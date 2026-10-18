@@ -1,0 +1,20 @@
+Asset: game/modern-ui/control-icons.png
+Generation: built-in ImageGen, transparent_background=true.
+
+Production sprite atlas for the Arcanum Modern PC RPG interface.
+One clean transparent PNG sprite sheet: eight isolated UI symbols in exactly
+four columns and two rows, landscape 2:1, equal square cells. Center each symbol
+at matching optical size with ample transparent padding. No grid lines, labels,
+background, frames or buttons.
+Top row, left to right: left arrowhead, up arrowhead, down arrowhead, right arrowhead.
+Bottom row: plus, minus, double left arrowhead, double right arrowhead.
+Late Victorian Arcanum steampunk style: dark wood, parchment and aged brass.
+Substantial solid warm antique brass, restrained bevel, soft pale gold upper-left
+highlights, dark bronze lower-right shading. Fine patina only. Readable at 18–28px.
+Simple bold filled triangles. Plus is a symmetrical thick cross; minus is a thick
+short bar. Orthographic front view. No lettering, decoration, screws, shadows
+outside the glyphs or tiny detail. True alpha transparency and rigorous equal
+spacing of cell centers.
+
+The original generated PNG is preserved, including its alpha channel. The UI
+samples measured symbol bounds and centers/scales them independently of fonts.

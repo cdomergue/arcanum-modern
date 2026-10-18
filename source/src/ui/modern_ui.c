@@ -94,6 +94,7 @@ static int art_count;
 static SDL_Texture *wood_texture, *paper_texture;
 static SDL_Texture* menu_background;
 static SDL_Texture* skill_icons_texture;
+static SDL_Texture* control_icons_texture;
 static float menu_background_width, menu_background_height;
 static Button buttons[MAX_BUTTONS];
 static int button_count;
@@ -408,6 +409,29 @@ static void draw_art(int number, SDL_FRect rect, bool fit)
     if(tig_art_interface_id_create(number,0,0,0,&id)==TIG_OK) draw_art_id(id,rect,fit);
 }
 
+/* Generated brass atlas: source bounds exclude transparent cell padding. */
+static bool control_symbol(SDL_FRect rect,const char* label,bool available,bool highlighted)
+{
+    static const char* labels[]={"<","^","v",">","+","-","<<",">>"};
+    static const SDL_FRect cells[]={
+        {93,98,236,310},{527,105,305,268},{948,141,320,245},{1447,97,233,311},
+        {88,507,294,292},{512,599,315,112},{924,524,324,260},{1411,524,303,256}
+    };
+    if(!control_icons_texture || !label)return false;
+    int index=-1;
+    for(int i=0;i<8;i++)if(strcmp(label,labels[i])==0){index=i;break;}
+    if(index<0)return false;
+    SDL_FRect src=cells[index];
+    float side=fminf(28,fminf(rect.w,rect.h)*.62f);
+    float scale=side/fmaxf(src.w,src.h);
+    SDL_FRect dst={rect.x+(rect.w-src.w*scale)/2,rect.y+(rect.h-src.h*scale)/2,src.w*scale,src.h*scale};
+    Uint8 brightness=available?(highlighted?255:215):145;
+    SDL_SetTextureColorMod(control_icons_texture,brightness,brightness,brightness);
+    SDL_SetTextureAlphaMod(control_icons_texture,available?255:140);
+    SDL_RenderTexture(renderer,control_icons_texture,&src,&dst);
+    return true;
+}
+
 static void button(SDL_FRect rect, int action, const char* label, int icon, bool active, bool available)
 {
     bool hover=inside(rect,mouse_x,mouse_y);
@@ -415,7 +439,7 @@ static void button(SDL_FRect rect, int action, const char* label, int icon, bool
     outline(rect,active?GOLD:(SDL_Color){112,83,45,255});
     rule(rect.x+1,rect.y+1,rect.w-2,(SDL_Color){145,111,62,100});
     if(icon>=0) draw_art(icon,(SDL_FRect){rect.x+9,rect.y+6,rect.h-12,rect.h-12},true);
-    if(label && *label) {
+    if(label && *label && !(icon<0 && control_symbol(rect,label,available,active||hover))) {
         if(icon>=0) text_compact(label,rect.x+rect.h+3,rect.y+(rect.h-14)/2-3,rect.w-rect.h-6,false,available?GOLD:MUTED);
         else centered(0,label,rect.x+rect.w/2,rect.y+(rect.h-14)/2-3,available?GOLD:MUTED);
     }
@@ -771,6 +795,7 @@ bool modern_ui_menu_suspend(bool suspend)
 static void menu_button(SDL_FRect rect, int action, const char* label, bool available)
 {
     button(rect, action, "", -1, false, available);
+    if(control_symbol(rect,label,available,inside(rect,mouse_x,mouse_y)))return;
     /* Center the visible glyphs, including accents, in buttons of any height. */
     NativeFont* font=&fonts[2];
     float top=font->size,bottom=0;
@@ -1709,6 +1734,15 @@ bool modern_ui_init(void)
         SDL_DestroySurface(inventory_actions);
         if(inventory_actions_texture)SDL_SetTextureScaleMode(inventory_actions_texture,SDL_SCALEMODE_LINEAR);
     }
+    SDL_Surface* controls=SDL_LoadPNG("modern-ui/control-icons.png");
+    if(controls) {
+        control_icons_texture=SDL_CreateTextureFromSurface(renderer,controls);
+        SDL_DestroySurface(controls);
+        if(control_icons_texture) {
+            SDL_SetTextureScaleMode(control_icons_texture,SDL_SCALEMODE_LINEAR);
+            SDL_SetTextureBlendMode(control_icons_texture,SDL_BLENDMODE_BLEND);
+        }
+    }
     SDL_Surface* skill_icons=SDL_LoadPNG("modern-ui/skill-icons.png");
     if(skill_icons) {
         skill_icons_texture=SDL_CreateTextureFromSurface(renderer,skill_icons);
@@ -1789,6 +1823,7 @@ void modern_ui_exit(void)
     SDL_DestroyTexture(wood_texture);SDL_DestroyTexture(paper_texture);
     SDL_DestroyTexture(menu_background);menu_background=NULL;
     SDL_DestroyTexture(skill_icons_texture);skill_icons_texture=NULL;
+    SDL_DestroyTexture(control_icons_texture);control_icons_texture=NULL;
     SDL_DestroyTexture(map_texture);map_texture=NULL;
     SDL_DestroyTexture(inventory_actions_texture);inventory_actions_texture=NULL;
     SDL_DestroyTexture(portrait_texture);portrait_texture=NULL;portrait_number=-1;

@@ -320,7 +320,8 @@ static void draw_inventory(void)
     button((SDL_FRect){left,y+748,120,48},731,"",-1,false,true);
     const int scattered[6][2]={{0,8},{15,0},{25,19},{3,27},{22,33},{33,6}};
     for(int i=0;i<6;i++)fill((SDL_FRect){left+10+scattered[i][0],y+754+scattered[i][1],6,6},MUTED);
-    text_draw(2,">",left+55,y+759,(SDL_Color){190,69,35,255});
+    if(!control_symbol((SDL_FRect){left+51,y+756,30,30},">",true,false))
+        text_draw(2,">",left+55,y+759,(SDL_Color){190,69,35,255});
     for(int row=0;row<3;row++)for(int col=0;col<3;col++)
         fill((SDL_FRect){left+81+col*9,y+759+row*9,7,7},GOLD);
     for(int i=0;i<2;i++) {
@@ -471,7 +472,8 @@ static void dialogue_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Co
 static void dialogue_scroll_button(SDL_FRect rect,int action,const char* label,bool active)
 {
     if(!active)return;
-    text_draw(1,label,rect.x+8,rect.y+4,GOLD);
+    if(!control_symbol(rect,label,true,inside(rect,mouse_x,mouse_y)))
+        text_draw(1,label,rect.x+8,rect.y+4,GOLD);
     if(button_count<MAX_BUTTONS)buttons[button_count++]=(Button){rect,action,true};
 }
 static void draw_world_hover(void)
@@ -667,7 +669,8 @@ static void draw_fate(void)
         SDL_FRect r={x+24,y+68+i*40,w-48,36};
         button(r,970+i,"",-1,modern_fate_active(i),true);
         text_draw(1,game_text(modern_fate_text(i)),r.x+18,r.y+5,GOLD);
-        if(modern_fate_active(i))text_draw(1,"+",r.x+r.w-25,r.y+5,GOLD);
+        if(modern_fate_active(i) && !control_symbol((SDL_FRect){r.x+r.w-30,r.y+4,24,24},"+",true,true))
+            text_draw(1,"+",r.x+r.w-25,r.y+5,GOLD);
     }
     menu_button((SDL_FRect){x+w-250,y+578,225,46},969,menu_text(260),true);
 }
