@@ -1640,8 +1640,12 @@ static bool handle_ui_event(SDL_Event* event)
         if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_E || key==SDL_SCANCODE_SPACE)) {
             if(down && !event->key.repeat){tactical_pressed_actor=combat_input_actor();pending_action=1100;}return true;
         }
-        if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_M || key==SDL_SCANCODE_K)) {
+        if(!native_panel() && (key==SDL_SCANCODE_M || key==SDL_SCANCODE_K)) {
             if(down && !event->key.repeat)pending_action=key==SDL_SCANCODE_M?6:5;
+            return true;
+        }
+        if(!native_panel() && key==SDL_SCANCODE_I) {
+            if(down && !event->key.repeat)pending_action=tactical_active()?1104:2;
             return true;
         }
         if(key==SDL_SCANCODE_J) {if(down && !event->key.repeat) pending_action=0;return true;}

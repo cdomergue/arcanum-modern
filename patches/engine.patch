@@ -1465,7 +1465,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  gsound_play_sfx(0, 1);
                  return true;
              case SDLK_R:
-@@ -2677,12 +2680,22 @@
+@@ -2585,6 +2588,7 @@
+     TigButtonState state;
+     int opposite_btn;
+ 
++    if(modern_ui_open_selector(window_type==ROTWIN_TYPE_SPELLS))return;
+     tig_button_state_get(intgame_secondary_buttons[btn].button_handle, &state);
+     if (state != TIG_BUTTON_STATE_PRESSED) {
+         opposite_btn = btn == INTGAME_SECONDARY_BUTTON_SPELLS
+@@ -2677,12 +2681,22 @@
      TigMouseState mouse_state;
      TigMessage fake_mouse_move;
  
@@ -1490,7 +1498,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      }
  
      if (msg->type == TIG_MESSAGE_KEYBOARD
-@@ -2699,6 +2712,7 @@
+@@ -2699,6 +2713,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -1498,7 +1506,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && sub_552050(msg->data.mouse.x, msg->data.mouse.y, &td)) {
                      if (td.is_loc) {
-@@ -2972,6 +2986,7 @@
+@@ -2972,6 +2987,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -1506,7 +1514,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && target_pick_at_screen_xy(msg->data.mouse.x, msg->data.mouse.y, &td, intgame_fullscreen)
                      && td.is_loc
-@@ -3117,7 +3132,7 @@
+@@ -3117,7 +3133,7 @@
      int64_t pc_obj;
      S4F2680 v1;
  
@@ -1515,7 +1523,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!combat_turn_based_is_active()
          || combat_turn_based_whos_turn_get() == pc_obj) {
-@@ -3261,16 +3276,18 @@
+@@ -3261,16 +3277,18 @@
      int anim;
      bool v26 = false;
  
@@ -1536,7 +1544,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,7 +3331,7 @@
+@@ -3314,7 +3332,7 @@
              }
          }
  
@@ -1545,7 +1553,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              switch (target_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
-@@ -3396,8 +3413,8 @@
+@@ -3396,8 +3414,8 @@
                      }
  
                      if (!td->is_loc
@@ -1556,7 +1564,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3712,10 +3729,12 @@
+@@ -3712,10 +3730,12 @@
          return;
      }
  
@@ -1570,7 +1578,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3800,7 @@
+@@ -3781,7 +3801,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -1579,7 +1587,16 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4088,6 +4107,10 @@
+@@ -4051,6 +4071,8 @@
+ // 0x5506C0
+ void iso_interface_window_set(RotatingWindowType window_type)
+ {
++    if((window_type==ROTWIN_TYPE_SPELLS || window_type==ROTWIN_TYPE_SKILLS)
++        && modern_ui_open_selector(window_type==ROTWIN_TYPE_SPELLS))return;
+     broadcast_ui_close();
+ 
+     if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
+@@ -4088,6 +4110,10 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
  {
@@ -1590,7 +1607,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4123,7 @@
+@@ -4100,6 +4126,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -1598,7 +1615,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4187,16 @@
+@@ -4163,9 +4190,16 @@
      }
  }
  
@@ -1615,7 +1632,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4233,11 @@
+@@ -4202,6 +4236,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -1627,7 +1644,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4869,14 @@
+@@ -4833,14 +4872,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -1644,7 +1661,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4948,13 @@
+@@ -4912,13 +4951,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -1660,7 +1677,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -6239,6 +6275,15 @@
+@@ -6239,6 +6278,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -1676,7 +1693,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6327,7 @@
+@@ -6282,6 +6330,7 @@
              }
          }
      }
@@ -1684,7 +1701,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6619,7 @@
+@@ -6573,6 +6622,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -1692,7 +1709,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6658,16 @@
+@@ -6611,6 +6661,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -1709,7 +1726,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6852,11 @@
+@@ -6795,6 +6855,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -1721,7 +1738,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7674,7 @@
+@@ -7612,6 +7677,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -1729,7 +1746,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7703,7 @@
+@@ -7640,7 +7706,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -1738,7 +1755,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7847,7 @@
+@@ -7784,7 +7850,7 @@
          mes_file_entry.str,
          value);
  
@@ -1747,7 +1764,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8896,195 @@
+@@ -8833,3 +8899,195 @@
  
      follower_ui_show();
  }

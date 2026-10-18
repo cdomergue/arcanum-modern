@@ -37,6 +37,13 @@ static int native_panel(void)
     if(selector)return 5;
     return 0;
 }
+bool modern_ui_open_selector(bool spells)
+{
+    if(!enabled || !in_game || !fonts[0].texture || mainmenu_ui_is_active())return false;
+    int p=native_panel();
+    if(!p || p==5)selector=spells?1:2;
+    return true;
+}
 static void panel_region(SDL_FRect rect,int x,int y,int w,int h,int kind)
 {
     if(panel_region_count<(int)SDL_arraysize(panel_regions))
@@ -527,7 +534,7 @@ static bool panels_action(int action)
     if(action>=900 && action<=908 && p==6){modern_sleep_choose(action==908?-1:action-900);return true;}
     if(action>=920 && action<=937 && p==7){modern_schematic_action(action==929?-1:action-920);description_scroll=0;return true;}
     if(action==5 || action==6) {
-        if(intgame_mode_get()==INTGAME_MODE_MAIN && !p){selector=action==6?1:2;return true;}
+        if(modern_ui_open_selector(action==6))return true;
     }
     if(p==1 && action>=600 && action<700)return creation_menu_action(action);
     if(action==720 && p==1){charedit_close();return true;}
@@ -629,6 +636,12 @@ static bool panels_event(SDL_Event* event)
     if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP) {
         if(p==4 && event->key.scancode==SDL_SCANCODE_ESCAPE)return false;
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
+            if(p==2 && event->key.scancode==SDL_SCANCODE_I && !mainmenu_ui_is_active()
+                && intgame_mode_get()!=INTGAME_MODE_QUANTITY)pending_action=730;
+            if(p==5 && (event->key.scancode==SDL_SCANCODE_M || event->key.scancode==SDL_SCANCODE_K)) {
+                int next=event->key.scancode==SDL_SCANCODE_M?1:2;
+                selector=selector==next?0:next;
+            }
             if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
             if(p==4 && event->key.scancode>=SDL_SCANCODE_1 && event->key.scancode<=SDL_SCANCODE_5)pending_action=800+event->key.scancode-SDL_SCANCODE_1;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEDOWN)pending_action=821;
