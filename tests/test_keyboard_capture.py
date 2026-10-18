@@ -11,7 +11,7 @@ import tempfile
 
 source = (Path(__file__).resolve().parents[1] / "source/src/ui/modern_ui.c").read_text()
 start = source.index("static bool handle_event(SDL_Event* event)\n{")
-end = source.index("\nstatic bool handle_ui_event(SDL_Event* event)\n{", start)
+end = source.index("\n}", start) + 2
 gate = source[start:end]
 
 harness = r"""

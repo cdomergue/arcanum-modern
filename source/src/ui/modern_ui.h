@@ -25,6 +25,7 @@ bool modern_ui_enabled(void);
 bool modern_ui_open_selector(bool spells);
 const char* modern_written_text(void);
 void modern_written_sync(bool enabled);
+bool modern_camera_key(int scancode);
 bool modern_hotkey_assign(int index,int type,int data,int64_t item_obj);
 bool modern_world_resize(int width,int height,float anchor_x,float anchor_y);
 void modern_ui_tick(void);

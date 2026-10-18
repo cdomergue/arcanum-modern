@@ -1526,6 +1526,21 @@ static bool handle_event(SDL_Event* event)
     return consumed;
 }
 
+static bool modern_camera_enabled(void)
+{
+    int mode=intgame_mode_get();
+    return enabled && in_game && !mainmenu_ui_is_active() && !journal && !native_panel()
+        && !slide_ui_is_active() && !searching && !menu_suspended
+        && SDL_GetKeyboardFocus()==window && !SDL_TextInputActive(window)
+        && !(SDL_GetModState()&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI))
+        && (mode==INTGAME_MODE_MAIN || mode==INTGAME_MODE_SPELL || mode==INTGAME_MODE_SKILL || mode==INTGAME_MODE_ITEM);
+}
+bool modern_camera_key(int scancode)
+{
+    if(!modern_camera_enabled() || scancode<0 || scancode>=SDL_SCANCODE_COUNT)return false;
+    return SDL_GetKeyboardState(NULL)[scancode];
+}
+
 static bool handle_ui_event(SDL_Event* event)
 {
     if(slide_ui_is_active())return false;
@@ -1639,6 +1654,7 @@ static bool handle_ui_event(SDL_Event* event)
             }
             return true;
         }
+        if(modern_camera_enabled() && (key==SDL_SCANCODE_W || key==SDL_SCANCODE_A || key==SDL_SCANCODE_S || key==SDL_SCANCODE_D))return true;
         if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_E || key==SDL_SCANCODE_SPACE)) {
             if(down && !event->key.repeat){tactical_pressed_actor=combat_input_actor();pending_action=1100;}return true;
         }
