@@ -1273,9 +1273,11 @@ static float world_zoom=1,zoom_anchor_x=.5f,zoom_anchor_y=.5f;
 static bool zoom_pending;
 static bool world_zoom_allowed(void)
 {
+    int panel=native_panel(),mode=intgame_mode_get();
     return enabled && in_game && visible() && !mainmenu_ui_is_active() && !journal
-        && !native_panel() && !intgame_is_compact_interface()
-        && intgame_mode_get()==INTGAME_MODE_MAIN;
+        && (panel==0 || panel==5) && !intgame_is_compact_interface()
+        && (mode==INTGAME_MODE_MAIN || mode==INTGAME_MODE_SPELL
+            || mode==INTGAME_MODE_SKILL || mode==INTGAME_MODE_ITEM);
 }
 static void world_zoom_sync(void)
 {
@@ -1296,7 +1298,7 @@ static void world_zoom_sync(void)
 }
 static bool world_zoom_event(SDL_Event* event)
 {
-    if(event->type!=SDL_EVENT_MOUSE_WHEEL || !world_zoom_allowed())return false;
+    if(event->type!=SDL_EVENT_MOUSE_WHEEL || !world_zoom_allowed() || native_panel())return false;
     int w,h;SDL_GetWindowSize(window,&w,&h);if(w<=0 || h<=0)return false;
     float x=event->wheel.mouse_x/w,y=event->wheel.mouse_y/h;
     if(hud_region(x*canvas_w,y*canvas_h))return true;
@@ -1679,7 +1681,7 @@ void modern_ui_tick(void)
         /* Dialogue choices live in the world window, independently of the bars.
          * Keep our HUD when an NPC starts talking (including the opening scene).
          */
-        && (intgame_mode_get()==INTGAME_MODE_MAIN || intgame_mode_get()==INTGAME_MODE_DIALOG || intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_SKILL || journal)
+        && (intgame_mode_get()==INTGAME_MODE_MAIN || intgame_mode_get()==INTGAME_MODE_DIALOG || intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_ITEM || journal)
         && iso_interface_window_get()==ROTWIN_TYPE_MSG;
     modern_intgame_hud_hide(hud || journal || native_panel());
 }

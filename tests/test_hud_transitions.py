@@ -18,7 +18,7 @@ harness = r"""
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
-enum { INTGAME_MODE_MAIN, INTGAME_MODE_DIALOG, INTGAME_MODE_INVEN, INTGAME_MODE_LOGBOOK, INTGAME_MODE_SPELL, INTGAME_MODE_SKILL };
+enum { INTGAME_MODE_MAIN, INTGAME_MODE_DIALOG, INTGAME_MODE_INVEN, INTGAME_MODE_LOGBOOK, INTGAME_MODE_SPELL, INTGAME_MODE_SKILL, INTGAME_MODE_ITEM };
 enum { ROTWIN_TYPE_MSG, ROTWIN_TYPE_SPELLS };
 static bool enabled=true, in_game, hud, journal;
 static bool menu, compact, classic_hidden;
@@ -72,6 +72,9 @@ int main(void) {
     pending_action=999;check(true);
     /* Conversation ends; original modal screens retain their own controls. */
     mode=INTGAME_MODE_MAIN;check(true);
+    mode=INTGAME_MODE_SPELL;check(true);
+    mode=INTGAME_MODE_SKILL;check(true);
+    mode=INTGAME_MODE_ITEM;check(true);
     mode=INTGAME_MODE_INVEN;check(false);
     mode=INTGAME_MODE_DIALOG;check(true);
     mode=INTGAME_MODE_MAIN;

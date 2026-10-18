@@ -20,9 +20,13 @@ code = r'''
 #define SDL_BUTTON_RMASK 2
 #define SDL_BUTTON_MMASK 4
 #define INTGAME_MODE_MAIN 0
+#define INTGAME_MODE_SPELL 1
+#define INTGAME_MODE_SKILL 2
+#define INTGAME_MODE_ITEM 3
 #define SDL_Log(...) ((void)0)
 typedef struct {int type;struct {float mouse_x,mouse_y,y;int direction;} wheel;} SDL_Event;
-static bool enabled=true,in_game=true,journal,menu,panel,compact,fail_resize;
+static bool enabled=true,in_game=true,journal,menu,compact,fail_resize;
+static int panel;
 static int mode,buttons,logical_w=1280,logical_h=720,window_w=1920,window_h=1080,resizes;
 static float canvas_w=1600,canvas_h=900,origin_x,origin_y;
 static void *window,*renderer;
@@ -65,6 +69,15 @@ int main(void){
     menu=false;world_zoom_sync();assert(logical_w==2560);
     panel=true;assert(!world_zoom_event(&e));world_zoom_sync();assert(logical_w==1280);
     panel=false;world_zoom_sync();assert(logical_w==2560);
+    /* Opening a native selector, then targeting a skill/spell/item retains zoom. */
+    calls=resizes;panel=5;world_zoom_sync();
+    assert(logical_w==2560&&resizes==calls&&!world_zoom_event(&e));
+    panel=0;
+    for(mode=INTGAME_MODE_SPELL;mode<=INTGAME_MODE_ITEM;mode++){
+        world_zoom_sync();assert(logical_w==2560&&resizes==calls);
+        assert(world_zoom_event(&e));world_zoom_sync();assert(logical_w==2560);
+    }
+    mode=INTGAME_MODE_MAIN;world_zoom_sync();assert(logical_w==2560);
     enabled=false;world_zoom_sync();assert(logical_w==1280 && !world_zoom_event(&e));
     enabled=true;world_zoom_sync();assert(logical_w==2560);
     e.wheel.y=1;
