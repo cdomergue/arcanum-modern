@@ -1429,6 +1429,102 @@ diff --git a/src/ui/follower_ui.h b/src/ui/follower_ui.h
 +void modern_follower_command(int64_t obj, int command);
 +
  #endif /* ARCANUM_UI_FOLLOWER_UI_H_ */
+diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
+--- a/src/ui/hotkey_ui.c
++++ b/src/ui/hotkey_ui.c
+@@ -1,4 +1,6 @@
+ #include "ui/hotkey_ui.h"
++#include "ui/modern_ui.h"
++#include "game/combat.h"
+ 
+ #include "game/gamelib.h"
+ #include "game/gsound.h"
+@@ -18,6 +20,7 @@
+ 
+ static bool intgame_save_hotkey(Hotkey* hotkey, TigFile* stream);
+ static bool intgame_load_hotkey(Hotkey* hotkey, TigFile* stream);
++static int modern_hotkey_slot = -1;
+ static int sub_57E460(void);
+ static void intgame_hotkey_mouse_load(tig_art_id_t art_id, bool a2);
+ static void sub_57ED60(Hotkey* hotkey, int a2);
+@@ -618,6 +621,7 @@
+ // 0x57E460
+ int sub_57E460(void)
+ {
++    if(modern_hotkey_slot>=0)return modern_hotkey_slot;
+     TigMouseState mouse_state;
+     TigRect rect;
+     int index;
+@@ -836,7 +840,8 @@
+ 
+     if (stru_683950.item_obj.obj != OBJ_HANDLE_NULL) {
+         if (item_parent(stru_683950.item_obj.obj, &parent_obj)
+-            && !player_is_local_pc_obj(parent_obj)) {
++            && !player_is_local_pc_obj(parent_obj)
++            && !(modern_hotkey_slot>=0 && parent_obj==combat_input_actor())) {
+             hotkey_ui_dragging = false;
+             sub_575770();
+             intgame_refresh_cursor();
+@@ -929,10 +934,10 @@
+             flags &= ~OIF_NO_DISPLAY;
+             obj_field_int32_set(stru_683950.item_obj.obj, OBJ_F_ITEM_FLAGS, flags);
+             item_location_set(stru_683950.item_obj.obj, hotkey->slot + 2000);
+-            inven_ui_update(player_get_local_pc_obj());
++            inven_ui_update(parent_obj);
+             hotkey->item_obj = stru_683950.item_obj;
+             hotkey->art_id = sub_554BE0(stru_683950.item_obj.obj);
+-            hotkey->count = item_count_items_matching_prototype(player_get_local_pc_obj(), hotkey->item_obj.obj);
++            hotkey->count = item_count_items_matching_prototype(parent_obj, hotkey->item_obj.obj);
+             break;
+         case HOTKEY_SKILL:
+             hotkey->data = stru_683950.data;
+@@ -1306,3 +1311,46 @@
+         }
+     }
+ }
++
++/* Explicit slot assignment for the native-resolution UI; keep the original
++ * bank storage, item validation and save format instead of a second hotkey bank. */
++bool modern_hotkey_assign(int index, int type, int data, int64_t item_obj)
++{
++    int64_t actor = combat_input_actor(), owner;
++    if(index<0 || index>=10 || !actor || !combat_input_ready(actor) || tig_net_is_active())return false;
++    if(type==HOTKEY_SPELL) {
++        if(data<0 || data>=SPELL_COUNT || !spell_is_known(actor,data))return false;
++    } else if(type==HOTKEY_SKILL) {
++        if(data<0 || data>=4)return false;
++    } else if(type==HOTKEY_ITEM) {
++        if(!obj_handle_is_valid(item_obj) || !item_parent(item_obj,&owner)
++            || owner!=actor)return false;
++        int obj_type=obj_field_int32_get(item_obj,OBJ_F_TYPE);
++        if(obj_type==OBJ_TYPE_GOLD || obj_type==OBJ_TYPE_AMMO)return false;
++        if(stru_6835E0[index].type==HOTKEY_ITEM && stru_6835E0[index].item_obj.obj==item_obj) {
++            sub_575770();return true;
++        }
++        if(item_check_remove(item_obj)!=ITEM_CANNOT_OK)return false;
++    } else return false;
++
++    /* Do not drop an existing bank item on the ground if its backpack is full. */
++    int64_t previous=stru_6835E0[index].type==HOTKEY_ITEM || stru_6835E0[index].type==HOTKEY_ITEM_SPELL
++        ?stru_6835E0[index].item_obj.obj:OBJ_HANDLE_NULL;
++    if(previous && obj_handle_is_valid(previous) && item_parent(previous,&owner)
++        && item_find_free_inv_loc_for_insertion(previous,owner)<0) {
++        item_error_msg(owner,ITEM_CANNOT_NO_ROOM);return false;
++    }
++    sub_575770();
++    if(type==HOTKEY_ITEM)sub_573630(item_obj);
++    stru_683950.slot=-1;
++    stru_683950.type=type;
++    stru_683950.data=data;
++    sub_4440E0(type==HOTKEY_ITEM?item_obj:OBJ_HANDLE_NULL,&stru_683950.item_obj);
++    hotkey_ui_dragging_index=-1;
++    hotkey_ui_dragging=true;
++    modern_hotkey_slot=index;
++    bool result=sub_57E8D0(TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP);
++    modern_hotkey_slot=-1;
++    if(result && type!=HOTKEY_ITEM)sub_4440E0(OBJ_HANDLE_NULL,&stru_6835E0[index].item_obj);
++    return result;
++}
 diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 --- a/src/ui/intgame.c
 +++ b/src/ui/intgame.c

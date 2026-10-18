@@ -1458,6 +1458,7 @@ static void render_overlay(SDL_Renderer* target)
         draw_party();
         if(journal) draw_journal();
         draw_play_panels();
+        draw_binding_bar();
     }
     if(menu || journal || native_panel() || (hud && hud_region(mouse_x,mouse_y))) draw_art(0,(SDL_FRect){mouse_x,mouse_y,28,35},true);
     SDL_SetRenderDrawBlendMode(renderer,old_blend);
