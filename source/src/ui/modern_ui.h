@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <SDL3/SDL_render.h>
 
 typedef struct ModernCombatPreview {
     int64_t actor, target, location;
@@ -20,6 +21,7 @@ int modern_maintained_spells(int64_t actor, int* ids, int* spells, int capacity)
 bool modern_spell_stop(int64_t actor, int id);
 
 bool modern_ui_init(void);
+SDL_Texture* modern_ui_loading_label(SDL_Renderer* target,const char* text,float size);
 void modern_ui_exit(void);
 bool modern_ui_enabled(void);
 bool modern_ui_open_selector(bool spells);

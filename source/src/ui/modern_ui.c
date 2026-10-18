@@ -195,6 +195,44 @@ static SDL_Texture* rgba_texture(int w, int h, Uint32* pixels)
     return t;
 }
 
+/* Startup precedes UI initialization: rasterize this localized label without
+ * touching the HUD's renderer, fonts or geometry. */
+SDL_Texture* modern_ui_loading_label(SDL_Renderer* target,const char* source,float size)
+{
+    size_t length;
+    unsigned char* data=SDL_LoadFile("modern-ui/Book.ttf",&length);
+    if(!data)return NULL;
+    stbtt_fontinfo font;
+    if(!stbtt_InitFont(&font,data,stbtt_GetFontOffsetForIndex(data,0))){SDL_free(data);return NULL;}
+    char text[2048];from_game(source,text,sizeof(text));
+    float scale=stbtt_ScaleForPixelHeight(&font,size),width=0;
+    int ascent,descent,gap;
+    stbtt_GetFontVMetrics(&font,&ascent,&descent,&gap);
+    const char* p=text;
+    while(*p){int advance,bearing;stbtt_GetCodepointHMetrics(&font,codepoint(&p),&advance,&bearing);width+=advance*scale;}
+    SDL_Surface* surface=SDL_CreateSurface((int)ceilf(width)+8,(int)ceilf((ascent-descent)*scale)+8,SDL_PIXELFORMAT_RGBA32);
+    if(!surface){SDL_free(data);return NULL;}
+    SDL_FillSurfaceRect(surface,NULL,0);
+    float pen=4;int baseline=(int)ceilf(ascent*scale)+4;
+    p=text;
+    while(*p) {
+        int c=codepoint(&p),w,h,xoff,yoff,advance,bearing;
+        unsigned char* bitmap=stbtt_GetCodepointBitmap(&font,scale,scale,c,&w,&h,&xoff,&yoff);
+        if(bitmap)for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
+            int dx=(int)roundf(pen)+xoff+x,dy=baseline+yoff+y;
+            if(dx<0 || dx>=surface->w || dy<0 || dy>=surface->h)continue;
+            unsigned char* pixel=(unsigned char*)surface->pixels+dy*surface->pitch+dx*4;
+            unsigned a=bitmap[y*w+x];
+            pixel[0]=pixel[1]=pixel[2]=255;pixel[3]=(unsigned char)(a+pixel[3]*(255-a)/255);
+        }
+        stbtt_FreeBitmap(bitmap,NULL);
+        stbtt_GetCodepointHMetrics(&font,c,&advance,&bearing);pen+=advance*scale;
+    }
+    SDL_Texture* texture=SDL_CreateTextureFromSurface(target,surface);
+    SDL_DestroySurface(surface);SDL_free(data);
+    return texture;
+}
+
 static bool make_font(NativeFont* font, unsigned char* data, float size)
 {
     const int side = 2048;

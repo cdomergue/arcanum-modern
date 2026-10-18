@@ -669,7 +669,13 @@ diff --git a/src/game/critter.h b/src/game/critter.h
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -324,6 +324,7 @@
+@@ -1,4 +1,5 @@
+ #include "game/gamelib.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -324,6 +325,7 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -677,7 +683,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      difficulty_changed();
  
      gamelib_mod_loaded = false;
-@@ -456,6 +457,7 @@
+@@ -456,6 +458,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -685,20 +691,23 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -1752,11 +1754,60 @@
+@@ -1752,11 +1755,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
 +/* Optional native-resolution replacements, keyed to the original splash name.
 + * Keep the engine's rotation and fall back to its installed artwork. */
 +static SDL_Texture* gamelib_splash_texture;
++static SDL_Texture* gamelib_splash_label;
 +
 +void gamelib_splash_clear(void)
 +{
 +    if(!gamelib_splash_texture)return;
 +    tig_video_set_slide_overlay(NULL);
 +    SDL_DestroyTexture(gamelib_splash_texture);
++    SDL_DestroyTexture(gamelib_splash_label);
 +    gamelib_splash_texture=NULL;
++    gamelib_splash_label=NULL;
 +}
 +
 +static void gamelib_draw_splash(SDL_Renderer* renderer)
@@ -717,6 +726,17 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 +    SDL_FRect rect={(width-image_width*scale)/2,(height-image_height*scale)/2,
 +        image_width*scale,image_height*scale};
 +    SDL_RenderTexture(renderer,gamelib_splash_texture,NULL,&rect);
++    if(gamelib_splash_label) {
++        float w,h;SDL_GetTextureSize(gamelib_splash_label,&w,&h);
++        float label_scale=w>rect.w*0.8f?rect.w*0.8f/w:1;
++        SDL_FRect label={rect.x+rect.w-w*label_scale-rect.w*0.06f,
++            rect.y+rect.h*0.87f,w*label_scale,h*label_scale};
++        SDL_FRect shadow=label;shadow.x+=2;shadow.y+=2;
++        SDL_SetTextureColorMod(gamelib_splash_label,0,0,0);
++        SDL_RenderTexture(renderer,gamelib_splash_label,NULL,&shadow);
++        SDL_SetTextureColorMod(gamelib_splash_label,255,255,255);
++        SDL_RenderTexture(renderer,gamelib_splash_label,NULL,&label);
++    }
 +    SDL_SetRenderLogicalPresentation(renderer,old_width,old_height,old_mode);
 +}
 +
@@ -734,6 +754,13 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 +    SDL_DestroySurface(image);
 +    if(!gamelib_splash_texture)return false;
 +    SDL_SetTextureScaleMode(gamelib_splash_texture,SDL_SCALEMODE_LINEAR);
++    mes_file_handle_t messages;
++    if(mes_load("mes\\MainMenu.mes",&messages)) {
++        MesFileEntry entry={0};entry.num=1;
++        int width,height;SDL_GetRenderOutputSize(renderer,&width,&height);
++        if(mes_search(messages,&entry))gamelib_splash_label=modern_ui_loading_label(renderer,entry.str,height/30.0f);
++        mes_unload(messages);
++    }
 +    tig_video_set_slide_overlay(gamelib_draw_splash);
 +    return true;
 +}
@@ -747,7 +774,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1851,7 @@
+@@ -1800,6 +1873,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
