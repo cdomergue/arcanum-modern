@@ -399,6 +399,15 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
+@@ -215,7 +283,7 @@
+         }
+     }
+ 
+-    settings_register(&settings, TURN_BASED_KEY, "0", turn_based_changed);
++    settings_register(&settings, TURN_BASED_KEY, "1", turn_based_changed);
+     combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
+ 
+     settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
 @@ -282,7 +350,7 @@
  // 0x4B2020
  bool combat_load(GameLoadInfo* load_info)
@@ -446,7 +455,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -2857,6 +2929,7 @@
+@@ -2857,12 +2929,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -454,7 +463,19 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (combat_turn_based == turn_based) {
          return true;
-@@ -2958,7 +3031,7 @@
+     }
+ 
+     pc = player_get_local_pc_obj();
++    /* Installation/new-game defaults are applied before a PC exists. There is
++     * no animation to interrupt yet, but the engine mode must still change. */
++    if (pc == OBJ_HANDLE_NULL) {
++        combat_turn_based = turn_based;
++        return true;
++    }
+     if (!sub_424070(pc, 3, 0, 1)) {
+         return false;
+     }
+@@ -2958,7 +3037,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -463,7 +484,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2997,7 +3070,11 @@
+@@ -2997,7 +3076,11 @@
  
      tig_debug_printf("Combat: TB: Action Points Available: %d.\n", combat_action_points);
  
@@ -476,7 +497,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3102,7 @@
+@@ -3025,6 +3108,7 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
@@ -484,7 +505,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3132,9 @@
+@@ -3054,8 +3138,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -496,7 +517,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3163,10 @@
+@@ -3084,9 +3169,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -509,7 +530,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3205,7 +3285,7 @@
+@@ -3205,7 +3291,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -518,7 +539,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3549,6 +3629,8 @@
+@@ -3549,6 +3635,8 @@
          return true;
      }
  

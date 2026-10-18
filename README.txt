@@ -25,6 +25,8 @@ La recherche fonctionne dans la rubrique choisie et ignore casse et accents.
 Les quêtes disposent des filtres Toutes / En cours / Terminées.
 
 COMBAT TACTIQUE
+Ce mode est activé par défaut dès l'installation et pour chaque nouvelle partie,
+y compris si la configuration importée indiquait auparavant le temps réel.
 Le combat utilise le tour par tour d'Arcanum : initiative, vitesse, PA, fatigue,
 dégâts, compétences et règles magiques restent calculés par le moteur original.
 Chaque compagnon contrôlable reçoit ses ordres pendant son propre tour.
