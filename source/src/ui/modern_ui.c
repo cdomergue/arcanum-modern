@@ -93,7 +93,8 @@ static BookLine* lines;
 static size_t line_count, line_capacity;
 static bool enabled, in_game, hud, journal, searching, dirty;
 static bool click_captured;
-static bool menu_suspended, classic_options;
+static bool menu_suspended;
+static int options_tab=-1;
 static int menu_previous_type = -1;
 static bool confirming_menu;
 static int confirmation_choice;
@@ -695,7 +696,7 @@ static bool native_menu(void)
         || type == MM_WINDOW_MAINMENU || type == MM_WINDOW_SINGLE_PLAYER
         || type == MM_WINDOW_PICK_NEW_OR_PREGEN || type == MM_WINDOW_26
         || type == MM_WINDOW_MAINMENU_IN_PLAY || type == MM_WINDOW_MAINMENU_IN_PLAY_LOCKED
-        || (type == MM_WINDOW_OPTIONS && !classic_options);
+        || type == MM_WINDOW_OPTIONS;
 }
 
 bool modern_ui_menu_suspend(bool suspend)
@@ -1096,7 +1097,7 @@ static void draw_menu(void)
     if(type==MM_WINDOW_NEW_CHAR || type==MM_WINDOW_PREGEN_CHAR) {draw_character_menu();return;}
     if(type==MM_WINDOW_LOAD_GAME) {draw_load_menu();return;}
     if(type==MM_WINDOW_CHAREDIT) {draw_character_sheet();return;}
-    float w = options ? 900 : 610, h = 660;
+    float w = options ? 1180 : 610, h = options ? 760 : 660;
     float x = (canvas_w-w)/2, y = (canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
     centered(3, options ? menu_text(12) : "Arcanum", canvas_w/2, y+33, GOLD);
@@ -1123,8 +1124,31 @@ static void draw_menu(void)
     }
     ModernGraphics* g = &modern_graphics;
     bool confirming = g->deadline != 0;
-    button((SDL_FRect){x+30,y+140,182,45},407,"Graphismes",-1,true,!confirming);
-    button((SDL_FRect){x+30,y+197,182,45},406,"Jeu et audio",-1,false,!confirming);
+    button((SDL_FRect){x+30,y+140,182,45},407,"Graphismes",-1,options_tab<0,!confirming);
+    const int tab_actions[]={406,408,409};
+    for(int i=0;i<3;i++)button((SDL_FRect){x+30,y+197+i*57,182,45},tab_actions[i],menu_text(4000+i),-1,options_tab==i,!confirming);
+    if(options_tab>=0) {
+        float ox=x+246,ow=w-280,cw=(ow-24)/2;
+        for(int i=0;i<8;i++) {
+            ModernOption option;if(!modern_options_state(i,&option))continue;
+            float cx=ox+(i/4)*(cw+24),cy=y+137+(i%4)*114;
+            SDL_Color color=option.enabled?GOLD:MUTED;
+            menu_paragraph(game_text(option.label),(SDL_FRect){cx,cy,cw,54},0,color);
+            menu_button((SDL_FRect){cx,cy+57,38,42},430+i*2,"<",option.enabled && (!option.numeric || option.value>0));
+            menu_button((SDL_FRect){cx+cw-38,cy+57,38,42},431+i*2,">",option.enabled && (!option.numeric || option.value<option.maximum));
+            char value[80];snprintf(value,sizeof(value),"%d / %d",option.value,option.maximum);
+            const char* label=option.text?game_text(option.text):value;
+            /* Native text fitting handles long translated values without pixel scaling. */
+            text_in_button((SDL_FRect){cx+44,cy+57,cw-88,42},-1,label,false,false);
+            if(option.numeric && option.maximum>0) {
+                fill((SDL_FRect){cx+47,cy+102,cw-94,3},(SDL_Color){60,45,27,255});
+                fill((SDL_FRect){cx+47,cy+102,(cw-94)*option.value/option.maximum,3},color);
+            }
+        }
+        rule(x+30,y+h-110,w-60,(SDL_Color){117,87,44,255});
+        menu_button((SDL_FRect){x+40,y+h-82,220,54},405,menu_text(4003),true);
+        return;
+    }
     float rx=x+246, rw=w-280;
     text_draw(2,"Graphismes",rx,y+144,GOLD);
     text_draw(0,"Mode d'affichage",rx,y+207,MUTED);
@@ -1142,17 +1166,17 @@ static void draw_menu(void)
     text_draw(0,g->selected.mode==1 ? "Le mode sans bordure suit la définition du bureau." :
         "Choisissez une définition adaptée à votre écran.",rx,y+416,MUTED);
     if (*g->status) text_draw(0,g->status,rx,y+455,GOLD);
-    rule(x+30,y+503,w-60,(SDL_Color){117,87,44,255});
+    rule(x+30,y+h-157,w-60,(SDL_Color){117,87,44,255});
     if (confirming) {
         Uint64 now=SDL_GetTicks();
         int seconds=g->deadline>now ? (int)((g->deadline-now+999)/1000) : 0;
         char question[128];snprintf(question,sizeof(question),"Conserver ces réglages ? Retour automatique dans %d s",seconds);
-        centered(0,question,canvas_w/2,y+527,GOLD);
-        menu_button((SDL_FRect){x+60,y+568,350,52},415,"Conserver",true);
-        menu_button((SDL_FRect){x+w-410,y+568,350,52},416,"Rétablir",true);
+        centered(0,question,canvas_w/2,y+h-133,GOLD);
+        menu_button((SDL_FRect){x+60,y+h-92,350,52},415,"Conserver",true);
+        menu_button((SDL_FRect){x+w-410,y+h-92,350,52},416,"Rétablir",true);
     } else {
-        menu_button((SDL_FRect){x+40,y+558,220,54},405,"Retour",true);
-        menu_button((SDL_FRect){x+w-300,y+558,260,54},414,"Appliquer",g->count>0);
+        menu_button((SDL_FRect){x+40,y+h-102,220,54},405,menu_text(4003),true);
+        menu_button((SDL_FRect){x+w-300,y+h-102,260,54},414,"Appliquer",g->count>0);
     }
 }
 
@@ -1256,7 +1280,7 @@ void modern_ui_menu_tick(void)
             int selected=sub_5496C0(type)->selected_index;
             save_page=selected>=0?selected/8:0;
         }
-        classic_options=false;
+        options_tab=-1;
         if (type==MM_WINDOW_OPTIONS) modern_graphics_begin();
         menu_previous_type=type;
         button_count=0;
@@ -1265,6 +1289,10 @@ void modern_ui_menu_tick(void)
     modern_graphics_tick();
     if (!native_menu() || pending_action<400 || pending_action>699) return;
     int action=pending_action;pending_action=-1;
+    if(type==MM_WINDOW_OPTIONS && action>=430 && action<446) {
+        if(options_tab>=0 && !modern_graphics.deadline)modern_options_adjust((action-430)/2,action%2?1:-1);
+        return;
+    }
     if(creation_menu_action(action))return;
     bool locked=type==MM_WINDOW_MAINMENU_IN_PLAY_LOCKED;
     menu_suspended=true; /* Classic confirmation dialogs must remain interactive. */
@@ -1274,9 +1302,11 @@ void modern_ui_menu_tick(void)
     case 402: if(!locked) modern_mainmenu_activate(1); break;
     case 403: modern_mainmenu_activate(locked?0:2); break;
     case 404: modern_mainmenu_activate(locked?1:3); break;
-    case 405: mainmenu_ui_close(true); break;
-    case 406: classic_options=true; break;
-    case 407: break;
+    case 405: if(type==MM_WINDOW_OPTIONS)modern_options_return();else mainmenu_ui_close(true); break;
+    case 406: if(!modern_graphics.deadline && modern_options_select(0))options_tab=0;break;
+    case 407: if(!modern_graphics.deadline)options_tab=-1;break;
+    case 408: if(!modern_graphics.deadline && modern_options_select(1))options_tab=1;break;
+    case 409: if(!modern_graphics.deadline && modern_options_select(2))options_tab=2;break;
     case 410: modern_graphics_mode(-1); break;
     case 411: modern_graphics_mode(1); break;
     case 412: modern_graphics_resolution(-1); break;

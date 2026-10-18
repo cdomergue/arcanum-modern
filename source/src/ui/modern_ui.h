@@ -59,6 +59,17 @@ typedef struct ModernBubble {
 } ModernBubble;
 int modern_bubbles(ModernBubble* bubbles,int capacity);
 void modern_bubbles_sync(bool native);
+typedef struct ModernOption {
+    const char *label,*text;
+    int value,maximum;
+    bool enabled,numeric;
+} ModernOption;
+bool modern_cyclic_state(int id,ModernOption* option);
+void modern_cyclic_adjust(int id,int direction);
+bool modern_options_state(int index,ModernOption* option);
+void modern_options_adjust(int index,int direction);
+bool modern_options_select(int tab);
+void modern_options_return(void);
 
 /* Live panel adapters. Mouse coordinates are in the original 800x600 canvas;
  * the presentation maps its own layout to these engine-owned controls. */

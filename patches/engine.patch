@@ -284,6 +284,41 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +
 +int64_t modern_charedit_object(void) { return charedit_created ? charedit_obj : OBJ_HANDLE_NULL; }
 +bool modern_charedit_editable(void) { return charedit_created && charedit_mode!=CHAREDIT_MODE_PASSIVE; }
+diff --git a/src/ui/cyclic_ui.c b/src/ui/cyclic_ui.c
+--- a/src/ui/cyclic_ui.c
++++ b/src/ui/cyclic_ui.c
+@@ -1,3 +1,4 @@
++#include "ui/modern_ui.h"
+ #include "ui/cyclic_ui.h"
+ 
+ #include "game/mes.h"
+@@ -997,3 +998,26 @@
+     // Redraw.
+     cyclic_ui_refresh_level(ctrl);
+ }
++
++/* Read the controls already owned by the options screen, including its MES values. */
++bool modern_cyclic_state(int id,ModernOption* option)
++{
++    CyclicUiControl* ctrl;
++    if(!get_control(&ctrl,id,__FUNCTION__))return false;
++    *option=(ModernOption){.label=ctrl->info.title,.text=NULL,.value=ctrl->value,
++        .maximum=ctrl->max_value,.enabled=ctrl->info.enabled,
++        .numeric=ctrl->info.type==CYCLIC_UI_CONTROL_NUMERIC_BAR};
++    if(ctrl->info.type==CYCLIC_UI_CONTROL_MESSAGE_FILE) {
++        MesFileEntry entry={.num=ctrl->value};
++        if(mes_search(ctrl->mes_file,&entry))option->text=entry.str;
++    } else if(ctrl->info.type==CYCLIC_UI_CONTROL_TEXT_ARRAY
++        && ctrl->value>=0 && ctrl->value<ctrl->info.text_array_size)
++        option->text=ctrl->info.text_array[ctrl->value];
++    return true;
++}
++void modern_cyclic_adjust(int id,int direction)
++{
++    CyclicUiControl* ctrl;
++    if(!get_control(&ctrl,id,__FUNCTION__) || !ctrl->info.enabled)return;
++    if(direction<0)cycle_left(ctrl);else if(direction>0)cycle_right(ctrl);
++}
 diff --git a/src/ui/dialog_ui.c b/src/ui/dialog_ui.c
 --- a/src/ui/dialog_ui.c
 +++ b/src/ui/dialog_ui.c
@@ -842,6 +877,47 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stru_5C36B0[mainmenu_ui_type][0]) {
              sub_5412D0();
              return false;
+@@ -6053,3 +6172,15 @@
+         }
+     }
+ }
++
++bool modern_options_select(int tab)
++{
++    if(mainmenu_ui_window_type!=MM_WINDOW_OPTIONS || tab<0 || tab>=OPTIONS_UI_TAB_COUNT)return false;
++    sub_541E20(tab);
++    return dword_64C440==tab;
++}
++void modern_options_return(void)
++{
++    if(mainmenu_ui_window_type==MM_WINDOW_OPTIONS)
++        mainmenu_ui_press_options(mainmenu_ui_options_buttons[3].button_handle);
++}
+diff --git a/src/ui/options_ui.c b/src/ui/options_ui.c
+--- a/src/ui/options_ui.c
++++ b/src/ui/options_ui.c
+@@ -1,3 +1,4 @@
++#include "ui/modern_ui.h"
+ #include "ui/options_ui.h"
+ 
+ #include "game/anim.h"
+@@ -691,3 +692,16 @@
+ {
+     settings_set_value(&settings, MUSIC_VOLUME_KEY, value);
+ }
++
++bool modern_options_state(int index,ModernOption* option)
++{
++    return options_ui_started && index>=0 && index<MAX_CONTROLS
++        && options_ui_controls[index].initialized
++        && modern_cyclic_state(options_ui_controls[index].id,option);
++}
++void modern_options_adjust(int index,int direction)
++{
++    if(options_ui_started && index>=0 && index<MAX_CONTROLS
++        && options_ui_controls[index].initialized)
++        modern_cyclic_adjust(options_ui_controls[index].id,direction);
++}
 diff --git a/src/ui/schematic_ui.c b/src/ui/schematic_ui.c
 --- a/src/ui/schematic_ui.c
 +++ b/src/ui/schematic_ui.c
