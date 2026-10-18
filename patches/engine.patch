@@ -2857,3 +2857,29 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    info->field_34=x;info->field_38=y;
 +    if(info->refresh_rect)info->refresh_rect(&info->rect);
 +}
+diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
+--- a/src/ui/written_ui.c
++++ b/src/ui/written_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/written_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include "game/critter.h"
+ #include "game/descriptions.h"
+@@ -1277,3 +1278,16 @@
+         pch++;
+     }
+ }
++
++/* Read the already assembled note from the installed language resources. */
++const char* modern_written_text(void)
++{
++    return written_ui_created && written_ui_type==WRITTEN_TYPE_NOTE ? written_ui_text : NULL;
++}
++void modern_written_sync(bool modern)
++{
++    if(!modern_written_text())return;
++    bool hidden=tig_window_is_hidden(written_ui_window);
++    if(modern && !hidden)tig_window_hide(written_ui_window);
++    else if(!modern && hidden)tig_window_show(written_ui_window);
++}

@@ -40,6 +40,7 @@
 #include "ui/logbook_ui.h"
 #include "ui/mainmenu_ui.h"
 #include "ui/slide_ui.h"
+#include "ui/written_ui.h"
 #include "ui/schematic_ui.h"
 #include <tig/tig.h>
 
@@ -1729,6 +1730,7 @@ void modern_ui_tick(void)
     modern_sleep_sync(enabled);
     modern_fate_sync(enabled);
     modern_bubbles_sync(enabled);
+    modern_written_sync(enabled);
     if(!enabled) {modern_followers_sync(false);return;}
     in_game=true;
     panels_tick();

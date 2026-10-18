@@ -4,6 +4,7 @@ static PanelRegion panel_regions[32];
 static int panel_region_count, selector, selector_college, panel_previous;
 static bool sheet_summary;
 static int dialogue_scroll, dialogue_max;
+static int written_scroll,written_max;
 static char dialogue_previous[1000];
 static SDL_FRect dialogue_view;
 static int dialogue_choice=-1;
@@ -27,6 +28,7 @@ static int native_panel(void)
 {
     if(!enabled || !in_game || menu_suspended)return 0;
     if(mainmenu_ui_is_active())return mainmenu_ui_window_type_get()==MM_WINDOW_SHOP && inven_ui_is_created()?2:0;
+    if(modern_written_text())return 9;
     if(play_sheet())return 1;
     if(inven_ui_is_created())return 2;
     if(wmap_ui_is_created())return 3;
@@ -370,6 +372,24 @@ static void draw_inventory(void)
         menu_button((SDL_FRect){qx+295,qy+145,240,50},764,menu_text(54),true);
     }
 }
+static void draw_written(void)
+{
+    const char* text=game_text(modern_written_text());
+    float w=fminf(880,canvas_w-80),h=canvas_h-90,x=(canvas_w-w)/2,y=30;
+    fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){10,8,6,150});
+    frame((SDL_FRect){x-12,y-12,w+24,h+24});
+    material(paper_texture,(SDL_FRect){x,y,w,h-66});
+    SDL_FRect content={x+55,y+38,w-110,h-145};
+    int rows=menu_paragraph(text,(SDL_FRect){0,0,content.w,0},0,INK);
+    written_max=rows-(int)(content.h/27);if(written_max<0)written_max=0;
+    if(written_scroll>written_max)written_scroll=written_max;
+    menu_paragraph(text,content,written_scroll,INK);
+    if(written_max) {
+        menu_button((SDL_FRect){x+w-48,y+20,36,42},991,"^",written_scroll>0);
+        menu_button((SDL_FRect){x+w-48,y+h-120,36,42},992,"v",written_scroll<written_max);
+    }
+    menu_button((SDL_FRect){x+w-250,y+h-55,230,45},990,menu_text(4003),true);
+}
 static void draw_map(void)
 {
     ModernMap map;if(!modern_map_state(&map))return;
@@ -612,6 +632,7 @@ static void draw_play_panels(void)
     switch(native_panel()) {
     case 1:panel_backdrop();if(sheet_summary)draw_sheet_summary();else draw_character_sheet();break;
     case 2:draw_inventory();break;
+    case 9:draw_written();break;
     case 3:draw_map();break;
     case 4:draw_dialogue();break;
     case 5:draw_selector();break;
@@ -623,6 +644,11 @@ static void draw_play_panels(void)
 static bool panels_action(int action)
 {
     int p=native_panel();
+    if(p==9 && action>=990 && action<=992) {
+        if(action==990)written_ui_close();
+        else {written_scroll+=action==991?-3:3;if(written_scroll<0)written_scroll=0;if(written_scroll>written_max)written_scroll=written_max;}
+        return true;
+    }
     if(action==950 || action==951) {
         if(!p && (intgame_mode_get()==INTGAME_MODE_MAIN || intgame_mode_get()==INTGAME_MODE_SKILL)) {
             if(action==950 && intgame_mode_get()==INTGAME_MODE_SKILL && sub_579F90()==1)skill_ui_cancel();
@@ -676,6 +702,7 @@ static void panels_tick(void)
     int p=native_panel();
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
+        if(p==9)written_scroll=0;
         if(p==1){sheet_summary=true;sheet_category=sheet_page=sheet_selected=description_scroll=0;}
         if(p!=5)selector=0;
         binding_cancel=binding_pressed;binding_pressed=binding_moved=false;binding_bar_visible=false;
@@ -740,7 +767,8 @@ static bool panels_event(SDL_Event* event)
     if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP){mouse_x=event->button.x*canvas_w/ww;mouse_y=event->button.y*canvas_h/wh;}
     if((p==2 || p==5) && binding_event(event))return true;
     if(event->type==SDL_EVENT_MOUSE_WHEEL) {
-        if(p==4)pending_action=inside(dialogue_reply_view,mouse_x,mouse_y)?(event->wheel.y>0?822:823):(event->wheel.y>0?820:821);
+        if(p==9)pending_action=event->wheel.y>0?991:992;
+        else if(p==4)pending_action=inside(dialogue_reply_view,mouse_x,mouse_y)?(event->wheel.y>0?822:823):(event->wheel.y>0?820:821);
         else if(p==2)pending_action=inside(inventory_detail_rect,mouse_x,mouse_y)?(event->wheel.y>0?770:771):(event->wheel.y>0?735:736);
         else if(p==1 || p==7){description_scroll+=event->wheel.y>0?-3:3;if(description_scroll<0)description_scroll=0;if(description_scroll>description_max)description_scroll=description_max;}
         return true;
@@ -748,13 +776,14 @@ static bool panels_event(SDL_Event* event)
     if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP) {
         if(p==4 && event->key.scancode==SDL_SCANCODE_ESCAPE)return false;
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
+            if(p==9 && (event->key.scancode==SDL_SCANCODE_PAGEUP || event->key.scancode==SDL_SCANCODE_PAGEDOWN))pending_action=event->key.scancode==SDL_SCANCODE_PAGEUP?991:992;
             if(p==2 && event->key.scancode==SDL_SCANCODE_I && !mainmenu_ui_is_active()
                 && intgame_mode_get()!=INTGAME_MODE_QUANTITY)pending_action=730;
             if(p==5 && (event->key.scancode==SDL_SCANCODE_M || event->key.scancode==SDL_SCANCODE_K)) {
                 int next=event->key.scancode==SDL_SCANCODE_M?1:2;
                 selector=selector==next?0:next;
             }
-            if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
+            if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=p==9?990:p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
             if(p==4 && event->key.scancode>=SDL_SCANCODE_1 && event->key.scancode<=SDL_SCANCODE_5)pending_action=800+event->key.scancode-SDL_SCANCODE_1;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEDOWN)pending_action=821;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEUP)pending_action=820;
