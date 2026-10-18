@@ -677,6 +677,84 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      difficulty_changed();
  
      gamelib_mod_loaded = false;
+@@ -456,6 +457,7 @@
+ // 0x4024D0
+ void gamelib_exit(void)
+ {
++    gamelib_splash_clear();
+     settings_save(&settings);
+ 
+     for (int index = MODULE_COUNT - 1; index >= 0; index--) {
+@@ -1752,11 +1754,60 @@
+     gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
+ }
+ 
++/* Optional native-resolution replacements, keyed to the original splash name.
++ * Keep the engine's rotation and fall back to its installed artwork. */
++static SDL_Texture* gamelib_splash_texture;
++
++void gamelib_splash_clear(void)
++{
++    if(!gamelib_splash_texture)return;
++    tig_video_set_slide_overlay(NULL);
++    SDL_DestroyTexture(gamelib_splash_texture);
++    gamelib_splash_texture=NULL;
++}
++
++static void gamelib_draw_splash(SDL_Renderer* renderer)
++{
++    int width,height,old_width,old_height;
++    float image_width,image_height;
++    SDL_RendererLogicalPresentation old_mode;
++    SDL_GetRenderOutputSize(renderer,&width,&height);
++    SDL_GetTextureSize(gamelib_splash_texture,&image_width,&image_height);
++    SDL_GetRenderLogicalPresentation(renderer,&old_width,&old_height,&old_mode);
++    SDL_SetRenderLogicalPresentation(renderer,width,height,SDL_LOGICAL_PRESENTATION_DISABLED);
++    SDL_SetRenderDrawColor(renderer,0,0,0,255);
++    SDL_RenderFillRect(renderer,NULL);
++    float scale=(float)width/image_width;
++    if(scale*image_height>height)scale=(float)height/image_height;
++    SDL_FRect rect={(width-image_width*scale)/2,(height-image_height*scale)/2,
++        image_width*scale,image_height*scale};
++    SDL_RenderTexture(renderer,gamelib_splash_texture,NULL,&rect);
++    SDL_SetRenderLogicalPresentation(renderer,old_width,old_height,old_mode);
++}
++
++static bool gamelib_load_splash(const char* name)
++{
++    SDL_Renderer* renderer;
++    char path[TIG_MAX_PATH];
++    size_t length=strlen(name);
++    if(length<4 || tig_video_renderer_get(&renderer)!=TIG_OK)return false;
++    snprintf(path,sizeof(path),"modern-ui/splash/%.*s.png",(int)(length-4),name);
++    SDL_strlwr(path);
++    SDL_Surface* image=SDL_LoadPNG(path);
++    if(!image)return false;
++    gamelib_splash_texture=SDL_CreateTextureFromSurface(renderer,image);
++    SDL_DestroySurface(image);
++    if(!gamelib_splash_texture)return false;
++    SDL_SetTextureScaleMode(gamelib_splash_texture,SDL_SCALEMODE_LINEAR);
++    tig_video_set_slide_overlay(gamelib_draw_splash);
++    return true;
++}
++
+ // 0x404830
+ void gamelib_splash(tig_window_handle_t window_handle)
+ {
+     int splash;
+-    TigVideoBuffer* video_buffer;
++    TigVideoBuffer* video_buffer=NULL;
+     TigVideoBufferData vb_data;
+     TigFileList file_list;
+     TigWindowData window_data;
+@@ -1800,6 +1851,7 @@
+             tig_video_buffer_destroy(video_buffer);
+         }
+ 
++        gamelib_load_splash(file_list.entries[value].path);
+         tig_window_invalidate_rect(NULL);
+         tig_window_display();
+ 
 diff --git a/src/game/gamelib.h b/src/game/gamelib.h
 --- a/src/game/gamelib.h
 +++ b/src/game/gamelib.h
@@ -688,6 +766,14 @@ diff --git a/src/game/gamelib.h b/src/game/gamelib.h
  
  #define BRIGHTNESS_KEY "brightness"
  #define TEXT_DURATION_KEY "text duration"
+@@ -85,6 +86,7 @@
+ bool gamelib_init(GameInitInfo* init_info);
+ void gamelib_reset(void);
+ void gamelib_exit(void);
++void gamelib_splash_clear(void);
+ void gamelib_ping(void);
+ void gamelib_resize(GameResizeInfo* resize_info);
+ void gamelib_default_module_name_set(const char* name);
 diff --git a/src/game/gsound.c b/src/game/gsound.c
 --- a/src/game/gsound.c
 +++ b/src/game/gsound.c
@@ -949,16 +1035,17 @@ diff --git a/src/main.c b/src/main.c
  
      if (tig_init(&init_info) != TIG_OK) {
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
-@@ -290,6 +291,8 @@
+@@ -290,6 +291,9 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
++    gamelib_splash_clear();
 +    modern_ui_init();
 +
      if (highres_config->intro) {
          gmovie_play(8, GAME_MOVIE_NO_FINAL_FLIP, 0);
      }
-@@ -317,6 +320,7 @@
+@@ -317,6 +321,7 @@
  
      main_loop();
  
@@ -966,7 +1053,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,6 +387,7 @@
+@@ -383,6 +388,7 @@
              output_profile_data = false;
          }
  
@@ -974,7 +1061,7 @@ diff --git a/src/main.c b/src/main.c
          tig_ping();
          gamelib_ping();
          iso_redraw();
-@@ -743,25 +748,25 @@
+@@ -743,25 +749,25 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {

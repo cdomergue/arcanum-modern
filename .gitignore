@@ -10,6 +10,9 @@
 !/game/modern-ui/death-background.png
 !/game/modern-ui/inventory-actions.png
 !/game/modern-ui/skill-icons.png
+!/game/modern-ui/splash/
+/game/modern-ui/splash/*
+!/game/modern-ui/splash/splash1.png
 /game/modern-ui/settings.ini*
 /game/modern-ui/graphics.ini*
 *.log
