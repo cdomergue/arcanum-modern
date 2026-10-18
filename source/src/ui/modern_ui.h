@@ -8,6 +8,7 @@
 bool modern_ui_init(void);
 void modern_ui_exit(void);
 bool modern_ui_enabled(void);
+bool modern_world_resize(int width,int height,float anchor_x,float anchor_y);
 void modern_ui_tick(void);
 void modern_ui_menu_tick(void);
 bool modern_ui_menu_suspend(bool suspend);

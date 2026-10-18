@@ -1261,8 +1261,57 @@ static bool creation_menu_action(int action)
     return false;
 }
 
+/* Zoom affects the world raster only; native fonts and controls retain their density. */
+static bool hud_region(float x,float y);
+static int zoom_base_width,zoom_base_height;
+static float world_zoom=1,zoom_anchor_x=.5f,zoom_anchor_y=.5f;
+static bool zoom_pending;
+static bool world_zoom_allowed(void)
+{
+    return enabled && in_game && visible() && !mainmenu_ui_is_active() && !journal
+        && !native_panel() && !intgame_is_compact_interface()
+        && intgame_mode_get()==INTGAME_MODE_MAIN;
+}
+static void world_zoom_sync(void)
+{
+    if(!zoom_base_width) {
+        zoom_base_width=hrp_iso_window_width_get();zoom_base_height=hrp_iso_window_height_get();
+        if(!zoom_base_width || !zoom_base_height)return;
+    }
+    bool active=world_zoom_allowed();
+    float zoom=active?world_zoom:1;
+    int width=(int)lroundf(zoom_base_width/zoom),height=(int)lroundf(zoom_base_height/zoom);
+    if(width==hrp_iso_window_width_get() && height==hrp_iso_window_height_get()) {zoom_pending=false;return;}
+    float ax=active && zoom_pending?zoom_anchor_x:.5f,ay=active && zoom_pending?zoom_anchor_y:.5f;
+    if(!modern_world_resize(width,height,ax,ay)) {
+        world_zoom=(float)zoom_base_width/hrp_iso_window_width_get();
+        SDL_Log("World zoom: unable to resize framebuffer");
+    }
+    zoom_pending=false;
+}
+static bool world_zoom_event(SDL_Event* event)
+{
+    if(event->type!=SDL_EVENT_MOUSE_WHEEL || !world_zoom_allowed())return false;
+    int w,h;SDL_GetWindowSize(window,&w,&h);if(w<=0 || h<=0)return false;
+    float x=event->wheel.mouse_x/w,y=event->wheel.mouse_y/h;
+    if(hud_region(x*canvas_w,y*canvas_h))return true;
+    if(SDL_GetMouseState(NULL,NULL)&(SDL_BUTTON_LMASK|SDL_BUTTON_RMASK|SDL_BUTTON_MMASK))return true;
+    float rx,ry;
+    if(!SDL_RenderCoordinatesFromWindow(renderer,event->wheel.mouse_x,event->wheel.mouse_y,&rx,&ry))return true;
+    x=rx/hrp_iso_window_width_get();y=ry/hrp_iso_window_height_get();
+    if(x<0 || x>1 || y<0 || y>1)return true;
+    float delta=event->wheel.y;
+    if(event->wheel.direction==SDL_MOUSEWHEEL_FLIPPED)delta=-delta;
+    float minimum=fmaxf(.5f,fmaxf(zoom_base_width/4096.0f,zoom_base_height/4096.0f));
+    float maximum=fminf(zoom_base_width/800.0f,zoom_base_height/600.0f);
+    world_zoom=fmaxf(minimum,fminf(maximum,world_zoom*powf(1.12f,fmaxf(-8,fminf(8,delta)))));
+    zoom_anchor_x=fmaxf(0,fminf(1,x));zoom_anchor_y=fmaxf(0,fminf(1,y));zoom_pending=true;
+    return true;
+}
+
 void modern_ui_menu_tick(void)
 {
+    world_zoom_sync();
     if (!enabled) return;
     if(mainmenu_ui_is_active() && mainmenu_ui_window_type_get()==MM_WINDOW_SHOP) {
         in_game=true;panels_tick();
@@ -1432,6 +1481,7 @@ static bool handle_ui_event(SDL_Event* event)
         return true;
     }
     if(!menu && panels_event(event))return true;
+    if(world_zoom_event(event))return true;
     if(!menu && (!visible() || (!hud && !journal))) return false;
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
     if(ww<=0 || wh<=0) return false;
@@ -1597,6 +1647,7 @@ void modern_ui_tick(void)
         modern_map_action(8);
         if(!enabled) {modern_intgame_hud_hide(false);hud=false;}
     }
+    world_zoom_sync();
     modern_sleep_sync(enabled);
     modern_fate_sync(enabled);
     modern_bubbles_sync(enabled);

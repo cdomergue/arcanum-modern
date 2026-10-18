@@ -16,6 +16,9 @@ J : ouvrir/fermer le nouveau journal.
 Échap : quitter la recherche, puis fermer le journal ; menu en jeu.
 Échap > Options > Graphismes : mode d'affichage et résolution.
 F9 : basculer entre notre interface et la présentation classique.
+Molette sur le monde : rapprocher / éloigner la vue autour du pointeur.
+Les bandeaux natifs gardent leur taille. Avec le rendu par défaut, zoom de 50 à 120 %.
+Les menus et panneaux conservent leur défilement ; le zoom revient à leur fermeture.
 Flèches gauche/droite, Page précédente/suivante ou molette : tourner les pages.
 A- / A+ : texte du journal de 16 à 26, mémorisé dans game/modern-ui/settings.ini.
 La recherche fonctionne dans la rubrique choisie et ignore casse et accents.

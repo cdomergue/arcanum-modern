@@ -23,6 +23,18 @@ diff --git a/first_party/tig/include/tig/message.h b/first_party/tig/include/tig
  int tig_message_enqueue(TigMessage* message);
  int tig_message_set_key_handler(TigMessageKeyboardCallback callback, int key);
  
+diff --git a/first_party/tig/include/tig/mouse.h b/first_party/tig/include/tig/mouse.h
+--- a/first_party/tig/include/tig/mouse.h
++++ b/first_party/tig/include/tig/mouse.h
+@@ -93,6 +93,8 @@
+ 
+ void tig_mouse_wheel(int dx, int dy);
+ 
++void tig_mouse_resize_screen(int width, int height);
++
+ #ifdef __cplusplus
+ }
+ #endif
 diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/video.h
 --- a/first_party/tig/include/tig/video.h
 +++ b/first_party/tig/include/tig/video.h
@@ -34,6 +46,27 @@ diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/v
  int tig_video_screenshot_set_settings(TigVideoScreenshotSettings* settings);
  int tig_video_screenshot_make(void);
  int tig_video_get_palette(unsigned int* colors);
+@@ -139,6 +140,8 @@
+ int tig_video_buffer_save_to_bmp(TigVideoBufferSaveToBmpInfo* save_info);
+ int tig_video_buffer_load_from_bmp(const char* filename, TigVideoBuffer** video_buffer_ptr, unsigned int flags);
+ 
++int tig_video_resize_logical(int width, int height);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/first_party/tig/include/tig/window.h b/first_party/tig/include/tig/window.h
+--- a/first_party/tig/include/tig/window.h
++++ b/first_party/tig/include/tig/window.h
+@@ -123,6 +123,8 @@
+ int tig_window_modal_dialog(TigWindowModalDialogInfo* modal_info, TigWindowModalDialogChoice* choice_ptr);
+ int tig_window_move(tig_window_handle_t window_handle, int x, int y);
+ 
++int tig_window_resize_world(tig_window_handle_t handle, int width, int height);
++
+ #ifdef __cplusplus
+ }
+ #endif
 diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
 --- a/first_party/tig/src/message.c
 +++ b/first_party/tig/src/message.c
@@ -61,6 +94,18 @@ diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
          SDL_ConvertEventToRenderCoordinates(renderer, &event);
  
          switch (event.type) {
+diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
+--- a/first_party/tig/src/mouse.c
++++ b/first_party/tig/src/mouse.c
+@@ -821,3 +821,8 @@
+     message.data.mouse.repeat = false;
+     tig_message_enqueue(&message);
+ }
++
++void tig_mouse_resize_screen(int width, int height)
++{
++    tig_mouse_screen_bounds = (TigRect){0, 0, width, height};
++}
 diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 --- a/first_party/tig/src/video.c
 +++ b/first_party/tig/src/video.c
@@ -89,6 +134,69 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
      }
  
      SDL_RenderPresent(tig_video_state.renderer);
+@@ -1447,3 +1458,25 @@
+ 
+     return rc;
+ }
++
++/* Replace the logical framebuffer without changing the OS window or display mode. */
++int tig_video_resize_logical(int width, int height)
++{
++    if (!tig_video_initialized || width < 800 || height < 600 || width > 4096 || height > 4096)
++        return TIG_ERR_INVALID_PARAM;
++    SDL_Surface* surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_XRGB8888);
++    SDL_Texture* texture = SDL_CreateTexture(tig_video_state.renderer, SDL_PIXELFORMAT_XRGB8888,
++        SDL_TEXTUREACCESS_STREAMING, width, height);
++    if (!surface || !texture) {
++        SDL_DestroySurface(surface); SDL_DestroyTexture(texture);
++        return TIG_ERR_GENERIC;
++    }
++    if (!SDL_SetRenderLogicalPresentation(tig_video_state.renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX)) {
++        SDL_DestroySurface(surface); SDL_DestroyTexture(texture);
++        return TIG_ERR_GENERIC;
++    }
++    SDL_DestroySurface(tig_video_state.surface); SDL_DestroyTexture(tig_video_state.texture);
++    tig_video_state.surface = surface; tig_video_state.texture = texture;
++    stru_610388 = (TigRect){0, 0, width, height};
++    return TIG_OK;
++}
+diff --git a/first_party/tig/src/window.c b/first_party/tig/src/window.c
+--- a/first_party/tig/src/window.c
++++ b/first_party/tig/src/window.c
+@@ -1804,3 +1804,33 @@
+ 
+     return TIG_OK;
+ }
++
++/* Keep the world handle and message filter stable while changing its raster size. */
++int tig_window_resize_world(tig_window_handle_t handle, int width, int height)
++{
++    if (!tig_window_initialized || handle == TIG_WINDOW_HANDLE_INVALID
++        || width < 800 || height < 600 || width > 4096 || height > 4096) return TIG_ERR_INVALID_PARAM;
++    int index = tig_window_handle_to_index(handle);
++    if (index < 0 || index >= TIG_WINDOW_MAX) return TIG_ERR_INVALID_PARAM;
++    TigWindow* win = &windows[index];
++    if (win->usage & TIG_WINDOW_USAGE_FREE || win->flags & TIG_WINDOW_TRANSPARENT) return TIG_ERR_INVALID_PARAM;
++    TigVideoBufferCreateInfo info = {0};
++    info.flags = TIG_VIDEO_BUFFER_CREATE_VIDEO_MEMORY;
++    info.width = width; info.height = height; info.background_color = win->background_color;
++    TigVideoBuffer* buffer;
++    int rc = tig_video_buffer_create(&info, &buffer);
++    if (rc != TIG_OK) return rc;
++    rc = tig_video_resize_logical(width, height);
++    if (rc != TIG_OK) {tig_video_buffer_destroy(buffer);return rc;}
++    tig_video_buffer_destroy(win->video_buffer); win->video_buffer = buffer;
++    win->frame.width = win->bounds.width = width;
++    win->frame.height = win->bounds.height = height;
++    tig_window_screen_rect = (TigRect){0, 0, width, height};
++    while (tig_window_dirty_rects) {
++        TigRectListNode* node = tig_window_dirty_rects;
++        tig_window_dirty_rects = node->next; tig_rect_node_destroy(node);
++    }
++    tig_mouse_resize_screen(width, height);
++    tig_window_invalidate_rect(NULL);
++    return TIG_OK;
++}
 diff --git a/src/game/tb.c b/src/game/tb.c
 --- a/src/game/tb.c
 +++ b/src/game/tb.c
@@ -397,7 +505,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
  #include <stdio.h>
  
-@@ -2685,6 +2686,15 @@
+@@ -43,6 +44,7 @@
+ #include "ui/broadcast_ui.h"
+ #include "ui/charedit_ui.h"
+ #include "ui/compact_ui.h"
++#include "ui/combat_ui.h"
+ #include "ui/dialog_ui.h"
+ #include "ui/fate_ui.h"
+ #include "ui/follower_ui.h"
+@@ -2685,6 +2687,15 @@
          }
      }
  
@@ -413,7 +529,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (msg->type == TIG_MESSAGE_KEYBOARD
          && !textedit_ui_is_focused()
          && !msg->data.keyboard.pressed
-@@ -4088,6 +4098,10 @@
+@@ -4088,6 +4099,10 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
  {
@@ -424,7 +540,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4114,7 @@
+@@ -4100,6 +4115,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -432,7 +548,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4178,16 @@
+@@ -4163,9 +4179,16 @@
      }
  }
  
@@ -449,7 +565,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4224,11 @@
+@@ -4202,6 +4225,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -461,7 +577,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -6239,6 +6266,15 @@
+@@ -6239,6 +6267,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -477,7 +593,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6318,7 @@
+@@ -6282,6 +6319,7 @@
              }
          }
      }
@@ -485,7 +601,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6610,7 @@
+@@ -6573,6 +6611,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -493,7 +609,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6649,16 @@
+@@ -6611,6 +6650,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -510,7 +626,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6843,11 @@
+@@ -6795,6 +6844,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -522,7 +638,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7665,7 @@
+@@ -7612,6 +7666,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -530,7 +646,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7694,7 @@
+@@ -7640,7 +7695,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -539,7 +655,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7838,7 @@
+@@ -7784,7 +7839,7 @@
          mes_file_entry.str,
          value);
  
@@ -548,7 +664,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8887,81 @@
+@@ -8833,3 +8888,110 @@
  
      follower_ui_show();
  }
@@ -629,6 +745,35 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    if(object==OBJ_HANDLE_NULL || object!=modern_hover_object || !obj_handle_is_valid(object)
 +        || !modern_hover_snapshot.count || intgame_mode_get()==INTGAME_MODE_DIALOG)return NULL;
 +    return &modern_hover_snapshot;
++}
++
++/* Resize all world subsystems together; the native UI uses physical pixels. */
++bool modern_world_resize(int width, int height, float anchor_x, float anchor_y)
++{
++    TigWindowData data;
++    if (tig_window_data(dword_64C52C, &data) != TIG_OK) return false;
++    int old_width = data.rect.width, old_height = data.rect.height;
++    if (width == old_width && height == old_height) return true;
++    if (tig_window_resize_world(dword_64C52C, width, height) != TIG_OK) return false;
++    GameResizeInfo resize = {0};
++    resize.window_handle = dword_64C52C;
++    resize.window_rect = resize.content_rect = (TigRect){0, 0, width, height};
++    gamelib_resize(&resize);
++    /* Interface-layout callbacks rebuild classic buttons at new HRP offsets.
++     * Only the viewport consumers must follow a camera zoom. */
++    target_resize(&resize);
++    iso_resize(&resize);
++    combat_ui_resize(&resize);
++    follower_ui_resize(&resize);
++    location_origin_scroll((int)((width-old_width)*anchor_x), (int)((height-old_height)*anchor_y));
++    object_hover_obj_set(OBJ_HANDLE_NULL);
++    iso_invalidate_rect(&resize.content_rect);
++    SDL_Renderer* renderer;
++    if (tig_video_renderer_get(&renderer) == TIG_OK) {
++        float x,y,rx,ry; SDL_GetMouseState(&x,&y);
++        if (SDL_RenderCoordinatesFromWindow(renderer,x,y,&rx,&ry)) tig_mouse_set_position((int)rx,(int)ry);
++    }
++    return true;
 +}
 diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 --- a/src/ui/inven_ui.c
