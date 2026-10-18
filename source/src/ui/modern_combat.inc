@@ -12,6 +12,15 @@ static int tactical_line_count;
 static struct { int number; SDL_Texture* texture; float width,height; } tactical_portraits[32];
 static int tactical_portrait_count;
 
+/* Rendering can occur inside engine transitions, before the next UI tick.
+ * A turn-order snapshot must never keep a freed object alive implicitly. */
+static int64_t tactical_order_actor(int index)
+{
+    if(index<0 || index>=tactical_count || index>=128)return OBJ_HANDLE_NULL;
+    int64_t actor=tactical_order[index];
+    return actor && obj_handle_is_valid(actor)?actor:OBJ_HANDLE_NULL;
+}
+
 /* Only newly introduced controls need new strings. All game names, statistics,
  * spells, costs and outcomes below come from the installed localization. */
 enum {TC_END,TC_AP,TC_ROUND,TC_WAIT,TC_MOVE,TC_ATTACK,TC_BLOCKED,TC_RANGE,TC_FATIGUE,TC_BUSY,TC_LOG,TC_AFTER_MOVE,TC_MAINTAINED};
@@ -38,7 +47,9 @@ static void tactical_portraits_clear(void)
 }
 static void tactical_portrait(int64_t actor,SDL_FRect rect)
 {
-    int number=-1;bool portrait=intgame_examine_portrait(player_get_local_pc_obj(),actor,&number);
+    int64_t viewer=player_get_local_pc_obj();
+    if(!actor || !obj_handle_is_valid(actor) || !viewer || !obj_handle_is_valid(viewer))return;
+    int number=-1;bool portrait=intgame_examine_portrait(viewer,actor,&number);
     if(!portrait){draw_art(number,rect,true);return;}
     int i=0;while(i<tactical_portrait_count && tactical_portraits[i].number!=number)i++;
     if(i==tactical_portrait_count && i<32){
@@ -64,6 +75,8 @@ static void tactical_tick(void)
     bool active=tactical_active();
     if(!active){
         if(tactical_was_active){tactical_portraits_clear();tactical_actor=0;tactical_has_preview=false;}
+        tactical_count=0;tactical_pressed_actor=0;
+        memset(tactical_order,0,sizeof(tactical_order));
         tactical_was_active=false;return;
     }
     enabled=true;
@@ -96,7 +109,7 @@ static void draw_tactical_preview(void)
 {
     if(!tactical_has_preview || native_panel() || tactical_region(mouse_x,mouse_y))return;
     ModernCombatPreview* p=&tactical_preview;
-    if(p->actor!=combat_input_actor())return;
+    if(!p->actor || !obj_handle_is_valid(p->actor) || p->actor!=combat_input_actor())return;
     SDL_Color green={129,212,153,220},red={236,128,95,220};
     for(int i=1;i<p->count;i++){
         SDL_FPoint a=tactical_point(p->path[i-1]),b=tactical_point(p->path[i]);
@@ -158,7 +171,8 @@ static void draw_tactical_hud(void)
     button((SDL_FRect){tx+47,40,29,25},1102,">",-1,false,(tactical_page+1)*10<tactical_count);
     for(int j=0;j<10;j++){
         int i=tactical_page*10+j;if(i>=tactical_count)break;
-        int64_t obj=tactical_order[i];float x=tx+90+j*80;
+        int64_t obj=tactical_order_actor(i);if(!obj)continue;
+        float x=tx+90+j*80;
         SDL_FRect rect={x,16,74,53};bool selected=obj==tactical_actor;
         button(rect,1200+i,"",-1,selected,true);
         tactical_portrait(obj,(SDL_FRect){x+4,19,31,40});
@@ -222,7 +236,7 @@ static bool tactical_action(int action)
     if(action==1111){if(tactical_spell_page<7)tactical_spell_page++;return true;}
     if(action==1106){tactical_log_open=!tactical_log_open;return true;}
     if(action>=1200 && action<1328){
-        int i=action-1200;if(i<tactical_count && obj_handle_is_valid(tactical_order[i]))location_origin_set(obj_field_int64_get(tactical_order[i],OBJ_F_LOCATION));
+        int64_t obj=tactical_order_actor(action-1200);if(obj)location_origin_set(obj_field_int64_get(obj,OBJ_F_LOCATION));
         return true; /* Camera only: selecting a portrait never changes turn/AP. */
     }
     bool command=action==5 || action==6 || action==950 || action==951
