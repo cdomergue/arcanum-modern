@@ -298,37 +298,44 @@ static void draw_world_hover(void)
 {
     if(journal || native_panel() || !visible())return;
     const ModernDetails* detail=modern_hover_details();if(!detail)return;
-    float width=fminf(760,canvas_w-80),text_width=width-144,height=36;
+    float width=fminf(700,canvas_w-80),text_width=width-96;
+    /* Pack the original fields into one wrapping row, preserving every value. */
+    char description[40100]="";size_t used=0;
     for(int i=0;i<detail->count;i++) {
         if(!strcmp(detail->lines[i],detail->title))continue;
-        height+=menu_paragraph(game_text(detail->lines[i]),(SDL_FRect){0,0,text_width,0},0,GOLD)*27+4;
+        bool gauge=false;
+        for(int j=0;j<detail->bar_count;j++)if(detail->bar_lines[j]==i)gauge=true;
+        if(gauge)continue;
+        const char* separator=used?(detail->bar_count?"   |   ":"\n"):"";
+        used+=(size_t)snprintf(description+used,sizeof(description)-used,"%s%s",separator,detail->lines[i]);
     }
     int title_rows=menu_paragraph(game_text(detail->title),(SDL_FRect){0,0,text_width,0},0,GOLD);
-    height+=title_rows*27;
-    if(detail->extra_count)height+=42;
-    if(height<122)height=122;
-    float x=(canvas_w-width)/2,y=canvas_h-142-height;
+    int rows=*description?menu_paragraph(game_text(description),(SDL_FRect){0,0,text_width,0},0,GOLD):0;
+    float height=20+(title_rows+rows)*27+(detail->bar_count?26:0)+(detail->extra_count?28:0);
+    if(height<86)height=86;
+    float x=(canvas_w-width)/2,y=canvas_h-136-height;
     fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,220});outline((SDL_FRect){x,y,width,height},MUTED);
-    if(detail->portrait>=0)draw_portrait(detail->portrait,(SDL_FRect){x+16,y+16,88,102});
-    else if(detail->icon>=0)draw_art(detail->icon,(SDL_FRect){x+16,y+16,88,88},true);
-    float tx=x+122,ty=y+16;
-    menu_paragraph(game_text(detail->title),(SDL_FRect){tx,ty,text_width,title_rows*27},0,GOLD);ty+=title_rows*27+8;
-    for(int i=0;i<detail->count;i++) {
-        if(!strcmp(detail->lines[i],detail->title))continue;
-        int bar=-1;for(int j=0;j<detail->bar_count;j++)if(detail->bar_lines[j]==i)bar=j;
-        if(bar>=0) {
-            int kind=detail->bar_kinds[bar];SDL_Color c=kind==1?(SDL_Color){105,136,244,255}:kind==2?(SDL_Color){124,194,94,255}:(SDL_Color){216,65,53,255};
-            float fraction=fmaxf(0,fminf(1,detail->bar_values[bar]/100.0f));
-            SDL_FRect gauge={tx,ty+6,text_width-118,14};
-            fill(gauge,(SDL_Color){35,30,25,255});outline(gauge,MUTED);
-            fill((SDL_FRect){gauge.x+2,gauge.y+2,(gauge.w-4)*fraction,gauge.h-4},c);
-            text_draw(1,game_text(detail->lines[i]),tx+text_width-106,ty,c);ty+=31;
-        } else {
-            int rows=menu_paragraph(game_text(detail->lines[i]),(SDL_FRect){0,0,text_width,0},0,GOLD);
-            menu_paragraph(game_text(detail->lines[i]),(SDL_FRect){tx,ty,text_width,rows*27},0,GOLD);ty+=rows*27+4;
-        }
+    if(detail->portrait>=0)draw_portrait(detail->portrait,(SDL_FRect){x+10,y+10,56,65});
+    else if(detail->icon>=0)draw_art(detail->icon,(SDL_FRect){x+10,y+10,56,56},true);
+    float tx=x+78,ty=y+10;
+    menu_paragraph(game_text(detail->title),(SDL_FRect){tx,ty,text_width,title_rows*27},0,GOLD);ty+=title_rows*27;
+    if(rows) {
+        menu_paragraph(game_text(description),(SDL_FRect){tx,ty,text_width,rows*27},0,GOLD);ty+=rows*27;
     }
-    for(int i=0;i<detail->extra_count;i++)draw_art(detail->extra_icons[i],(SDL_FRect){tx+i*42,ty,36,36},true);
+    float column_width=(text_width-20*(detail->bar_count-1))/fmaxf(1,detail->bar_count);
+    for(int j=0;j<detail->bar_count;j++) {
+        int i=detail->bar_lines[j];if(i<0 || i>=detail->count)continue;
+        int kind=detail->bar_kinds[j];SDL_Color c=kind==1?(SDL_Color){105,136,244,255}:kind==2?(SDL_Color){124,194,94,255}:(SDL_Color){216,65,53,255};
+        const char* value=game_text(detail->lines[i]);float value_width=text_measure(1,value);
+        float gx=tx+j*(column_width+20);
+        SDL_FRect gauge={gx,ty+7,column_width-value_width-10,10};
+        float fraction=fmaxf(0,fminf(1,detail->bar_values[j]/100.0f));
+        fill(gauge,(SDL_Color){35,30,25,255});outline(gauge,MUTED);
+        fill((SDL_FRect){gauge.x+2,gauge.y+2,(gauge.w-4)*fraction,gauge.h-4},c);
+        text_draw(1,value,gx+column_width-value_width,ty,c);
+    }
+    if(detail->bar_count)ty+=26;
+    for(int i=0;i<detail->extra_count;i++)draw_art(detail->extra_icons[i],(SDL_FRect){tx+i*28,ty,24,24},true);
 }
 static void draw_world_bubbles(void)
 {
