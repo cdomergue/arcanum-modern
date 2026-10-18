@@ -1,0 +1,1004 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,6 +24,10 @@
+ 
+ # Keep alphabetically sorted.
+ set(SRCS
++    "src/ui/modern_graphics.c"
++    "src/ui/modern_graphics.h"
++    "src/ui/modern_ui.c"
++    "src/ui/modern_ui.h"
+     "src/game/a_name.c"
+     "src/game/a_name.h"
+     "src/game/ai.c"
+diff --git a/first_party/tig/include/tig/message.h b/first_party/tig/include/tig/message.h
+--- a/first_party/tig/include/tig/message.h
++++ b/first_party/tig/include/tig/message.h
+@@ -78,6 +78,7 @@
+ int tig_message_init(TigInitInfo* init_info);
+ void tig_message_exit(void);
+ void tig_message_ping(void);
++void tig_message_set_native_filter(bool (*filter)(SDL_Event*));
+ int tig_message_enqueue(TigMessage* message);
+ int tig_message_set_key_handler(TigMessageKeyboardCallback callback, int key);
+ 
+diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/video.h
+--- a/first_party/tig/include/tig/video.h
++++ b/first_party/tig/include/tig/video.h
+@@ -113,6 +113,7 @@
+ int tig_video_blit(TigVideoBuffer* src_video_buffer, TigRect* src_rect, TigRect* dst_rect);
+ int tig_video_fill(const TigRect* rect, tig_color_t color);
+ int tig_video_flip(void);
++void tig_video_set_overlay(void (*draw)(SDL_Renderer*));
+ int tig_video_screenshot_set_settings(TigVideoScreenshotSettings* settings);
+ int tig_video_screenshot_make(void);
+ int tig_video_get_palette(unsigned int* colors);
+diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
+--- a/first_party/tig/src/message.c
++++ b/first_party/tig/src/message.c
+@@ -80,6 +80,13 @@
+     tig_message_mutex = NULL;
+ }
+ 
++static bool (*native_event_filter)(SDL_Event*);
++
++void tig_message_set_native_filter(bool (*filter)(SDL_Event*))
++{
++    native_event_filter = filter;
++}
++
+ // 0x52B7B0
+ void tig_message_ping(void)
+ {
+@@ -108,6 +115,9 @@
+     }
+ 
+     while (SDL_PollEvent(&event)) {
++        if (native_event_filter != NULL && native_event_filter(&event)) {
++            continue;
++        }
+         SDL_ConvertEventToRenderCoordinates(renderer, &event);
+ 
+         switch (event.type) {
+diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
+--- a/first_party/tig/src/video.c
++++ b/first_party/tig/src/video.c
+@@ -235,6 +235,13 @@
+     return TIG_OK;
+ }
+ 
++static void (*native_overlay)(SDL_Renderer*);
++
++void tig_video_set_overlay(void (*draw)(SDL_Renderer*))
++{
++    native_overlay = draw;
++}
++
+ // 0x51F8F0
+ int tig_video_flip(void)
+ {
+@@ -259,6 +266,10 @@
+     if (tig_video_show_fps) {
+         SDL_SetRenderDrawColor(tig_video_state.renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+         SDL_RenderDebugTextFormat(tig_video_state.renderer, 0, 0, "%d", tig_video_state.fps);
++    }
++
++    if (native_overlay != NULL) {
++        native_overlay(tig_video_state.renderer);
+     }
+ 
+     SDL_RenderPresent(tig_video_state.renderer);
+diff --git a/src/game/tb.c b/src/game/tb.c
+--- a/src/game/tb.c
++++ b/src/game/tb.c
+@@ -1,4 +1,5 @@
+ #include "game/tb.h"
++#include "ui/modern_ui.h"
+ 
+ #include "game/gamelib.h"
+ #include "game/object.h"
+@@ -372,6 +373,7 @@
+     // Iterate through active text bubbles.
+     for (idx = 0; idx < MAX_TEXT_BUBBLES; idx++) {
+         if ((tb_text_bubbles[idx].flags & TEXT_BUBBLE_IN_USE) != 0) {
++            if(tb_text_bubbles[idx].obj==modern_dialog_actor())continue;
+             // Get the bubble's screen rect.
+             tb_get_rect(&(tb_text_bubbles[idx]), &tb_rect);
+ 
+@@ -800,3 +802,11 @@
+         break;
+     }
+ }
++
++bool modern_dialog_anchor(int* x,int* y)
++{
++    TextBubble* bubble=find_text_bubble(modern_dialog_actor());
++    if(!bubble)return false;
++    TigRect rect;tb_get_rect(bubble,&rect);
++    *x=rect.x+rect.width/2;*y=rect.y;return true;
++}
+diff --git a/src/game/tc.c b/src/game/tc.c
+--- a/src/game/tc.c
++++ b/src/game/tc.c
+@@ -1,4 +1,5 @@
+ #include "game/tc.h"
++#include "ui/modern_ui.h"
+ 
+ /**
+  * The number of lines in the text conversation.
+@@ -274,6 +275,7 @@
+  */
+ void tc_draw(GameDrawInfo* draw_info)
+ {
++    if(modern_dialog_actor()!=0)return;
+     // Make sure we're not in the editor.
+     if (tc_editor) {
+         return;
+diff --git a/src/main.c b/src/main.c
+--- a/src/main.c
++++ b/src/main.c
+@@ -46,6 +46,7 @@
+ #include "ui/intgame.h"
+ #include "ui/iso.h"
+ #include "ui/logbook_ui.h"
++#include "ui/modern_ui.h"
+ #include "ui/mainmenu_ui.h"
+ #include "ui/textedit_ui.h"
+ #include "ui/wmap_rnd.h"
+@@ -205,7 +206,7 @@
+ 
+     // Specify window name.
+     init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
+-    init_info.window_name = "Arcanum: Of Steamworks & Magick Obscura - Community Edition";
++    init_info.window_name = "Arcanum - Atelier interface";
+ 
+     if (tig_init(&init_info) != TIG_OK) {
+         return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
+@@ -290,6 +291,8 @@
+         return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
+     }
+ 
++    modern_ui_init();
++
+     if (highres_config->intro) {
+         gmovie_play(8, GAME_MOVIE_NO_FINAL_FLIP, 0);
+     }
+@@ -317,6 +320,7 @@
+ 
+     main_loop();
+ 
++    modern_ui_exit();
+     gameuilib_mod_unload();
+     gamelib_mod_unload();
+     gameuilib_exit();
+@@ -383,6 +387,7 @@
+             output_profile_data = false;
+         }
+ 
++        modern_ui_tick();
+         tig_ping();
+         gamelib_ping();
+         iso_redraw();
+diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
+--- a/src/ui/charedit_ui.c
++++ b/src/ui/charedit_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/charedit_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -3887,3 +3888,44 @@
+     charedit_error_msg.str = charedit_errors[CHAREDIT_ERR_SKILL_AT_MIN];
+     intgame_message_window_display_msg(&charedit_error_msg);
+ }
++
++/* Use the original point accounting, prerequisites and accepted-value checks. */
++const char* modern_charedit_text(int number)
++{
++    MesFileEntry entry = { 0 };
++    entry.num = number;
++    mes_get_msg(charedit_mes_file, &entry);
++    return entry.str;
++}
++
++void modern_charedit_adjust(int category, int index, int direction)
++{
++    if (!charedit_is_created() || charedit_obj != player_get_local_pc_obj()) return;
++    TigMessage message = { 0 };
++    message.type = TIG_MESSAGE_BUTTON;
++    message.data.button.state = TIG_BUTTON_STATE_PRESSED;
++    if (category == 0 && index >= 0 && index < 10) {
++        message.data.button.button_handle = direction > 0
++            ? stru_5C7F88[index].button_handle : stru_5C8028[index].button_handle;
++        charedit_window_message_filter(&message);
++    } else if (category == 1 && index >= 0 && index < SKILL_COUNT) {
++        message.data.button.button_handle = direction > 0
++            ? charedit_skills_plus_buttons[index].button_handle : charedit_skills_minus_buttons[index].button_handle;
++        charedit_skills_win_message_filter(&message);
++    } else if (category == 2 && index >= 0 && index < TECH_COUNT) {
++        /* Classic +/- buttons are created only when their panel is refreshed. */
++        int degree = tech_degree_get(charedit_obj, index);
++        if (direction > 0 && degree < DEGREE_COUNT - 1) tech_ui_inc_degree(charedit_obj, index);
++        else if (direction < 0 && degree > 0) tech_ui_dec_degree(charedit_obj, index);
++    } else if (category == 3 && index >= 0 && index < COLLEGE_COUNT) {
++        int level = spell_college_level_get(charedit_obj, index);
++        if (direction > 0 && level < 5) spell_ui_add(charedit_obj, 5 * index + level);
++        else if (direction < 0 && level > dword_64D364[index])
++            spell_ui_remove(charedit_obj, 5 * index + level - 1);
++    }
++    charedit_refresh();
++}
++
++
++int64_t modern_charedit_object(void) { return charedit_created ? charedit_obj : OBJ_HANDLE_NULL; }
++bool modern_charedit_editable(void) { return charedit_created && charedit_mode!=CHAREDIT_MODE_PASSIVE; }
+diff --git a/src/ui/dialog_ui.c b/src/ui/dialog_ui.c
+--- a/src/ui/dialog_ui.c
++++ b/src/ui/dialog_ui.c
+@@ -1,4 +1,6 @@
+ #include "ui/dialog_ui.h"
++
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -517,3 +519,24 @@
+         dialog_ui_speech_handle = TIG_SOUND_HANDLE_INVALID;
+     }
+ }
++
++
++const DialogState* modern_dialog_state(void)
++{
++    if (!modern_ui_enabled() || intgame_mode_get()!=INTGAME_MODE_DIALOG
++        || !dialog_ui_local_pc_dialog_active) return NULL;
++    DialogUiEntry* entry=sub_567420(player_get_local_pc_obj());
++    return entry ? &entry->state : NULL;
++}
++int64_t modern_dialog_actor(void)
++{
++    const DialogState* state=modern_dialog_state();
++    return state ? state->npc_obj : OBJ_HANDLE_NULL;
++}
++void modern_dialog_choose(int index)
++{
++    const DialogState* state=modern_dialog_state();
++    if (!state || index<0 || index>=state->num_options) return;
++    DialogUiEntry* entry=sub_567420(state->pc_obj);
++    dialog_ui_process_option(entry,index);
++}
+diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
+--- a/src/ui/fate_ui.c
++++ b/src/ui/fate_ui.c
+@@ -1,3 +1,4 @@
++#include "ui/modern_ui.h"
+ #include "ui/fate_ui.h"
+ 
+ #include "game/critter.h"
+@@ -342,3 +343,25 @@
+ 
+     charedit_refresh();
+ }
++
++int modern_fate_count(void) {return fate_ui_created?FATE_COUNT:0;}
++const char* modern_fate_text(int index)
++{
++    MesFileEntry entry={.num=index};mes_get_msg(fate_ui_mes,&entry);return entry.str;
++}
++bool modern_fate_active(int index) {return fate_ui_created && fate_is_activated(fate_ui_obj,index);}
++void modern_fate_sync(bool native)
++{
++    if(!fate_ui_created)return;
++    if(native)tig_window_hide(fate_ui_window);else tig_window_show(fate_ui_window);
++}
++void modern_fate_choose(int index)
++{
++    if(!fate_ui_created)return;
++    if(index<0){fate_ui_close();return;}
++    if(index>=FATE_COUNT)return;
++    TigMessage message={0};message.type=TIG_MESSAGE_BUTTON;
++    message.data.button.button_handle=fate_ui_buttons[index].button_handle;
++    message.data.button.state=modern_fate_active(index)?TIG_BUTTON_STATE_RELEASED:TIG_BUTTON_STATE_PRESSED;
++    fate_ui_message_filter(&message);
++}
+diff --git a/src/ui/intgame.c b/src/ui/intgame.c
+--- a/src/ui/intgame.c
++++ b/src/ui/intgame.c
+@@ -1,4 +1,5 @@
+ #include "ui/intgame.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -2685,6 +2686,15 @@
+         }
+     }
+ 
++    /* Hidden command bars no longer run their window message filter. Route
++     * conversation events before hotkeys or world movement when using the
++     * native HUD; Escape and Options retain the original filter's behavior.
++     */
++    if (intgame_mode_get() == INTGAME_MODE_DIALOG
++        && intgame_dialog_process_event_func != NULL && sub_54B5D0(msg)) {
++        return;
++    }
++
+     if (msg->type == TIG_MESSAGE_KEYBOARD
+         && !textedit_ui_is_focused()
+         && !msg->data.keyboard.pressed
+@@ -4088,6 +4098,10 @@
+ // 0x550750
+ void intgame_message_window_display_msg(UiMessage* ui_message)
+ {
++    if (ui_message->type >= UI_MSG_TYPE_POISON
++        && ui_message->type <= UI_MSG_TYPE_FEEDBACK) {
++        modern_ui_message(ui_message->str);
++    }
+     sub_552770(ui_message);
+     if (dword_64C6D4 != NULL) {
+         dword_64C6D4(ui_message);
+@@ -4100,6 +4114,7 @@
+     UiMessage ui_message;
+ 
+     (void)a1;
++    modern_ui_message(str);
+ 
+     if (dword_64C6D4 != NULL) {
+         ui_message.type = UI_MSG_TYPE_FEEDBACK;
+@@ -4163,9 +4178,13 @@
+     }
+ }
+ 
++/* Collect the original localized detail fields without touching the legacy surface. */
++static ModernDetails* modern_details_capture;
++
+ // 0x550930
+ void intgame_message_window_clear_internal(void)
+ {
++    if(modern_details_capture)return;
+     if (!intgame_iso_interface_created) {
+         return;
+     }
+@@ -4202,6 +4221,11 @@
+ // 0x550A10
+ bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
+ {
++    if(modern_details_capture) {
++        if(str && *str && modern_details_capture->count<20)
++            snprintf(modern_details_capture->lines[modern_details_capture->count++],2000,"%s",str);
++        return true;
++    }
+     TigFont font_desc;
+     TigRect text_rect;
+     int width;
+@@ -6573,6 +6597,7 @@
+ // 0x554560
+ void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
+ {
++    if(modern_details_capture){modern_details_capture->icon=num;return;}
+     tig_art_id_t art_id;
+     TigArtFrameData art_frame_data;
+     TigArtBlitInfo blit_info;
+@@ -7640,7 +7665,7 @@
+         mes_file_entry.str,
+         item_total_attack(obj));
+ 
+-    if (intgame_iso_window_type != ROTWIN_TYPE_MSG) {
++    if (!modern_details_capture && intgame_iso_window_type != ROTWIN_TYPE_MSG) {
+         intgame_message_window_display_str(-1, str);
+         return;
+     }
+@@ -7784,7 +7809,7 @@
+         mes_file_entry.str,
+         value);
+ 
+-    if (intgame_iso_window_type != ROTWIN_TYPE_MSG) {
++    if (!modern_details_capture && intgame_iso_window_type != ROTWIN_TYPE_MSG) {
+         intgame_message_window_display_str(-1, buffer);
+         return;
+     }
+@@ -8833,3 +8858,73 @@
+ 
+     follower_ui_show();
+ }
++
++/* Hide only the old command bars. World, followers and modal screens stay live. */
++void modern_intgame_hud_hide(bool hide)
++{
++    static bool hidden;
++    if (!intgame_iso_interface_created) return;
++    for (int i = 0; i < 2; i++) {
++        /* Menus can restore these windows without changing our requested state. */
++        if (hide && !tig_window_is_hidden(dword_64C4F8[i])) {
++            tig_window_hide(dword_64C4F8[i]);
++        } else if (!hide && hidden && !intgame_is_compact_interface()
++            && tig_window_is_hidden(dword_64C4F8[i])) {
++            tig_window_show(dword_64C4F8[i]);
++        }
++    }
++    hidden = hide;
++}
++
++void modern_intgame_action(int action)
++{
++    TigMessage message = {0};
++    message.type = TIG_MESSAGE_BUTTON;
++    message.data.button.state = TIG_BUTTON_STATE_RELEASED;
++    if (action >= 0 && action < 5) {
++        message.data.button.button_handle = intgame_primary_buttons[action].button_handle;
++    } else if (action >= 5 && action < 9) {
++        message.data.button.button_handle = intgame_secondary_buttons[action - 5].button_handle;
++    } else if (action == 9) {
++        message.data.button.button_handle = intgame_sleep_button_info.button_handle;
++    } else if (action == 10) {
++        message.data.button.button_handle = intgame_clock_button_info.button_handle;
++    } else return;
++    iso_interface_message_filter(&message);
++}
++
++
++void modern_quantity_state(int* value,int* maximum) { *value=intgame_quantity;*maximum=intgame_max_quantity; }
++void modern_quantity_action(int value,bool accept)
++{
++    if(intgame_mode_get()!=INTGAME_MODE_QUANTITY)return;
++    if(value<0) {sub_575770();intgame_mode_set(INTGAME_MODE_MAIN);iso_interface_window_set(ROTWIN_TYPE_MSG);return;}
++    intgame_quantity=value>intgame_max_quantity?intgame_max_quantity:value;
++    intgame_refresh_quantity();
++    if(accept){sub_578B80(intgame_quantity);intgame_mode_set(INTGAME_MODE_MAIN);}
++}
++
++const char* modern_intgame_text(int number)
++{
++    MesFileEntry entry={.num=number};mes_get_msg(intgame_mes_file,&entry);return entry.str;
++}
++
++int modern_intgame_icon(int slot)
++{
++    UiPrimaryButton ids[]={UI_PRIMARY_BUTTON_CHAR,UI_PRIMARY_BUTTON_INVENTORY,
++        UI_PRIMARY_BUTTON_LOGBOOK,intgame_map_button};
++    return slot>=0 && slot<4?intgame_ui_primary_button_icons[ids[slot]]:137;
++}
++void modern_inventory_details(int64_t pc,int64_t object,int kind,ModernDetails* details)
++{
++    memset(details,0,sizeof(*details));details->icon=-1;
++    if(!object)return;
++    modern_details_capture=details;
++    if(kind==1)intgame_message_window_display_attack(object);
++    else if(kind==2)intgame_message_window_display_defense(object);
++    else {
++        char name[MAX_STRING];sub_57CD60(pc,object,name);
++        intgame_examine_item(pc,object,name);
++    }
++    modern_details_capture=NULL;
++}
+diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
+--- a/src/ui/inven_ui.c
++++ b/src/ui/inven_ui.c
+@@ -1,4 +1,6 @@
+ #include "ui/inven_ui.h"
++
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -4595,3 +4597,57 @@
+     blit_info.dst_rect = rect;
+     tig_window_blit_art(inven_ui_window_handle, &blit_info);
+ }
++
++
++bool modern_inventory_state(ModernInventory* state)
++{
++    if (!inven_ui_created) return false;
++    *state=(ModernInventory){.mode=inven_ui_mode,.scroll=dword_681508,
++        .rows=inven_ui_mode==INVEN_UI_MODE_BARTER?7:8,
++        .pc=inven_ui_pc_obj,.target=qword_682C78,.owner=qword_6813A8,
++        .paperdoll=inven_ui_panel==INVEN_UI_PANEL_PAPERDOLL,
++        .target_paperdoll=inven_ui_target_panel==INVEN_UI_PANEL_PAPERDOLL,
++        .drop=inven_ui_have_drop_box,.use=inven_ui_have_use_box,.gamble=inven_ui_have_gamble_box,
++        .drop_x=inven_ui_drop_box_frame.x+2,.drop_y=inven_ui_drop_box_frame.y+2,
++        .use_x=inven_ui_use_box_frame.x+2,.use_y=inven_ui_use_box_frame.y+2,
++        .gamble_x=inven_ui_gamble_box_frame.x+2,.gamble_y=inven_ui_gamble_box_frame.y+2,
++        .feedback=byte_68241C};
++    return true;
++}
++int64_t modern_inventory_at(int x,int y) { return inven_ui_created ? sub_575FA0(x,y,NULL) : OBJ_HANDLE_NULL; }
++void modern_inventory_mouse(int x,int y,int event)
++{
++    if (!inven_ui_created) return;
++    TigRect rect={0,0,800,600};hrp_apply(&rect,GRAVITY_CENTER_HORIZONTAL|GRAVITY_CENTER_VERTICAL);
++    TigMessage message={0};message.type=TIG_MESSAGE_MOUSE;
++    message.data.mouse.x=x+rect.x;message.data.mouse.y=y+rect.y;message.data.mouse.event=event;
++    inven_ui_message_filter(&message);
++    if(event==TIG_MESSAGE_MOUSE_MOVE && inven_ui_created)inven_ui_message_filter_handle_mouse_idle(x,y);
++}
++void modern_inventory_scroll(int direction)
++{
++    if(!inven_ui_created || inven_ui_drag_item_obj!=OBJ_HANDLE_NULL)return;
++    int limit=dword_681510;
++    dword_681508+=direction;
++    if(dword_681508<0)dword_681508=0;if(dword_681508>limit)dword_681508=limit;
++    scrollbar_ui_control_set(inven_ui_target_inventory_scrollbar,SCROLLBAR_CURRENT_VALUE,dword_681508);
++    redraw_inven(false);
++}
++void modern_inventory_action(int action)
++{
++    if(!inven_ui_created)return;
++    if(action==0) {sub_575770();inven_ui_destroy();return;}
++    if(inven_ui_drag_item_obj!=OBJ_HANDLE_NULL)return;
++    switch(action) {
++    case 1:inven_ui_message_filter_handle_button_released(inven_ui_arrange_items_btn);break;
++    case 2:if(inven_ui_mode==INVEN_UI_MODE_LOOT)inven_ui_message_filter_handle_button_released(inven_ui_take_all_btn);break;
++    case 3:inven_ui_message_filter_handle_button_pressed(inven_ui_panel==INVEN_UI_PANEL_PAPERDOLL?inven_ui_inventory_btn:inven_ui_paperdoll_btn);break;
++    case 4:inven_ui_message_filter_handle_button_pressed(inven_ui_target_panel==INVEN_UI_PANEL_PAPERDOLL?inven_ui_target_inventory_btn:inven_ui_target_paperdoll_btn);break;
++    case 5:sub_574FD0(false);break;
++    case 6:sub_574FD0(true);break;
++    }
++}
++const char* modern_inventory_text(int number)
++{
++    MesFileEntry entry={.num=number};mes_get_msg(inven_ui_mes_file,&entry);return entry.str;
++}
+diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
+--- a/src/ui/logbook_ui.c
++++ b/src/ui/logbook_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/logbook_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -577,6 +578,14 @@
+         return;
+     }
+ 
++    if (modern_ui_enabled()) {
++        ui_toggle_primary_button(UI_PRIMARY_BUTTON_LOGBOOK, false);
++        logbook_ui_created = true;
++        modern_ui_journal_open();
++        gsound_play_sfx(SND_INTERFACE_BOOK_OPEN, 1);
++        return;
++    }
++
+     if (!intgame_big_window_lock(logbook_ui_message_filter, &logbook_ui_window)) {
+         tig_debug_printf("logbk_ui_create: ERROR: intgame_big_window_lock failed!\n");
+         exit(EXIT_SUCCESS); // FIXME: Should be EXIT_FAILURE.
+@@ -657,6 +666,13 @@
+ void logbook_ui_destroy(void)
+ {
+     if (!logbook_ui_created) {
++        return;
++    }
++
++    if (modern_ui_enabled()) {
++        modern_ui_journal_close();
++        logbook_ui_created = false;
++        gsound_play_sfx(SND_INTERFACE_BOOK_CLOSE, 1);
+         return;
+     }
+ 
+@@ -1776,3 +1792,38 @@
+         }
+     }
+ }
++
++/* Native presentation reads the same entries as the original journal. */
++int modern_logbook_select(int tab)
++{
++    if (tab < 0 || tab >= LOGBOOK_UI_TAB_COUNT) return 0;
++    logbook_ui_tab = tab;
++    logbook_ui_quotes_mode = false;
++    logbook_ui_load_data();
++    if (tab == LOGBOOK_UI_TAB_BACKGROUND) return logbook_ui_entry_count > 0 ? 1 : 0;
++    return logbook_ui_entry_count;
++}
++
++int modern_logbook_entry(int index, char* text, size_t capacity)
++{
++    if (capacity == 0) return 0;
++    text[0] = '\0';
++    if (index < 0 || index >= logbook_ui_entry_count) return 0;
++    switch (logbook_ui_tab) {
++    case LOGBOOK_UI_TAB_RUMORS_AND_NOTES: logbook_ui_format_rumor(text, capacity, index); break;
++    case LOGBOOK_UI_TAB_QUESTS: logbook_ui_format_quest(text, capacity, index); break;
++    case LOGBOOK_UI_TAB_REPUTATIONS: logbook_ui_format_reputation(text, capacity, index); break;
++    case LOGBOOK_UI_TAB_BLESSINGS_AND_CURSES: logbook_ui_format_blessing_or_curse(text, capacity, index); break;
++    case LOGBOOK_UI_TAB_KILLS_AND_INJURES: logbook_ui_format_kill_or_injury(text, capacity, index); break;
++    case LOGBOOK_UI_TAB_BACKGROUND:
++        SDL_strlcpy(text, background_description_get_body(logbook_ui_entry_ids[0]), capacity);
++        break;
++    case LOGBOOK_UI_TAB_KEYS: logbook_ui_format_key(text, capacity, index); break;
++    }
++    if (logbook_ui_entry_fonts[index] == logbook_ui_font_active) return 1;
++    if (logbook_ui_entry_fonts[index] == logbook_ui_font_quest_completed) return 2;
++    if (logbook_ui_entry_fonts[index] == logbook_ui_font_quest_failed
++        || logbook_ui_entry_fonts[index] == logbook_ui_font_curse) return 3;
++    if (logbook_ui_entry_fonts[index] == logbook_ui_font_struck) return 4;
++    return 0;
++}
+diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
+--- a/src/ui/mainmenu_ui.c
++++ b/src/ui/mainmenu_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/mainmenu_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -1740,6 +1741,8 @@
+     broadcast_ui_close();
+ 
+     while (mainmenu_ui_active) {
++        modern_ui_menu_tick();
++        if (!mainmenu_ui_active) break;
+         tig_ping();
+         tig_timer_now(&timestamp);
+         timeevent_ping(timestamp);
+@@ -1781,6 +1784,115 @@
+     return mainmenu_ui_active;
+ }
+ 
++/* Dispatch through the original menu logic, preserving save/load restrictions. */
++void modern_mainmenu_activate(int button_index)
++{
++    MainMenuWindowInfo* info = main_menu_window_info[mainmenu_ui_window_type];
++    if (!mainmenu_ui_active || button_index < 0 || button_index >= info->num_buttons) return;
++    TigMessage message = {0};
++    message.type = TIG_MESSAGE_BUTTON;
++    message.data.button.state = TIG_BUTTON_STATE_RELEASED;
++    message.data.button.button_handle = info->buttons[button_index].button_handle;
++    mainmenu_ui_message_filter(&message);
++}
++
++
++/* Native presentation reads the same localized data as the original screens. */
++bool modern_mainmenu_character(ModernCharacter* character, int description)
++{
++    if (mainmenu_ui_window_type != MM_WINDOW_NEW_CHAR
++        && mainmenu_ui_window_type != MM_WINDOW_PREGEN_CHAR
++        && mainmenu_ui_window_type != MM_WINDOW_CHAREDIT) return false;
++    memset(character, 0, sizeof(*character));
++    character->editable = mainmenu_ui_window_type == MM_WINDOW_NEW_CHAR;
++    character->object = mainmenu_ui_window_type == MM_WINDOW_PREGEN_CHAR
++        ? qword_64C460 : player_get_local_pc_obj();
++    int64_t obj = character->object;
++    if (obj == OBJ_HANDLE_NULL) return false;
++    int race = stat_level_get(obj, STAT_RACE);
++    int gender = stat_level_get(obj, STAT_GENDER);
++    character->gender_editable = character->editable && !dword_5C3620
++        && race >= 0 && race < (int)SDL_arraysize(stru_5C5170)
++        && stru_5C5170[race].available_for_female;
++    character->portrait = portrait_get(obj);
++    character->index = mainmenu_ui_pregen_char_idx;
++    character->count = mainmenu_ui_pregen_char_cnt - 1;
++    if (character->editable) {
++        SDL_strlcpy(character->name, mainmenu_ui_textedit_buffer, sizeof(character->name));
++    } else {
++        char* name = NULL;
++        obj_field_string_get(obj, OBJ_F_PC_PLAYER_NAME, &name);
++        if (name) { SDL_strlcpy(character->name, name, sizeof(character->name)); FREE(name); }
++    }
++    MesFileEntry entry = { 0 };
++    entry.num = 740 + gender; mes_get_msg(mainmenu_ui_mainmenu_mes_file, &entry);
++    character->gender = entry.str;
++    entry.num = 720 + race; mes_get_msg(mainmenu_ui_mainmenu_mes_file, &entry);
++    character->race = entry.str;
++    int background = background_text_get(obj);
++    character->background = background_description_get_name(background);
++    character->description_kind = description == 2 && background <= 1000 ? 1 : description;
++    if (description == 2 && background > 1000) {
++        character->description = background_description_get_body(background);
++    } else {
++        entry.num = description == 0 ? 742 + gender : 770 + 2 * race + gender;
++        mes_get_msg(mainmenu_ui_mainmenu_mes_file, &entry);
++        character->description = entry.str;
++    }
++    return true;
++}
++
++void modern_mainmenu_gender(int direction)
++{
++    ModernCharacter character;
++    if (!modern_mainmenu_character(&character, 0) || !character.gender_editable) return;
++    if (direction < 0) mainmenu_ui_new_char_prev_gender(character.object);
++    else mainmenu_ui_new_char_next_gender(character.object);
++    mainmenu_ui_new_char_refresh(NULL);
++}
++
++void modern_mainmenu_name(const char* name)
++{
++    if (mainmenu_ui_window_type == MM_WINDOW_NEW_CHAR)
++        SDL_strlcpy(mainmenu_ui_textedit_buffer, name, 24);
++}
++
++const char* modern_mainmenu_save_name(int index)
++{
++    if (mainmenu_ui_window_type != MM_WINDOW_LOAD_GAME || index < 0
++        || index >= (int)mainmenu_ui_gsl.count) return "";
++    return sub_543040(index);
++}
++
++void modern_mainmenu_save_select(int index)
++{
++    if (mainmenu_ui_window_type != MM_WINDOW_LOAD_GAME || index < 0
++        || index >= (int)mainmenu_ui_gsl.count) return;
++    main_menu_window_info[mainmenu_ui_window_type]->selected_index = index;
++    if (mainmenu_ui_gsi_loaded) gamelib_saveinfo_exit(&mainmenu_ui_gsi);
++    mainmenu_ui_gsi_loaded = gamelib_saveinfo_load(mainmenu_ui_gsl.names[index], &mainmenu_ui_gsi);
++    mainmenu_ui_load_game_refresh(NULL);
++}
++
++const GameSaveInfo* modern_mainmenu_save_info(void)
++{
++    return mainmenu_ui_window_type == MM_WINDOW_LOAD_GAME && mainmenu_ui_gsi_loaded
++        ? &mainmenu_ui_gsi : NULL;
++}
++
++const char* modern_mainmenu_save_location(void)
++{
++    if (!modern_mainmenu_save_info()) return "";
++    int area = 0;
++    if (map_by_type(MAP_TYPE_START_MAP) == mainmenu_ui_gsi.map)
++        area = area_get_nearest_area_in_range(mainmenu_ui_gsi.pc_location, true);
++    else map_get_area(mainmenu_ui_gsi.map, &area);
++    if (area > 0) return area_get_name(area);
++    MesFileEntry entry = { 0 }; entry.num = 5050;
++    mes_get_msg(mainmenu_ui_mainmenu_mes_file, &entry);
++    return entry.str;
++}
++
+ // 0x541690
+ TigWindowModalDialogChoice mainmenu_ui_confirm_quit(void)
+ {
+@@ -1796,6 +1908,11 @@
+ 
+     mes_file_entry.num = num;
+     mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
++
++    if (modern_ui_enabled()) {
++        return modern_ui_confirm(mes_file_entry.str)
++            ? TIG_WINDOW_MODAL_DIALOG_CHOICE_OK : TIG_WINDOW_MODAL_DIALOG_CHOICE_CANCEL;
++    }
+ 
+     modal_info.type = TIG_WINDOW_MODAL_DIALOG_TYPE_OK_CANCEL;
+     modal_info.x = 237;
+@@ -1806,7 +1923,9 @@
+     modal_info.process = NULL;
+     modal_info.redraw = gamelib_redraw;
+     hrp_center(&(modal_info.x), &(modal_info.y));
++    bool was_suspended = modern_ui_menu_suspend(true);
+     tig_window_modal_dialog(&modal_info, &choice);
++    modern_ui_menu_suspend(was_suspended);
+ 
+     return choice;
+ }
+@@ -2022,7 +2141,7 @@
+     MainMenuWindowInfo* window;
+ 
+     window = main_menu_window_info[mainmenu_ui_window_type];
+-    if (button_handle == window->buttons[3].button_handle) {
++    if (button_handle == window->buttons[window->num_buttons-2].button_handle) {
+         if (mainmenu_ui_confirm_quit() != TIG_WINDOW_MODAL_DIALOG_CHOICE_OK) {
+             return false;
+         }
+@@ -2032,7 +2151,7 @@
+         return sub_549310(button_handle);
+     }
+ 
+-    if (button_handle == window->buttons[4].button_handle) {
++    if (button_handle == window->buttons[window->num_buttons-1].button_handle) {
+         if (stru_5C36B0[mainmenu_ui_type][0]) {
+             sub_5412D0();
+             return false;
+diff --git a/src/ui/schematic_ui.c b/src/ui/schematic_ui.c
+--- a/src/ui/schematic_ui.c
++++ b/src/ui/schematic_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/schematic_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -1569,3 +1570,35 @@
+     obj = sub_4685A0(schematic_info.item2[0]);
+     object_examine(obj, obj, item2);
+ }
++
++const char* modern_schematic_text(int number)
++{
++    MesFileEntry entry={.num=number};mes_get_msg(schematic_ui_text_mes_file,&entry);return entry.str;
++}
++bool modern_schematic_state(ModernSchematic* state)
++{
++    if(!schematic_ui_created)return false;
++    *state=(ModernSchematic){.tech=schematic_ui_cur_tech,.page=schematic_ui_cur_page,
++        .count=schematic_ui_cur_num_schematics_by_tech[schematic_ui_cur_tech],
++        .id=schematic_ui_current_id(),.view=schematic_ui_view,.readiness=schematic_ui_readiness,
++        .component1=schematic_ui_component1_obj,.component2=schematic_ui_component2_obj,.name="",.description="",.art=-1};
++    if(state->id>=0) {
++        SchematicInfo info;schematic_ui_info_get(state->id,&info);
++        state->name=modern_schematic_text(info.name);state->description=modern_schematic_text(info.description);state->art=info.art_num;
++    }
++    return true;
++}
++void modern_schematic_action(int action)
++{
++    if(!schematic_ui_created)return;
++    if(action<0){schematic_ui_close();return;}
++    TigMessage msg={0};msg.type=TIG_MESSAGE_BUTTON;msg.data.button.state=TIG_BUTTON_STATE_PRESSED;
++    if(action>=10 && action<18)msg.data.button.button_handle=schematic_ui_tabs[action-10].button_handle;
++    else if(action>=0 && action<SCHEMATIC_UI_BUTTON_COUNT) {
++        if(action==0 && schematic_ui_cur_page<=0)return;
++        if(action==1 && schematic_ui_cur_page+1>=schematic_ui_cur_num_schematics_by_tech[schematic_ui_cur_tech])return;
++        if(action==2) {if(schematic_ui_current_id()<0)return;msg.data.button.state=TIG_BUTTON_STATE_RELEASED;}
++        msg.data.button.button_handle=schematic_ui_buttons[action].button_handle;
++    } else return;
++    schematic_ui_message_filter(&msg);
++}
+diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
+--- a/src/ui/sleep_ui.c
++++ b/src/ui/sleep_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/sleep_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include "game/combat.h"
+ #include "game/critter.h"
+@@ -741,3 +742,23 @@
+ 
+     object_list_destroy(&objects);
+ }
++
++int modern_sleep_count(void) { return sleep_ui_active && !is_sleeping ? (sleep_ui_wait_mode?SLEEP_UI_WAIT_OPTION_COUNT:SLEEP_UI_OPTION_COUNT) : 0; }
++const char* modern_sleep_text(int option)
++{
++    MesFileEntry entry={.num=option+(sleep_ui_wait_mode?12:0)};mes_get_msg(sleep_ui_mes_file,&entry);return entry.str;
++}
++void modern_sleep_choose(int option)
++{
++    if(option<0){sleep_ui_close();return;}
++    if(option>=modern_sleep_count())return;
++    TigMessage msg={0};msg.type=TIG_MESSAGE_BUTTON;msg.data.button.state=TIG_BUTTON_STATE_RELEASED;
++    msg.data.button.button_handle=sleep_ui_buttons[option].button_handle;sleep_ui_message_filter(&msg);
++}
++
++void modern_sleep_sync(bool native)
++{
++    if(!sleep_ui_active)return;
++    if(native)tig_window_hide(sleep_ui_window);
++    else tig_window_show(sleep_ui_window);
++}
+diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
+--- a/src/ui/wmap_ui.c
++++ b/src/ui/wmap_ui.c
+@@ -1,4 +1,6 @@
+ #include "ui/wmap_ui.h"
++
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -435,6 +437,7 @@
+ 
+ // 0x66D864
+ static bool wmap_ui_created;
++static bool modern_map_buttons_hidden;
+ 
+ // 0x66D868
+ static WmapUiMode wmap_ui_mode;
+@@ -748,7 +751,7 @@
+ 
+     wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
+ 
+-    if (tig_art_interface_id_create(217, 0, 0, 0, &art_id) != TIG_OK
++    if (!modern_ui_enabled() && tig_art_interface_id_create(217, 0, 0, 0, &art_id) != TIG_OK
+         || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
+         return false;
+     }
+@@ -1523,6 +1526,7 @@
+     }
+ 
+     wmap_ui_textedit_focused = false;
++    modern_map_buttons_hidden = false;
+ 
+     tig_art_interface_id_create(138, 0, 0, 0, &art_id);
+ 
+@@ -4212,7 +4216,7 @@
+     tmp_rect.height = 3;
+     tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
+ 
+-    if (tig_art_interface_id_create(217, 0, 0, 0, &(art_blit_info.art_id)) == TIG_OK
++    if (!modern_ui_enabled() && tig_art_interface_id_create(217, 0, 0, 0, &(art_blit_info.art_id)) == TIG_OK
+         && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
+         src_rect.x = 0;
+         src_rect.y = 0;
+@@ -4426,7 +4430,7 @@
+         tig_window_blit_art(wmap_ui_window, &art_blit_info);
+     }
+ 
+-    if (tig_rect_intersection(&wmap_ui_nav_cvr_frame, rect, &dst_rect) == TIG_OK) {
++    if (!modern_ui_enabled() && tig_rect_intersection(&wmap_ui_nav_cvr_frame, rect, &dst_rect) == TIG_OK) {
+         src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
+         src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
+         src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
+@@ -4851,7 +4855,7 @@
+         object_list_destroy(&objects);
+     }
+ 
+-    if (tig_rect_intersection(&wmap_ui_nav_cvr_frame, &dirty_rect, &art_dst_rect) == TIG_OK) {
++    if (!modern_ui_enabled() && tig_rect_intersection(&wmap_ui_nav_cvr_frame, &dirty_rect, &art_dst_rect) == TIG_OK) {
+         art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
+         art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
+         art_src_rect.width = art_dst_rect.width;
+@@ -4984,3 +4988,69 @@
+         tig_window_blit_art(wmap_ui_window, &art_blit_info);
+     }
+ }
++
++
++bool modern_map_state(ModernMap* state)
++{
++    if(!wmap_ui_created)return false;
++    if(modern_map_buttons_hidden!=modern_ui_enabled())modern_map_action(8);
++    WmapInfo* info=&wmap_ui_mode_info[wmap_ui_mode];
++    TigVideoBuffer* buffer=NULL;tig_window_vbid_get(wmap_ui_window,&buffer);
++    *state=(ModernMap){.mode=wmap_ui_mode,.x=info->field_14.x,.y=info->field_14.y,
++        .width=info->field_14.width,.height=info->field_14.height,.buffer=buffer,
++        .moving=wmap_ui_state==WMAP_UI_STATE_MOVING};
++    return buffer!=NULL;
++}
++void modern_map_mouse(int x,int y,int event)
++{
++    if(!wmap_ui_created)return;
++    TigRect rect={0,0,800,600};hrp_apply(&rect,GRAVITY_CENTER_HORIZONTAL|GRAVITY_CENTER_VERTICAL);
++    TigMessage message={0};message.type=TIG_MESSAGE_MOUSE;
++    message.data.mouse.x=x+rect.x;message.data.mouse.y=y+rect.y;message.data.mouse.event=event;
++    wmap_ui_message_filter(&message);
++}
++void modern_map_action(int action)
++{
++    if(!wmap_ui_created)return;
++    if(action==0){wmap_ui_close();return;}
++    if(action==8){
++        modern_map_buttons_hidden=modern_ui_enabled();
++        for(int i=0;i<2;i++) {
++            if(modern_map_buttons_hidden)tig_button_hide(wmap_ui_zoom_button_info[i].button_handle);
++            else tig_button_show(wmap_ui_zoom_button_info[i].button_handle);
++        }
++        if(modern_map_buttons_hidden) {
++            tig_button_hide(wmap_ui_navigate_button_info.button_handle);
++            tig_button_hide(wmap_ui_travel_button_info.button_handle);
++        } else {
++            tig_button_show(wmap_ui_navigate_button_info.button_handle);
++            if(wmap_ui_mode!=WMAP_UI_MODE_CONTINENT && (wmap_ui_mode==WMAP_UI_MODE_TOWN || dword_66D880))
++                tig_button_show(wmap_ui_travel_button_info.button_handle);
++        }
++        wmap_ui_mode_info[wmap_ui_mode].refresh();return;
++    }
++    if(action>=4 && action<=7){wmap_ui_scroll((action-4)*2);return;}
++    TigMessage message={0};message.type=TIG_MESSAGE_BUTTON;message.data.button.state=TIG_BUTTON_STATE_RELEASED;
++    message.data.button.button_handle=action==1?wmap_ui_zoom_button_info[0].button_handle:
++        action==2?wmap_ui_zoom_button_info[1].button_handle:wmap_ui_travel_button_info.button_handle;
++    wmap_ui_message_filter(&message);
++}
++const char* modern_map_text(int number)
++{
++    MesFileEntry entry={.num=number};mes_get_msg(wmap_ui_worldmap_mes_file,&entry);return entry.str;
++}
++
++/* Native drag deltas use map pixels and the original viewport bounds. */
++void modern_map_pan(int dx,int dy)
++{
++    if(!wmap_ui_created || wmap_ui_state==WMAP_UI_STATE_MOVING)return;
++    WmapInfo* info=&wmap_ui_mode_info[wmap_ui_mode];
++    int x=info->field_34+dx,y=info->field_38+dy;
++    if(x<0)x=0;
++    if(x>info->field_60)x=info->field_60;
++    if(y<0)y=0;
++    if(y>info->field_64)y=info->field_64;
++    if(x==info->field_34 && y==info->field_38)return;
++    info->field_34=x;info->field_38=y;
++    if(info->refresh_rect)info->refresh_rect(&info->rect);
++}
