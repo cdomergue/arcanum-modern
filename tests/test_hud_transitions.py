@@ -31,6 +31,9 @@ static void modern_map_action(int action) { assert(action == 8); }
 static void modern_sleep_sync(bool native) { (void)native; }
 static void modern_fate_sync(bool native) { (void)native; }
 static void modern_bubbles_sync(bool native) { (void)native; }
+static void modern_written_sync(bool native) { (void)native; }
+static void modern_followers_sync(bool native) { (void)native; }
+static void party_tick(void) {}
 static void panels_tick(void) {}
 static int native_panel(void) { return 0; }
 static void logbook_ui_close(void) { journal=false; }
