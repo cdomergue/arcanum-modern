@@ -118,7 +118,9 @@ static void draw_tactical_preview(void)
     }
     char line[512];
     const char* action=p->kind==0?tactical_text(TC_MOVE):p->kind==1?tactical_text(TC_ATTACK):game_text(spell_name(modern_spell_selected()));
-    snprintf(line,sizeof(line),"%s  ·  %s %d %s",action,game_text(modern_intgame_text(15)),p->cost,tactical_text(TC_AP));
+    /* Movement is a quote: the original animation stack can charge a partial
+     * first/last tile differently from the geometric path. */
+    snprintf(line,sizeof(line),"%s  ·  %s %s%d %s",action,game_text(modern_intgame_text(15)),p->count>1?"≈ ":"",p->cost,tactical_text(TC_AP));
     if(!p->in_range)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_RANGE),sizeof(line));
     else if(!p->reachable)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_BLOCKED),sizeof(line));
     if(p->chance>=0){char chance[64];snprintf(chance,sizeof(chance),"  ·  %s %d%%",game_text(modern_intgame_text(20)),p->chance);SDL_strlcat(line,chance,sizeof(line));}

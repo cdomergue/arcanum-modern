@@ -34,7 +34,9 @@ M : sorts ; K : compétences ; Inventaire : équipement du personnage actif.
 Les sorts inconnus sont masqués en combat ; les sorts sans ressources suffisantes
 sont grisés. Le sélecteur indique les coûts et permet d'arrêter les sorts maintenus.
 Le survol prévisualise le trajet, les PA, la portée et la chance de toucher depuis
-la position actuelle. Le journal de combat conserve les messages du moteur.
+la position actuelle. Les coûts de déplacement marqués ≈ sont estimatifs : le
+moteur facture aussi les transitions entre animations et les cases partielles.
+Le journal de combat conserve les messages du moteur.
 La peur, la perte de contrôle et l'incapacité continuent d'obéir aux règles du jeu.
 Les tours ne sont pas partagés entre alliés. Les nouveaux libellés tactiques sont
 disponibles en français et en anglais ; les noms et descriptions viennent du jeu.
