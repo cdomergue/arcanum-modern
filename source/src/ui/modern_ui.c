@@ -19,6 +19,7 @@
 #include "game/hrp.h"
 #include "ui/charedit_ui.h"
 #include "ui/inven_ui.h"
+#include "ui/follower_ui.h"
 #include "ui/wmap_ui.h"
 #include "ui/tb_ui.h"
 #include "ui/spell_ui.h"
@@ -119,6 +120,8 @@ static int native_panel(void);
 static bool panels_event(SDL_Event* event);
 static bool panels_action(int action);
 static bool tactical_active(void);
+static bool party_region(float x,float y);
+static int hit(float x,float y);
 static void draw_tactical_spells(void);
 static void panels_tick(void);
 static void draw_play_panels(void);
@@ -1378,9 +1381,11 @@ void modern_ui_menu_tick(void)
 /* Native play panels share this file's text, materials and input helpers. */
 #include "modern_panels.inc"
 #include "modern_combat.inc"
+#include "modern_party.inc"
 
 static bool hud_region(float x,float y)
 {
+    if(party_region(x,y))return true;
     if(tactical_active())return tactical_region(x,y);
     return inside((SDL_FRect){(canvas_w-930)/2,10,930,60},x,y)
         || inside((SDL_FRect){(canvas_w-980)/2,canvas_h-126,980,116},x,y);
@@ -1414,6 +1419,7 @@ static void render_overlay(SDL_Renderer* target)
         draw_world_bubbles();
         if(!hud_region(mouse_x,mouse_y))draw_world_hover();
         if(hud){if(tactical_active()){draw_tactical_preview();draw_tactical_hud();}else draw_hud();}
+        draw_party();
         if(journal) draw_journal();
         draw_play_panels();
     }
@@ -1439,6 +1445,7 @@ static void save_settings(void)
 
 static void activate(int action)
 {
+    if(party_action(action))return;
     if(tactical_action(action))return;
     if(panels_action(action))return;
     /* A conversation may begin between a HUD click and its deferred dispatch. */
@@ -1491,6 +1498,7 @@ static bool handle_ui_event(SDL_Event* event)
         return true;
     }
     if(!menu && panels_event(event))return true;
+    if(!menu && party_event(event))return true;
     if(world_zoom_event(event))return true;
     if(!menu && (!visible() || (!hud && !journal))) return false;
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
@@ -1672,7 +1680,7 @@ void modern_ui_tick(void)
     modern_sleep_sync(enabled);
     modern_fate_sync(enabled);
     modern_bubbles_sync(enabled);
-    if(!enabled) return;
+    if(!enabled) {modern_followers_sync(false);return;}
     in_game=true;
     panels_tick();
     if(pending_action>=0) {int action=pending_action;pending_action=-1;activate(action);}
@@ -1684,6 +1692,7 @@ void modern_ui_tick(void)
         && (intgame_mode_get()==INTGAME_MODE_MAIN || intgame_mode_get()==INTGAME_MODE_DIALOG || intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_ITEM || journal)
         && iso_interface_window_get()==ROTWIN_TYPE_MSG;
     modern_intgame_hud_hide(hud || journal || native_panel());
+    party_tick();
 }
 
 void modern_ui_journal_open(void)

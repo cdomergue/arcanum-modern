@@ -1087,6 +1087,249 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
 +    message.data.button.state=modern_fate_active(index)?TIG_BUTTON_STATE_RELEASED:TIG_BUTTON_STATE_PRESSED;
 +    fate_ui_message_filter(&message);
 +}
+diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
+--- a/src/ui/follower_ui.c
++++ b/src/ui/follower_ui.c
+@@ -3,10 +3,12 @@
+ #include <stdio.h>
+ 
+ #include "game/broadcast.h"
++#include "game/combat.h"
+ #include "game/critter.h"
+ #include "game/hrp.h"
+ #include "game/mes.h"
+ #include "game/obj.h"
++#include "game/obj_pool.h"
+ #include "game/object.h"
+ #include "game/player.h"
+ #include "game/portrait.h"
+@@ -153,6 +155,8 @@
+  */
+ #define FOLLOWER_UI_DROP_DOWN_MENU_ART 826
+ 
++static bool modern_followers_hidden;
++static void follower_ui_dispatch_command(int index);
+ static void follower_ui_create(int index);
+ static bool follower_ui_message_filter(TigMessage* msg);
+ static void follower_ui_drop_down_menu_create(int index);
+@@ -643,9 +647,7 @@
+ {
+     int64_t pc_obj;
+     int index;
+-    MesFileEntry mes_file_entry;
+     char str[MAX_STRING];
+-    Broadcast bcast;
+     TargetDescriptor td;
+ 
+     pc_obj = player_get_local_pc_obj();
+@@ -681,40 +683,7 @@
+                 for (index = 0; index < FOLLOWER_UI_COMMAND_COUNT; index++) {
+                     if (msg->data.button.button_handle == follower_ui_drop_menu_item_buttons[index]) {
+                         follower_ui_drop_down_menu_destroy();
+-                        switch (index) {
+-                        case FOLLOWER_UI_COMMAND_WALK:
+-                        case FOLLOWER_UI_COMMAND_ATTACK:
+-                            // Enter targeting mode. The player needs to click
+-                            // a tile or object to complete the order.
+-                            follower_ui_begin_order_mode(index);
+-                            break;
+-                        case FOLLOWER_UI_COMMAND_INVENTORY:
+-                            // Open barter inventory if permitted.
+-                            if (inven_ui_can_open_inven(follower_ui_commander_obj, follower_ui_subordinate_obj)) {
+-                                inven_ui_open(follower_ui_commander_obj, follower_ui_subordinate_obj, INVEN_UI_MODE_BARTER);
+-                            }
+-                            break;
+-                        case FOLLOWER_UI_COMMAND_CHARACTER_SHEET:
+-                            charedit_open(follower_ui_subordinate_obj, CHAREDIT_MODE_PASSIVE);
+-                            break;
+-                        case FOLLOWER_UI_COMMAND_WAIT:
+-                            // Mind-controlled followers cannot be ordered to wait.
+-                            if ((obj_field_int32_get(follower_ui_subordinate_obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) != 0) {
+-                                return true;
+-                            }
+-                            // FALLTHROUGH
+-                        default:
+-                            // Stay Close, Spread Out, Back Off, and Wait (when
+-                            // not mind-controlled) are issued as broadcast
+-                            // messages.
+-                            mes_file_entry.num = index;
+-                            if (mes_search(follower_ui_mes_file, &mes_file_entry)) {
+-                                object_examine(follower_ui_subordinate_obj, follower_ui_commander_obj, str);
+-                                snprintf(bcast.str, sizeof(bcast.str), "%s %s", str, mes_file_entry.str);
+-                                broadcast_msg(follower_ui_commander_obj, &bcast);
+-                            }
+-                            break;
+-                        }
++                        follower_ui_dispatch_command(index);
+                         return true;
+                     }
+                 }
+@@ -1139,7 +1108,7 @@
+     if (follower_ui_visible) {
+         // Show all active slots.
+         for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
+-            tig_window_show(follower_ui_windows[index]);
++            if (!modern_followers_hidden) tig_window_show(follower_ui_windows[index]);
+         }
+ 
+         tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
+@@ -1212,7 +1181,7 @@
+     if (follower_ui_visible) {
+         // Show all active slots.
+         for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
+-            tig_window_show(follower_ui_windows[index]);
++            if (!modern_followers_hidden) tig_window_show(follower_ui_windows[index]);
+         }
+     }
+ 
+@@ -1243,7 +1212,7 @@
+ void update_toggle_button_visibility(void)
+ {
+     if (follower_ui_followers_count > 0) {
+-        tig_window_show(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
++        if (!modern_followers_hidden) tig_window_show(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
+     } else {
+         tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
+     }
+@@ -1271,7 +1240,7 @@
+             tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
+         }
+         tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
+-        tig_window_show(follower_ui_windows[FOLLOWER_UI_BUTTON_SCROLL_UP]);
++        if (!modern_followers_hidden) tig_window_show(follower_ui_windows[FOLLOWER_UI_BUTTON_SCROLL_UP]);
+ 
+         // Scroll-down button is active if not already at the bottom.
+         if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
+@@ -1280,7 +1249,7 @@
+             tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
+         }
+         tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
+-        tig_window_show(follower_ui_windows[FOLLOWER_UI_BUTTON_SCROLL_DOWN]);
++        if (!modern_followers_hidden) tig_window_show(follower_ui_windows[FOLLOWER_UI_BUTTON_SCROLL_DOWN]);
+     } else {
+         // Either all portraits fit into existing slots, or the follower UI is
+         // hidden.
+@@ -1351,3 +1320,106 @@
+         follower_ui_refresh();
+     }
+ }
++
++/* Presentation adapters retain the installed command strings and native orders. */
++static void follower_ui_dispatch_command(int index)
++{
++    MesFileEntry mes_file_entry;
++    char str[MAX_STRING];
++    Broadcast bcast;
++    switch (index) {
++    case FOLLOWER_UI_COMMAND_WALK:
++    case FOLLOWER_UI_COMMAND_ATTACK:
++        // Enter targeting mode. The player needs to click
++        // a tile or object to complete the order.
++        follower_ui_begin_order_mode(index);
++        break;
++    case FOLLOWER_UI_COMMAND_INVENTORY:
++        // Open barter inventory if permitted.
++        if (inven_ui_can_open_inven(follower_ui_commander_obj, follower_ui_subordinate_obj)) {
++            inven_ui_open(follower_ui_commander_obj, follower_ui_subordinate_obj, INVEN_UI_MODE_BARTER);
++        }
++        break;
++    case FOLLOWER_UI_COMMAND_CHARACTER_SHEET:
++        charedit_open(follower_ui_subordinate_obj, CHAREDIT_MODE_PASSIVE);
++        break;
++    case FOLLOWER_UI_COMMAND_WAIT:
++        // Mind-controlled followers cannot be ordered to wait.
++        if ((obj_field_int32_get(follower_ui_subordinate_obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) != 0) {
++            return;
++        }
++        // FALLTHROUGH
++    default:
++        // Stay Close, Spread Out, Back Off, and Wait (when
++        // not mind-controlled) are issued as broadcast
++        // messages.
++        mes_file_entry.num = index;
++        if (mes_search(follower_ui_mes_file, &mes_file_entry)) {
++            object_examine(follower_ui_subordinate_obj, follower_ui_commander_obj, str);
++            snprintf(bcast.str, sizeof(bcast.str), "%s %s", str, mes_file_entry.str);
++            broadcast_msg(follower_ui_commander_obj, &bcast);
++        }
++        break;
++    }
++}
++
++void modern_followers_sync(bool hidden)
++{
++    if (!follower_ui_initialized) return;
++    bool restore = modern_followers_hidden && !hidden;
++    modern_followers_hidden = hidden;
++    if (hidden) {
++        for (int i = 0; i < FOLLOWER_UI_BUTTON_COUNT; i++) {
++            if (!tig_window_is_hidden(follower_ui_windows[i])) tig_window_hide(follower_ui_windows[i]);
++        }
++        follower_ui_drop_down_menu_destroy();
++    } else if (restore) follower_ui_refresh();
++}
++
++int modern_followers_get(int64_t* objects, int capacity)
++{
++    int64_t pc = player_get_local_pc_obj();
++    if (!pc || !obj_handle_is_valid(pc)) return 0;
++    int count = obj_arrayfield_length_get(pc, OBJ_F_CRITTER_FOLLOWER_IDX);
++    int n = 0;
++    for (int i = 0; i < count && n < capacity; i++) {
++        int64_t obj = obj_arrayfield_handle_get(pc, OBJ_F_CRITTER_FOLLOWER_IDX, i);
++        if (obj && obj_handle_is_valid(obj)) objects[n++] = obj;
++    }
++    return n;
++}
++
++const char* modern_follower_text(int command)
++{
++    MesFileEntry entry = { .num = command };
++    return follower_ui_initialized && command >= 0 && command < FOLLOWER_UI_COMMAND_COUNT
++        && mes_search(follower_ui_mes_file, &entry) ? entry.str : "";
++}
++
++bool modern_follower_command_available(int64_t obj, int command)
++{
++    int64_t pc = player_get_local_pc_obj();
++    if (!follower_ui_initialized || !obj || !obj_handle_is_valid(obj)
++        || !pc || !player_is_local_pc_obj(critter_pc_leader_get(obj))
++        || dialog_ui_is_in_dialog(pc) || command < 0 || command >= FOLLOWER_UI_COMMAND_COUNT) return false;
++    if (command == FOLLOWER_UI_COMMAND_CHARACTER_SHEET) return true;
++    if (combat_turn_based_is_active()) {
++        /* Never issue AI orders or change the active actor through this menu. */
++        return command == FOLLOWER_UI_COMMAND_INVENTORY && obj == combat_input_actor() && combat_input_ready(obj);
++    }
++    if (command == FOLLOWER_UI_COMMAND_INVENTORY) return inven_ui_can_open_inven(pc, obj);
++    if (command == FOLLOWER_UI_COMMAND_WAIT) return (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0;
++    return true;
++}
++
++void modern_follower_command(int64_t obj, int command)
++{
++    if (!modern_follower_command_available(obj, command)) return;
++    if (combat_turn_based_is_active() && command == FOLLOWER_UI_COMMAND_INVENTORY) {
++        inven_ui_open(obj, OBJ_HANDLE_NULL, INVEN_UI_MODE_INVENTORY);
++        return;
++    }
++    follower_ui_commander_obj = player_get_local_pc_obj();
++    follower_ui_subordinate_obj = obj;
++    follower_ui_dispatch_command(command);
++}
+diff --git a/src/ui/follower_ui.h b/src/ui/follower_ui.h
+--- a/src/ui/follower_ui.h
++++ b/src/ui/follower_ui.h
+@@ -18,4 +18,10 @@
+ void follower_ui_hide(void);
+ void follower_ui_show(void);
+ 
++void modern_followers_sync(bool hidden);
++int modern_followers_get(int64_t* objects, int capacity);
++const char* modern_follower_text(int command);
++bool modern_follower_command_available(int64_t obj, int command);
++void modern_follower_command(int64_t obj, int command);
++
+ #endif /* ARCANUM_UI_FOLLOWER_UI_H_ */
 diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 --- a/src/ui/intgame.c
 +++ b/src/ui/intgame.c
