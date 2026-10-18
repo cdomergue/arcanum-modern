@@ -730,7 +730,14 @@ bool modern_ui_menu_suspend(bool suspend)
 static void menu_button(SDL_FRect rect, int action, const char* label, bool available)
 {
     button(rect, action, "", -1, false, available);
-    centered(2, label, rect.x + rect.w/2, rect.y + 11, available ? GOLD : MUTED);
+    /* Center the visible glyphs, including accents, in buttons of any height. */
+    NativeFont* font=&fonts[2];
+    float top=font->size,bottom=0;
+    for(const char* p=label;*p;) {
+        int c=codepoint(&p);stbtt_packedchar* g=&font->glyphs[c-GLYPH_FIRST];
+        if(g->y1>g->y0){top=fminf(top,font->size+g->yoff/font->density);bottom=fmaxf(bottom,font->size+g->yoff2/font->density);}
+    }
+    centered(2,label,rect.x+rect.w/2,rect.y+(rect.h-bottom-top)/2,available?GOLD:MUTED);
 }
 
 static void draw_menu_background(void)
