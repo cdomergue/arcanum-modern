@@ -2,7 +2,6 @@
 typedef struct PanelRegion { SDL_FRect rect; int x,y,w,h,kind; } PanelRegion;
 static PanelRegion panel_regions[32];
 static int panel_region_count, selector, selector_college, panel_previous;
-static bool sheet_summary;
 static int dialogue_scroll, dialogue_max;
 static int written_scroll,written_max,written_step=3;
 static char dialogue_previous[1000];
@@ -179,25 +178,6 @@ static const char* actor_name(int64_t obj)
     static char text[1024];text[0]=0;
     if(obj)object_examine(obj,player_get_local_pc_obj(),text);
     return game_text(text);
-}
-static void draw_sheet_summary(void)
-{
-    int64_t obj=modern_charedit_object();
-    float w=fminf(1360,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-800)/2;
-    frame((SDL_FRect){x,y,w,800});
-    centered(3,actor_name(obj),canvas_w/2,y+26,GOLD);
-    draw_portrait(portrait_get(obj),(SDL_FRect){x+40,y+100,180,220});
-    text_draw(2,game_text(race_name(stat_level_get(obj,STAT_RACE))),x+40,y+344,GOLD);
-    text_draw(1,game_text(gender_name(stat_level_get(obj,STAT_GENDER))),x+40,y+384,MUTED);
-    for(int i=0;i<24;i++) {
-        int stat=i;float xx=x+270+(i/12)*(w-320)/2,yy=y+105+(i%12)*45;
-        char value[48];snprintf(value,sizeof(value),"%d",stat_level_get(obj,stat));
-        text_draw(1,game_text(stat_name(stat)),xx,yy,GOLD);
-        text_draw(1,value,xx+(w-320)/2-70,yy,MUTED);
-        rule(xx,yy+33,(w-320)/2-45,(SDL_Color){81,59,35,255});
-    }
-    menu_button((SDL_FRect){x+30,y+726,280,54},724,menu_text(739),true);
-    menu_button((SDL_FRect){x+w-310,y+726,280,54},720,menu_text(260),true);
 }
 static void inventory_grid(SDL_FRect r,int legacy_x,int legacy_y,int rows,int scroll)
 {
@@ -695,7 +675,7 @@ static void draw_play_panels(void)
 {
     panel_region_count=0;
     switch(native_panel()) {
-    case 1:panel_backdrop();if(sheet_summary)draw_sheet_summary();else draw_character_sheet();break;
+    case 1:panel_backdrop();draw_character_sheet();break;
     case 2:draw_inventory();break;
     case 9:draw_written();break;
     case 3:draw_map();break;
@@ -735,9 +715,8 @@ static bool panels_action(int action)
     if(action==5 || action==6) {
         if(modern_ui_open_selector(action==6))return true;
     }
-    if(p==1 && action>=600 && action<700)return creation_menu_action(action);
+    if(p==1 && ((action>=600 && action<700) || action==540 || action==541))return creation_menu_action(action);
     if(action==720 && p==1){charedit_close();return true;}
-    if(action==724 && p==1){sheet_summary=!sheet_summary;return true;}
     if(action==737 && p==2 && mainmenu_ui_is_active()){modern_mainmenu_activate(1);return true;}
     if(action==730 && p==2 && mainmenu_ui_is_active()){modern_mainmenu_activate(0);return true;}
     if(action>=730 && action<=736 && p==2) {
@@ -768,7 +747,7 @@ static void panels_tick(void)
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
         if(p==9)written_scroll=0;
-        if(p==1){sheet_summary=true;sheet_category=sheet_page=sheet_selected=description_scroll=0;}
+        if(p==1){sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);}
         if(p!=5)selector=0;
         binding_cancel=binding_pressed;binding_pressed=binding_moved=false;binding_bar_visible=false;
         map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;SDL_CaptureMouse(false);

@@ -29,6 +29,8 @@
 #include "game/obj_pool.h"
 #include "game/item.h"
 #include "game/stat.h"
+#include "game/level.h"
+#include "game/resistance.h"
 #include "game/player.h"
 #include "game/portrait.h"
 #include "game/skill.h"
@@ -1025,18 +1027,18 @@ static const int sheet_skills[]={BASIC_SKILL_BOW,BASIC_SKILL_DODGE,BASIC_SKILL_M
     BASIC_SKILL_GAMBLING,BASIC_SKILL_HAGGLE,BASIC_SKILL_HEAL,BASIC_SKILL_PERSUATION,
     TECH_SKILL_REPAIR,TECH_SKILL_FIREARMS,TECH_SKILL_PICK_LOCKS,TECH_SKILL_DISARM_TRAPS};
 
-static void sheet_item(int64_t obj,int index,const char** name,const char** description,int* value)
+static void sheet_item(int64_t obj,int category,int index,const char** name,const char** description,int* value)
 {
-    if(sheet_category==0) {
+    if(category==0) {
         *name=index<2?character_text(106+index):game_text(stat_name(sheet_stats[index]));
         *description=game_text(modern_charedit_text(index<2?106+index:107+index));
         *value=index==0?object_hp_max(obj):index==1?critter_fatigue_max(obj):stat_level_get(obj,sheet_stats[index]);
-    } else if(sheet_category==1) {
+    } else if(category==1) {
         int skill=sheet_skills[index];
         *name=game_text(index<12?basic_skill_name(skill):tech_skill_name(skill));
         *description=game_text(index<12?basic_skill_description(skill):tech_skill_description(skill));
         *value=index<12?basic_skill_points_get(obj,skill):tech_skill_points_get(obj,skill);
-    } else if(sheet_category==2) {
+    } else if(category==2) {
         *name=game_text(tech_discipline_name_get(index));*description=game_text(tech_discipline_description_get(index));
         *value=tech_degree_get(obj,index);
     } else {
@@ -1045,63 +1047,7 @@ static void sheet_item(int64_t obj,int index,const char** name,const char** desc
     }
 }
 
-static void draw_character_sheet(void)
-{
-    bool playing=play_sheet();
-    int64_t obj=playing?modern_charedit_object():player_get_local_pc_obj();if(obj==OBJ_HANDLE_NULL)return;
-    float w=fminf(1360,canvas_w-40),h=800,x=(canvas_w-w)/2,y=(canvas_h-h)/2;
-    frame((SDL_FRect){x,y,w,h});
-    char actor_name[512];sub_57CD60(player_get_local_pc_obj(),obj,actor_name);
-    centered(3,playing?game_text(actor_name):menu_text(421),canvas_w/2,y+22,GOLD);
-    char points[160];snprintf(points,sizeof(points),"%s : %d",character_text(0),stat_level_get(obj,STAT_UNSPENT_POINTS));
-    text_draw(2,points,x+35,y+76,GOLD);
-    const char* titles[]={menu_text(739),character_text(132),character_text(133),character_text(134)};
-    for(int i=0;i<4;i++)text_in_button((SDL_FRect){x+30+i*(w-60)/4,y+123,(w-60)/4-8,60},650+i,titles[i],i==sheet_category,true);
-    float left=x+30,lw=(w-90)*.51f,right=left+lw+30,rw=w-lw-90;
-    int count=sheet_category==0?10:sheet_category==2?8:16;
-    int first=sheet_page*8;
-    for(int row=0;row<8 && first+row<count;row++) {
-        int index=first+row,value;const char *name,*description;sheet_item(obj,index,&name,&description,&value);
-        float ry=y+208+row*51;char number[32];snprintf(number,sizeof(number),"%d",value);
-        text_in_button((SDL_FRect){left,ry,lw-164,46},660+row,name,sheet_selected==index,true);
-        menu_button((SDL_FRect){left+lw-156,ry,42,46},600+row*2,"-",modern_charedit_editable() && (sheet_category<2 || value>0));
-        centered(1,number,left+lw-79,ry+11,GOLD);
-        menu_button((SDL_FRect){left+lw-42,ry,42,46},601+row*2,"+",
-            modern_charedit_editable() && (sheet_category<2 || value<(sheet_category==2?7:5)));
-    }
-    int value;const char *name,*description;sheet_item(obj,sheet_selected,&name,&description,&value);
-    text_draw(2,name,right,y+207,GOLD);
-    char detail[8192];SDL_strlcpy(detail,description,sizeof(detail));
-    if(sheet_category==3) {
-        for(int i=0;i<5;i++) {
-            SDL_strlcat(detail,"\n\n",sizeof(detail));
-            SDL_strlcat(detail,i<value?"[+] ":"[ ] ",sizeof(detail));
-            SDL_strlcat(detail,game_text(spell_name(sheet_selected*5+i)),sizeof(detail));
-            SDL_strlcat(detail,"\n",sizeof(detail));
-            SDL_strlcat(detail,game_text(spell_description(sheet_selected*5+i)),sizeof(detail));
-        }
-    } else if(sheet_category==2) {
-        for(int i=0;i<7;i++) {
-            SDL_strlcat(detail,"\n\n",sizeof(detail));
-            SDL_strlcat(detail,i<value?"[+] ":"[ ] ",sizeof(detail));
-            SDL_strlcat(detail,game_text(schematic_ui_learned_schematic_product_name(sheet_selected,i+1)),sizeof(detail));
-            SDL_strlcat(detail,"\n",sizeof(detail));
-            SDL_strlcat(detail,game_text(tech_degree_description_get(i+1,sheet_selected)),sizeof(detail));
-        }
-    }
-    description_panel(detail,(SDL_FRect){right,y+252,rw,365});
-    menu_button((SDL_FRect){left,y+628,60,46},640,"<",sheet_page>0);
-    menu_button((SDL_FRect){left+lw-60,y+628,60,46},641,">",first+8<count);
-    if(*message_text && SDL_GetTicks()-message_time<12000)
-        menu_paragraph(message_text,(SDL_FRect){right,y+655,rw,54},0,(SDL_Color){240,180,120,255});
-    if(playing) {
-        menu_button((SDL_FRect){left,y+726,280,54},724,character_text(7),true);
-        menu_button((SDL_FRect){x+w-310,y+726,280,54},720,menu_text(260),true);
-    } else {
-        menu_button((SDL_FRect){left,y+726,280,54},501,menu_text(7002),true);
-        menu_button((SDL_FRect){x+w-310,y+726,280,54},500,menu_text(7003),true);
-    }
-}
+#include "modern_sheet.inc"
 
 static void draw_confirmation(void)
 {
@@ -1320,18 +1266,32 @@ static bool creation_menu_action(int action)
         }
     }
     if(type==MM_WINDOW_CHAREDIT || play_sheet()) {
-        if(action>=650 && action<654) {
-            sheet_category=action-650;sheet_page=sheet_selected=description_scroll=0;return true;
+        if(action>=651 && action<=653) {
+            sheet_category=action-650;sheet_page=sheet_selected=0;sheet_select_detail(sheet_category,0);return true;
+        }
+        if(action>=684 && action<=687) {
+            sheet_page=action-684;sheet_selected=sheet_page*4;sheet_select_detail(1,sheet_selected);return true;
+        }
+        if(action>=690 && action<700) {sheet_select_detail(0,action-690);return true;}
+        if(action>=620 && action<640) {
+            int index=(action-620)/2;sheet_select_detail(0,index);message_text[0]=0;
+            modern_charedit_adjust(0,index,action%2?1:-1);return true;
+        }
+        if(action>=660 && action<676) {
+            sheet_selected=sheet_category==1?sheet_page*4+action-660:action-660;
+            sheet_select_detail(sheet_category,sheet_selected);return true;
+        }
+        if(action>=676 && action<=682) {
+            sheet_select_detail(sheet_category,sheet_selected);sheet_degree=action-676;return true;
         }
         if(action==640 || action==641) {
-            sheet_page=action==640?0:1;sheet_selected=sheet_page*8;description_scroll=0;return true;
+            sheet_select_detail(sheet_category,sheet_selected);message_text[0]=0;
+            modern_charedit_adjust(sheet_category,sheet_selected,action==641?1:-1);return true;
         }
-        if(action>=660 && action<668) {sheet_selected=sheet_page*8+action-660;description_scroll=0;return true;}
-        if(action>=600 && action<616) {
-            sheet_selected=sheet_page*8+(action-600)/2;
-            message_text[0]=0;
-            modern_charedit_adjust(sheet_category,sheet_selected,action%2?1:-1);
-            return true;
+        if(action>=600 && action<608) {
+            sheet_selected=sheet_page*4+(action-600)/2;
+            sheet_select_detail(1,sheet_selected);message_text[0]=0;
+            modern_charedit_adjust(1,sheet_selected,action%2?1:-1);return true;
         }
     }
     return false;
@@ -1401,7 +1361,7 @@ void modern_ui_menu_tick(void)
         modern_graphics_cancel();
         if(name_focused)menu_name_focus(false);
         description_scroll=0;description_tab=2;derived_stats=false;
-        sheet_category=sheet_page=sheet_selected=0;message_text[0]=0;
+        sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);message_text[0]=0;
         thumbnail_index=-2;
         if(type==MM_WINDOW_LOAD_GAME) {
             int selected=sub_5496C0(type)->selected_index;
