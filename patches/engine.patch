@@ -432,41 +432,105 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4178,13 @@
+@@ -4163,9 +4178,16 @@
      }
  }
  
-+/* Collect the original localized detail fields without touching the legacy surface. */
++/* Capture localized fields; world hover also preserves the legacy surface for F9. */
 +static ModernDetails* modern_details_capture;
++static bool modern_details_passthrough;
++static ModernDetails modern_hover_snapshot;
++static int64_t modern_hover_object;
 +
  // 0x550930
  void intgame_message_window_clear_internal(void)
  {
-+    if(modern_details_capture)return;
++    if(modern_details_capture && !modern_details_passthrough)return;
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4221,11 @@
+@@ -4202,6 +4224,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
 +    if(modern_details_capture) {
 +        if(str && *str && modern_details_capture->count<20)
 +            snprintf(modern_details_capture->lines[modern_details_capture->count++],2000,"%s",str);
-+        return true;
++        if(!modern_details_passthrough)return true;
 +    }
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -6573,6 +6597,7 @@
+@@ -6239,6 +6266,15 @@
+ // 0x553BE0
+ void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
+ {
++    /* Observe the engine's actual examination, after its script has run. */
++    bool capture=modern_ui_enabled() && !modern_details_capture && intgame_iso_window_type==ROTWIN_TYPE_MSG;
++    if(capture) {
++        memset(&modern_hover_snapshot,0,sizeof(modern_hover_snapshot));
++        modern_hover_snapshot.icon=modern_hover_snapshot.portrait=-1;
++        snprintf(modern_hover_snapshot.title,sizeof(modern_hover_snapshot.title),"%s",str);
++        modern_hover_object=target_obj;
++        modern_details_capture=&modern_hover_snapshot;modern_details_passthrough=true;
++    }
+     int type;
+ 
+     if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
+@@ -6282,6 +6318,7 @@
+             }
+         }
+     }
++    if(capture){modern_details_capture=NULL;modern_details_passthrough=false;}
+ }
+ 
+ // 0x553D10
+@@ -6573,6 +6610,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
-+    if(modern_details_capture){modern_details_capture->icon=num;return;}
++    if(modern_details_capture){modern_details_capture->icon=num;if(!modern_details_passthrough)return;}
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7640,7 +7665,7 @@
+@@ -6611,6 +6649,16 @@
+ // 0x554640
+ void sub_554640(int a1, int a2, TigRect* rect, int value)
+ {
++    if(modern_details_capture) {
++        int i=modern_details_capture->bar_count;
++        if(i<2) {
++            modern_details_capture->bar_count++;
++            modern_details_capture->bar_values[i]=value;
++            modern_details_capture->bar_kinds[i]=a1==465?1:a1==665?2:0;
++            modern_details_capture->bar_lines[i]=modern_details_capture->count;
++        }
++        if(!modern_details_passthrough)return;
++    }
+     tig_window_handle_t window_handle;
+     tig_art_id_t art_id;
+     TigArtFrameData art_frame_data;
+@@ -6795,6 +6843,11 @@
+ // 0x554B00
+ void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
+ {
++    if(modern_details_capture) {
++        if(art_num!=582 && modern_details_capture->extra_count<4)
++            modern_details_capture->extra_icons[modern_details_capture->extra_count++]=art_num;
++        if(!modern_details_passthrough)return;
++    }
+     tig_art_id_t art_id;
+     TigArtFrameData art_frame_data;
+     TigArtBlitInfo blit_info;
+@@ -7612,6 +7665,7 @@
+ // 0x5561D0
+ void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
+ {
++    if(modern_details_capture){modern_details_capture->portrait=portrait;if(!modern_details_passthrough)return;}
+     if (intgame_is_compact_interface()) {
+         window_handle = compact_ui_message_window_acquire();
+         x -= 211;
+@@ -7640,7 +7694,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -475,7 +539,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7809,7 @@
+@@ -7784,7 +7838,7 @@
          mes_file_entry.str,
          value);
  
@@ -484,7 +548,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8858,73 @@
+@@ -8833,3 +8887,81 @@
  
      follower_ui_show();
  }
@@ -547,16 +611,24 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +}
 +void modern_inventory_details(int64_t pc,int64_t object,int kind,ModernDetails* details)
 +{
-+    memset(details,0,sizeof(*details));details->icon=-1;
++    memset(details,0,sizeof(*details));details->icon=details->portrait=-1;
 +    if(!object)return;
 +    modern_details_capture=details;
 +    if(kind==1)intgame_message_window_display_attack(object);
 +    else if(kind==2)intgame_message_window_display_defense(object);
 +    else {
-+        char name[MAX_STRING];sub_57CD60(pc,object,name);
++        char name[MAX_STRING];object_examine(object,pc,name);
 +        intgame_examine_item(pc,object,name);
 +    }
 +    modern_details_capture=NULL;
++}
++
++const ModernDetails* modern_hover_details(void)
++{
++    int64_t object=object_hover_obj_get();
++    if(object==OBJ_HANDLE_NULL || object!=modern_hover_object || !obj_handle_is_valid(object)
++        || !modern_hover_snapshot.count || intgame_mode_get()==INTGAME_MODE_DIALOG)return NULL;
++    return &modern_hover_snapshot;
 +}
 diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 --- a/src/ui/inven_ui.c

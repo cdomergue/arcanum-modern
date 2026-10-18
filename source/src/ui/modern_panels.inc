@@ -294,6 +294,42 @@ static void dialogue_scroll_button(SDL_FRect rect,int action,const char* label,b
     text_draw(1,label,rect.x+8,rect.y+4,GOLD);
     if(button_count<MAX_BUTTONS)buttons[button_count++]=(Button){rect,action,true};
 }
+static void draw_world_hover(void)
+{
+    if(journal || native_panel() || !visible())return;
+    const ModernDetails* detail=modern_hover_details();if(!detail)return;
+    float width=fminf(760,canvas_w-80),text_width=width-144,height=36;
+    for(int i=0;i<detail->count;i++) {
+        if(!strcmp(detail->lines[i],detail->title))continue;
+        height+=menu_paragraph(game_text(detail->lines[i]),(SDL_FRect){0,0,text_width,0},0,GOLD)*27+4;
+    }
+    int title_rows=menu_paragraph(game_text(detail->title),(SDL_FRect){0,0,text_width,0},0,GOLD);
+    height+=title_rows*27;
+    if(detail->extra_count)height+=42;
+    if(height<122)height=122;
+    float x=(canvas_w-width)/2,y=canvas_h-142-height;
+    fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,220});outline((SDL_FRect){x,y,width,height},MUTED);
+    if(detail->portrait>=0)draw_portrait(detail->portrait,(SDL_FRect){x+16,y+16,88,102});
+    else if(detail->icon>=0)draw_art(detail->icon,(SDL_FRect){x+16,y+16,88,88},true);
+    float tx=x+122,ty=y+16;
+    menu_paragraph(game_text(detail->title),(SDL_FRect){tx,ty,text_width,title_rows*27},0,GOLD);ty+=title_rows*27+8;
+    for(int i=0;i<detail->count;i++) {
+        if(!strcmp(detail->lines[i],detail->title))continue;
+        int bar=-1;for(int j=0;j<detail->bar_count;j++)if(detail->bar_lines[j]==i)bar=j;
+        if(bar>=0) {
+            int kind=detail->bar_kinds[bar];SDL_Color c=kind==1?(SDL_Color){105,136,244,255}:kind==2?(SDL_Color){124,194,94,255}:(SDL_Color){216,65,53,255};
+            float fraction=fmaxf(0,fminf(1,detail->bar_values[bar]/100.0f));
+            SDL_FRect gauge={tx,ty+6,text_width-118,14};
+            fill(gauge,(SDL_Color){35,30,25,255});outline(gauge,MUTED);
+            fill((SDL_FRect){gauge.x+2,gauge.y+2,(gauge.w-4)*fraction,gauge.h-4},c);
+            text_draw(1,game_text(detail->lines[i]),tx+text_width-106,ty,c);ty+=31;
+        } else {
+            int rows=menu_paragraph(game_text(detail->lines[i]),(SDL_FRect){0,0,text_width,0},0,GOLD);
+            menu_paragraph(game_text(detail->lines[i]),(SDL_FRect){tx,ty,text_width,rows*27},0,GOLD);ty+=rows*27+4;
+        }
+    }
+    for(int i=0;i<detail->extra_count;i++)draw_art(detail->extra_icons[i],(SDL_FRect){tx+i*42,ty,36,36},true);
+}
 static void draw_world_bubbles(void)
 {
     if(journal || !visible())return;

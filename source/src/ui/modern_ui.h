@@ -43,10 +43,14 @@ void modern_intgame_action(int action);
 const char* modern_intgame_text(int number);
 int modern_intgame_icon(int slot);
 typedef struct ModernDetails {
-    int count, icon;
+    int count, icon, portrait;
+    int bar_count,bar_values[2],bar_kinds[2],bar_lines[2];
+    int extra_count,extra_icons[4];
+    char title[2000];
     char lines[20][2000];
 } ModernDetails;
 void modern_inventory_details(int64_t pc,int64_t object,int kind,ModernDetails* details);
+const ModernDetails* modern_hover_details(void);
 void modern_map_pan(int dx,int dy);
 int modern_fate_count(void);
 const char* modern_fate_text(int index);

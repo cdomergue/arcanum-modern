@@ -1354,6 +1354,7 @@ static void render_overlay(SDL_Renderer* target)
     if(menu) draw_menu();
     else {
         draw_world_bubbles();
+        if(!hud_region(mouse_x,mouse_y))draw_world_hover();
         if(hud) draw_hud();
         if(journal) draw_journal();
         draw_play_panels();
