@@ -126,9 +126,23 @@ static void draw_tactical_preview(void)
     if(p->chance>=0){char chance[64];snprintf(chance,sizeof(chance),"  ·  %s %d%%",game_text(modern_intgame_text(20)),p->chance);SDL_strlcat(line,chance,sizeof(line));}
     if(p->kind==1 && p->count>1)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_AFTER_MOVE),sizeof(line));
     if(p->fatigue)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_FATIGUE),sizeof(line));
-    float width=fminf(900,text_measure(0,line)+42),x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(canvas_h-168,mouse_y+36);
-    fill((SDL_FRect){x,y,width,31},(SDL_Color){16,12,9,225});outline((SDL_FRect){x,y,width,31},p->affordable?green:red);
+    char health[1200]="";
+    /* Exact party health is useful while aiming, including a one-point deficit.
+     * Read the current engine values; do not predict healing or reveal enemies. */
+    if(p->kind==2 && p->target && obj_handle_is_valid(p->target)
+        && obj_type_is_critter(obj_field_int32_get(p->target,OBJ_F_TYPE))
+        && (player_is_local_pc_obj(p->target) || player_is_local_pc_obj(critter_pc_leader_get(p->target)))) {
+        char name[1024];object_examine(p->target,player_get_local_pc_obj(),name);
+        int current=object_hp_current(p->target),maximum=object_hp_max(p->target);
+        snprintf(health,sizeof(health),"%s  ·  %s : %d / %d",game_text(name),character_text(106),current,maximum);
+        if(current<maximum){char deficit[40];snprintf(deficit,sizeof(deficit),"  (−%d)",maximum-current);SDL_strlcat(health,deficit,sizeof(health));}
+    }
+    float height=*health?55:31;
+    float width=fminf(900,fmaxf(text_measure(0,line),text_measure(0,health))+42);
+    float x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(canvas_h-137-height,mouse_y+36);
+    fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,225});outline((SDL_FRect){x,y,width,height},p->affordable?green:red);
     text_compact(line,x+10,y+6,width-20,false,p->affordable?GOLD:red);
+    if(*health)text_compact(health,x+10,y+30,width-20,false,GOLD);
 }
 static void tactical_button(SDL_FRect r,int action,const char* label,bool selected,bool available)
 {
