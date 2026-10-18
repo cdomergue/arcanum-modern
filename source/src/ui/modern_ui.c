@@ -1756,7 +1756,6 @@ bool modern_ui_init(void)
         if(skill_icons_texture)SDL_SetTextureScaleMode(skill_icons_texture,SDL_SCALEMODE_LINEAR);
     }
     mes_load("mes\\OptionsOffOn.mes",&option_boolean_file);
-    modern_graphics_init(window);
     enabled=true;
     combat_tactical_enable();
     if(SDL_getenv("ARCANUM_UI_SELFTEST")) verify_text_layout();

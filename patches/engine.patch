@@ -1045,7 +1045,15 @@ diff --git a/src/game/tf.c b/src/game/tf.c
 diff --git a/src/main.c b/src/main.c
 --- a/src/main.c
 +++ b/src/main.c
-@@ -46,6 +46,7 @@
+@@ -9,6 +9,7 @@
+ #endif
+ 
+ #include <tig/tig.h>
++#include "ui/modern_graphics.h"
+ 
+ #include "game/ai.h"
+ #include "game/anim.h"
+@@ -46,6 +47,7 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
@@ -1053,7 +1061,7 @@ diff --git a/src/main.c b/src/main.c
  #include "ui/mainmenu_ui.h"
  #include "ui/textedit_ui.h"
  #include "ui/wmap_rnd.h"
-@@ -205,7 +206,7 @@
+@@ -205,10 +207,18 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -1062,7 +1070,18 @@ diff --git a/src/main.c b/src/main.c
  
      if (tig_init(&init_info) != TIG_OK) {
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
-@@ -290,6 +291,9 @@
++    }
++
++    /* Apply the saved output mode before the splash is first presented.
++     * The world keeps its independent logical resolution from init_info. */
++    SDL_Window* startup_window;
++    if(tig_video_window_get(&startup_window)==TIG_OK) {
++        modern_graphics_init(startup_window);
++        SDL_PumpEvents();
+     }
+ 
+     screenshotter.key = SDL_SCANCODE_F12;
+@@ -290,6 +300,9 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
@@ -1072,7 +1091,7 @@ diff --git a/src/main.c b/src/main.c
      if (highres_config->intro) {
          gmovie_play(8, GAME_MOVIE_NO_FINAL_FLIP, 0);
      }
-@@ -317,6 +321,7 @@
+@@ -317,6 +330,7 @@
  
      main_loop();
  
@@ -1080,7 +1099,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,6 +388,7 @@
+@@ -383,6 +397,7 @@
              output_profile_data = false;
          }
  
@@ -1088,7 +1107,7 @@ diff --git a/src/main.c b/src/main.c
          tig_ping();
          gamelib_ping();
          iso_redraw();
-@@ -743,25 +749,25 @@
+@@ -743,25 +758,25 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
