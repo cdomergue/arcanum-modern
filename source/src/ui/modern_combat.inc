@@ -195,7 +195,7 @@ static void draw_tactical_hud(void)
         char digit[3];snprintf(digit,sizeof(digit),"%d",(i+1)%10);text_draw(0,digit,r.x+1,r.y+19,MUTED);
     }
     else {
-        tactical_button((SDL_FRect){x+550,y+15,210,28},951,game_text(sub_57A700(0)),false,ready);
+        button((SDL_FRect){x+550,y+15,210,28},951,game_text(sub_57A700(0)),sub_579F50(0),false,ready);
         tactical_button((SDL_FRect){x+550,y+50,210,28},1105,game_text(modern_intgame_text(1005)),false,ready);
     }
     tactical_button((SDL_FRect){x+550,y+83,210,24},1106,tactical_text(TC_LOG),tactical_log_open,true);

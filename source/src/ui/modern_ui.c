@@ -90,6 +90,7 @@ static ArtTexture arts[512];
 static int art_count;
 static SDL_Texture *wood_texture, *paper_texture;
 static SDL_Texture* menu_background;
+static SDL_Texture* skill_icons_texture;
 static float menu_background_width, menu_background_height;
 static Button buttons[MAX_BUTTONS];
 static int button_count;
@@ -339,6 +340,16 @@ static ArtTexture* art_get(tig_art_id_t id)
 
 static void draw_art_id(tig_art_id_t id, SDL_FRect rect, bool fit)
 {
+    if(skill_icons_texture && tig_art_type(id)==TIG_ART_TYPE_INTERFACE) {
+        const int icons[]={279,280,282,278};
+        /* Sample the supplied atlas directly: retain its alpha and silver frames. */
+        const SDL_FRect cells[]={{62,63,539,523},{655,63,539,523},{62,656,539,526},{655,656,539,526}};
+        for(int i=0;i<4;i++)if(tig_art_num_get(id)==icons[i]) {
+            SDL_FRect src=cells[i];
+            if(fit){float scale=fminf(rect.w/src.w,rect.h/src.h);rect.x+=(rect.w-src.w*scale)/2;rect.y+=(rect.h-src.h*scale)/2;rect.w=src.w*scale;rect.h=src.h*scale;}
+            SDL_RenderTexture(renderer,skill_icons_texture,&src,&rect);return;
+        }
+    }
     ArtTexture* art=art_get(id);
     if (!art || !art->texture) return;
     if (fit) {
@@ -1652,6 +1663,12 @@ bool modern_ui_init(void)
         SDL_DestroySurface(inventory_actions);
         if(inventory_actions_texture)SDL_SetTextureScaleMode(inventory_actions_texture,SDL_SCALEMODE_LINEAR);
     }
+    SDL_Surface* skill_icons=SDL_LoadPNG("modern-ui/skill-icons.png");
+    if(skill_icons) {
+        skill_icons_texture=SDL_CreateTextureFromSurface(renderer,skill_icons);
+        SDL_DestroySurface(skill_icons);
+        if(skill_icons_texture)SDL_SetTextureScaleMode(skill_icons_texture,SDL_SCALEMODE_LINEAR);
+    }
     modern_graphics_init(window);
     enabled=true;
     combat_tactical_enable();
@@ -1723,6 +1740,7 @@ void modern_ui_exit(void)
     art_count=0;
     SDL_DestroyTexture(wood_texture);SDL_DestroyTexture(paper_texture);
     SDL_DestroyTexture(menu_background);menu_background=NULL;
+    SDL_DestroyTexture(skill_icons_texture);skill_icons_texture=NULL;
     SDL_DestroyTexture(map_texture);map_texture=NULL;
     SDL_DestroyTexture(inventory_actions_texture);inventory_actions_texture=NULL;
     SDL_DestroyTexture(portrait_texture);portrait_texture=NULL;portrait_number=-1;
