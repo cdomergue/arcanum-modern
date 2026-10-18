@@ -5,6 +5,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
+typedef struct ModernCombatPreview {
+    int64_t actor, target, location;
+    int kind, cost, step_cost, chance, radius, count;
+    bool reachable, affordable, fatigue, blocked, in_range;
+    int64_t path[201];
+} ModernCombatPreview;
+bool modern_combat_preview(ModernCombatPreview* preview);
+void modern_combat_sync(void);
+void modern_combat_log(int64_t object, const char* text);
+int modern_spell_selected(void);
+
 bool modern_ui_init(void);
 void modern_ui_exit(void);
 bool modern_ui_enabled(void);

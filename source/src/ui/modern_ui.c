@@ -13,6 +13,8 @@
 #include "../../third_party/stb/stb_truetype.h"
 
 #include "game/critter.h"
+#include "game/combat.h"
+#include "game/location.h"
 #include "game/dialog.h"
 #include "game/hrp.h"
 #include "ui/charedit_ui.h"
@@ -23,6 +25,7 @@
 #include "ui/skill_ui.h"
 #include "game/gamelib.h"
 #include "game/object.h"
+#include "game/obj_pool.h"
 #include "game/item.h"
 #include "game/stat.h"
 #include "game/player.h"
@@ -1370,9 +1373,11 @@ void modern_ui_menu_tick(void)
 
 /* Native play panels share this file's text, materials and input helpers. */
 #include "modern_panels.inc"
+#include "modern_combat.inc"
 
 static bool hud_region(float x,float y)
 {
+    if(tactical_active())return tactical_region(x,y);
     return inside((SDL_FRect){(canvas_w-930)/2,10,930,60},x,y)
         || inside((SDL_FRect){(canvas_w-980)/2,canvas_h-126,980,116},x,y);
 }
@@ -1404,7 +1409,7 @@ static void render_overlay(SDL_Renderer* target)
     else {
         draw_world_bubbles();
         if(!hud_region(mouse_x,mouse_y))draw_world_hover();
-        if(hud) draw_hud();
+        if(hud){if(tactical_active()){draw_tactical_preview();draw_tactical_hud();}else draw_hud();}
         if(journal) draw_journal();
         draw_play_panels();
     }
@@ -1430,6 +1435,7 @@ static void save_settings(void)
 
 static void activate(int action)
 {
+    if(tactical_action(action))return;
     if(panels_action(action))return;
     /* A conversation may begin between a HUD click and its deferred dispatch. */
     if(intgame_mode_get()==INTGAME_MODE_DIALOG) return;
@@ -1493,6 +1499,7 @@ static bool handle_ui_event(SDL_Event* event)
         mouse_x=event->button.x*canvas_w/ww;mouse_y=event->button.y*canvas_h/wh;
         bool over=menu || journal || (hud && hud_region(mouse_x,mouse_y));
         if(event->button.down && over) {
+            tactical_pressed_actor=combat_input_actor();
             click_captured=true;pressed_action=event->button.button==SDL_BUTTON_LEFT?hit(mouse_x,mouse_y):-1;
             return true;
         }
@@ -1581,6 +1588,9 @@ static bool handle_ui_event(SDL_Event* event)
             }
             return true;
         }
+        if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_E || key==SDL_SCANCODE_SPACE)) {
+            if(down && !event->key.repeat){tactical_pressed_actor=combat_input_actor();pending_action=1100;}return true;
+        }
         if(key==SDL_SCANCODE_J) {if(down && !event->key.repeat) pending_action=0;return true;}
     }
     return false;
@@ -1628,6 +1638,7 @@ bool modern_ui_init(void)
     }
     modern_graphics_init(window);
     enabled=true;
+    combat_tactical_enable();
     if(SDL_getenv("ARCANUM_UI_SELFTEST")) verify_text_layout();
     tig_video_set_overlay(render_overlay);
     tig_message_set_native_filter(handle_event);
@@ -1640,6 +1651,8 @@ bool modern_ui_enabled(void) {return enabled;}
 void modern_ui_tick(void)
 {
     modern_ui_menu_tick();
+    tactical_tick();
+    if(pending_action==999 && tactical_active())pending_action=-1;
     if(pending_action==999) {
         pending_action=-1;
         if(journal) logbook_ui_close();
@@ -1685,6 +1698,7 @@ void modern_ui_message(const char* text)
 
 void modern_ui_exit(void)
 {
+    tactical_portraits_clear();
     modern_graphics_cancel();
     tig_video_set_overlay(NULL);tig_message_set_native_filter(NULL);
     for(int i=0;i<FONT_COUNT;i++) {SDL_DestroyTexture(fonts[i].texture);fonts[i].texture=NULL;}

@@ -197,6 +197,349 @@ diff --git a/first_party/tig/src/window.c b/first_party/tig/src/window.c
 +    tig_window_invalidate_rect(NULL);
 +    return TIG_OK;
 +}
+diff --git a/src/game/ai.c b/src/game/ai.c
+--- a/src/game/ai.c
++++ b/src/game/ai.c
+@@ -299,6 +299,8 @@
+         return;
+     }
+ 
++    if (combat_turn_based_is_active() && combat_player_controls(obj)) return;
++
+     if (!ai_heal(&ai) && !ai_look_for_item(&ai)) {
+         sub_4A92D0(&ai);
+     }
+diff --git a/src/game/anim.c b/src/game/anim.c
+--- a/src/game/anim.c
++++ b/src/game/anim.c
+@@ -3737,7 +3737,7 @@
+ 
+             if ((state_change & 0x90000000) == 0x90000000) {
+                 run_info->flags |= 0x02;
+-                if (combat_turn_based_is_active() && !player_is_local_pc_obj(run_info->anim_obj)) {
++                if (combat_turn_based_is_active() && !combat_player_controls(run_info->anim_obj)) {
+                     combat_consume_action_points(run_info->anim_obj, combat_required_action_points_get());
+                 }
+ 
+@@ -4848,7 +4848,7 @@
+     if (run_info->path.max == 0 || run_info->path.max > range) {
+         path_create_info.flags = PATH_FLAG_0x0001;
+         if (!sub_425BF0(&path_create_info, 1)) {
+-            if (!player_is_pc_obj(obj)) {
++            if (!combat_player_controls(obj)) {
+                 combat_turn_based_end_critter_turn(obj);
+             }
+             return false;
+@@ -4856,7 +4856,7 @@
+ 
+         run_info->path.max = path_make(&path_create_info);
+         if (run_info->path.max == 0 || run_info->path.max > range) {
+-            if (!player_is_pc_obj(obj)) {
++            if (!combat_player_controls(obj)) {
+                 combat_turn_based_end_critter_turn(obj);
+             }
+             return false;
+@@ -4973,7 +4973,7 @@
+     if (run_info->path.max == 0 || run_info->path.max > range) {
+         path_create_info.flags = PATH_FLAG_0x0001;
+         if (!sub_425BF0(&path_create_info, 1)) {
+-            if (!player_is_pc_obj(obj)) {
++            if (!combat_player_controls(obj)) {
+                 combat_turn_based_end_critter_turn(obj);
+             }
+             return false;
+@@ -4981,7 +4981,7 @@
+ 
+         run_info->path.max = path_make(&path_create_info);
+         if (run_info->path.max == 0 || run_info->path.max > range) {
+-            if (!player_is_pc_obj(obj)) {
++            if (!combat_player_controls(obj)) {
+                 combat_turn_based_end_critter_turn(obj);
+             }
+             return false;
+@@ -5168,7 +5168,7 @@
+ }
+ 
+ // 0x426560
+-bool sub_426560(int64_t obj, int64_t from, int64_t to, AnimPath* path, unsigned int flags)
++static bool anim_find_path(int64_t obj, int64_t from, int64_t to, AnimPath* path, unsigned int flags, bool preview)
+ {
+     int v1;
+     int8_t* rotations;
+@@ -5244,7 +5244,7 @@
+     }
+ 
+     if (path->max == 0) {
+-        if (!player_is_pc_obj(obj)) {
++        if (!preview && !combat_player_controls(obj)) {
+             combat_turn_based_end_critter_turn(obj);
+         }
+         return false;
+@@ -5261,6 +5261,19 @@
+ 
+     return true;
+ }
++bool sub_426560(int64_t obj, int64_t from, int64_t to, AnimPath* path, unsigned int flags)
++{
++    return anim_find_path(obj, from, to, path, flags, false);
++}
++
++bool anim_preview_path(int64_t obj, int64_t to, bool adjacent, AnimPath* path)
++{
++    memset(path, 0, sizeof(*path));
++    path->field_CC = sizeof(path->rotations);
++    return obj && anim_find_path(obj, obj_field_int64_get(obj, OBJ_F_LOCATION), to,
++        path, adjacent ? PATH_FLAG_0x0001 : 0, true);
++}
++
+ 
+ // 0x426840
+ bool sub_426840(AnimRunInfo* run_info)
+@@ -5926,7 +5939,7 @@
+         }
+ 
+         if (run_info->path.max == 0) {
+-            if (!player_is_pc_obj(obj)) {
++            if (!combat_player_controls(obj)) {
+                 combat_turn_based_end_critter_turn(obj);
+             }
+             return false;
+diff --git a/src/game/anim.h b/src/game/anim.h
+--- a/src/game/anim.h
++++ b/src/game/anim.h
+@@ -53,6 +53,8 @@
+ } BloodSplotchType;
+ 
+ extern AnimGoalNode* anim_goal_nodes[];
++
++bool anim_preview_path(int64_t obj, int64_t to, bool adjacent, AnimPath* path);
+ 
+ bool anim_init(GameInitInfo* init_info);
+ void anim_exit(void);
+diff --git a/src/game/combat.c b/src/game/combat.c
+--- a/src/game/combat.c
++++ b/src/game/combat.c
+@@ -1,4 +1,5 @@
+ #include "game/combat.h"
++#include "ui/modern_ui.h"
+ 
+ #define _USE_MATH_DEFINES
+ #include <math.h>
+@@ -195,6 +196,73 @@
+ static CombatCallbacks combat_callbacks;
+ 
+ // 0x4B1D50
++
++/* Tactical input never changes player identity or replenishes the engine's PA. */
++static bool tactical_enabled;
++
++void combat_tactical_enable(void)
++{
++    tactical_enabled = true;
++    settings_set_value(&settings, TURN_BASED_KEY, 1);
++    settings_set_value(&settings, FAST_TURN_BASED_KEY, 0);
++}
++
++bool combat_tactical_enabled(void) { return tactical_enabled; }
++
++bool combat_player_controls(int64_t obj)
++{
++    if (!obj || !obj_handle_is_valid(obj)) return false;
++    if (player_is_local_pc_obj(obj)) return true;
++    if (!tactical_enabled || !combat_turn_based_active
++        || obj_field_int32_get(obj, OBJ_F_TYPE) != OBJ_TYPE_NPC
++        || !player_is_local_pc_obj(critter_pc_leader_get(obj))) return false;
++    /* Fear and hostile mind control retain their original forced behavior. */
++    if (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & (OCF_FLEEING | OCF_SPELL_FLEE | OCF_SURRENDERED)) return false;
++    if (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) {
++        int64_t controller = OBJ_HANDLE_NULL;
++        if (!sub_459040(obj, OSF_MIND_CONTROLLED, &controller)
++            || (controller != player_get_local_pc_obj()
++                && !player_is_local_pc_obj(critter_pc_leader_get(controller)))) return false;
++    }
++    return true;
++}
++
++int64_t combat_input_actor(void)
++{
++    if (!combat_turn_based_active) return player_get_local_pc_obj();
++    int64_t actor = combat_turn_based_whos_turn_get();
++    return combat_player_controls(actor) ? actor : OBJ_HANDLE_NULL;
++}
++
++bool combat_input_ready(int64_t obj)
++{
++    AnimID current, fidget;
++    if (!obj || obj != combat_input_actor() || !critter_is_active(obj)) return false;
++    if (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & (OCF_PARALYZED | OCF_STUNNED)) return false;
++    if (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_STONED) return false;
++    return !sub_423300(obj, &current)
++        || (anim_is_current_goal_type(obj, AG_ANIM_FIDGET, &fidget)
++            && anim_id_is_equal(&current, &fidget));
++}
++
++bool combat_input_end_turn(int64_t expected_actor)
++{
++    if (!combat_turn_based_active || !combat_input_ready(expected_actor)) return false;
++    combat_turn_based_end_critter_turn(expected_actor);
++    return true;
++}
++
++int combat_turn_order(int64_t* actors, int capacity)
++{
++    int count = 0;
++    if (!combat_turn_based_active) return 0;
++    for (ObjectNode* node = combat_critter_list.head; node && count < capacity; node = node->next) {
++        if (obj_handle_is_valid(node->obj) && critter_is_active(node->obj)
++            && !sub_4B7DC0(node->obj)) actors[count++] = node->obj;
++    }
++    return count;
++}
++
+ bool combat_init(GameInitInfo* init_info)
+ {
+     combat_editor = init_info->editor;
+@@ -282,7 +350,7 @@
+ // 0x4B2020
+ bool combat_load(GameLoadInfo* load_info)
+ {
+-    int saved_action_points;
++    int saved_action_points, saved_turn;
+     ObjectID oid;
+     int64_t obj;
+     ObjectNode* node;
+@@ -292,10 +360,12 @@
+     if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
+     if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
+ 
++    if (tactical_enabled) combat_turn_based = true;
+     if (!combat_turn_based_active) {
+         return true;
+     }
+ 
++    saved_turn = combat_turn_based_turn;
+     combat_callbacks.field_4();
+ 
+     if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
+@@ -307,6 +377,7 @@
+     }
+ 
+     combat_action_points = saved_action_points;
++    combat_turn_based_turn = saved_turn;
+ 
+     if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
+     qword_5FC238 = obj_pool_perm_lookup(oid);
+@@ -422,7 +493,7 @@
+ // 0x4B2410
+ void fast_turn_based_changed(void)
+ {
+-    combat_fast_turn_based = settings_get_value(&settings, FAST_TURN_BASED_KEY);
++    combat_fast_turn_based = !tactical_enabled && settings_get_value(&settings, FAST_TURN_BASED_KEY);
+ }
+ 
+ // 0x4B24F0
+@@ -1813,6 +1884,7 @@
+             }
+         }
+ 
++        if (tf_level_get() != TF_LEVEL_VERBOSE) modern_combat_log(combat->target_obj, str);
+         if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
+             tf_add(combat->target_obj, tf_type, str);
+         }
+@@ -2857,6 +2929,7 @@
+ bool sub_4B6C90(bool turn_based)
+ {
+     int64_t pc;
++    if (tactical_enabled) turn_based = true;
+ 
+     if (combat_turn_based == turn_based) {
+         return true;
+@@ -2958,7 +3031,7 @@
+ 
+     combat_debug(obj, "Whos Turn Set");
+ 
+-    if (!player_is_local_pc_obj(qword_5FC248)) {
++    if (!combat_player_controls(qword_5FC248)) {
+         sub_424070(qword_5FC248, 3, 0, 1);
+     }
+ 
+@@ -2997,7 +3070,11 @@
+ 
+     tig_debug_printf("Combat: TB: Action Points Available: %d.\n", combat_action_points);
+ 
+-    if (player_is_local_pc_obj(obj)) {
++    if (combat_player_controls(obj)) {
++        if (!player_is_local_pc_obj(obj) && !gamelib_in_load()) {
++            object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_START_COMBAT, 0);
++            object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0);
++        }
+         combat_callbacks.field_C(combat_action_points);
+ 
+         if (!sub_4BB900()) {
+@@ -3025,6 +3102,7 @@
+ {
+     if (obj == dword_5FC240->obj
+         && !player_is_pc_obj(obj)
++        && !combat_player_controls(obj)
+         && !gamelib_in_load()) {
+         if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
+             ai_process(obj);
+@@ -3054,7 +3132,7 @@
+     }
+ 
+     if (dword_5FC240 != NULL) {
+-        if (player_is_pc_obj(dword_5FC240->obj) && combat_action_points > 0) {
++        if (combat_player_controls(dword_5FC240->obj) && combat_action_points > 0) {
+             return;
+         }
+ 
+@@ -3084,7 +3162,7 @@
+ 
+     if (combat_turn_based_active) {
+         if (dword_5FC240 != NULL
+-            && player_is_pc_obj(dword_5FC240->obj)
++            && combat_player_controls(dword_5FC240->obj)
+             && combat_action_points > 0) {
+             return true;
+         }
+@@ -3205,7 +3283,7 @@
+ 
+     dword_5FC250 = 0;
+     dword_5FC240 = combat_critter_list.head;
+-    while (sub_4B7580(dword_5FC240) && dword_5FC240 != NULL) {
++    while (dword_5FC240 != NULL && sub_4B7580(dword_5FC240)) {
+         dword_5FC250++;
+         dword_5FC240 = dword_5FC240->next;
+     }
+@@ -3549,6 +3627,8 @@
+         return true;
+     }
+ 
++    if (tactical_enabled && SDL_getenv("ARCANUM_TACTICAL_TRACE"))
++        tig_debug_printf("Tactical PA: actor=%lld before=%d cost=%d location=%lld\n", (long long)obj, combat_action_points, action_points, (long long)obj_field_int64_get(obj, OBJ_F_LOCATION));
+     is_pc = player_is_local_pc_obj(obj);
+     if (combat_action_points >= action_points) {
+         combat_action_points -= action_points;
+diff --git a/src/game/combat.h b/src/game/combat.h
+--- a/src/game/combat.h
++++ b/src/game/combat.h
+@@ -93,6 +93,16 @@
+ // Serializeable.
+ static_assert(sizeof(CombatContext) == 0x68, "wrong size");
+ 
++
++/* Input ownership is separate from the actual PC used by quests and scripts. */
++void combat_tactical_enable(void);
++bool combat_tactical_enabled(void);
++bool combat_player_controls(int64_t obj);
++int64_t combat_input_actor(void);
++bool combat_input_ready(int64_t obj);
++bool combat_input_end_turn(int64_t expected_actor);
++int combat_turn_order(int64_t* actors, int capacity);
++
+ bool combat_init(GameInitInfo* init_info);
+ void combat_exit(void);
+ void combat_reset(void);
 diff --git a/src/game/tb.c b/src/game/tb.c
 --- a/src/game/tb.c
 +++ b/src/game/tb.c
@@ -293,6 +636,23 @@ diff --git a/src/game/tc.c b/src/game/tc.c
      // Make sure we're not in the editor.
      if (tc_editor) {
          return;
+diff --git a/src/game/tf.c b/src/game/tf.c
+--- a/src/game/tf.c
++++ b/src/game/tf.c
+@@ -1,4 +1,5 @@
+ #include "game/tf.h"
++#include "ui/modern_ui.h"
+ 
+ #include "game/gamelib.h"
+ #include "game/object.h"
+@@ -519,6 +520,7 @@
+  */
+ void tf_add(int64_t obj, int type, const char* str)
+ {
++    modern_combat_log(obj, str);
+     TextFloaterList* list;
+     TextFloaterList* prev_list;
+     TextFloaterEntry* entry;
 diff --git a/src/main.c b/src/main.c
 --- a/src/main.c
 +++ b/src/main.c
@@ -392,6 +752,60 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +
 +int64_t modern_charedit_object(void) { return charedit_created ? charedit_obj : OBJ_HANDLE_NULL; }
 +bool modern_charedit_editable(void) { return charedit_created && charedit_mode!=CHAREDIT_MODE_PASSIVE; }
+diff --git a/src/ui/combat_ui.c b/src/ui/combat_ui.c
+--- a/src/ui/combat_ui.c
++++ b/src/ui/combat_ui.c
+@@ -1,4 +1,5 @@
+ #include "ui/combat_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include "game/anim.h"
+ #include "game/combat.h"
+@@ -188,6 +189,7 @@
+             }
+         }
+     }
++    modern_combat_sync();
+ }
+ 
+ // 0x56ECE0
+@@ -286,6 +288,7 @@
+     if (!intgame_is_compact_interface()) {
+         tig_window_hide(combat_ui_compact_ap_bar_window_handle);
+     }
++    modern_combat_sync();
+ }
+ 
+ // 0x56EF40
+@@ -657,7 +660,7 @@
+             && msg->data.button.button_handle == combat_ui_end_turn_button_info.button_handle) {
+             obj = combat_turn_based_whos_turn_get();
+             if (obj != OBJ_HANDLE_NULL
+-                && player_is_local_pc_obj(obj)
++                && combat_player_controls(obj)
+                 && (!sub_423300(obj, &curr_anim_id)
+                     || (anim_is_current_goal_type(obj, AG_ANIM_FIDGET, &fidget_anim_id)
+                         && anim_id_is_equal(&curr_anim_id, &fidget_anim_id)))) {
+@@ -672,7 +675,7 @@
+             && msg->data.keyboard.scancode == SDL_SCANCODE_E) {
+             obj = combat_turn_based_whos_turn_get();
+             if (obj != OBJ_HANDLE_NULL
+-                && player_is_local_pc_obj(obj)
++                && combat_player_controls(obj)
+                 && (!sub_423300(obj, &curr_anim_id)
+                     || (anim_is_current_goal_type(obj, AG_ANIM_FIDGET, &fidget_anim_id)
+                         && anim_id_is_equal(&curr_anim_id, &fidget_anim_id)))) {
+@@ -687,3 +690,10 @@
+ 
+     return false;
+ }
++
++void modern_combat_sync(void)
++{
++    if (!combat_tactical_enabled()) return;
++    if (combat_ui_ap_bar_window_handle != TIG_WINDOW_HANDLE_INVALID) tig_window_hide(combat_ui_ap_bar_window_handle);
++    if (combat_ui_compact_ap_bar_window_handle != TIG_WINDOW_HANDLE_INVALID) tig_window_hide(combat_ui_compact_ap_bar_window_handle);
++}
 diff --git a/src/ui/cyclic_ui.c b/src/ui/cyclic_ui.c
 --- a/src/ui/cyclic_ui.c
 +++ b/src/ui/cyclic_ui.c
@@ -499,13 +913,14 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
 diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 --- a/src/ui/intgame.c
 +++ b/src/ui/intgame.c
-@@ -1,4 +1,5 @@
+@@ -1,4 +1,6 @@
  #include "ui/intgame.h"
 +#include "ui/modern_ui.h"
++#include "game/path.h"
  
  #include <stdio.h>
  
-@@ -43,6 +44,7 @@
+@@ -43,6 +45,7 @@
  #include "ui/broadcast_ui.h"
  #include "ui/charedit_ui.h"
  #include "ui/compact_ui.h"
@@ -513,10 +928,39 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  #include "ui/dialog_ui.h"
  #include "ui/fate_ui.h"
  #include "ui/follower_ui.h"
-@@ -2685,6 +2687,15 @@
-         }
-     }
+@@ -2022,7 +2025,7 @@
+             }
  
+             if (msg->data.button.button_handle == intgame_primary_buttons[INTGAME_PRIMARY_BUTTON_INVENTORY].button_handle) {
+-                inven_ui_open(player_get_local_pc_obj(), OBJ_HANDLE_NULL, INVEN_UI_MODE_INVENTORY);
++                inven_ui_open(combat_input_actor(), OBJ_HANDLE_NULL, INVEN_UI_MODE_INVENTORY);
+                 return true;
+             }
+ 
+@@ -2529,7 +2532,7 @@
+                 gsound_play_sfx(0, 1);
+                 return true;
+             case SDLK_I:
+-                inven_ui_open(player_get_local_pc_obj(), OBJ_HANDLE_NULL, INVEN_UI_MODE_INVENTORY);
++                inven_ui_open(combat_input_actor(), OBJ_HANDLE_NULL, INVEN_UI_MODE_INVENTORY);
+                 gsound_play_sfx(0, 1);
+                 return true;
+             case SDLK_R:
+@@ -2677,12 +2680,22 @@
+     TigMouseState mouse_state;
+     TigMessage fake_mouse_move;
+ 
+-    pc_obj = player_get_local_pc_obj();
+-
++    pc_obj = combat_input_actor();
++
++    if (!pc_obj) return;
+     if (combat_turn_based_is_active()) {
+         if (combat_turn_based_whos_turn_get() != pc_obj) {
+             return;
+         }
++    }
++
 +    /* Hidden command bars no longer run their window message filter. Route
 +     * conversation events before hotkeys or world movement when using the
 +     * native HUD; Escape and Options retain the original filter's behavior.
@@ -524,12 +968,90 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    if (intgame_mode_get() == INTGAME_MODE_DIALOG
 +        && intgame_dialog_process_event_func != NULL && sub_54B5D0(msg)) {
 +        return;
-+    }
-+
+     }
+ 
      if (msg->type == TIG_MESSAGE_KEYBOARD
-         && !textedit_ui_is_focused()
-         && !msg->data.keyboard.pressed
-@@ -4088,6 +4099,10 @@
+@@ -2699,6 +2712,7 @@
+         case TIG_MESSAGE_MOUSE:
+             switch (msg->data.mouse.event) {
+             case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
++                if (combat_turn_based_is_active() && !combat_input_ready(pc_obj)) break;
+                 if (sub_5517A0(msg)
+                     && sub_552050(msg->data.mouse.x, msg->data.mouse.y, &td)) {
+                     if (td.is_loc) {
+@@ -2972,6 +2986,7 @@
+         case TIG_MESSAGE_MOUSE:
+             switch (msg->data.mouse.event) {
+             case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
++                if (combat_turn_based_is_active() && !combat_input_ready(pc_obj)) break;
+                 if (sub_5517A0(msg)
+                     && target_pick_at_screen_xy(msg->data.mouse.x, msg->data.mouse.y, &td, intgame_fullscreen)
+                     && td.is_loc
+@@ -3117,7 +3132,7 @@
+     int64_t pc_obj;
+     S4F2680 v1;
+ 
+-    pc_obj = player_get_local_pc_obj();
++    pc_obj = combat_input_actor();
+ 
+     if (!combat_turn_based_is_active()
+         || combat_turn_based_whos_turn_get() == pc_obj) {
+@@ -3261,16 +3276,18 @@
+     int anim;
+     bool v26 = false;
+ 
+-    pc_obj = player_get_local_pc_obj();
++    pc_obj = combat_input_actor();
+     if (pc_obj == OBJ_HANDLE_NULL) {
+         return;
+     }
+ 
++    if (combat_turn_based_is_active() && !combat_input_ready(pc_obj)) return;
++
+     if (!critter_is_active(pc_obj)) {
+         return;
+     }
+ 
+-    target_type = obj_field_int32_get(td->obj, OBJ_F_TYPE);
++    target_type = td->is_loc ? OBJ_TYPE_TRAP : obj_field_int32_get(td->obj, OBJ_F_TYPE);
+     if (!td->is_loc && td->obj == pc_obj) {
+         return;
+     }
+@@ -3314,7 +3331,7 @@
+             }
+         }
+ 
+-        if (combat_critter_is_combat_mode_active(pc_obj)) {
++        if (combat_critter_is_combat_mode_active(pc_obj) || (combat_turn_based_is_active() && combat_player_controls(pc_obj))) {
+             switch (target_type) {
+             case OBJ_TYPE_WALL:
+             case OBJ_TYPE_PORTAL:
+@@ -3396,8 +3413,8 @@
+                     }
+ 
+                     if (!td->is_loc
+-                        && player_is_local_pc_obj(critter_pc_leader_get(td->obj)
+-                            && !tig_kb_is_key_pressed(SDL_SCANCODE_LALT))) {
++                        && (player_is_local_pc_obj(td->obj) || player_is_local_pc_obj(critter_pc_leader_get(td->obj)))
++                        && !tig_kb_is_key_pressed(SDL_SCANCODE_LALT)) {
+                         return;
+                     }
+                 }
+@@ -3712,10 +3729,12 @@
+         return;
+     }
+ 
+-    pc_obj = player_get_local_pc_obj();
++    pc_obj = combat_input_actor();
+     if (pc_obj == OBJ_HANDLE_NULL) {
+         return;
+     }
++
++    if (combat_turn_based_is_active() && !combat_input_ready(pc_obj)) return;
+ 
+     if (critter_is_dead(pc_obj)) {
+         return;
+@@ -4088,6 +4107,10 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
  {
@@ -540,7 +1062,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4115,7 @@
+@@ -4100,6 +4123,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -548,7 +1070,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4179,16 @@
+@@ -4163,9 +4187,16 @@
      }
  }
  
@@ -565,7 +1087,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4225,11 @@
+@@ -4202,6 +4233,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -577,7 +1099,40 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -6239,6 +6267,15 @@
+@@ -4833,14 +4869,14 @@
+         if (!map_is_clearing_objects()) {
+             if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
+                 if (!td.is_loc) {
+-                    sub_57CCF0(player_get_local_pc_obj(), td.obj);
++                    sub_57CCF0(combat_input_actor(), td.obj);
+                     object_hover_obj_set(td.obj);
+                 }
+             } else if (combat_turn_based_is_active()
+                 && target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, TGT_TILE, intgame_fullscreen)
+                 && td.is_loc
+                 && intgame_mode_get() == INTGAME_MODE_MAIN) {
+-                combat_check_move_to(player_get_local_pc_obj(), td.loc);
++                combat_check_move_to(combat_input_actor(), td.loc);
+             }
+         }
+     }
+@@ -4912,13 +4948,13 @@
+             v1 = true;
+             v17 = true;
+             spell_ui_cancel();
+-            combat_check_cast_spell(player_get_local_pc_obj());
++            combat_check_cast_spell(combat_input_actor());
+             break;
+         case INTGAME_MODE_SKILL:
+             v1 = true;
+             v17 = true;
+             skill_ui_cancel();
+-            combat_check_use_skill(player_get_local_pc_obj());
++            combat_check_use_skill(combat_input_actor());
+             break;
+         case INTGAME_MODE_DIALOG:
+             sub_551A10(pc_obj);
+@@ -6239,6 +6275,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -593,7 +1148,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6319,7 @@
+@@ -6282,6 +6327,7 @@
              }
          }
      }
@@ -601,7 +1156,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6611,7 @@
+@@ -6573,6 +6619,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -609,7 +1164,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6650,16 @@
+@@ -6611,6 +6658,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -626,7 +1181,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6844,11 @@
+@@ -6795,6 +6852,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -638,7 +1193,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7666,7 @@
+@@ -7612,6 +7674,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -646,7 +1201,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7695,7 @@
+@@ -7640,7 +7703,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -655,7 +1210,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7839,7 @@
+@@ -7784,7 +7847,7 @@
          mes_file_entry.str,
          value);
  
@@ -664,7 +1219,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8888,110 @@
+@@ -8833,3 +8896,187 @@
  
      follower_ui_show();
  }
@@ -775,6 +1330,83 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    }
 +    return true;
 +}
++
++/* Read-only previews: never invoke an action, a script, or a random roll. */
++bool modern_combat_preview(ModernCombatPreview* p)
++{
++    memset(p, 0, sizeof(*p)); p->chance = -1; p->in_range = true;
++    p->actor = combat_input_actor();
++    if (!combat_turn_based_is_active() || !combat_input_ready(p->actor)) return false;
++    TigMouseState mouse; TargetDescriptor td;
++    if (tig_mouse_get_state(&mouse) != TIG_OK || !sub_5518C0(mouse.x, mouse.y)) return false;
++    if (!target_pick_at_screen_xy_ex(mouse.x, mouse.y, &td, TGT_OBJECT | TGT_OBJ_NO_T_WALL | TGT_TILE, intgame_fullscreen)) return false;
++    p->target = td.is_loc ? OBJ_HANDLE_NULL : td.obj;
++    if (p->target == p->actor && intgame_mode_get() == INTGAME_MODE_MAIN) return false;
++    if (p->target && intgame_mode_get() == INTGAME_MODE_MAIN && !tig_kb_get_modifier(SDL_KMOD_ALT)
++        && (player_is_local_pc_obj(p->target) || player_is_local_pc_obj(critter_pc_leader_get(p->target)))) return false;
++    p->location = td.is_loc ? td.loc : obj_field_int64_get(td.obj, OBJ_F_LOCATION);
++    int64_t from = obj_field_int64_get(p->actor, OBJ_F_LOCATION);
++    bool adjacent = false, needs_path = false;
++    p->step_cost = 2;
++    if (player_is_pc_obj(p->actor) && get_always_run(p->actor) && critter_encumbrance_level_get(p->actor) < 4 && critter_fatigue_current(p->actor) > 0) p->step_cost = 1;
++    if (intgame_mode_get() == INTGAME_MODE_SPELL) {
++        int spl = modern_spell_selected();
++        if (spl < 0 || spl >= SPELL_COUNT) return false;
++        p->kind = 2; p->cost = 4; p->radius = sub_4502B0(spl);
++        p->in_range = location_dist(from, p->location) <= magictech_get_range(spl);
++        /* LOS check only reads the invocation. The run/charge APIs are excluded. */
++        MagicTechInvocation invocation;
++        magictech_invocation_init(&invocation, p->actor, spl);
++        if (td.is_loc) invocation.target_loc = td.loc;
++        else sub_4440E0(td.obj, &invocation.target_obj);
++        p->blocked = !magictech_check_los(&invocation);
++        p->reachable = p->in_range && !p->blocked;
++    } else if (intgame_mode_get() == INTGAME_MODE_SKILL || intgame_mode_get() == INTGAME_MODE_ITEM) {
++        /* Skills and items have specific validation/costs: don't invent a quote. */
++        return false;
++    } else if (p->target && obj_type_is_critter(obj_field_int32_get(p->target, OBJ_F_TYPE)) && !critter_is_dead(p->target)) {
++        p->kind = 1; p->cost = combat_attack_cost(p->actor);
++        int64_t weapon = item_wield_get(p->actor, ITEM_INV_LOC_WEAPON);
++        int range = weapon ? item_weapon_range(weapon, p->actor) : 1;
++        needs_path = range <= 1 && location_dist(from, p->location) > 1;
++        adjacent = true;
++        p->in_range = range <= 1 || location_dist(from, p->location) <= range;
++        SkillInvocation si; skill_invocation_init(&si);
++        sub_4440E0(p->actor, &si.source); sub_4440E0(p->target, &si.target); sub_4440E0(weapon, &si.item);
++        si.skill = item_weapon_skill(weapon);
++        int effectiveness = IS_TECH_SKILL(si.skill) ? tech_skill_effectiveness(p->actor, GET_TECH_SKILL(si.skill), p->target)
++            : basic_skill_effectiveness(p->actor, GET_BASIC_SKILL(si.skill), p->target);
++        effectiveness -= skill_invocation_difficulty(&si);
++        if (weapon && si.skill != SKILL_THROWING) {
++            int penalty = sub_461620(weapon, p->actor, p->target);
++            if (penalty > 0) effectiveness -= effectiveness * penalty / 100;
++        }
++        p->blocked = (si.flags & SKILL_INVOCATION_BLOCKED_SHOT) != 0;
++        /* The current-position hit chance is only meaningful once in range. */
++        if (!needs_path) p->chance = effectiveness < 0 || !p->in_range || p->blocked ? 0 : effectiveness;
++        p->reachable = p->in_range && !p->blocked;
++    } else {
++        if (p->target) return false;
++        p->kind = 0; p->reachable = true; needs_path = from != p->location;
++    }
++    if (needs_path) {
++        AnimPath path;
++        p->reachable = anim_preview_path(p->actor, p->location, adjacent, &path);
++        if (p->reachable) {
++            p->path[p->count++] = from;
++            int64_t loc = from;
++            for (int i = 0; i < path.max && p->count < 201; i++) {
++                if (!location_in_dir(loc, path.rotations[i], &loc)) break;
++                p->path[p->count++] = loc;
++            }
++            p->cost += path.max * p->step_cost;
++        }
++    }
++    int ap = combat_action_points_get();
++    p->fatigue = p->cost > ap && ap > 0 && player_is_local_pc_obj(p->actor) && critter_fatigue_current(p->actor) > 1;
++    p->affordable = p->reachable && (p->cost <= ap || p->fatigue);
++    return true;
++}
 diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 --- a/src/ui/inven_ui.c
 +++ b/src/ui/inven_ui.c
@@ -843,6 +1475,28 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 +{
 +    MesFileEntry entry={.num=number};mes_get_msg(inven_ui_mes_file,&entry);return entry.str;
 +}
+diff --git a/src/ui/item_ui.c b/src/ui/item_ui.c
+--- a/src/ui/item_ui.c
++++ b/src/ui/item_ui.c
+@@ -121,7 +121,7 @@
+ 
+             if ((*tgt_ptr & TGT_OBJECT) != 0
+                 && tig_kb_get_modifier(SDL_KMOD_SHIFT)) {
+-                target_descriptor_set_obj(&td, player_get_local_pc_obj());
++                target_descriptor_set_obj(&td, owner_obj);
+                 item_ui_apply(&td);
+             }
+         }
+@@ -147,7 +147,8 @@
+     int64_t item_obj;
+     char str[1000];
+ 
+-    pc_obj = player_get_local_pc_obj();
++    pc_obj = combat_input_actor();
++    if (!pc_obj || (combat_turn_based_is_active() && !combat_input_ready(pc_obj))) return;
+ 
+     if (critter_is_dead(pc_obj)) {
+         return;
 diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
 --- a/src/ui/logbook_ui.c
 +++ b/src/ui/logbook_ui.c
@@ -1118,6 +1772,15 @@ diff --git a/src/ui/options_ui.c b/src/ui/options_ui.c
  #include "ui/options_ui.h"
  
  #include "game/anim.h"
+@@ -412,7 +413,7 @@
+     } else {
+         *value_ptr = 0;
+     }
+-    *enabled_ptr = true;
++    *enabled_ptr = !combat_tactical_enabled();
+ }
+ 
+ /**
 @@ -691,3 +692,16 @@
  {
      settings_set_value(&settings, MUSIC_VOLUME_KEY, value);
@@ -1180,6 +1843,26 @@ diff --git a/src/ui/schematic_ui.c b/src/ui/schematic_ui.c
 +    } else return;
 +    schematic_ui_message_filter(&msg);
 +}
+diff --git a/src/ui/skill_ui.c b/src/ui/skill_ui.c
+--- a/src/ui/skill_ui.c
++++ b/src/ui/skill_ui.c
+@@ -145,6 +145,7 @@
+ {
+     int64_t pc_obj;
+ 
++    if (combat_turn_based_is_active() && !combat_input_ready(obj)) return;
+     pc_obj = player_get_local_pc_obj();
+     if (pc_obj != obj) {
+         if (critter_is_dead(pc_obj)
+@@ -178,7 +179,7 @@
+     uint64_t tgt;
+     SkillInvocation skill_invocation;
+ 
+-    is_pc = player_is_local_pc_obj(obj);
++    is_pc = combat_player_controls(obj);
+     qword_683490 = obj;
+     dword_5CB270 = type;
+ 
 diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
 --- a/src/ui/sleep_ui.c
 +++ b/src/ui/sleep_ui.c
@@ -1213,6 +1896,50 @@ diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
 +    if(native)tig_window_hide(sleep_ui_window);
 +    else tig_window_show(sleep_ui_window);
 +}
+diff --git a/src/ui/spell_ui.c b/src/ui/spell_ui.c
+--- a/src/ui/spell_ui.c
++++ b/src/ui/spell_ui.c
+@@ -123,6 +123,8 @@
+         return SPELL_UI_ACTIVATE_ERR;
+     }
+ 
++    if (combat_turn_based_is_active() && !combat_input_ready(obj_type_is_item(obj_field_int32_get(obj, OBJ_F_TYPE)) ? obj_field_handle_get(obj, OBJ_F_ITEM_PARENT) : obj)) return SPELL_UI_ACTIVATE_ERR;
++
+     dword_683508 = true;
+ 
+     if (obj_type_is_item(obj_field_int32_get(obj, OBJ_F_TYPE))) {
+@@ -137,7 +139,7 @@
+         return SPELL_UI_ACTIVATE_ERR;
+     }
+ 
+-    if (!player_is_pc_obj(qword_683500)) {
++    if (!combat_player_controls(qword_683500)) {
+         return SPELL_UI_ACTIVATE_ERR;
+     }
+ 
+@@ -213,7 +215,7 @@
+ 
+         if ((*tgt_ptr & TGT_OBJECT) != 0
+             && tig_kb_get_modifier(SDL_KMOD_SHIFT)) {
+-            target_descriptor_set_obj(&td, player_get_local_pc_obj());
++            target_descriptor_set_obj(&td, qword_683500);
+             if ((*tgt_ptr & TGT_OBJ_NO_SELF) == 0) {
+                 spell_ui_apply(&td);
+                 dword_683508 = false;
+@@ -290,6 +292,7 @@
+ // 0x57C110
+ void spell_ui_apply(TargetDescriptor* td)
+ {
++    if (combat_turn_based_is_active() && !combat_input_ready(qword_683500)) return;
+     MesFileEntry mes_file_entry;
+     UiMessage ui_message;
+     MagicTechInvocation mt_invocation;
+@@ -540,3 +543,5 @@
+         }
+     }
+ }
++
++int modern_spell_selected(void) { return dword_5CB3A0; }
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c

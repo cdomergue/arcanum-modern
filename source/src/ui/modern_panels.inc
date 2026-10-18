@@ -60,7 +60,7 @@ static void panel_backdrop(void)
 static const char* actor_name(int64_t obj)
 {
     static char text[1024];text[0]=0;
-    if(obj)sub_57CD60(player_get_local_pc_obj(),obj,text);
+    if(obj)object_examine(obj,player_get_local_pc_obj(),text);
     return game_text(text);
 }
 static void draw_sheet_summary(void)
@@ -417,7 +417,7 @@ static void draw_selector(void)
     float w=fminf(1080,canvas_w-60),x=(canvas_w-w)/2,y=(canvas_h-700)/2;
     frame((SDL_FRect){x,y,w,700});
     centered(3,character_text(selector==1?134:132),canvas_w/2,y+25,GOLD);
-    int64_t pc=player_get_local_pc_obj();
+    int64_t pc=combat_input_actor();
     if(selector==1) {
         for(int i=0;i<16;i++)text_in_button((SDL_FRect){x+25+(i%4)*(w-50)/4,y+85+(i/4)*50,(w-50)/4-6,44},850+i,game_text(spell_college_name(i)),selector_college==i,true);
         for(int i=0;i<5;i++) {
@@ -510,7 +510,7 @@ static bool panels_action(int action)
     if(action==950 || action==951) {
         if(!p && (intgame_mode_get()==INTGAME_MODE_MAIN || intgame_mode_get()==INTGAME_MODE_SKILL)) {
             if(action==950 && intgame_mode_get()==INTGAME_MODE_SKILL && sub_579F90()==1)skill_ui_cancel();
-            else sub_579FA0(player_get_local_pc_obj(),action==950?1:0);
+            else sub_579FA0(combat_input_actor(),action==950?1:0);
         }
         return true;
     }
@@ -550,9 +550,9 @@ static bool panels_action(int action)
     if(action>=850 && action<866){selector_college=action-850;return true;}
     if(action>=870 && action<875 && p==5) {
         int spl=selector_college*5+action-870;
-        if(spell_is_known(player_get_local_pc_obj(),spl)){selector=0;spell_ui_activate(player_get_local_pc_obj(),spl);}return true;
+        if(spell_is_known(combat_input_actor(),spl)){selector=0;spell_ui_activate(combat_input_actor(),spl);}return true;
     }
-    if(action>=880 && action<884 && p==5){selector=0;sub_579FA0(player_get_local_pc_obj(),action-880);return true;}
+    if(action>=880 && action<884 && p==5){selector=0;sub_579FA0(combat_input_actor(),action-880);return true;}
     return false;
 }
 static void panels_tick(void)

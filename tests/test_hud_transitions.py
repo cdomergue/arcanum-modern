@@ -25,6 +25,8 @@ static bool menu, compact, classic_hidden;
 static int mode=INTGAME_MODE_MAIN, rotating=ROTWIN_TYPE_MSG, pending_action=-1;
 static void modern_ui_menu_tick(void) {}
 static void world_zoom_sync(void) {}
+static bool tactical_active(void) { return false; }
+static void tactical_tick(void) {}
 static void modern_map_action(int action) { assert(action == 8); }
 static void modern_sleep_sync(bool native) { (void)native; }
 static void modern_fate_sync(bool native) { (void)native; }
