@@ -864,9 +864,6 @@ static bool panels_event(SDL_Event* event)
             if(p==3 && map_drag_event(event->type,motion?0:event->button.button,r))return true;
             int e=motion?TIG_MESSAGE_MOUSE_MOVE:event->type==SDL_EVENT_MOUSE_BUTTON_DOWN?TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
                 event->button.button==SDL_BUTTON_RIGHT?TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP:TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP;
-            if(p==2 && event->type==SDL_EVENT_MOUSE_BUTTON_UP
-                && event->button.button==SDL_BUTTON_LEFT && event->button.clicks==2)
-                e=MODERN_INVENTORY_DOUBLE_CLICK;
             if(motion || event->button.button==SDL_BUTTON_LEFT || event->type==SDL_EVENT_MOUSE_BUTTON_UP)panel_mouse_queue(r->kind,xx,yy,e);
             return true;
         }
