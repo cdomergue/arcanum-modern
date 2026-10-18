@@ -39,12 +39,13 @@ static int critter_fatigue_current(int64_t a){(void)a;return fatigue;}
 typedef struct {int* stream;} GameLoadInfo;
 static int gsound_pending_scheme_restore,gsound_post_song_scheme_idxs[2];
 static int gsound_combat_music_active,gsound_pre_combat_scheme_idxs[2];
-static int gsound_combat_music_handle,position,loops,schemes;
+static int gsound_combat_music_handle,position,loops,schemes,stops;
+static void gsound_stop_all(int fade){assert(fade==0);stops++;}
 static int tig_file_fread(void* dst,size_t size,size_t n,int* stream){
     assert(size==sizeof(int)&&n==1);memcpy(dst,&stream[position++],size);return 1;
 }
 static int gsound_play_music_indefinitely(const char* path,int fade){
-    assert(!strcmp(path,"sound\\music\\combatmusic.mp3")&&fade==0);loops++;return 42;
+    assert(stops>loops&&!strcmp(path,"sound\\music\\combatmusic.mp3")&&fade==0);loops++;return 42;
 }
 static void gsound_play_scheme(int a,int b){assert(a==7&&b==8);schemes++;}
 '''
@@ -71,7 +72,7 @@ int main(void){
  int data[]={7,8,0,0,0,1,12,13};GameLoadInfo load={data};
  assert(gsound_load(&load)&&loops==1&&schemes==0&&gsound_combat_music_handle==42);
  assert(gsound_pre_combat_scheme_idxs[0]==12&&gsound_pre_combat_scheme_idxs[1]==13);
- position=0;data[5]=0;assert(gsound_load(&load)&&loops==1&&schemes==1);
+ position=0;data[5]=0;assert(gsound_load(&load)&&loops==1&&schemes==1&&stops==2);
  puts("PASS: spell availability, fatigue/mastery/race/mana quotes, read-only resources and saved combat music/ambience");
 }
 '''

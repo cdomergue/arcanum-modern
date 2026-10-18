@@ -550,7 +550,18 @@ diff --git a/src/game/combat.h b/src/game/combat.h
 diff --git a/src/game/gsound.c b/src/game/gsound.c
 --- a/src/game/gsound.c
 +++ b/src/game/gsound.c
-@@ -705,7 +705,13 @@
+@@ -679,6 +679,10 @@
+     int temp[GSOUND_SCHEME_SLOTS];
+     int index;
+ 
++    /* Deserialized state cannot own the previous runtime's audio handles.
++     * Stop both scheme loops and independent menu/transition tracks first. */
++    gsound_stop_all(0);
++
+     for (index = 0; index < GSOUND_SCHEME_SLOTS; index++) {
+         if (tig_file_fread(&(temp[index]), sizeof(*temp), 1, load_info->stream) != 1) {
+             return false;
+@@ -705,7 +709,13 @@
          }
      }
  
