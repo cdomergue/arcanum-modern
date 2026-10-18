@@ -304,6 +304,33 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
+@@ -11333,7 +11346,7 @@
+ 
+     always_run = settings_get_value(&settings, ALWAYS_RUN_KEY);
+ 
+-    if (player_is_local_pc_obj(obj)) {
++    if (combat_player_controls(obj)) {
+         if (always_run) {
+             if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
+                 return false;
+@@ -13334,7 +13347,7 @@
+         return false;
+     }
+ 
+-    if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PC
++    if ((obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PC || combat_player_controls(obj))
+         && get_always_run(obj)
+         && critter_encumbrance_level_get(obj) < 4) {
+         return anim_goal_run_to_tile(obj, loc);
+@@ -13441,7 +13454,7 @@
+         return false;
+     }
+ 
+-    if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PC
++    if ((obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PC || combat_player_controls(obj))
+         && get_always_run(obj)) {
+         return sub_434030(obj, loc);
+     }
 diff --git a/src/game/anim.h b/src/game/anim.h
 --- a/src/game/anim.h
 +++ b/src/game/anim.h
@@ -548,6 +575,19 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
+@@ -3741,6 +3829,12 @@
+         return false;
+     }
+ 
++    /* The NPC shortcut consumes a whole path without rendering its frames.
++     * Manually controlled allies need the same visible movement as the PC. */
++    if (tactical_enabled && combat_player_controls(obj)) {
++        return false;
++    }
++
+     if (combat_fast_turn_based) {
+         return true;
+     }
 diff --git a/src/game/combat.h b/src/game/combat.h
 --- a/src/game/combat.h
 +++ b/src/game/combat.h
@@ -1500,7 +1540,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +            && (tig_kb_get_modifier(SDL_KMOD_CTRL) || !tig_kb_get_modifier(SDL_KMOD_NUM) || get_always_run(p->actor))
 +        : (((tig_kb_get_modifier(SDL_KMOD_CTRL) || tig_kb_get_modifier(SDL_KMOD_NUM))
 +                && !settings_get_value(&settings, ALWAYS_RUN_KEY))
-+            || (player_is_pc_obj(p->actor) && get_always_run(p->actor)));
++            || (combat_player_controls(p->actor) && get_always_run(p->actor)));
 +    if (run && critter_encumbrance_level_get(p->actor) < ENCUMBRANCE_LEVEL_SIGNIFICANT
 +        && critter_fatigue_current(p->actor) > 0) p->step_cost = 1;
 +    if (intgame_mode_get() == INTGAME_MODE_SPELL) {
