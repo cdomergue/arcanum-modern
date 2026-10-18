@@ -53,6 +53,12 @@ const char* modern_fate_text(int index);
 bool modern_fate_active(int index);
 void modern_fate_choose(int index);
 void modern_fate_sync(bool native);
+typedef struct ModernBubble {
+    const char* text;
+    int type,x,y,width,height;
+} ModernBubble;
+int modern_bubbles(ModernBubble* bubbles,int capacity);
+void modern_bubbles_sync(bool native);
 
 /* Live panel adapters. Mouse coordinates are in the original 800x600 canvas;
  * the presentation maps its own layout to these engine-owned controls. */

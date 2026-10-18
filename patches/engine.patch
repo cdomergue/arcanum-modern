@@ -98,15 +98,42 @@ diff --git a/src/game/tb.c b/src/game/tb.c
  
  #include "game/gamelib.h"
  #include "game/object.h"
-@@ -372,6 +373,7 @@
+@@ -58,6 +59,8 @@
+     /* 0018 */ TigVideoBuffer* video_buffer;
+     /* 001C */ TigRect rect;
+     /* 002C */ TbPosition pos;
++    char* text; // Original encoded text, owned for the bubble's lifetime.
++    int type;
+ } TextBubble;
+ 
+ static void tb_remove_internal(TextBubble* tb);
+@@ -372,6 +375,7 @@
      // Iterate through active text bubbles.
      for (idx = 0; idx < MAX_TEXT_BUBBLES; idx++) {
          if ((tb_text_bubbles[idx].flags & TEXT_BUBBLE_IN_USE) != 0) {
-+            if(tb_text_bubbles[idx].obj==modern_dialog_actor())continue;
++            if(modern_ui_enabled() && tb_text_bubbles[idx].text)continue;
              // Get the bubble's screen rect.
              tb_get_rect(&(tb_text_bubbles[idx]), &tb_rect);
  
-@@ -800,3 +802,11 @@
+@@ -430,6 +434,8 @@
+     tb->obj = obj;
+     tb->rect = dirty_rect;
+     tb->pos = TB_POS_INVALID;
++    tb->text = STRDUP(str);
++    tb->type = type;
+ 
+     // Mark the object as having a text bubble.
+     object_flags_set(obj, OF_TEXT);
+@@ -553,6 +559,8 @@
+     obj_field_int32_set(tb->obj, OBJ_F_FLAGS, flags);
+ 
+     // Reset the text bubble's properties.
++    FREE(tb->text);
++    tb->text = NULL;
+     tb->flags = 0;
+     tb->obj = OBJ_HANDLE_NULL;
+ }
+@@ -800,3 +808,34 @@
          break;
      }
  }
@@ -117,6 +144,29 @@ diff --git a/src/game/tb.c b/src/game/tb.c
 +    if(!bubble)return false;
 +    TigRect rect;tb_get_rect(bubble,&rect);
 +    *x=rect.x+rect.width/2;*y=rect.y;return true;
++}
++
++int modern_bubbles(ModernBubble* bubbles,int capacity)
++{
++    if(!tb_enabled || tb_view_options.type!=VIEW_TYPE_ISOMETRIC)return 0;
++    int count=0;
++    for(int i=0;i<MAX_TEXT_BUBBLES && count<capacity;i++) {
++        TextBubble* bubble=&tb_text_bubbles[i];
++        if(!(bubble->flags&TEXT_BUBBLE_IN_USE) || !bubble->text || !*bubble->text
++            || bubble->obj==modern_dialog_actor())continue;
++        TigRect rect;tb_get_rect(bubble,&rect);
++        if(rect.width<=0 || rect.height<=0 || rect.x+rect.width<=0 || rect.y+rect.height<=0
++            || rect.x>=tb_iso_content_rect.width || rect.y>=tb_iso_content_rect.height)continue;
++        bubbles[count++]=(ModernBubble){bubble->text,bubble->type,rect.x,rect.y,rect.width,rect.height};
++    }
++    return count;
++}
++void modern_bubbles_sync(bool native)
++{
++    static bool previous;
++    if(previous!=native && tb_iso_window_invalidate_rect)
++        tb_iso_window_invalidate_rect(&tb_iso_content_rect);
++    previous=native;
 +}
 diff --git a/src/game/tc.c b/src/game/tc.c
 --- a/src/game/tc.c

@@ -1323,6 +1323,7 @@ static void render_overlay(SDL_Renderer* target)
     button_count=0;
     if(menu) draw_menu();
     else {
+        draw_world_bubbles();
         if(hud) draw_hud();
         if(journal) draw_journal();
         draw_play_panels();
@@ -1567,6 +1568,7 @@ void modern_ui_tick(void)
     }
     modern_sleep_sync(enabled);
     modern_fate_sync(enabled);
+    modern_bubbles_sync(enabled);
     if(!enabled) return;
     in_game=true;
     panels_tick();

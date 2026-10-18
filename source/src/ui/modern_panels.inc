@@ -294,6 +294,31 @@ static void dialogue_scroll_button(SDL_FRect rect,int action,const char* label,b
     text_draw(1,label,rect.x+8,rect.y+4,GOLD);
     if(button_count<MAX_BUTTONS)buttons[button_count++]=(Button){rect,action,true};
 }
+static void draw_world_bubbles(void)
+{
+    if(journal || !visible())return;
+    int panel=native_panel();if(panel && panel!=4 && panel!=8)return;
+    ModernBubble bubbles[8];int count=modern_bubbles(bubbles,8);
+    const SDL_Color colors[]={{235,229,207,255},{255,115,100,255},{136,229,138,255},{142,174,255,255}};
+    float sx=canvas_w/hrp_iso_window_width_get(),sy=canvas_h/hrp_iso_window_height_get();
+    for(int i=0;i<count;i++) {
+        ModernBubble* b=&bubbles[i];const char* text=game_text(b->text);
+        float width=fminf(420,fmaxf(180,text_measure(1,text)+8));
+        int rows=menu_paragraph(text,(SDL_FRect){0,0,width,0},0,GOLD);
+        float height=rows*27;
+        /* Let unusually long script lines use more width instead of clipping. */
+        while(height>canvas_h-250 && width<canvas_w-80) {
+            width=fminf(canvas_w-80,width+120);
+            rows=menu_paragraph(text,(SDL_FRect){0,0,width,0},0,GOLD);height=rows*27;
+        }
+        float x=(b->x+b->width/2.0f)*sx-width/2,y=(b->y+b->height)*sy-height;
+        x=fmaxf(20,fminf(canvas_w-width-20,x));
+        y=fmaxf(90,fminf(canvas_h-150-height,y));
+        SDL_FRect rect={x,y,width,height};
+        fill((SDL_FRect){x-10,y-7,width+20,height+14},(SDL_Color){12,10,8,160});
+        dialogue_paragraph(text,rect,0,colors[b->type>=0 && b->type<4?b->type:0]);
+    }
+}
 static void draw_dialogue(void)
 {
     const DialogState* state=modern_dialog_state();if(!state)return;
