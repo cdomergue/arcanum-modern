@@ -15,6 +15,9 @@ bool modern_combat_preview(ModernCombatPreview* preview);
 void modern_combat_sync(void);
 void modern_combat_log(int64_t object, const char* text);
 int modern_spell_selected(void);
+bool modern_spell_resources(int64_t actor, int spell, int* fatigue_cost);
+int modern_maintained_spells(int64_t actor, int* ids, int* spells, int capacity);
+bool modern_spell_stop(int64_t actor, int id);
 
 bool modern_ui_init(void);
 void modern_ui_exit(void);

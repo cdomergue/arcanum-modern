@@ -484,25 +484,32 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,7 +3132,7 @@
+@@ -3054,8 +3132,9 @@
      }
  
      if (dword_5FC240 != NULL) {
 -        if (player_is_pc_obj(dword_5FC240->obj) && combat_action_points > 0) {
+-            return;
 +        if (combat_player_controls(dword_5FC240->obj) && combat_action_points > 0) {
-             return;
++            if (critter_is_active(dword_5FC240->obj)) return;
++            combat_action_points = 0;
          }
  
-@@ -3084,7 +3162,7 @@
+         if (dword_5FC240->obj == qword_5FC258) {
+@@ -3084,9 +3163,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
 -            && player_is_pc_obj(dword_5FC240->obj)
 +            && combat_player_controls(dword_5FC240->obj)
              && combat_action_points > 0) {
-             return true;
+-            return true;
++            if (critter_is_active(dword_5FC240->obj)) return true;
++            combat_action_points = 0;
          }
-@@ -3205,7 +3283,7 @@
+ 
+         if (dword_5FC264) {
+@@ -3205,7 +3285,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -511,7 +518,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3549,6 +3627,8 @@
+@@ -3549,6 +3629,8 @@
          return true;
      }
  
@@ -540,6 +547,104 @@ diff --git a/src/game/combat.h b/src/game/combat.h
  bool combat_init(GameInitInfo* init_info);
  void combat_exit(void);
  void combat_reset(void);
+diff --git a/src/game/gsound.c b/src/game/gsound.c
+--- a/src/game/gsound.c
++++ b/src/game/gsound.c
+@@ -705,7 +705,13 @@
+         }
+     }
+ 
+-    gsound_play_scheme(temp[0], temp[1]);
++    if (gsound_combat_music_active) {
++        /* Handles are runtime-only. Resume the saved combat loop without a new
++         * random stinger or overwriting the saved post-combat ambience. */
++        gsound_combat_music_handle = gsound_play_music_indefinitely("sound\\music\\combatmusic.mp3", 0);
++    } else {
++        gsound_play_scheme(temp[0], temp[1]);
++    }
+ 
+     return true;
+ }
+diff --git a/src/game/magictech.c b/src/game/magictech.c
+--- a/src/game/magictech.c
++++ b/src/game/magictech.c
+@@ -1,4 +1,5 @@
+ #include "game/magictech.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -7132,3 +7133,57 @@
+             obj_field_int64_get(obj, OBJ_F_LOCATION));
+     }
+ }
++
++
++bool modern_spell_resources(int64_t actor, int spell, int* fatigue_cost)
++{
++    *fatigue_cost = 0;
++    if (!actor || spell < 0 || spell >= SPELL_COUNT || !spell_is_known(actor, spell)) return false;
++    int check = magictech_spells[spell].cost;
++    int charge = check;
++    if (spell_mastery_get(actor) == COLLEGE_FROM_SPELL(spell)) {
++        charge /= 2;
++        if (charge & 1) charge++;
++    }
++    if (magictech_cheat_mode) check = charge = 1;
++    if (stat_level_get(actor, STAT_RACE) == RACE_DWARF) { check *= 2; charge *= 2; }
++    if (obj_field_int32_get(actor, OBJ_F_CRITTER_FLAGS) & OCF_FATIGUE_LIMITING) {
++        if (check > 0) {check /= 2; if (!check) check = 1;}
++        if (charge > 0) {charge /= 2; if (!charge) charge = 1;}
++    }
++    for (int slot = FIRST_WEAR_INV_LOC; slot <= LAST_WEAR_INV_LOC; slot++) {
++        int64_t item = item_wield_get(actor, slot);
++        if (item) {
++            int mana = obj_field_int32_get(item, OBJ_F_ITEM_MANA_STORE);
++            if (mana > 0) {check -= mana; charge -= mana;}
++        }
++    }
++    *fatigue_cost = charge > 0 ? charge : 0;
++    return check <= 0 || critter_fatigue_current(actor) - check > -15;
++}
++
++int modern_maintained_spells(int64_t actor, int* ids, int* spells, int capacity)
++{
++    int count = 0;
++    if (!actor || !magictech_run_info || !magictech_spells) return 0;
++    for (int i = 0; i < 512 && count < capacity; i++) {
++        MagicTechRunInfo* run = &magictech_run_info[i];
++        if ((run->flags & MAGICTECH_RUN_ACTIVE) && run->source_obj.obj == actor
++            && run->spell >= 0 && run->spell < SPELL_COUNT
++            && magictech_spells[run->spell].maintenance.period > 0
++            && run->action != MAGICTECH_ACTION_END) {
++            ids[count] = run->id; spells[count++] = run->spell;
++        }
++    }
++    return count;
++}
++
++bool modern_spell_stop(int64_t actor, int id)
++{
++    MagicTechRunInfo* run;
++    if (!combat_input_ready(actor) || !magictech_id_to_run_info(id, &run)
++        || run->source_obj.obj != actor || run->spell < 0 || run->spell >= SPELL_COUNT
++        || magictech_spells[run->spell].maintenance.period <= 0) return false;
++    magictech_interrupt_delayed(id);
++    return true;
++}
+diff --git a/src/game/skill.c b/src/game/skill.c
+--- a/src/game/skill.c
++++ b/src/game/skill.c
+@@ -2668,6 +2668,9 @@
+     int best_effectiveness;
+     int64_t best_follower_obj;
+ 
++    /* Tactical orders belong to the actor whose turn is active. */
++    if (combat_tactical_enabled() && combat_turn_based_is_active()) return;
++
+     // Ensure the source is a PC.
+     if (obj_field_int32_get(skill_invocation->source.obj, OBJ_F_TYPE) != OBJ_TYPE_PC) {
+         return;
 diff --git a/src/game/tb.c b/src/game/tb.c
 --- a/src/game/tb.c
 +++ b/src/game/tb.c
@@ -1051,6 +1156,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
+@@ -3781,7 +3800,7 @@
+         sub_579FA0(pc_obj, hotkey->data);
+         break;
+     case HOTKEY_SPELL:
+-        spell_ui_activate(pc_obj, hotkey->data);
++        if (spell_is_known(pc_obj, hotkey->data)) spell_ui_activate(pc_obj, hotkey->data);
+         break;
+     case HOTKEY_ITEM_SPELL:
+         sub_444130(&(hotkey->item_obj));
 @@ -4088,6 +4107,10 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
@@ -1219,7 +1333,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8896,187 @@
+@@ -8833,3 +8896,195 @@
  
      follower_ui_show();
  }
@@ -1348,7 +1462,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    int64_t from = obj_field_int64_get(p->actor, OBJ_F_LOCATION);
 +    bool adjacent = false, needs_path = false;
 +    p->step_cost = 2;
-+    if (player_is_pc_obj(p->actor) && get_always_run(p->actor) && critter_encumbrance_level_get(p->actor) < 4 && critter_fatigue_current(p->actor) > 0) p->step_cost = 1;
++    /* Match the command's run/walk choice, including NumLock/Ctrl for NPCs. */
++    bool run = p->target
++        ? !tig_kb_get_modifier(SDL_KMOD_SHIFT)
++            && (tig_kb_get_modifier(SDL_KMOD_CTRL) || !tig_kb_get_modifier(SDL_KMOD_NUM) || get_always_run(p->actor))
++        : (((tig_kb_get_modifier(SDL_KMOD_CTRL) || tig_kb_get_modifier(SDL_KMOD_NUM))
++                && !settings_get_value(&settings, ALWAYS_RUN_KEY))
++            || (player_is_pc_obj(p->actor) && get_always_run(p->actor)));
++    if (run && critter_encumbrance_level_get(p->actor) < ENCUMBRANCE_LEVEL_SIGNIFICANT
++        && critter_fatigue_current(p->actor) > 0) p->step_cost = 1;
 +    if (intgame_mode_get() == INTGAME_MODE_SPELL) {
 +        int spl = modern_spell_selected();
 +        if (spl < 0 || spl >= SPELL_COUNT) return false;
@@ -1417,7 +1539,28 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
  
  #include <stdio.h>
  
-@@ -4595,3 +4597,57 @@
+@@ -539,7 +541,10 @@
+         return false;
+     }
+ 
+-    if (obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC) {
++    if (obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC
++        && !(mode == INVEN_UI_MODE_INVENTORY && target_obj == OBJ_HANDLE_NULL
++            && combat_tactical_enabled() && combat_turn_based_is_active()
++            && combat_input_ready(pc_obj))) {
+         return false;
+     }
+ 
+@@ -2233,6 +2238,8 @@
+     int64_t pc_obj;
+     int mode;
+ 
++    if (combat_tactical_enabled() && combat_turn_based_is_active()) return;
++
+     sub_575770();
+ 
+     follower_obj = qword_6813A8;
+@@ -4595,3 +4602,57 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }

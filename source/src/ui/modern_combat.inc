@@ -1,7 +1,8 @@
 /* Tactical presentation. Order, PA, rolls and execution belong to the engine. */
 static int64_t tactical_actor, tactical_pressed_actor;
 static int64_t tactical_order[128];
-static int tactical_count, tactical_page;
+static int tactical_count, tactical_page, tactical_spell_page;
+static int tactical_maintained_ids[32],tactical_maintained_spells[32],tactical_maintained_count;
 static bool tactical_was_active, tactical_log_open;
 static ModernCombatPreview tactical_preview;
 static bool tactical_has_preview;
@@ -13,11 +14,11 @@ static int tactical_portrait_count;
 
 /* Only newly introduced controls need new strings. All game names, statistics,
  * spells, costs and outcomes below come from the installed localization. */
-enum {TC_END,TC_AP,TC_ROUND,TC_WAIT,TC_MOVE,TC_ATTACK,TC_BLOCKED,TC_RANGE,TC_FATIGUE,TC_BUSY,TC_LOG,TC_AFTER_MOVE};
+enum {TC_END,TC_AP,TC_ROUND,TC_WAIT,TC_MOVE,TC_ATTACK,TC_BLOCKED,TC_RANGE,TC_FATIGUE,TC_BUSY,TC_LOG,TC_AFTER_MOVE,TC_MAINTAINED};
 static const char* tactical_text(int id)
 {
-    static const char* en[]={"End turn","AP","Round","Enemy turn","Move","Attack","No path / blocked","Out of range","Fatigue","Action in progress","Combat log","After approach"};
-    static const char* fr[]={"Fin du tour","PA","Tour","Tour adverse","Déplacement","Attaque","Chemin bloqué","Hors de portée","Fatigue","Action en cours","Journal de combat","Après approche"};
+    static const char* en[]={"End turn","AP","Round","Enemy turn","Move","Attack","No path / blocked","Out of range","Fatigue","Action in progress","Combat log","After approach","Maintained spells"};
+    static const char* fr[]={"Fin du tour","PA","Tour","Tour adverse","Déplacement","Attaque","Chemin bloqué","Hors de portée","Fatigue","Action en cours","Journal de combat","Après approche","Sorts maintenus"};
     return strcmp(modern_intgame_text(0),"Niveau")==0?fr[id]:en[id];
 }
 
@@ -27,7 +28,6 @@ void modern_combat_log(int64_t object,const char* raw)
     char name[1000],text[1000];object_examine(object,player_get_local_pc_obj(),name);
     from_game(raw,text,sizeof(text));
     char line[1200];snprintf(line,sizeof(line),"%s : %.900s",game_text(name),text);
-    if(tactical_line_count && strcmp(tactical_lines[(tactical_line_count-1)%32],line)==0)return;
     SDL_strlcpy(tactical_lines[tactical_line_count++%32],line,sizeof(tactical_lines[0]));
 }
 
@@ -73,7 +73,7 @@ static void tactical_tick(void)
     tactical_count=combat_turn_order(tactical_order,128);
     if(actor!=tactical_actor){
         tactical_actor=actor;tactical_preview_time=0;tactical_has_preview=false;
-        selector=0;
+        selector=0;tactical_spell_page=0;
         if(!mainmenu_ui_is_active() && inven_ui_is_created())inven_ui_destroy();
         pending_action=-1;pressed_action=-1;button_count=0;
         if(!mainmenu_ui_is_active() && (intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_ITEM))intgame_mode_set(INTGAME_MODE_MAIN);
@@ -185,6 +185,12 @@ static void draw_tactical_hud(void)
     tactical_button((SDL_FRect){x+550,y+83,210,24},1106,tactical_text(TC_LOG),tactical_log_open,true);
     tactical_button((SDL_FRect){x+775,y+18,125,56},1100,tactical_text(TC_END),false,ready);
     centered(0,"[E / Space]",x+837,y+84,MUTED);
+    if(*message_text && SDL_GetTicks()-message_time<8000){
+        float width=fminf(940,text_measure(0,message_text)+32);
+        SDL_FRect r={(canvas_w-width)/2,y-39,width,30};
+        fill(r,(SDL_Color){16,12,9,235});outline(r,GOLD);
+        text_compact(message_text,r.x+12,r.y+6,r.w-24,true,GOLD);
+    }
     if(tactical_log_open){
         SDL_FRect r={x,y-164,540,158};fill(r,(SDL_Color){16,12,9,220});outline(r,GOLD);
         int first=tactical_line_count>6?tactical_line_count-6:0;
@@ -196,6 +202,8 @@ static bool tactical_action(int action)
     if(!tactical_active())return false;
     if(action==1101){if(tactical_page>0)tactical_page--;return true;}
     if(action==1102){if((tactical_page+1)*10<tactical_count)tactical_page++;return true;}
+    if(action==1110){if(tactical_spell_page>0)tactical_spell_page--;return true;}
+    if(action==1111){if(tactical_spell_page<7)tactical_spell_page++;return true;}
     if(action==1106){tactical_log_open=!tactical_log_open;return true;}
     if(action>=1200 && action<1328){
         int i=action-1200;if(i<tactical_count && obj_handle_is_valid(tactical_order[i]))location_origin_set(obj_field_int64_get(tactical_order[i],OBJ_F_LOCATION));
@@ -203,13 +211,66 @@ static bool tactical_action(int action)
     }
     bool command=action==5 || action==6 || action==950 || action==951
         || (action>=300 && action<310) || (action>=870 && action<884)
-        || (action>=1100 && action<=1105);
+        || (action>=1100 && action<=1105) || (action>=1400 && action<1480) || (action>=1500 && action<1532);
     if(!command)return false;
     int64_t actor=combat_input_actor();
     if(!combat_input_ready(actor) || actor!=tactical_actor)return true;
+    if(action>=1400 && action<1480){
+        int spell=action-1400,cost;
+        bool ap=combat_action_points_get()>=4 || (combat_action_points_get()>0 && player_is_local_pc_obj(actor) && critter_fatigue_current(actor)>1);
+        if(ap && modern_spell_resources(actor,spell,&cost)) {selector=0;spell_ui_activate(actor,spell);}return true;
+    }
+    if(action>=1500 && action<1532){int i=action-1500;if(i<tactical_maintained_count)modern_spell_stop(actor,tactical_maintained_ids[i]);return true;}
     if(action==1100){if(actor==tactical_pressed_actor)combat_input_end_turn(actor);return true;}
     if(action==1103){intgame_mode_set(INTGAME_MODE_MAIN);combat_critter_activate_combat_mode(actor);return true;}
     if(action==1104){inven_ui_open(actor,OBJ_HANDLE_NULL,INVEN_UI_MODE_INVENTORY);return true;}
     if(action==1105){charedit_open(actor,CHAREDIT_MODE_PASSIVE);return true;}
     return false;
+}
+
+
+static void draw_tactical_spells(void)
+{
+    int64_t actor=combat_input_actor();int known[80],count=0;
+    for(int spell=0;spell<SPELL_COUNT;spell++)if(spell_is_known(actor,spell))known[count++]=spell;
+    int pages=(count+9)/10;if(pages<1)pages=1;
+    if(tactical_spell_page>=pages)tactical_spell_page=pages-1;
+    int visible=count-tactical_spell_page*10;if(visible>10)visible=10;
+    int rows=(visible+1)/2;
+    tactical_maintained_count=modern_maintained_spells(actor,tactical_maintained_ids,tactical_maintained_spells,32);
+    float width=850,height=185+fmaxf(1,rows)*78+(tactical_maintained_count?85:0);
+    float x=(canvas_w-width)/2,y=(canvas_h-height)/2;
+    frame((SDL_FRect){x,y,width,height});
+    centered(2,game_text(modern_intgame_text(1000)),canvas_w/2,y+20,GOLD);
+    text_compact(actor_name(actor),x+25,y+55,width-50,true,MUTED);
+    bool ready=combat_input_ready(actor);
+    bool ap=combat_action_points_get()>=4 || (combat_action_points_get()>0 && player_is_local_pc_obj(actor) && critter_fatigue_current(actor)>1);
+    for(int i=0;i<visible;i++){
+        int spell=known[tactical_spell_page*10+i],cost;
+        bool resources=modern_spell_resources(actor,spell,&cost);
+        bool available=ready && ap && resources;
+        SDL_FRect r={x+25+(i%2)*400,y+91+(i/2)*78,390,69};
+        button(r,1400+spell,"",-1,false,available);
+        draw_art(spell_icon(spell),(SDL_FRect){r.x+8,r.y+10,44,44},true);
+        text_compact(game_text(spell_name(spell)),r.x+62,r.y+10,r.w-72,false,available?GOLD:MUTED);
+        char price[100];snprintf(price,sizeof(price),"4 %s  ·  %s %d",tactical_text(TC_AP),game_text(modern_intgame_text(44)),cost);
+        text_compact(price,r.x+62,r.y+39,r.w-72,false,available?GOLD:(SDL_Color){210,134,103,255});
+    }
+    if(!count)centered(1,"—",canvas_w/2,y+111,MUTED);
+    if(tactical_maintained_count){
+        float yy=y+94+fmaxf(1,rows)*78;
+        text_draw(0,tactical_text(TC_MAINTAINED),x+25,yy,MUTED);
+        for(int i=0;i<tactical_maintained_count && i<10;i++){
+            int spell=tactical_maintained_spells[i];SDL_FRect r={x+25+i*78,yy+25,71,45};
+            button(r,1500+i,"×",spell_icon(spell),false,ready);
+            if(inside(r,mouse_x,mouse_y)){
+                const char* name=game_text(spell_name(spell));float w=text_measure(0,name)+24;
+                fill((SDL_FRect){r.x,yy-32,w,28},(SDL_Color){16,12,9,245});text_draw(0,name,r.x+12,yy-27,GOLD);
+            }
+        }
+    }
+    tactical_button((SDL_FRect){x+25,y+height-57,45,34},1110,"<",false,tactical_spell_page>0);
+    tactical_button((SDL_FRect){x+140,y+height-57,45,34},1111,">",false,tactical_spell_page+1<pages);
+    char page[32];snprintf(page,sizeof(page),"%d / %d",tactical_spell_page+1,pages);centered(0,page,x+105,y+height-49,MUTED);
+    tactical_button((SDL_FRect){x+width-230,y+height-57,205,34},840,menu_text(54),false,true);
 }

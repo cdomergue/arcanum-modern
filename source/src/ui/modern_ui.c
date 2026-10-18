@@ -118,6 +118,8 @@ static void render_overlay(SDL_Renderer* target);
 static int native_panel(void);
 static bool panels_event(SDL_Event* event);
 static bool panels_action(int action);
+static bool tactical_active(void);
+static void draw_tactical_spells(void);
 static void panels_tick(void);
 static void draw_play_panels(void);
 static bool play_sheet(void);
@@ -1590,6 +1592,10 @@ static bool handle_ui_event(SDL_Event* event)
         }
         if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_E || key==SDL_SCANCODE_SPACE)) {
             if(down && !event->key.repeat){tactical_pressed_actor=combat_input_actor();pending_action=1100;}return true;
+        }
+        if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_M || key==SDL_SCANCODE_K)) {
+            if(down && !event->key.repeat)pending_action=key==SDL_SCANCODE_M?6:5;
+            return true;
         }
         if(key==SDL_SCANCODE_J) {if(down && !event->key.repeat) pending_action=0;return true;}
     }

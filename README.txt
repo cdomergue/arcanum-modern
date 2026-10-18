@@ -15,7 +15,7 @@ COMMANDES
 J : ouvrir/fermer le nouveau journal.
 Échap : quitter la recherche, puis fermer le journal ; menu en jeu.
 Échap > Options > Graphismes : mode d'affichage et résolution.
-F9 : basculer entre notre interface et la présentation classique.
+F9 : basculer entre notre interface et la présentation classique hors combat.
 Molette sur le monde : rapprocher / éloigner la vue autour du pointeur.
 Les bandeaux natifs gardent leur taille. Avec le rendu par défaut, zoom de 50 à 120 %.
 Les menus et panneaux conservent leur défilement ; le zoom revient à leur fermeture.
@@ -23,6 +23,21 @@ Flèches gauche/droite, Page précédente/suivante ou molette : tourner les page
 A- / A+ : texte du journal de 16 à 26, mémorisé dans game/modern-ui/settings.ini.
 La recherche fonctionne dans la rubrique choisie et ignore casse et accents.
 Les quêtes disposent des filtres Toutes / En cours / Terminées.
+
+COMBAT TACTIQUE
+Le combat utilise le tour par tour d'Arcanum : initiative, vitesse, PA, fatigue,
+dégâts, compétences et règles magiques restent calculés par le moteur original.
+Chaque compagnon contrôlable reçoit ses ordres pendant son propre tour.
+Cliquer sur un portrait déplace la caméra sans changer de tour ni rendre de PA.
+E / Espace ou Fin du tour : terminer le tour du personnage actif.
+M : sorts ; K : compétences ; Inventaire : équipement du personnage actif.
+Les sorts inconnus sont masqués en combat ; les sorts sans ressources suffisantes
+sont grisés. Le sélecteur indique les coûts et permet d'arrêter les sorts maintenus.
+Le survol prévisualise le trajet, les PA, la portée et la chance de toucher depuis
+la position actuelle. Le journal de combat conserve les messages du moteur.
+La peur, la perte de contrôle et l'incapacité continuent d'obéir aux règles du jeu.
+Les tours ne sont pas partagés entre alliés. Les nouveaux libellés tactiques sont
+disponibles en français et en anglais ; les noms et descriptions viennent du jeu.
 
 PÉRIMÈTRE DE CETTE VERSION
 Nouveaux bandeaux de navigation et d'actions : commandes reliées au jeu,

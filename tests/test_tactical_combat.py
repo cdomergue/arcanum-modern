@@ -111,6 +111,13 @@ int main(void){
  assert(combat_consume_action_points(1,4)&&damage==2&&combat_action_points==0);
  turn.obj=2;combat_action_points=1;damage=0;advanced=0;
  assert(!combat_consume_action_points(2,4)&&damage==0&&advanced==1);
+ /* Incapacitation after an action must release the manual turn. */
+ turn.obj=2;combat_action_points=4;advanced=scheduled=0;active[2]=false;
+ sub_4B7080();assert(combat_action_points==0&&scheduled==1);
+ combat_tb_timeevent_process(&event);assert(advanced==1);
+ combat_action_points=4;advanced=0;
+ combat_tb_timeevent_process(&event);assert(advanced==1&&combat_action_points==0);
+ active[2]=true;
  combat_turn_based_active=false;assert(combat_input_actor()==1);
  assert(combat_consume_action_points(2,4)&&damage==0);
  puts("PASS: actor ownership, stale/end-turn input, animation wait, fear/control, original PA and fatigue rules");

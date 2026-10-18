@@ -414,6 +414,7 @@ static void draw_dialogue(void)
 
 static void draw_selector(void)
 {
+    if(selector==1 && tactical_active()){draw_tactical_spells();return;}
     float w=fminf(1080,canvas_w-60),x=(canvas_w-w)/2,y=(canvas_h-700)/2;
     frame((SDL_FRect){x,y,w,700});
     centered(3,character_text(selector==1?134:132),canvas_w/2,y+25,GOLD);
