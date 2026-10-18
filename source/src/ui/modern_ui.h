@@ -108,6 +108,7 @@ typedef struct ModernInventory {
 } ModernInventory;
 bool modern_inventory_state(ModernInventory* state);
 int64_t modern_inventory_at(int x,int y);
+enum { MODERN_INVENTORY_DOUBLE_CLICK = -1 };
 void modern_inventory_mouse(int x,int y,int event);
 void modern_inventory_action(int action);
 void modern_inventory_scroll(int direction);

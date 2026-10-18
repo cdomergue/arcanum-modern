@@ -1974,7 +1974,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      sub_575770();
  
      follower_obj = qword_6813A8;
-@@ -4595,3 +4602,57 @@
+@@ -4595,3 +4602,68 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }
@@ -1999,6 +1999,17 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 +void modern_inventory_mouse(int x,int y,int event)
 +{
 +    if (!inven_ui_created) return;
++    if(event==MODERN_INVENTORY_DOUBLE_CLICK) {
++        /* The original right-click already performs a checked quick transfer.
++         * Release the second click's pickup before dispatching that same action. */
++        int mode=intgame_mode_get();
++        if((mode==INTGAME_MODE_LOOT || mode==INTGAME_MODE_BARTER || mode==INTGAME_MODE_STEAL)
++            && (inven_ui_mode==INVEN_UI_MODE_LOOT || inven_ui_mode==INVEN_UI_MODE_BARTER || inven_ui_mode==INVEN_UI_MODE_STEAL)) {
++            sub_575770();
++            dword_68346C=0;
++            event=TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP;
++        } else event=TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP;
++    }
 +    TigRect rect={0,0,800,600};hrp_apply(&rect,GRAVITY_CENTER_HORIZONTAL|GRAVITY_CENTER_VERTICAL);
 +    TigMessage message={0};message.type=TIG_MESSAGE_MOUSE;
 +    message.data.mouse.x=x+rect.x;message.data.mouse.y=y+rect.y;message.data.mouse.event=event;
