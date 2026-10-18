@@ -2900,15 +2900,29 @@ diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
  
  #include "game/critter.h"
  #include "game/descriptions.h"
-@@ -1277,3 +1278,16 @@
+@@ -1277,3 +1278,30 @@
          pch++;
      }
  }
 +
-+/* Read the already assembled note from the installed language resources. */
++/* Expose installed text; the modern UI owns wrapping, never book contents. */
 +const char* modern_written_text(void)
 +{
-+    return written_ui_created && written_ui_type==WRITTEN_TYPE_NOTE ? written_ui_text : NULL;
++    return written_ui_created && (written_ui_type==WRITTEN_TYPE_NOTE || written_ui_type==WRITTEN_TYPE_BOOK) ? written_ui_text : NULL;
++}
++bool modern_written_is_book(void)
++{
++    return written_ui_created && written_ui_type==WRITTEN_TYPE_BOOK;
++}
++const char* modern_written_book_paragraph(int index,bool* centered,int* font)
++{
++    if(!modern_written_is_book() || index<0 || index>=TEN)return NULL;
++    MesFileEntry entry={0};entry.num=written_ui_num+index;
++    if(!mes_search(written_ui_mes_file,&entry))return NULL;
++    int alignment;char* text;
++    written_ui_parse(entry.str,font,&alignment,&text);
++    *centered=alignment!=0;
++    return text;
 +}
 +void modern_written_sync(bool modern)
 +{

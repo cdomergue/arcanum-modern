@@ -4,7 +4,7 @@ static PanelRegion panel_regions[32];
 static int panel_region_count, selector, selector_college, panel_previous;
 static bool sheet_summary;
 static int dialogue_scroll, dialogue_max;
-static int written_scroll,written_max;
+static int written_scroll,written_max,written_step=3;
 static char dialogue_previous[1000];
 static SDL_FRect dialogue_view;
 static int dialogue_choice=-1;
@@ -372,8 +372,73 @@ static void draw_inventory(void)
         menu_button((SDL_FRect){qx+295,qy+145,240,50},764,menu_text(54),true);
     }
 }
+/* Font 744 is the game's book illustration atlas, not a text alphabet. */
+static void written_book_picture(const char* text,SDL_FRect rect,int offset)
+{
+    tig_art_id_t id;
+    if(!*text || tig_art_interface_id_create(744,0,0,0,&id)!=TIG_OK)return;
+    ArtTexture* art=art_get(tig_art_id_frame_set(id,(unsigned char)*text-31));
+    if(!art || !art->texture)return;
+    float scale=fminf(rect.w/art->width,162.0f/art->height);
+    SDL_FRect dst={rect.x+(rect.w-art->width*scale)/2,rect.y-offset*27+(162-art->height*scale)/2,art->width*scale,art->height*scale};
+    float top=fmaxf(dst.y,rect.y),bottom=fminf(dst.y+dst.h,rect.y+rect.h);
+    if(bottom<=top)return;
+    SDL_FRect src={0,(top-dst.y)/scale,art->width,(bottom-top)/scale};
+    dst.y=top;dst.h=bottom-top;
+    SDL_SetTextureColorMod(art->texture,INK.r,INK.g,INK.b);
+    SDL_RenderTexture(renderer,art->texture,&src,&dst);
+    SDL_SetTextureColorMod(art->texture,255,255,255);
+}
+static int written_book_page(SDL_FRect rect,int offset)
+{
+    int row=0,visible_rows=(int)(rect.h/27);
+    for(int i=0;i<10;i++) {
+        bool centered_text=false;int font=0;
+        const char* source=modern_written_book_paragraph(i,&centered_text,&font);
+        if(!source)break;
+        const char* text=game_text(source);
+        int rows=font==744?6:menu_paragraph(text,(SDL_FRect){0,0,rect.w,0},0,INK);
+        int skip=offset>row?offset-row:0,start=row>offset?row-offset:0;
+        if(start<visible_rows && skip<rows) {
+            SDL_FRect part={rect.x,rect.y+start*27,rect.w,(visible_rows-start)*27};
+            if(font==744)written_book_picture(source,part,skip);
+            else if(centered_text && rows==1)centered(1,text,part.x+part.w/2,part.y,INK);
+            else menu_paragraph(text,part,skip,INK);
+        }
+        row+=rows+1;
+    }
+    return row>0?row-1:0;
+}
+static void draw_written_book(void)
+{
+    float w=fminf(1280,canvas_w-80),h=canvas_h-110,x=(canvas_w-w)/2,y=30;
+    fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){10,8,6,150});
+    frame((SDL_FRect){x-12,y-12,w+24,h+74});
+    material(paper_texture,(SDL_FRect){x,y,w/2-5,h});
+    material(paper_texture,(SDL_FRect){x+w/2+5,y,w/2-5,h});
+    fill((SDL_FRect){x+w/2-5,y,10,h},(SDL_Color){50,32,17,255});
+    SDL_FRect page={x+40,y+35,w/2-80,h-85};
+    int page_rows=(int)(page.h/27);
+    written_step=page_rows*2;
+    int total=written_book_page((SDL_FRect){0,0,page.w,0},0);
+    written_max=total>0?((total-1)/written_step)*written_step:0;
+    if(written_scroll>written_max)written_scroll=written_max;
+    written_scroll=(written_scroll/written_step)*written_step;
+    written_book_page(page,written_scroll);
+    page.x+=w/2;written_book_page(page,written_scroll+page_rows);
+    char number[24];
+    for(int side=0;side<2;side++) {
+        snprintf(number,sizeof(number),"- %d -",written_scroll/page_rows+side+1);
+        centered(1,number,x+w*(side?0.75f:0.25f),y+h-35,INK);
+    }
+    menu_button((SDL_FRect){x+15,y+h+12,80,42},991,"<",written_scroll>0);
+    menu_button((SDL_FRect){x+w-95,y+h+12,80,42},992,">",written_scroll<written_max);
+    menu_button((SDL_FRect){x+w/2-115,y+h+12,230,42},990,menu_text(4003),true);
+}
 static void draw_written(void)
 {
+    if(modern_written_is_book()){draw_written_book();return;}
+    written_step=3;
     const char* text=game_text(modern_written_text());
     float w=fminf(880,canvas_w-80),h=canvas_h-90,x=(canvas_w-w)/2,y=30;
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){10,8,6,150});
@@ -646,7 +711,7 @@ static bool panels_action(int action)
     int p=native_panel();
     if(p==9 && action>=990 && action<=992) {
         if(action==990)written_ui_close();
-        else {written_scroll+=action==991?-3:3;if(written_scroll<0)written_scroll=0;if(written_scroll>written_max)written_scroll=written_max;}
+        else {written_scroll+=action==991?-written_step:written_step;if(written_scroll<0)written_scroll=0;if(written_scroll>written_max)written_scroll=written_max;}
         return true;
     }
     if(action==950 || action==951) {
@@ -777,6 +842,7 @@ static bool panels_event(SDL_Event* event)
         if(p==4 && event->key.scancode==SDL_SCANCODE_ESCAPE)return false;
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
             if(p==9 && (event->key.scancode==SDL_SCANCODE_PAGEUP || event->key.scancode==SDL_SCANCODE_PAGEDOWN))pending_action=event->key.scancode==SDL_SCANCODE_PAGEUP?991:992;
+            if(p==9 && modern_written_is_book() && (event->key.scancode==SDL_SCANCODE_LEFT || event->key.scancode==SDL_SCANCODE_RIGHT))pending_action=event->key.scancode==SDL_SCANCODE_LEFT?991:992;
             if(p==2 && event->key.scancode==SDL_SCANCODE_I && !mainmenu_ui_is_active()
                 && intgame_mode_get()!=INTGAME_MODE_QUANTITY)pending_action=730;
             if(p==5 && (event->key.scancode==SDL_SCANCODE_M || event->key.scancode==SDL_SCANCODE_K)) {
