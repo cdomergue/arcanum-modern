@@ -1434,6 +1434,7 @@ static int hit(float x,float y)
 
 static void render_overlay(SDL_Renderer* target)
 {
+    if(slide_ui_is_active())return;
     bool menu=native_menu();
     if(!menu && !native_panel() && (!visible() || (!hud && !journal))) return;
     renderer=target;
@@ -1525,6 +1526,7 @@ static bool handle_event(SDL_Event* event)
 
 static bool handle_ui_event(SDL_Event* event)
 {
+    if(slide_ui_is_active())return false;
     bool menu=native_menu();
     if(in_game && fonts[0].texture && !mainmenu_ui_is_active()
         && (event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP)

@@ -38,15 +38,16 @@ diff --git a/first_party/tig/include/tig/mouse.h b/first_party/tig/include/tig/m
 diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/video.h
 --- a/first_party/tig/include/tig/video.h
 +++ b/first_party/tig/include/tig/video.h
-@@ -113,6 +113,7 @@
+@@ -113,6 +113,8 @@
  int tig_video_blit(TigVideoBuffer* src_video_buffer, TigRect* src_rect, TigRect* dst_rect);
  int tig_video_fill(const TigRect* rect, tig_color_t color);
  int tig_video_flip(void);
 +void tig_video_set_overlay(void (*draw)(SDL_Renderer*));
++void tig_video_set_slide_overlay(void (*draw)(SDL_Renderer*));
  int tig_video_screenshot_set_settings(TigVideoScreenshotSettings* settings);
  int tig_video_screenshot_make(void);
  int tig_video_get_palette(unsigned int* colors);
-@@ -139,6 +140,8 @@
+@@ -139,6 +141,8 @@
  int tig_video_buffer_save_to_bmp(TigVideoBufferSaveToBmpInfo* save_info);
  int tig_video_buffer_load_from_bmp(const char* filename, TigVideoBuffer** video_buffer_ptr, unsigned int flags);
  
@@ -109,11 +110,17 @@ diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 --- a/first_party/tig/src/video.c
 +++ b/first_party/tig/src/video.c
-@@ -235,6 +235,13 @@
+@@ -235,6 +235,19 @@
      return TIG_OK;
  }
  
 +static void (*native_overlay)(SDL_Renderer*);
++static void (*slide_overlay)(SDL_Renderer*);
++
++void tig_video_set_slide_overlay(void (*draw)(SDL_Renderer*))
++{
++    slide_overlay = draw;
++}
 +
 +void tig_video_set_overlay(void (*draw)(SDL_Renderer*))
 +{
@@ -123,7 +130,17 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
  // 0x51F8F0
  int tig_video_flip(void)
  {
-@@ -259,6 +266,10 @@
+@@ -242,6 +255,9 @@
+ 
+     SDL_RenderClear(tig_video_state.renderer);
+     SDL_RenderTexture(tig_video_state.renderer, tig_video_state.texture, NULL, NULL);
++
++    /* Native-resolution slides participate in the engine fade, unlike HUD text. */
++    if (slide_overlay != NULL) slide_overlay(tig_video_state.renderer);
+ 
+     if (tig_fade_state.enabled) {
+         SDL_BlendMode blend_mode;
+@@ -259,6 +275,10 @@
      if (tig_video_show_fps) {
          SDL_SetRenderDrawColor(tig_video_state.renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
          SDL_RenderDebugTextFormat(tig_video_state.renderer, 0, 0, "%d", tig_video_state.fps);
@@ -134,7 +151,7 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
      }
  
      SDL_RenderPresent(tig_video_state.renderer);
-@@ -1447,3 +1458,25 @@
+@@ -1447,3 +1467,25 @@
  
      return rc;
  }
@@ -2436,6 +2453,110 @@ diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
 +    if(native)tig_window_hide(sleep_ui_window);
 +    else tig_window_show(sleep_ui_window);
 +}
+diff --git a/src/ui/slide_ui.c b/src/ui/slide_ui.c
+--- a/src/ui/slide_ui.c
++++ b/src/ui/slide_ui.c
+@@ -48,6 +48,45 @@
+  * 0x67BB08
+  */
+ static bool slide_ui_active;
++static int slide_ui_type;
++static SDL_Texture* slide_ui_death_texture;
++static int slide_ui_death_width, slide_ui_death_height;
++
++static void slide_ui_draw_death(SDL_Renderer* renderer)
++{
++    int width, height, old_width, old_height;
++    SDL_RendererLogicalPresentation old_mode;
++    SDL_GetRenderOutputSize(renderer, &width, &height);
++    SDL_GetRenderLogicalPresentation(renderer, &old_width, &old_height, &old_mode);
++    SDL_SetRenderLogicalPresentation(renderer, width, height, SDL_LOGICAL_PRESENTATION_DISABLED);
++    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
++    SDL_RenderFillRect(renderer, NULL);
++    float scale = (float)width / slide_ui_death_width;
++    if (scale * slide_ui_death_height > height) scale = (float)height / slide_ui_death_height;
++    SDL_FRect rect = { (width - slide_ui_death_width * scale) / 2,
++        (height - slide_ui_death_height * scale) / 2,
++        slide_ui_death_width * scale, slide_ui_death_height * scale };
++    SDL_RenderTexture(renderer, slide_ui_death_texture, NULL, &rect);
++    SDL_SetRenderLogicalPresentation(renderer, old_width, old_height, old_mode);
++}
++
++static bool slide_ui_load_death(int slide)
++{
++    /* Only replace the default grave slide; retain story-specific slides. */
++    if (slide_ui_type != SLIDE_UI_TYPE_DEATH || slide != 0) return false;
++    SDL_Renderer* renderer;
++    if (tig_video_renderer_get(&renderer) != TIG_OK) return false;
++    SDL_Surface* image = SDL_LoadPNG("modern-ui/death-background.png");
++    if (!image) return false;
++    slide_ui_death_width = image->w;
++    slide_ui_death_height = image->h;
++    slide_ui_death_texture = SDL_CreateTextureFromSurface(renderer, image);
++    SDL_DestroySurface(image);
++    if (!slide_ui_death_texture) return false;
++    SDL_SetTextureScaleMode(slide_ui_death_texture, SDL_SCALEMODE_LINEAR);
++    tig_video_set_slide_overlay(slide_ui_draw_death);
++    return true;
++}
+ 
+ /**
+  * Called when a module is being loaded.
+@@ -94,6 +133,7 @@
+     int index;
+ 
+     slide_ui_active = true;
++    slide_ui_type = type;
+ 
+     // Remove all enqeueued slides.
+     slide_ui_queue_clear();
+@@ -211,17 +251,20 @@
+     rect.height = 600;
+ 
+     if (slide_ui_get_assets(slide, bmp_path, sizeof(bmp_path), speech_path, sizeof(speech_path))) {
+-        // Load image.
+-        if (tig_video_buffer_load_from_bmp(bmp_path, &video_buffer, 0x01) == TIG_OK) {
+-            // Put image into window.
+-            blit_info.type = TIG_WINDOW_BLIT_VIDEO_BUFFER_TO_WINDOW;
+-            blit_info.vb_blit_flags = 0;
+-            blit_info.src_rect = &rect;
+-            blit_info.src_video_buffer = video_buffer;
+-            blit_info.dst_rect = &rect;
+-            blit_info.dst_window_handle = window_handle;
+-            tig_window_blit(&blit_info);
+-            tig_video_buffer_destroy(video_buffer);
++        // The supplied widescreen asset falls back to the installed BMP if missing.
++        bool modern_death = slide_ui_load_death(slide);
++        if (modern_death || tig_video_buffer_load_from_bmp(bmp_path, &video_buffer, 0x01) == TIG_OK) {
++            if (!modern_death) {
++                // Put image into window.
++                blit_info.type = TIG_WINDOW_BLIT_VIDEO_BUFFER_TO_WINDOW;
++                blit_info.vb_blit_flags = 0;
++                blit_info.src_rect = &rect;
++                blit_info.src_video_buffer = video_buffer;
++                blit_info.dst_rect = &rect;
++                blit_info.dst_window_handle = window_handle;
++                tig_window_blit(&blit_info);
++                tig_video_buffer_destroy(video_buffer);
++            }
+ 
+             // Refresh screen.
+             sub_51E850(window_handle);
+@@ -305,8 +348,13 @@
+             }
+         }
+ 
+-        // Perform fade-out effect.
++        // Keep the native image attached until the fade has fully covered it.
+         slide_ui_fade_out();
++        if (modern_death) {
++            tig_video_set_slide_overlay(NULL);
++            SDL_DestroyTexture(slide_ui_death_texture);
++            slide_ui_death_texture = NULL;
++        }
+     }
+ 
+     return cont;
 diff --git a/src/ui/spell_ui.c b/src/ui/spell_ui.c
 --- a/src/ui/spell_ui.c
 +++ b/src/ui/spell_ui.c
