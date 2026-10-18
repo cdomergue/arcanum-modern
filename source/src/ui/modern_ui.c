@@ -100,6 +100,7 @@ static bool enabled, in_game, hud, journal, searching, dirty;
 static bool click_captured;
 static bool menu_suspended;
 static int options_tab=-1;
+static mes_file_handle_t option_boolean_file=MES_FILE_HANDLE_INVALID;
 static int menu_previous_type = -1;
 static bool confirming_menu;
 static int confirmation_choice;
@@ -1164,6 +1165,16 @@ static void draw_menu(void)
                 fill((SDL_FRect){cx+47,cy+102,(cw-94)*option.value/option.maximum,3},color);
             }
         }
+        if(options_tab==0) {
+            bool on=settings_get_value(&settings,MODERN_UNLIMITED_FOLLOWERS_KEY)==1;
+            bool french=strcmp(modern_intgame_text(0),"Niveau")==0;
+            menu_paragraph(french?"Compagnons illimités":"Unlimited companions",(SDL_FRect){ox,y+601,ow-160,30},0,GOLD);
+            MesFileEntry entry={.num=on?1:0};
+            const char* value=on?"✓":"—";
+            if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
+            menu_button((SDL_FRect){ox+ow-130,y+595,130,36},417,value,!tig_net_is_active());
+            text_compact(french?"Retire la limite liée au charisme ; les conditions de recrutement restent actives.":"Removes the Charisma limit; recruitment requirements still apply.",ox,y+630,ow,false,MUTED);
+        }
         rule(x+30,y+h-110,w-60,(SDL_Color){117,87,44,255});
         menu_button((SDL_FRect){x+40,y+h-82,220,54},405,menu_text(4003),true);
         return;
@@ -1384,6 +1395,12 @@ void modern_ui_menu_tick(void)
     case 414: modern_graphics_apply(); break;
     case 415: modern_graphics_confirm(); break;
     case 416: modern_graphics_cancel(); break;
+    case 417:
+        if(type==MM_WINDOW_OPTIONS && options_tab==0 && !tig_net_is_active()) {
+            settings_set_value(&settings,MODERN_UNLIMITED_FOLLOWERS_KEY,settings_get_value(&settings,MODERN_UNLIMITED_FOLLOWERS_KEY)==1?0:1);
+            settings_save(&settings);
+        }
+        break;
     }
     menu_suspended=false;
     button_count=0;
@@ -1669,6 +1686,7 @@ bool modern_ui_init(void)
         SDL_DestroySurface(skill_icons);
         if(skill_icons_texture)SDL_SetTextureScaleMode(skill_icons_texture,SDL_SCALEMODE_LINEAR);
     }
+    mes_load("mes\\OptionsOffOn.mes",&option_boolean_file);
     modern_graphics_init(window);
     enabled=true;
     combat_tactical_enable();
@@ -1733,6 +1751,7 @@ void modern_ui_message(const char* text)
 void modern_ui_exit(void)
 {
     tactical_portraits_clear();
+    if(option_boolean_file!=MES_FILE_HANDLE_INVALID){mes_unload(option_boolean_file);option_boolean_file=MES_FILE_HANDLE_INVALID;}
     modern_graphics_cancel();
     tig_video_set_overlay(NULL);tig_message_set_native_filter(NULL);
     for(int i=0;i<FONT_COUNT;i++) {SDL_DestroyTexture(fonts[i].texture);fonts[i].texture=NULL;}

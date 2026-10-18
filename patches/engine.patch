@@ -209,6 +209,15 @@ diff --git a/src/game/ai.c b/src/game/ai.c
      if (!ai_heal(&ai) && !ai_look_for_item(&ai)) {
          sub_4A92D0(&ai);
      }
+@@ -3186,7 +3188,7 @@
+         return AI_FOLLOW_LOW_LEVEL;
+     }
+ 
+-    if (!ignore_charisma_limits) {
++    if (!ignore_charisma_limits && !critter_followers_unlimited(pc_obj)) {
+         pc_max_followers = stat_level_get(pc_obj, STAT_MAX_FOLLOWERS);
+         if (pc_max_followers == 0) {
+             return AI_FOLLOW_NOT_ALLOWED;
 diff --git a/src/game/anim.c b/src/game/anim.c
 --- a/src/game/anim.c
 +++ b/src/game/anim.c
@@ -608,6 +617,60 @@ diff --git a/src/game/combat.h b/src/game/combat.h
  bool combat_init(GameInitInfo* init_info);
  void combat_exit(void);
  void combat_reset(void);
+diff --git a/src/game/critter.c b/src/game/critter.c
+--- a/src/game/critter.c
++++ b/src/game/critter.c
+@@ -2457,3 +2457,17 @@
+     // Print effects.
+     effect_debug_obj(obj);
+ }
++
++/* Optional party capacity rule. It does not alter Charisma or existing members. */
++bool critter_followers_unlimited(int64_t leader)
++{
++    return leader != OBJ_HANDLE_NULL && player_is_local_pc_obj(leader)
++        && !tig_net_is_active() && settings_get_value(&settings, MODERN_UNLIMITED_FOLLOWERS_KEY) == 1;
++}
++
++bool critter_follower_limit_reached(int64_t leader)
++{
++    if (critter_followers_unlimited(leader)) return false;
++    int maximum = stat_level_get(leader, STAT_MAX_FOLLOWERS);
++    return maximum == 0 || critter_num_followers(leader, true) >= maximum;
++}
+diff --git a/src/game/critter.h b/src/game/critter.h
+--- a/src/game/critter.h
++++ b/src/game/critter.h
+@@ -110,4 +110,7 @@
+ bool critter_is_dumb(int64_t obj);
+ void critter_debug_obj(int64_t obj);
+ 
++bool critter_followers_unlimited(int64_t leader);
++bool critter_follower_limit_reached(int64_t leader);
++
+ #endif /* ARCANUM_GAME_CRITTER_H_ */
+diff --git a/src/game/gamelib.c b/src/game/gamelib.c
+--- a/src/game/gamelib.c
++++ b/src/game/gamelib.c
+@@ -324,6 +324,7 @@
+     settings_load(&settings);
+ 
+     settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
++    settings_register(&settings, MODERN_UNLIMITED_FOLLOWERS_KEY, "0", NULL);
+     difficulty_changed();
+ 
+     gamelib_mod_loaded = false;
+diff --git a/src/game/gamelib.h b/src/game/gamelib.h
+--- a/src/game/gamelib.h
++++ b/src/game/gamelib.h
+@@ -13,6 +13,7 @@
+ #define AUTO_SWITCH_WEAPON_KEY "auto switch"
+ #define ALWAYS_RUN_KEY "always run"
+ #define FOLLOWER_SKILLS_KEY "follower skills"
++#define MODERN_UNLIMITED_FOLLOWERS_KEY "modern unlimited followers"
+ 
+ #define BRIGHTNESS_KEY "brightness"
+ #define TEXT_DURATION_KEY "text duration"
 diff --git a/src/game/gsound.c b/src/game/gsound.c
 --- a/src/game/gsound.c
 +++ b/src/game/gsound.c
@@ -704,6 +767,25 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 +    magictech_interrupt_delayed(id);
 +    return true;
 +}
+diff --git a/src/game/script.c b/src/game/script.c
+--- a/src/game/script.c
++++ b/src/game/script.c
+@@ -972,14 +972,11 @@
+     case SCT_OBJ_HAS_MAX_FOLLOWERS: {
+         // (obj) has maximum followers
+ 
+-        int max_followers;
+-
+         cnt = script_resolve_focus_obj(condition->op_type[0], condition->op_value[0], state, objs, &objects);
+         matched = 0;
+         for (index = 0; index < cnt; index++) {
+             if (critter_is_pc(objs[index])) {
+-                max_followers = stat_level_get(objs[index], STAT_MAX_FOLLOWERS);
+-                if (max_followers == 0 || critter_num_followers(objs[index], true) >= max_followers) {
++                if (critter_follower_limit_reached(objs[index])) {
+                     matched++;
+                 }
+             } else {
 diff --git a/src/game/skill.c b/src/game/skill.c
 --- a/src/game/skill.c
 +++ b/src/game/skill.c
