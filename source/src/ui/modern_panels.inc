@@ -274,11 +274,9 @@ static void draw_map(void)
     fill(available,(SDL_Color){12,10,8,255});
     if(map_texture)SDL_RenderTexture(renderer,map_texture,&src,&dest);outline(dest,GOLD);
     panel_region(dest,map.x,map.y,map.width,map.height,3);
-    text_in_button((SDL_FRect){x+30,y+741,210,50},743,game_text(modern_map_text(512)),false,map.mode!=1);
-    const char* directions[]={"^",">","v","<"};
-    for(int i=0;i<4;i++)menu_button((SDL_FRect){x+260+i*65,y+741,55,50},744+i,directions[i],true);
-    menu_button((SDL_FRect){x+w-260,y+741,230,50},740,menu_text(260),true);
-    if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+550,y+736,w-840,54},0,GOLD);
+    menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
+    text_in_button((SDL_FRect){x+w-350,y+741,320,50},743,game_text(modern_map_text(512)),false,map.mode!=1);
+    if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+290,y+736,w-670,54},0,GOLD);
 }
 
 static SDL_FRect dialogue_reply_view;
