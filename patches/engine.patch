@@ -26,7 +26,17 @@ diff --git a/first_party/tig/include/tig/message.h b/first_party/tig/include/tig
 diff --git a/first_party/tig/include/tig/mouse.h b/first_party/tig/include/tig/mouse.h
 --- a/first_party/tig/include/tig/mouse.h
 +++ b/first_party/tig/include/tig/mouse.h
-@@ -93,6 +93,8 @@
+@@ -56,6 +56,9 @@
+ // cursor mode (managed by DirectInput).
+ void tig_mouse_set_button(int button, bool pressed);
+ 
++// Clear a captured press without forwarding a release into the game world.
++void tig_mouse_cancel_button(int button);
++
+ // Obtains current mouse state and returns `TIG_OK`.
+ //
+ // Returns `TIG_ERR_NOT_INITIALIZED` if mouse system was not initialized.
+@@ -93,6 +96,8 @@
  
  void tig_mouse_wheel(int dx, int dy);
  
@@ -85,11 +95,20 @@ diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
  // 0x52B7B0
  void tig_message_ping(void)
  {
-@@ -108,6 +115,9 @@
+@@ -108,6 +115,18 @@
      }
  
      while (SDL_PollEvent(&event)) {
 +        if (native_event_filter != NULL && native_event_filter(&event)) {
++            /* A dialog can open on DOWN and consume the physical UP. Stop
++             * software repeats without dispatching an action beneath the UI. */
++            if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
++                switch (event.button.button) {
++                case SDL_BUTTON_LEFT: tig_mouse_cancel_button(TIG_MOUSE_BUTTON_LEFT); break;
++                case SDL_BUTTON_RIGHT: tig_mouse_cancel_button(TIG_MOUSE_BUTTON_RIGHT); break;
++                case SDL_BUTTON_MIDDLE: tig_mouse_cancel_button(TIG_MOUSE_BUTTON_MIDDLE); break;
++                }
++            }
 +            continue;
 +        }
          SDL_ConvertEventToRenderCoordinates(renderer, &event);
@@ -98,7 +117,23 @@ diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
 diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 --- a/first_party/tig/src/mouse.c
 +++ b/first_party/tig/src/mouse.c
-@@ -821,3 +821,8 @@
+@@ -319,6 +319,15 @@
+         message.data.mouse.repeat = false;
+         tig_message_enqueue(&message);
+     }
++}
++
++void tig_mouse_cancel_button(int button)
++{
++    if (button < 0 || button >= TIG_MOUSE_BUTTON_COUNT) return;
++    tig_mouse_state.flags &= ~(tig_mouse_state_button_down_flags[button]
++        | tig_mouse_state_button_down_repeat_flags[button]
++        | tig_mouse_state_button_up_flags[button]);
++    tig_mouse_software_button_timestamps[button] = tig_ping_timestamp;
+ }
+ 
+ // 0x4FF9F0
+@@ -821,3 +830,8 @@
      message.data.mouse.repeat = false;
      tig_message_enqueue(&message);
  }
@@ -1940,7 +1975,25 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -6239,6 +6278,15 @@
+@@ -5888,6 +5927,8 @@
+ // 0x553320
+ bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
+ {
++    tig_mouse_cancel_button(TIG_MOUSE_BUTTON_LEFT);
++    dword_64C6D8 = false;
+     intgame_dialog_process_event_func = func;
+     tc_show();
+     intgame_mode_set(INTGAME_MODE_MAIN);
+@@ -5899,6 +5940,8 @@
+ // 0x553350
+ void intgame_dialog_end(void)
+ {
++    tig_mouse_cancel_button(TIG_MOUSE_BUTTON_LEFT);
++    dword_64C6D8 = false;
+     intgame_dialog_process_event_func = NULL;
+     tc_hide();
+     intgame_mode_set(INTGAME_MODE_MAIN);
+@@ -6239,6 +6282,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -1956,7 +2009,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6330,7 @@
+@@ -6282,6 +6334,7 @@
              }
          }
      }
@@ -1964,7 +2017,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6622,7 @@
+@@ -6573,6 +6626,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -1972,7 +2025,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6661,16 @@
+@@ -6611,6 +6665,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -1989,7 +2042,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6855,11 @@
+@@ -6795,6 +6859,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -2001,7 +2054,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7677,7 @@
+@@ -7612,6 +7681,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -2009,7 +2062,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7706,7 @@
+@@ -7640,7 +7710,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -2018,7 +2071,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7850,7 @@
+@@ -7784,7 +7854,7 @@
          mes_file_entry.str,
          value);
  
@@ -2027,7 +2080,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8899,195 @@
+@@ -8833,3 +8903,195 @@
  
      follower_ui_show();
  }
