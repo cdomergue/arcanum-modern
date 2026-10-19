@@ -24,6 +24,7 @@ jobs:
           python3 tests/test_tactical_camera.py
           python3 tests/test_keyboard_capture.py
           python3 tests/test_combat_binding.py
+          python3 tests/test_map_route.py
           python3 tests/test_camera_keys.py
           python3 tests/test_qol_preferences.py
           python3 tests/test_tactical_combat.py

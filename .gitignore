@@ -30,6 +30,7 @@
 !/source/src/ui/modern_ui.h
 !/source/src/ui/modern_panels.inc
 !/source/src/ui/modern_map_cache.inc
+!/source/src/ui/modern_map_route.inc
 !/source/src/ui/modern_map_generator.c
 !/source/src/ui/modern_map_generator.h
 !/source/src/ui/modern_map_startup.inc

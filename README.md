@@ -132,6 +132,10 @@ Hover an item, spell or skill and press **1–0** to assign a quick slot.
 **Shift-click** transfers a whole stack. Drag the map to pan it. In the journal,
 the **star** marks favorites and the **pin** tracks a quest.
 
+On the local map, distant destinations automatically add intermediate waypoints
+when a valid route fits within the six-point limit. Use the travel button to
+start following the route.
+
 Turn-based combat is the default for fresh installations. Each controllable ally
 acts during their own turn. The camera pans smoothly to the active character,
 with a brief input guard to prevent accidental actions. Selecting a portrait also moves the camera. A `~`

@@ -606,7 +606,15 @@ diff --git a/src/game/ai.c b/src/game/ai.c
 diff --git a/src/game/anim.c b/src/game/anim.c
 --- a/src/game/anim.c
 +++ b/src/game/anim.c
-@@ -3737,7 +3737,7 @@
+@@ -17,6 +17,7 @@
+ #include "game/mt_item.h"
+ #include "game/multiplayer.h"
+ #include "game/object.h"
++#include "game/obj_pool.h"
+ #include "game/path.h"
+ #include "game/player.h"
+ #include "game/portal.h"
+@@ -3737,7 +3738,7 @@
  
              if ((state_change & 0x90000000) == 0x90000000) {
                  run_info->flags |= 0x02;
@@ -615,7 +623,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      combat_consume_action_points(run_info->anim_obj, combat_required_action_points_get());
                  }
  
-@@ -4848,7 +4848,7 @@
+@@ -4848,7 +4849,7 @@
      if (run_info->path.max == 0 || run_info->path.max > range) {
          path_create_info.flags = PATH_FLAG_0x0001;
          if (!sub_425BF0(&path_create_info, 1)) {
@@ -624,7 +632,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4856,7 +4856,7 @@
+@@ -4856,7 +4857,7 @@
  
          run_info->path.max = path_make(&path_create_info);
          if (run_info->path.max == 0 || run_info->path.max > range) {
@@ -633,7 +641,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4973,7 +4973,7 @@
+@@ -4973,7 +4974,7 @@
      if (run_info->path.max == 0 || run_info->path.max > range) {
          path_create_info.flags = PATH_FLAG_0x0001;
          if (!sub_425BF0(&path_create_info, 1)) {
@@ -642,7 +650,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4981,7 +4981,7 @@
+@@ -4981,7 +4982,7 @@
  
          run_info->path.max = path_make(&path_create_info);
          if (run_info->path.max == 0 || run_info->path.max > range) {
@@ -651,7 +659,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -5168,7 +5168,7 @@
+@@ -5168,7 +5169,7 @@
  }
  
  // 0x426560
@@ -660,7 +668,17 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  {
      int v1;
      int8_t* rotations;
-@@ -5244,7 +5244,7 @@
+@@ -5211,7 +5212,8 @@
+     offset_x = obj_field_int32_get(obj, OBJ_F_OFFSET_X);
+     offset_y = obj_field_int32_get(obj, OBJ_F_OFFSET_Y);
+ 
+-    if (offset_x != 0 || offset_y != 0) {
++    if ((offset_x != 0 || offset_y != 0)
++        && (!preview || from == obj_field_int64_get(obj, OBJ_F_LOCATION))) {
+         v1--;
+         rotations++;
+         v2 = false;
+@@ -5244,7 +5246,7 @@
      }
  
      if (path->max == 0) {
@@ -669,13 +687,21 @@ diff --git a/src/game/anim.c b/src/game/anim.c
              combat_turn_based_end_critter_turn(obj);
          }
          return false;
-@@ -5261,6 +5261,19 @@
+@@ -5261,6 +5263,27 @@
  
      return true;
  }
 +bool sub_426560(int64_t obj, int64_t from, int64_t to, AnimPath* path, unsigned int flags)
 +{
 +    return anim_find_path(obj, from, to, path, flags, false);
++}
++
++bool anim_preview_route_segment(int64_t obj, int64_t from, int64_t to)
++{
++    AnimPath path = {0};
++    path.field_CC = sizeof(path.rotations);
++    return obj && obj_handle_is_valid(obj) && from != to && to != 0 && to != -1
++        && anim_find_path(obj, from, to, &path, 0, true);
 +}
 +
 +bool anim_preview_path(int64_t obj, int64_t to, bool adjacent, AnimPath* path)
@@ -689,7 +715,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  
  // 0x426840
  bool sub_426840(AnimRunInfo* run_info)
-@@ -5926,7 +5939,7 @@
+@@ -5926,7 +5949,7 @@
          }
  
          if (run_info->path.max == 0) {
@@ -698,7 +724,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -11333,7 +11346,7 @@
+@@ -11333,7 +11356,7 @@
  
      always_run = settings_get_value(&settings, ALWAYS_RUN_KEY);
  
@@ -707,7 +733,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          if (always_run) {
              if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
                  return false;
-@@ -11480,8 +11493,11 @@
+@@ -11480,8 +11503,11 @@
              if (tig_art_anim_data(art_id, &art_anim_data) == TIG_OK) {
                  frame = tig_art_id_frame_get(art_id);
                  if (frame == 3 || frame == 8) {
@@ -721,7 +747,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  }
              }
          }
-@@ -13334,7 +13350,7 @@
+@@ -13334,7 +13360,7 @@
          return false;
      }
  
@@ -730,7 +756,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)
          && critter_encumbrance_level_get(obj) < 4) {
          return anim_goal_run_to_tile(obj, loc);
-@@ -13441,7 +13457,7 @@
+@@ -13441,7 +13467,7 @@
          return false;
      }
  
@@ -742,11 +768,12 @@ diff --git a/src/game/anim.c b/src/game/anim.c
 diff --git a/src/game/anim.h b/src/game/anim.h
 --- a/src/game/anim.h
 +++ b/src/game/anim.h
-@@ -53,6 +53,8 @@
+@@ -53,6 +53,9 @@
  } BloodSplotchType;
  
  extern AnimGoalNode* anim_goal_nodes[];
 +
++bool anim_preview_route_segment(int64_t obj, int64_t from, int64_t to);
 +bool anim_preview_path(int64_t obj, int64_t to, bool adjacent, AnimPath* path);
  
  bool anim_init(GameInitInfo* init_info);
@@ -3648,7 +3675,27 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -4212,7 +4219,7 @@
+@@ -3569,6 +3576,8 @@
+     return false;
+ }
+ 
++#include "modern_map_route.inc"
++
+ // 0x5643E0
+ bool sub_5643E0(WmapCoords* coords)
+ {
+@@ -3592,6 +3601,10 @@
+             return false;
+         }
+         route_type = WMAP_ROUTE_TYPE_TOWN;
++    }
++
++    if (wmap_ui_mode == WMAP_UI_MODE_TOWN && modern_ui_enabled()) {
++        return modern_town_route_add(coords);
+     }
+ 
+     wp_idx = wmap_ui_routes[route_type].length;
+@@ -4212,7 +4225,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -3657,7 +3704,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4426,7 +4433,7 @@
+@@ -4426,7 +4439,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -3666,7 +3713,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4678,8 @@
+@@ -4671,7 +4684,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -3676,7 +3723,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4704,7 @@
+@@ -4696,7 +4710,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -3685,7 +3732,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4859,7 @@
+@@ -4851,7 +4865,7 @@
          object_list_destroy(&objects);
      }
  
@@ -3694,7 +3741,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4984,3 +4992,82 @@
+@@ -4984,3 +4998,82 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
