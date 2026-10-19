@@ -14,6 +14,35 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
+@@ -335,6 +341,9 @@
+     ${TIG_LIBRARY}
+ )
+ 
++add_executable(check-utf8-files EXCLUDE_FROM_ALL "../tools/check-utf8-files.c")
++target_link_libraries(check-utf8-files PRIVATE ${TIG_LIBRARY})
++
+ # SDL HID on Android requires C++ linker.
+ if(ANDROID)
+     enable_language(CXX)
+diff --git a/first_party/tig/include/tig/compat.h b/first_party/tig/include/tig/compat.h
+--- a/first_party/tig/include/tig/compat.h
++++ b/first_party/tig/include/tig/compat.h
+@@ -2,6 +2,7 @@
+ #define TIG_COMPAT_H_
+ 
+ #include "tig/types.h"
++#include <stdio.h>
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -21,6 +22,7 @@
+ #endif
+ 
+ void compat_windows_path_to_native(char* path);
++FILE* compat_fopen(const char* path, const char* mode);
+ void compat_resolve_path(char* path);
+ void compat_append_path(char* path, size_t size, const char* comp);
+ void compat_join_path_ex(char* path, size_t size, ...);
 diff --git a/first_party/tig/include/tig/message.h b/first_party/tig/include/tig/message.h
 --- a/first_party/tig/include/tig/message.h
 +++ b/first_party/tig/include/tig/message.h
@@ -38,7 +67,15 @@ diff --git a/first_party/tig/include/tig/mouse.h b/first_party/tig/include/tig/m
  // Obtains current mouse state and returns `TIG_OK`.
  //
  // Returns `TIG_ERR_NOT_INITIALIZED` if mouse system was not initialized.
-@@ -93,6 +96,8 @@
+@@ -69,6 +72,7 @@
+ 
+ // Renders mouse cursor to screen.
+ void tig_mouse_display(void);
++void tig_mouse_display_native(SDL_Renderer* renderer, float x, float y, float scale);
+ 
+ // Refreshes internally managed cursor surface.
+ //
+@@ -93,6 +97,8 @@
  
  void tig_mouse_wheel(int dx, int dy);
  
@@ -50,16 +87,18 @@ diff --git a/first_party/tig/include/tig/mouse.h b/first_party/tig/include/tig/m
 diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/video.h
 --- a/first_party/tig/include/tig/video.h
 +++ b/first_party/tig/include/tig/video.h
-@@ -113,6 +113,8 @@
+@@ -113,6 +113,10 @@
  int tig_video_blit(TigVideoBuffer* src_video_buffer, TigRect* src_rect, TigRect* dst_rect);
  int tig_video_fill(const TigRect* rect, tig_color_t color);
  int tig_video_flip(void);
 +void tig_video_set_overlay(void (*draw)(SDL_Renderer*));
++void tig_video_set_cursor_overlay(void (*draw)(SDL_Renderer*));
++bool tig_video_has_cursor_overlay(void);
 +void tig_video_set_slide_overlay(void (*draw)(SDL_Renderer*));
  int tig_video_screenshot_set_settings(TigVideoScreenshotSettings* settings);
  int tig_video_screenshot_make(void);
  int tig_video_get_palette(unsigned int* colors);
-@@ -139,6 +141,8 @@
+@@ -139,6 +143,8 @@
  int tig_video_buffer_save_to_bmp(TigVideoBufferSaveToBmpInfo* save_info);
  int tig_video_buffer_load_from_bmp(const char* filename, TigVideoBuffer** video_buffer_ptr, unsigned int flags);
  
@@ -80,6 +119,60 @@ diff --git a/first_party/tig/include/tig/window.h b/first_party/tig/include/tig/
  #ifdef __cplusplus
  }
  #endif
+diff --git a/first_party/tig/src/compat.c b/first_party/tig/src/compat.c
+--- a/first_party/tig/src/compat.c
++++ b/first_party/tig/src/compat.c
+@@ -5,6 +5,20 @@
+ #else
+ #include <dirent.h>
+ #endif
++
++FILE* compat_fopen(const char* path, const char* mode)
++{
++#ifdef _WIN32
++    wchar_t* wide_path = (wchar_t*)SDL_iconv_string("UTF-16LE", "UTF-8", path, strlen(path) + 1);
++    wchar_t* wide_mode = (wchar_t*)SDL_iconv_string("UTF-16LE", "UTF-8", mode, strlen(mode) + 1);
++    FILE* file = wide_path && wide_mode ? _wfopen(wide_path, wide_mode) : NULL;
++    SDL_free(wide_path);
++    SDL_free(wide_mode);
++    return file;
++#else
++    return fopen(path, mode);
++#endif
++}
+ 
+ void compat_windows_path_to_native(char* path)
+ {
+diff --git a/first_party/tig/src/database.c b/first_party/tig/src/database.c
+--- a/first_party/tig/src/database.c
++++ b/first_party/tig/src/database.c
+@@ -69,7 +69,7 @@
+     long pos;
+     long size;
+ 
+-    stream = fopen(path, "rb");
++    stream = compat_fopen(path, "rb");
+     if (stream == NULL) {
+         return NULL;
+     }
+@@ -748,7 +748,7 @@
+         return;
+     }
+ 
+-    stream = fopen(path, "rt");
++    stream = compat_fopen(path, "rt");
+     if (stream == NULL) {
+         return;
+     }
+@@ -847,7 +847,7 @@
+ 
+     memset(stream, 0, sizeof(*stream));
+ 
+-    stream->underlying_stream = fopen(database->path, "rb");
++    stream->underlying_stream = compat_fopen(database->path, "rb");
+     if (stream->underlying_stream == NULL) {
+         return false;
+     }
 diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
 --- a/first_party/tig/src/file.c
 +++ b/first_party/tig/src/file.c
@@ -96,6 +189,51 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                  repo = repo->next;
                  while (repo != NULL) {
                      if ((repo->type & TIG_FILE_DATABASE) != 0
+@@ -1602,7 +1606,7 @@
+         SDL_snprintf(path, sizeof(path), "%s\\%s", repo->path, filename);
+     }
+ 
+-    stream = fopen(path, "wbx");
++    stream = compat_fopen(path, "wbx");
+     if (stream == NULL) {
+         return false;
+     }
+@@ -1737,7 +1741,7 @@
+     stream->flags &= ~(TIG_FILE_DATABASE | TIG_FILE_PLAIN);
+ 
+     if (path[0] == '.' || path[0] == '\\' || path[1] == ':' || path[0] == '/') {
+-        stream->impl.plain_file_stream = fopen(path, mode);
++        stream->impl.plain_file_stream = compat_fopen(path, mode);
+         if (stream->impl.plain_file_stream == NULL) {
+             return 0;
+         }
+@@ -1759,7 +1763,7 @@
+                             compat_join_path(mutable_path, sizeof(mutable_path), writeable_repo->path, path);
+                             compat_resolve_path(mutable_path);
+ 
+-                            stream->impl.plain_file_stream = fopen(mutable_path, mode);
++                            stream->impl.plain_file_stream = compat_fopen(mutable_path, mode);
+                             if (stream->impl.plain_file_stream != NULL) {
+                                 stream->flags |= TIG_FILE_PLAIN;
+                                 database_entry->flags &= ~TIG_DATABASE_ENTRY_0x100;
+@@ -1789,7 +1793,7 @@
+                     compat_join_path(mutable_path, sizeof(mutable_path), repo->path, path);
+                     compat_resolve_path(mutable_path);
+ 
+-                    stream->impl.plain_file_stream = fopen(mutable_path, mode);
++                    stream->impl.plain_file_stream = compat_fopen(mutable_path, mode);
+                     if (stream->impl.plain_file_stream != NULL) {
+                         stream->flags |= TIG_FILE_PLAIN;
+                         break;
+@@ -1852,7 +1856,7 @@
+     FILE* stream;
+     uint8_t file_owner[1024];
+ 
+-    stream = fopen(filename, "rb");
++    stream = compat_fopen(filename, "rb");
+     if (stream == NULL) {
+         return false;
+     }
 diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
 --- a/first_party/tig/src/message.c
 +++ b/first_party/tig/src/message.c
@@ -135,12 +273,19 @@ diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
 diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 --- a/first_party/tig/src/mouse.c
 +++ b/first_party/tig/src/mouse.c
-@@ -319,6 +319,15 @@
-         message.data.mouse.repeat = false;
-         tig_message_enqueue(&message);
+@@ -78,6 +78,8 @@
+ 
+ // 0x60466C
+ static TigVideoBuffer* tig_mouse_cursor_video_buffer;
++static SDL_Texture* tig_mouse_native_texture;
++static bool tig_mouse_native_dirty = true;
+ 
+ // 0x604670
+ static tig_art_id_t tig_mouse_cursor_art_id;
+@@ -321,6 +323,15 @@
      }
-+}
-+
+ }
+ 
 +void tig_mouse_cancel_button(int button)
 +{
 +    if (button < 0 || button >= TIG_MOUSE_BUTTON_COUNT) return;
@@ -148,10 +293,46 @@ diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 +        | tig_mouse_state_button_down_repeat_flags[button]
 +        | tig_mouse_state_button_up_flags[button]);
 +    tig_mouse_software_button_timestamps[button] = tig_ping_timestamp;
- }
- 
++}
++
  // 0x4FF9F0
-@@ -821,3 +830,8 @@
+ int tig_mouse_get_state(TigMouseState* mouse_state)
+ {
+@@ -361,6 +372,7 @@
+ // 0x4FFAB0
+ void tig_mouse_display(void)
+ {
++    if (tig_video_has_cursor_overlay()) return;
+     TigRect src_rect;
+     TigRect dst_rect;
+ 
+@@ -402,6 +414,7 @@
+ // 0x4FFB40
+ void tig_mouse_cursor_refresh(void)
+ {
++    tig_mouse_native_dirty = true;
+     TigRect src_rect;
+     TigRect dst_rect;
+     TigArtBlitInfo blit_info;
+@@ -486,6 +499,9 @@
+ // 0x4FFEA0
+ bool tig_mouse_cursor_destroy_video_buffers(void)
+ {
++    SDL_DestroyTexture(tig_mouse_native_texture);
++    tig_mouse_native_texture = NULL;
++    tig_mouse_native_dirty = true;
+     tig_video_buffer_destroy(tig_mouse_cursor_video_buffer);
+     return true;
+ }
+@@ -622,6 +638,7 @@
+ // 0x500160
+ int tig_mouse_cursor_overlay(tig_art_id_t art_id, int x, int y)
+ {
++    tig_mouse_native_dirty = true;
+     bool hidden;
+     int rc;
+     TigArtFrameData art_frame_data;
+@@ -821,3 +838,40 @@
      message.data.mouse.repeat = false;
      tig_message_enqueue(&message);
  }
@@ -160,15 +341,58 @@ diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 +{
 +    tig_mouse_screen_bounds = (TigRect){0, 0, width, height};
 +}
++
++void tig_mouse_display_native(SDL_Renderer* renderer, float x, float y, float scale)
++{
++    if (!tig_mouse_active || (tig_mouse_state.flags & TIG_MOUSE_STATE_HIDDEN) != 0
++        || !tig_mouse_cursor_video_buffer) return;
++    if (tig_mouse_native_dirty || !tig_mouse_native_texture) {
++        TigVideoBufferData data;
++        if (tig_video_buffer_lock(tig_mouse_cursor_video_buffer) != TIG_OK) return;
++        if (tig_video_buffer_data(tig_mouse_cursor_video_buffer, &data) == TIG_OK) {
++            SDL_Surface* surface = SDL_CreateSurfaceFrom(data.width, data.height,
++                SDL_PIXELFORMAT_XRGB8888, data.pixels, data.pitch);
++            if (surface) {
++                SDL_SetSurfaceColorKey(surface, true, data.color_key);
++                SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
++                if (texture) {
++                    SDL_DestroyTexture(tig_mouse_native_texture);
++                    tig_mouse_native_texture = texture;
++                    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
++                    tig_mouse_native_dirty = false;
++                }
++                SDL_DestroySurface(surface);
++            }
++        }
++        tig_video_buffer_unlock(tig_mouse_cursor_video_buffer);
++    }
++    if (tig_mouse_native_texture) {
++        SDL_FRect source = {0, 0, tig_mouse_state.frame.width, tig_mouse_state.frame.height};
++        SDL_FRect destination = {x - tig_mouse_state.offset_x * scale,
++            y - tig_mouse_state.offset_y * scale, source.w * scale, source.h * scale};
++        SDL_RenderTexture(renderer, tig_mouse_native_texture, &source, &destination);
++    }
++}
 diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 --- a/first_party/tig/src/video.c
 +++ b/first_party/tig/src/video.c
-@@ -235,6 +235,19 @@
+@@ -235,6 +235,30 @@
      return TIG_OK;
  }
  
 +static void (*native_overlay)(SDL_Renderer*);
 +static void (*slide_overlay)(SDL_Renderer*);
++static void (*cursor_overlay)(SDL_Renderer*);
++
++void tig_video_set_cursor_overlay(void (*draw)(SDL_Renderer*))
++{
++    cursor_overlay = draw;
++}
++
++bool tig_video_has_cursor_overlay(void)
++{
++    return cursor_overlay != NULL;
++}
 +
 +void tig_video_set_slide_overlay(void (*draw)(SDL_Renderer*))
 +{
@@ -183,7 +407,7 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
  // 0x51F8F0
  int tig_video_flip(void)
  {
-@@ -242,6 +255,9 @@
+@@ -242,6 +266,9 @@
  
      SDL_RenderClear(tig_video_state.renderer);
      SDL_RenderTexture(tig_video_state.renderer, tig_video_state.texture, NULL, NULL);
@@ -193,18 +417,20 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
  
      if (tig_fade_state.enabled) {
          SDL_BlendMode blend_mode;
-@@ -259,6 +275,10 @@
-     if (tig_video_show_fps) {
+@@ -260,6 +287,12 @@
          SDL_SetRenderDrawColor(tig_video_state.renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
          SDL_RenderDebugTextFormat(tig_video_state.renderer, 0, 0, "%d", tig_video_state.fps);
-+    }
+     }
 +
 +    if (native_overlay != NULL) {
 +        native_overlay(tig_video_state.renderer);
-     }
++    }
++
++    if (cursor_overlay != NULL) cursor_overlay(tig_video_state.renderer);
  
      SDL_RenderPresent(tig_video_state.renderer);
-@@ -1447,3 +1467,25 @@
+ 
+@@ -1447,3 +1480,25 @@
  
      return rc;
  }

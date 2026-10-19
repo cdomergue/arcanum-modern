@@ -45,6 +45,10 @@ needed depends on your machine and installed modules. Choose **Play now** to use
 the original maps immediately. Preparation resumes at the next launch, keeping
 completed tiles. A complete cache is reused on subsequent launches.
 
+If preparation fails, note the error code shown on screen and check
+`modern-ui/.map-work/generation.log` inside your game folder. You can still choose
+**Play now** and use the original maps.
+
 To compile the mod yourself, see the [build instructions](#build-from-source).
 Back up your saved games before trying an experimental engine.
 

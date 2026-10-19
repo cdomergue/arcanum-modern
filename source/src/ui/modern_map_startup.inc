@@ -2,6 +2,8 @@ bool modern_ui_prepare_maps(const char* executable)
 {
     if (!enabled) return true;
     SDL_Process* process = modern_maps_start(executable);
+    char launch_error[256] = "";
+    if (!process) SDL_strlcpy(launch_error, SDL_GetError(), sizeof(launch_error));
     ModernMapProgress progress = {0};
     bool failed = !process, running = process != NULL, proceed = true, finished = false;
     int old_w, old_h, exit_code = 0;
@@ -18,6 +20,7 @@ bool modern_ui_prepare_maps(const char* executable)
             modern_maps_progress(&progress);
             if (SDL_WaitProcess(process, false, &exit_code)) {
                 running = false;
+                modern_maps_progress(&progress);
                 failed = exit_code != 0 || progress.stage != 2;
                 if (!failed) break;
             }
@@ -45,7 +48,9 @@ bool modern_ui_prepare_maps(const char* executable)
         centered(0, failed
             ? tr("La préparation n’a pas pu se terminer.", "Preparation could not be completed.")
             : tr("Les cartes sont créées à partir de votre installation du jeu.", "Maps are generated from your installed game files."), cx, cy - 88, GOLD);
-        centered(0, tr("Cette étape peut prendre du temps et utiliser environ 8 Go.", "This can take a while and use about 8 GB of disk space."), cx, cy - 50, MUTED);
+        centered(0, failed
+            ? tr("Journal : modern-ui/.map-work/generation.log", "Log: modern-ui/.map-work/generation.log")
+            : tr("Cette étape peut prendre du temps et utiliser environ 8 Go.", "This can take a while and use about 8 GB of disk space."), cx, cy - 50, MUTED);
         SDL_FRect track = {cx - 350, cy + 5, 700, 22};
         fill(track, (SDL_Color){7,6,4,255}); outline(track, MUTED);
         double fraction = progress.total ? (double)progress.done / progress.total : 0;
@@ -55,7 +60,9 @@ bool modern_ui_prepare_maps(const char* executable)
         }
         fill(bar, GOLD);
         char status[160];
-        if (progress.total) SDL_snprintf(status, sizeof(status), "%d%%  —  %llu / %llu", (int)(fraction * 100), progress.done, progress.total);
+        if (failed && !process) SDL_snprintf(status, sizeof(status), "%s", launch_error);
+        else if (failed) SDL_snprintf(status, sizeof(status), tr("Code d’erreur : %d (0x%08X)", "Error code: %d (0x%08X)"), exit_code, (unsigned)exit_code);
+        else if (progress.total) SDL_snprintf(status, sizeof(status), "%d%%  —  %llu / %llu", (int)(fraction * 100), progress.done, progress.total);
         else SDL_strlcpy(status, tr("Vérification et préparation…", "Checking and preparing…"), sizeof(status));
         centered(0, status, cx, cy + 43, GOLD);
         centered(0, tr("Vous pouvez jouer maintenant et reprendre au prochain lancement.", "You can play now and resume at the next launch."), cx, cy + 94, MUTED);

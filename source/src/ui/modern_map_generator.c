@@ -48,7 +48,18 @@ typedef struct MapGenWalk {
 
 static char* mapgen_status_path;
 static ModernMapProgress mapgen_progress;
+static SDL_IOStream* mapgen_log;
 void sub_43AAB0(void);
+
+static void SDLCALL mapgen_log_output(void* userdata, int category, SDL_LogPriority priority, const char* message)
+{
+    (void)userdata; (void)category; (void)priority;
+    if (mapgen_log) {
+        SDL_WriteIO(mapgen_log, message, strlen(message));
+        SDL_WriteIO(mapgen_log, "\n", 1);
+        SDL_FlushIO(mapgen_log);
+    }
+}
 
 static char* mapgen_join(const char* a, const char* b)
 {
@@ -324,7 +335,10 @@ static bool mapgen_catalog(const char* module, MapGenTask** tasks, size_t* count
         MapGenTask* task = &(*tasks)[i];
         if (!task->source[0] && !SDL_strcasecmp(module, "Arcanum") && task->id == 18 && first < *count)
             SDL_strlcpy(task->source, (*tasks)[first].source, sizeof(task->source));
-        if (!task->source[0]) return false;
+        if (!task->source[0]) {
+            SDL_Log("No source sector found for module %s, town map %d", module, task->id);
+            return false;
+        }
     }
     return true;
 }
@@ -685,12 +699,22 @@ int modern_maps_generate(const char* game_root, int tile_limit)
     int lock = open("modern-ui/.map-work/lock", O_CREAT | O_RDWR, 0600);
     if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB)) {if (lock >= 0) close(lock); return 4;}
 #endif
+    SDL_LogOutputFunction previous_log;
+    void* previous_userdata;
+    SDL_GetLogOutputFunction(&previous_log, &previous_userdata);
+    mapgen_log = SDL_IOFromFile("modern-ui/.map-work/generation.log", "wb");
+    SDL_SetLogOutputFunction(mapgen_log_output, NULL);
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
+    SDL_Log("HD map preparation: %s", game_root);
     mapgen_status_path = mapgen_join(game_root, "modern-ui/.map-work/progress");
     mapgen_report(0);
     int result = modern_maps_ready() ? 0 : mapgen_run(game_root, tile_limit);
     if (result) SDL_Log("HD map preparation stopped: code %d (%s)", result, SDL_GetError());
     mapgen_report(result ? 3 : 2);
     SDL_free(mapgen_status_path); mapgen_status_path = NULL;
+    SDL_SetLogOutputFunction(previous_log, previous_userdata);
+    if (mapgen_log) SDL_CloseIO(mapgen_log);
+    mapgen_log = NULL;
 #ifdef SDL_PLATFORM_WINDOWS
     CloseHandle(lock);
 #else

@@ -1769,9 +1769,28 @@ static void render_overlay(SDL_Renderer* target)
         break;
     }
     if(!menu && !journal)draw_quickslot_hint();
-    if(menu || journal || native_panel() || (hud && hud_region(mouse_x,mouse_y))) draw_art(0,(SDL_FRect){mouse_x,mouse_y,28,35},true);
     SDL_SetRenderDrawBlendMode(renderer,old_blend);
     SDL_SetRenderLogicalPresentation(renderer,old_w,old_h,old_mode);
+}
+
+static void render_cursor(SDL_Renderer* target)
+{
+    if (!enabled || slide_ui_is_active() || tig_movie_is_playing()) return;
+    renderer = target;
+    update_geometry();
+    int ww, wh, old_w, old_h;
+    SDL_GetWindowSize(window, &ww, &wh);
+    float x, y;
+    SDL_GetMouseState(&x, &y);
+    if (ww <= 0 || wh <= 0 || SDL_GetMouseFocus() != window) return;
+    x *= canvas_w / ww; y *= canvas_h / wh;
+    SDL_RendererLogicalPresentation old_mode;
+    SDL_GetRenderLogicalPresentation(renderer, &old_w, &old_h, &old_mode);
+    SDL_SetRenderLogicalPresentation(renderer, (int)canvas_w, (int)canvas_h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    if (native_menu() || journal || native_panel() || (hud && hud_region(x, y)))
+        draw_art(0, (SDL_FRect){x, y, 28, 35}, true);
+    else tig_mouse_display_native(renderer, x, y, 1.0f);
+    SDL_SetRenderLogicalPresentation(renderer, old_w, old_h, old_mode);
 }
 
 static void search_focus(bool on)
@@ -2054,6 +2073,7 @@ bool modern_ui_init(void)
     combat_tactical_enable();
     if(SDL_getenv("ARCANUM_UI_SELFTEST")) verify_text_layout();
     tig_video_set_overlay(render_overlay);
+    tig_video_set_cursor_overlay(render_cursor);
     tig_message_set_native_filter(handle_event);
     tig_debug_printf("Arcanum Modern: native interface initialized.\n");
     return true;
@@ -2070,6 +2090,8 @@ void modern_ui_tick(void)
         pending_action=-1;
         if(journal) logbook_ui_close();
         enabled=!enabled;
+        tig_video_set_cursor_overlay(enabled ? render_cursor : NULL);
+        tig_window_invalidate_rect(NULL);
         modern_map_action(8);
         if(!enabled) {modern_intgame_hud_hide(false);hud=false;}
     }
@@ -2116,7 +2138,7 @@ void modern_ui_exit(void)
     tactical_portraits_clear();
     if(option_boolean_file!=MES_FILE_HANDLE_INVALID){mes_unload(option_boolean_file);option_boolean_file=MES_FILE_HANDLE_INVALID;}
     modern_graphics_cancel();
-    tig_video_set_overlay(NULL);tig_message_set_native_filter(NULL);
+    tig_video_set_overlay(NULL);tig_video_set_cursor_overlay(NULL);tig_message_set_native_filter(NULL);
     for(int i=0;i<FONT_COUNT;i++) {SDL_DestroyTexture(fonts[i].texture);fonts[i].texture=NULL;}
     for(int i=0;i<art_count;i++) SDL_DestroyTexture(arts[i].texture);
     art_count=0;
