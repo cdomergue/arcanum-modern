@@ -17,8 +17,18 @@ such as PulseAudio or ALSA. No separate SDL installation is required.
 For a windowed session:
   ./"Play Arcanum Modern.sh" -window -geometry=1280x720
 
-Set SDL_RENDER_DRIVER=software to try software rendering. The launcher writes
-modern-launch.log in the game folder. Use Options to change other settings.
+The launcher tries Vulkan first. If it exits with a segmentation fault before
+reaching the main menu, the launcher retries once using X11 software rendering
+with framebuffer acceleration disabled. It preserves the first attempt in
+modern-launch-vulkan.log and writes the retry to modern-launch.log. Crashes
+at the menu or during gameplay do not trigger an automatic restart.
+
+To use software rendering directly:
+  SDL_RENDER_DRIVER=software ./"Play Arcanum Modern.sh"
+
+Selecting a renderer explicitly disables automatic retry. With software selected,
+X11 and disabled framebuffer acceleration are defaults; SDL_VIDEO_DRIVER and
+SDL_FRAMEBUFFER_ACCELERATION can override them. Use Options for game settings.
 
 This ZIP contains no game data, saves, generated maps or personal preferences.
 Close the game before extracting an update. Keep your existing modern-ui INI

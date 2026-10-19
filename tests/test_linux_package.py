@@ -1,6 +1,7 @@
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 import subprocess
@@ -62,6 +63,51 @@ class LinuxPackageTests(unittest.TestCase):
         self.p.validate_dependencies('0x1 (RUNPATH) Library runpath: [$ORIGIN]', '$ORIGIN')
         with self.assertRaises(ValueError):
             self.p.validate_dependencies('0x1 (RUNPATH) Library runpath: [$ORIGIN:/tmp/libraries]')
+
+    def test_launcher_crash_recovery(self):
+        for script in ('tools/linux/Play Arcanum Modern.sh', 'play.sh'):
+            for mode, renderer, attempts, status in (
+                ('crash', '', 2, 0), ('ready', '', 1, 139),
+                ('error', '', 1, 24), ('ok', '', 1, 0),
+                ('crash', 'vulkan', 1, 139), ('ok', 'software', 1, 0),
+                ('both_crash', '', 2, -11),
+            ):
+                with self.subTest(script=script, mode=mode, renderer=renderer), tempfile.TemporaryDirectory() as temp:
+                    root = Path(temp)
+                    game = root/'game'
+                    game.mkdir()
+                    (game/'modern-ui').mkdir()
+                    (game/'modern-ui/Book.ttf').touch()
+                    (game/'arcanum1.dat').touch()
+                    launcher = (root if script == 'play.sh' else game)/'launch.sh'
+                    launcher.write_bytes((ROOT/script).read_bytes())
+                    engine = game/'arcanum-modern'
+                    engine.write_text('''#!/bin/sh
+ulimit -c 0
+printf '%s|%s|%s|%s\\n' "$SDL_RENDER_DRIVER" "$SDL_VIDEO_DRIVER" "$SDL_FRAMEBUFFER_ACCELERATION" "$*" >> attempts
+echo "renderer=$SDL_RENDER_DRIVER"
+if [ "$SDL_RENDER_DRIVER" = software ] && [ "$TEST_MODE" != both_crash ]; then exit 0; fi
+case "$TEST_MODE" in
+    ready) echo 'Arcanum Modern: startup complete'; kill -SEGV $$ ;;
+    crash|both_crash) kill -SEGV $$ ;;
+    error) exit 24 ;;
+esac
+''')
+                    engine.chmod(0o755)
+                    env = {k: v for k, v in os.environ.items() if not k.startswith('SDL_')}
+                    env.update(TEST_MODE=mode)
+                    if renderer:
+                        env['SDL_RENDER_DRIVER'] = renderer
+                    result = subprocess.run(['sh', str(launcher), '-window', 'argument with spaces'], env=env, capture_output=True)
+                    self.assertEqual(result.returncode, status)
+                    calls = (game/'attempts').read_text().splitlines()
+                    self.assertEqual(len(calls), attempts)
+                    if attempts == 2 or renderer == 'software':
+                        self.assertEqual(calls[-1], 'software|x11|0|-window argument with spaces')
+                    self.assertEqual((game/'modern-launch-vulkan.log').exists(), attempts == 2)
+                    if attempts == 2:
+                        self.assertIn('renderer=vulkan', (game/'modern-launch-vulkan.log').read_text())
+                        self.assertIn('renderer=software', (game/'modern-launch.log').read_text())
 
 
 def verify_archive(path):

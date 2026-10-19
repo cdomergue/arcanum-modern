@@ -114,8 +114,15 @@ For a windowed session:
 ```
 
 The launcher uses Vulkan by default and writes `game/modern-launch.log`.
-`SDL_RENDER_DRIVER` selects another available SDL renderer. The provided Linux
-build configuration uses X11/XWayland and disables SDL's OpenGL backend.
+A segmentation fault before the main menu triggers one retry with X11 software
+rendering and framebuffer acceleration disabled. The first attempt is preserved
+in `game/modern-launch-vulkan.log`. There is no automatic restart after startup.
+
+`SDL_RENDER_DRIVER` selects a renderer explicitly and disables automatic retry.
+Setting it to `software` also defaults `SDL_VIDEO_DRIVER` to `x11` and
+`SDL_FRAMEBUFFER_ACCELERATION` to `0`, unless those variables are already set.
+The provided Linux build configuration uses X11/XWayland and disables SDL's
+OpenGL backend.
 
 To create the Linux x64 ZIP, build in a dedicated directory and run the packager:
 
@@ -421,6 +428,7 @@ python3 tests/test_display_config.py
 python3 tests/test_lock_states.py
 python3 tests/test_map_route.py
 python3 tests/test_shared_turns.py
+python3 tests/test_party_combat.py
 python3 tests/test_windows_full_package.py
 python3 tests/test_windows_package.py dist/ArcanumModern-windows-x64.zip
 ```
