@@ -959,6 +959,20 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 +    magictech_interrupt(id);
 +    return true;
 +}
+diff --git a/src/game/mes.c b/src/game/mes.c
+--- a/src/game/mes.c
++++ b/src/game/mes.c
+@@ -595,8 +595,8 @@
+                 current_mes_file_path);
+         }
+ 
+-        // Store character in buffer if there's space.
+-        if (pos < MAX_STRING) {
++        // Reserve one byte for the terminating NUL, including oversized fields.
++        if (pos < MAX_STRING - 1) {
+             buffer[pos++] = (char)ch;
+         } else {
+             too_long = true;
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
