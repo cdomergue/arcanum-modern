@@ -20,6 +20,7 @@ jobs:
             libasound2-dev libpulse-dev libxss-dev libxtst-dev libxfixes-dev libxkbcommon-dev libudev-dev
       - name: Check tactical camera and input handling
         run: |
+          bash ./prepare-source.sh
           python3 tests/test_tactical_camera.py
           python3 tests/test_keyboard_capture.py
           python3 tests/test_tactical_combat.py
