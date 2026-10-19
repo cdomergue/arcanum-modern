@@ -52,7 +52,12 @@ int main(int argc, char** argv)
     bool quit = false;
     while (tig_message_dequeue(&message) == TIG_OK) if (message.type == TIG_MESSAGE_QUIT) quit = true;
     assert(quit);
+    start = SDL_GetTicks();
+    assert(SDL_AddTimer(200, interrupt_movie, NULL));
+    assert(tig_movie_play(argv[1], 0, 0) == TIG_OK);
+    assert(SDL_GetTicks() - start >= 150);
+    assert(SDL_GetTicks() - start < 2000);
     tig_exit();
-    puts("PASS: Bink playback, renderer restoration, keyboard skip and quit propagation");
+    puts("PASS: Bink playback, renderer restoration, keyboard skip, quit propagation and cancelled quit");
     return 0;
 }
