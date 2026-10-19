@@ -66,7 +66,7 @@ static void tactical_portrait(int64_t actor,SDL_FRect rect)
 static bool tactical_active(void) {return combat_tactical_enabled() && combat_turn_based_is_active();}
 static bool tactical_region(float x,float y)
 {
-    return party_region(x,y) || inside((SDL_FRect){(canvas_w-930)/2,10,930,66},x,y)
+    return maintained_region(x,y) || party_region(x,y) || inside((SDL_FRect){(canvas_w-930)/2,10,930,66},x,y)
         || inside((SDL_FRect){(canvas_w-980)/2,canvas_h-126,980,116},x,y)
         || (tactical_log_open && inside((SDL_FRect){(canvas_w-980)/2,canvas_h-290,540,158},x,y));
 }

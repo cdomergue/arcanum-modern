@@ -59,3 +59,8 @@ consommé. Les règles de fatigue restent celles d’Arcanum.
 Livres, lettres, inscriptions, journaux imprimés et télégrammes utilisent les
 textes de l’installation. Les boutons de page, la molette et Page précédente /
 Page suivante permettent de parcourir les documents longs ; Échap les ferme.
+
+Les **sorts maintenus** apparaissent sous la barre supérieure, indépendamment du
+zoom. Survolez une icône pour lire son nom ; cliquez pour arrêter ce sort lorsque
+le personnage est disponible. En combat, cette zone suit le personnage contrôlé ;
+pendant le tour adverse, elle montre les sorts du héros sans permettre de les arrêter.

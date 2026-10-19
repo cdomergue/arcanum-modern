@@ -899,7 +899,7 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
  
  #include <stdio.h>
  
-@@ -7132,3 +7133,57 @@
+@@ -7132,3 +7133,59 @@
              obj_field_int64_get(obj, OBJ_F_LOCATION));
      }
  }
@@ -951,10 +951,12 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 +bool modern_spell_stop(int64_t actor, int id)
 +{
 +    MagicTechRunInfo* run;
-+    if (!combat_input_ready(actor) || !magictech_id_to_run_info(id, &run)
++    if (!magictech_spells || !magictech_run_info || id < 0 || id >= 512
++        || !combat_input_ready(actor) || !magictech_id_to_run_info(id, &run)
++        || !(run->flags & MAGICTECH_RUN_ACTIVE) || run->action == MAGICTECH_ACTION_END
 +        || run->source_obj.obj != actor || run->spell < 0 || run->spell >= SPELL_COUNT
 +        || magictech_spells[run->spell].maintenance.period <= 0) return false;
-+    magictech_interrupt_delayed(id);
++    magictech_interrupt(id);
 +    return true;
 +}
 diff --git a/src/game/script.c b/src/game/script.c

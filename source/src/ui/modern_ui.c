@@ -128,6 +128,7 @@ static int native_panel(void);
 static bool panels_event(SDL_Event* event);
 static bool panels_action(int action);
 static bool tactical_active(void);
+static bool maintained_region(float x,float y);
 static bool party_region(float x,float y);
 static int hit(float x,float y);
 static void draw_tactical_spells(void);
@@ -1502,6 +1503,79 @@ void modern_ui_menu_tick(void)
 #include "modern_combat.inc"
 #include "modern_party.inc"
 
+/* Stable-size maintenance controls for the character currently controlled. */
+static int maintained_ids[32],maintained_spells[32],maintained_count,maintained_page;
+static int64_t maintained_actor,maintained_pressed_actor;
+static int maintained_pressed_id=-1;
+static SDL_FRect maintained_rect;
+
+static bool maintained_region(float x,float y)
+{
+    return hud && !journal && !native_panel() && maintained_rect.w>0 && inside(maintained_rect,x,y);
+}
+
+static void draw_maintained_spells(void)
+{
+    maintained_rect=(SDL_FRect){0};
+    if(!hud || journal || native_panel())return;
+    int64_t actor=combat_input_actor();
+    /* Keep the player's effects visible during enemy turns, without commands. */
+    if(!actor)actor=player_get_local_pc_obj();
+    if(!actor || !obj_handle_is_valid(actor))return;
+    if(actor!=maintained_actor){maintained_page=0;maintained_actor=actor;}
+    maintained_count=modern_maintained_spells(actor,maintained_ids,maintained_spells,32);
+    int capacity=stat_level_get(actor,STAT_INTELLIGENCE)/4;
+    if(capacity<0)capacity=0;if(capacity>5)capacity=5;
+    int slots=maintained_count>capacity?maintained_count:capacity;
+    if(!slots)return;
+    int pages=(slots+4)/5;if(maintained_page>=pages)maintained_page=pages-1;
+    int visible=slots-maintained_page*5;if(visible>5)visible=5;
+    float width=170+visible*46+(pages>1?62:0),x=(canvas_w-width)/2,y=82;
+    maintained_rect=(SDL_FRect){x,y,width,54};
+    fill(maintained_rect,(SDL_Color){19,14,10,225});outline(maintained_rect,MUTED);
+    text_compact(tactical_text(TC_MAINTAINED),x+10,y+7,150,false,GOLD);
+    char count[40];snprintf(count,sizeof(count),"%d / %d",maintained_count,capacity);
+    text_draw(0,count,x+10,y+30,MUTED);
+    bool ready=combat_input_ready(actor) && intgame_mode_get()!=INTGAME_MODE_DIALOG;
+    int hovered=-1;SDL_FRect hover={0};
+    for(int i=0;i<visible;i++) {
+        int index=maintained_page*5+i;bool active=index<maintained_count;
+        SDL_FRect r={x+164+i*46,y+6,40,42};
+        button(r,2500+i,"",-1,active,active && ready);
+        if(active) {
+            draw_art(spell_icon(maintained_spells[index]),(SDL_FRect){r.x+4,r.y+4,32,32},true);
+            if(inside(r,mouse_x,mouse_y)){hovered=index;hover=r;}
+        }
+    }
+    if(pages>1) {
+        button((SDL_FRect){x+width-62,y+13,26,28},2505,"<",-1,false,maintained_page>0);
+        button((SDL_FRect){x+width-32,y+13,26,28},2506,">",-1,false,maintained_page+1<pages);
+    }
+    if(hovered>=0) {
+        char name[2048];SDL_strlcpy(name,game_text(spell_name(maintained_spells[hovered])),sizeof(name));
+        float w=fminf(540,fmaxf(260,text_measure(1,name)+24)),xx=fmaxf(8,fminf(canvas_w-w-8,hover.x));
+        SDL_FRect content={xx+12,y+66,w-24,0};int lines=menu_paragraph(name,content,0,GOLD);
+        if(lines>3)lines=3;
+        float h=lines*27+42;
+        fill((SDL_FRect){xx,y+60,w,h},(SDL_Color){19,14,10,245});outline((SDL_FRect){xx,y+60,w,h},MUTED);
+        content.h=lines*27;menu_paragraph(name,content,0,GOLD);
+        text_compact(ready?tr("Cliquer pour arrêter le sort","Click to stop the spell"):tactical_text(actor==combat_input_actor()?TC_BUSY:TC_WAIT),xx+12,y+70+lines*27,w-24,false,MUTED);
+    }
+}
+
+static bool maintained_action(int action)
+{
+    if(action<2500 || action>2506)return false;
+    if(!hud || journal || native_panel() || mainmenu_ui_is_active())return true;
+    if(action>=2505){maintained_page+=action==2505?-1:1;if(maintained_page<0)maintained_page=0;return true;}
+    /* The slot can change while the mouse is held: act on the pressed run ID. */
+    if(maintained_pressed_id>=0 && maintained_pressed_actor==combat_input_actor()
+        && intgame_mode_get()!=INTGAME_MODE_DIALOG)
+        modern_spell_stop(maintained_pressed_actor,maintained_pressed_id);
+    maintained_pressed_id=-1;
+    return true;
+}
+
 static void draw_quest_tracker(void)
 {
     if(journal || native_panel() || tactical_active() || !hud)return;
@@ -1529,7 +1603,7 @@ static void draw_quest_tracker(void)
 
 static bool hud_region(float x,float y)
 {
-    if(party_region(x,y))return true;
+    if(maintained_region(x,y) || party_region(x,y))return true;
     if(!tactical_active() && tracked_quest>=0 && *tracked_text && inside((SDL_FRect){canvas_w-335,85,320,100},x,y))return true;
     if(tactical_active())return tactical_region(x,y);
     return inside((SDL_FRect){(canvas_w-930)/2,10,930,60},x,y)
@@ -1610,6 +1684,7 @@ static void render_overlay(SDL_Renderer* target)
     else {
         draw_world_bubbles();
         if(!hud_region(mouse_x,mouse_y))draw_world_hover();
+        draw_maintained_spells();
         if(hud){if(tactical_active()){draw_tactical_preview();draw_tactical_hud();}else draw_hud();}
         draw_party();
         draw_quest_tracker();
@@ -1653,6 +1728,7 @@ static void save_settings(void)
 static void activate(int action)
 {
     if((action>=2000 && action<2128) || action==2300 || action==2301){notebook_action(action);return;}
+    if(maintained_action(action))return;
     if(party_action(action))return;
     if(tactical_action(action))return;
     if(panels_action(action))return;
@@ -1739,6 +1815,11 @@ static bool handle_ui_event(SDL_Event* event)
         if(event->button.down && over) {
             tactical_pressed_actor=combat_input_actor();
             click_captured=true;pressed_action=event->button.button==SDL_BUTTON_LEFT?hit(mouse_x,mouse_y):-1;
+            maintained_pressed_id=-1;
+            if(pressed_action>=2500 && pressed_action<2505) {
+                int index=maintained_page*5+pressed_action-2500;
+                if(index<maintained_count){maintained_pressed_id=maintained_ids[index];maintained_pressed_actor=maintained_actor;}
+            }
             return true;
         }
         if(!event->button.down && click_captured) {
