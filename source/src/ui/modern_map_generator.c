@@ -649,8 +649,17 @@ static int mapgen_run(const char* game_root, int tile_limit)
                         roof_blit_flags_set(0); sub_43AAB0();
                     }
                     if (strcmp(previous_map, task->source)) {
+                        SDL_Log("Preparing HD map: module %s, map %s, local map %d", task->module, task->source, task->id);
+                        map_reset();
+                        if (!map_preprocess_mobile(task->source)) {
+                            SDL_Log("Cannot prepare mobile objects for map %s", task->source);
+                            return 24;
+                        }
                         char base[300]; SDL_snprintf(base, sizeof(base), "maps\\%s", task->source);
-                        if (!map_open(base, "export-state", false)) return 24;
+                        if (!map_open(base, "export-state", false)) {
+                            SDL_Log("Cannot open map %s in module %s", task->source, task->module);
+                            return 24;
+                        }
                         for (int type = OBJ_TYPE_PROJECTILE; type < OBJ_TYPE_COUNT; type++)
                             if (object_type_is_enabled(type)) object_type_toggle(type);
                         light_set_colors(tig_color_make(255,255,255), tig_color_make(255,255,255));

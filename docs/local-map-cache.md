@@ -117,3 +117,13 @@ The native generation check covers truncated sectors, PNG validation and resume:
 python3 tools/build-map-exporter.py --source tools/check-map-generation.c --name check-map-generation --exclude-object src/ui/modern_map_generator.c.o
 build/macos-arm64/check-map-generation /tmp/arcanum-map-generation-check
 ```
+
+To check first-launch preparation and resume without preprocessed map objects,
+provide an engine executable and a game installation:
+
+```sh
+python3 tools/check-map-first-launch.py /absolute/path/to/arcanum-modern /absolute/path/to/Arcanum
+```
+
+The check uses temporary installations, renders two tiles per module across two
+launches, and leaves the supplied game installation unchanged.

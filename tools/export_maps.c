@@ -170,6 +170,8 @@ int main(int argc, char** argv)
             char base[512];
             snprintf(base, sizeof(base), "maps\\%s", tab);
             printf("OPEN %s\n", tab);
+            map_reset();
+            if (!map_preprocess_mobile(tab)) return 9;
             if (!map_open(base, "export-state", false)) return 9;
             for (int type = OBJ_TYPE_PROJECTILE; type < OBJ_TYPE_COUNT; type++) {
                 if (object_type_is_enabled(type)) object_type_toggle(type);
