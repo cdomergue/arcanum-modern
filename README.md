@@ -1,7 +1,8 @@
 # Arcanum Modern
 
 An experimental, unofficial modernization of **Arcanum: Of Steamworks and
-Magick Obscura**, based on [Arcanum Community Edition](https://github.com/alexbatalov/arcanum-ce).
+Magick Obscura**, featuring a redesigned interface and **BG3-inspired tactical
+combat**, based on [Arcanum Community Edition](https://github.com/alexbatalov/arcanum-ce).
 
 ## Installation
 
@@ -44,12 +45,16 @@ needed depends on your machine and installed modules. Choose **Play now** to use
 the original maps immediately. Preparation resumes at the next launch, keeping
 completed tiles. A complete cache is reused on subsequent launches.
 
-Downloads become available when a release is published. If no release has been
-published yet, the [build instructions](#build-from-source) explain how to create
-the packages. Back up your saved games before trying an experimental engine.
+To compile the mod yourself, see the [build instructions](#build-from-source).
+Back up your saved games before trying an experimental engine.
 
 ## Features
 
+- **BG3-inspired tactical combat:** take direct control of eligible companions
+  on their turns, preview movement and actions, inspect costs and spell
+  availability, and follow the fight in a combat log. Turn-based combat is
+  enabled by default. Initiative, action points, fatigue, damage and spell
+  restrictions follow Arcanum's rules.
 - **Native-resolution interface:** readable text and controls that keep their
   size while you zoom the world. The visual style uses wood, brass, parchment
   and the game's original artwork.
@@ -66,15 +71,8 @@ the packages. Back up your saved games before trying an experimental engine.
 - **Automatically prepared HD local maps:** maps rendered from the installed game data,
   with opaque roofs, exploration fog and separately drawn localized labels and
   markers. Original maps remain available when the detailed cache is absent.
-- **Tactical combat:** direct control of eligible companions during their own
-  turns, action previews, spell availability and a combat log. Initiative,
-  action points, fatigue, damage and spell restrictions follow the game's rules.
 - **Readable game text:** books, letters, newspapers, inscriptions, telegrams
   and floating dialogue use the installed game's content.
-- **Maintained spell controls:** hover an active effect to identify it and click
-  to stop it when its caster is available.
-- **Nearby world sounds:** footsteps, doors and other positional effects are
-  limited by their distance from the player.
 - **Optional unlimited companions:** disabled by default; recruitment conditions
   still apply.
 
