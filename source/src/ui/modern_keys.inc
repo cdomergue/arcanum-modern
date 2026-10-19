@@ -1,11 +1,12 @@
 /* Physical bindings: labels follow the active SDL keyboard layout. */
 enum {KB_INVENTORY,KB_JOURNAL,KB_CHARACTER,KB_MAP,KB_SPELLS,KB_SKILLS,
     KB_SCHEMATICS,KB_REST,KB_STEALTH,KB_STEAL,KB_END,
-    KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COUNT};
+    KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COMBAT,KB_COUNT};
+enum {KEY_SHIFT=1<<16};
 static int key_binding[KB_COUNT];
 static const int key_defaults[]={SDL_SCANCODE_I,SDL_SCANCODE_J,SDL_SCANCODE_C,SDL_SCANCODE_G,
     SDL_SCANCODE_M,SDL_SCANCODE_K,SDL_SCANCODE_T,SDL_SCANCODE_R,SDL_SCANCODE_H,SDL_SCANCODE_P,
-    SDL_SCANCODE_E,SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D};
+    SDL_SCANCODE_E,SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D,SDL_SCANCODE_SPACE|KEY_SHIFT};
 static int key_edit=-1,key_page;
 static char key_status[256];
 static const char* tr(const char* fr,const char* en)
@@ -13,18 +14,29 @@ static const char* tr(const char* fr,const char* en)
 static const char* key_label(int i)
 {
     const int labels[]={1006,1004,1005,1007,1000,1001,1003,1009};
+    if(i==KB_COMBAT)return game_text(modern_intgame_text(1002));
     if(i<8)return game_text(modern_intgame_text(labels[i]));
     if(i==KB_STEALTH || i==KB_STEAL)return game_text(sub_57A700(i==KB_STEALTH?0:1));
     const char* fr[]={"Fin du tour","Caméra : haut","Caméra : gauche","Caméra : bas","Caméra : droite"};
     const char* en[]={"End turn","Camera: up","Camera: left","Camera: down","Camera: right"};
     return tr(fr[i-KB_END],en[i-KB_END]);
 }
+static int key_chord(int key,int mods)
+{
+    return key|((mods&SDL_KMOD_SHIFT)?KEY_SHIFT:0);
+}
+static bool key_is(int i,int key,int mods)
+{
+    return key_binding[i]!=0 && key_binding[i]==key_chord(key,mods);
+}
 static const char* key_name(int i)
 {
+    static char names[KB_COUNT][96];
     if(!key_binding[i])return tr("Aucune","None");
-    return SDL_GetKeyName(SDL_GetKeyFromScancode(key_binding[i],SDL_KMOD_NONE,false));
+    const char* name=SDL_GetKeyName(SDL_GetKeyFromScancode(key_binding[i]&~KEY_SHIFT,SDL_KMOD_NONE,false));
+    snprintf(names[i],sizeof(names[i]),"%s%s",(key_binding[i]&KEY_SHIFT)?tr("Maj + ","Shift + "):"",name);
+    return names[i];
 }
-static bool key_is(int i,int key){return key_binding[i]!=0 && key_binding[i]==key;}
 static void key_save(void)
 {
     FILE* f=fopen("modern-ui/keys.ini.tmp","w");if(!f)return;
@@ -33,7 +45,8 @@ static void key_save(void)
 }
 static bool key_allowed(int key)
 {
-    /* Keep numbers for quick slots, navigation/modal keys and engine F keys. */
+    key&=~KEY_SHIFT;
+    /* Numbers, modal controls and function keys belong to the engine. */
     return (key>=SDL_SCANCODE_A && key<=SDL_SCANCODE_Z) || key==SDL_SCANCODE_SPACE;
 }
 static void key_load(void)
@@ -62,7 +75,9 @@ static bool key_options_event(SDL_Event* event)
     if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
         if(event->key.scancode==SDL_SCANCODE_ESCAPE){key_edit=-1;key_status[0]=0;}
         else if(event->key.scancode==SDL_SCANCODE_BACKSPACE || event->key.scancode==SDL_SCANCODE_DELETE)key_assign(key_edit,0);
-        else key_assign(key_edit,event->key.scancode);
+        else if(event->key.scancode!=SDL_SCANCODE_LSHIFT && event->key.scancode!=SDL_SCANCODE_RSHIFT
+            && !(event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)))
+            key_assign(key_edit,key_chord(event->key.scancode,event->key.mod));
     }
     return event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP || event->type==SDL_EVENT_TEXT_INPUT;
 }
@@ -70,7 +85,7 @@ static void draw_key_options(float x,float y,float w,float h)
 {
     float ox=x+246,ow=w-280;
     text_draw(2,tr("Raccourcis","Key bindings"),ox,y+142,GOLD);
-    text_compact(tr("Cliquez sur une touche, puis appuyez sur une lettre. Échap annule ; Retour arrière efface.","Click a binding, then press a letter. Escape cancels; Backspace clears."),ox,y+182,ow,false,MUTED);
+    text_compact(tr("Lettre ou Espace, avec Maj si souhaité. Échap annule ; Retour arrière efface.","Letter or Space, optionally with Shift. Escape cancels; Backspace clears."),ox,y+182,ow,false,MUTED);
     for(int row=0;row<8;row++) {
         int i=key_page*8+row;if(i>=KB_COUNT)break;
         float yy=y+222+row*46;
@@ -105,6 +120,6 @@ static int key_for_action(int action)
 {
     switch(action){case 2:case 1104:return KB_INVENTORY;case 0:return KB_JOURNAL;
     case 1:case 1105:return KB_CHARACTER;case 3:return KB_MAP;case 6:return KB_SPELLS;
-    case 5:return KB_SKILLS;case 8:return KB_SCHEMATICS;case 9:return KB_REST;
+    case 7:return KB_COMBAT;case 5:return KB_SKILLS;case 8:return KB_SCHEMATICS;case 9:return KB_REST;
     case 951:return KB_STEALTH;case 950:return KB_STEAL;case 1100:return KB_END;default:return -1;}
 }

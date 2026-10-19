@@ -40,13 +40,18 @@ code+=r'''
 int main(void){
     assert(mkdir("modern-ui",0700)==0);
     key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I);
+    assert(KB_COMBAT==15 && key_binding[KB_COMBAT]==(SDL_SCANCODE_SPACE|KEY_SHIFT));
     assert(!key_assign(KB_INVENTORY,SDL_SCANCODE_J));
     assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && *key_status);
     assert(!key_assign(KB_INVENTORY,40)); /* Return belongs to modal controls. */
     assert(key_assign(KB_INVENTORY,SDL_SCANCODE_B));
+    assert(key_assign(KB_COMBAT,SDL_SCANCODE_E|KEY_SHIFT));
+    assert(!key_assign(KB_INVENTORY,SDL_SCANCODE_E|KEY_SHIFT));
+    assert(!key_assign(KB_COMBAT,SDL_SCANCODE_E|(1<<20)));
     assert(key_assign(KB_UP,0)); /* An unbound camera direction must stay unbound. */
     memset(key_binding,0,sizeof(key_binding));key_load();
     assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_B && key_binding[KB_UP]==0);
+    assert(key_binding[KB_END]==SDL_SCANCODE_E && key_binding[KB_COMBAT]==(SDL_SCANCODE_E|KEY_SHIFT));
     FILE* f=fopen("modern-ui/keys.ini","w");assert(f);fputs("0=13\n1=13\n",f);fclose(f);
     key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I); /* Reject ambiguous file. */
     notebook_sync();assert(tracked_quest==-1 && !map_memo_count);

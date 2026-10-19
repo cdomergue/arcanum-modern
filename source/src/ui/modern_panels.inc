@@ -1061,13 +1061,13 @@ static bool panels_event(SDL_Event* event)
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
             if(p==9 && (event->key.scancode==SDL_SCANCODE_PAGEUP || event->key.scancode==SDL_SCANCODE_PAGEDOWN))pending_action=event->key.scancode==SDL_SCANCODE_PAGEUP?991:992;
             if(p==9 && modern_written_is_book() && (event->key.scancode==SDL_SCANCODE_LEFT || event->key.scancode==SDL_SCANCODE_RIGHT))pending_action=event->key.scancode==SDL_SCANCODE_LEFT?991:992;
-            if(p==2 && key_is(KB_INVENTORY,event->key.scancode) && !mainmenu_ui_is_active()
+            if(p==2 && key_is(KB_INVENTORY,event->key.scancode,event->key.mod) && !mainmenu_ui_is_active()
                 && intgame_mode_get()!=INTGAME_MODE_QUANTITY)pending_action=730;
-            if(p==5 && (key_is(KB_SPELLS,event->key.scancode) || key_is(KB_SKILLS,event->key.scancode))) {
-                int next=key_is(KB_SPELLS,event->key.scancode)?1:2;
+            if(p==5 && (key_is(KB_SPELLS,event->key.scancode,event->key.mod) || key_is(KB_SKILLS,event->key.scancode,event->key.mod))) {
+                int next=key_is(KB_SPELLS,event->key.scancode,event->key.mod)?1:2;
                 selector=selector==next?0:next;
             }
-            if((p==1 && key_is(KB_CHARACTER,event->key.scancode)) || (p==3 && key_is(KB_MAP,event->key.scancode)))pending_action=p==1?720:740;
+            if((p==1 && key_is(KB_CHARACTER,event->key.scancode,event->key.mod)) || (p==3 && key_is(KB_MAP,event->key.scancode,event->key.mod)))pending_action=p==1?720:740;
             if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=p==9?990:p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
             if(p==4 && event->key.scancode>=SDL_SCANCODE_1 && event->key.scancode<=SDL_SCANCODE_5)pending_action=800+event->key.scancode-SDL_SCANCODE_1;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEDOWN)pending_action=821;

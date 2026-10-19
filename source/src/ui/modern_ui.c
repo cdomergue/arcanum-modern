@@ -1879,7 +1879,33 @@ bool modern_camera_key(int scancode)
 {
     if(!modern_camera_enabled() || scancode<0 || scancode>=SDL_SCANCODE_COUNT)return false;
     const int directions[]={SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D};
-    for(int i=0;i<4;i++)if(scancode==directions[i])return key_binding[KB_UP+i] && SDL_GetKeyboardState(NULL)[key_binding[KB_UP+i]];
+    for(int i=0;i<4;i++)if(scancode==directions[i]) {
+        int key=key_binding[KB_UP+i]&~KEY_SHIFT;
+        return key_is(KB_UP+i,key,SDL_GetModState()) && SDL_GetKeyboardState(NULL)[key];
+    }
+    return false;
+}
+
+static bool handle_binding_event(SDL_Event* event)
+{
+    if((event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) || SDL_TextInputActive(window))return false;
+    int key=event->key.scancode,mods=event->key.mod;
+    for(int i=KB_UP;i<=KB_RIGHT;i++)if(key_is(i,key,mods))return modern_camera_enabled();
+    const int actions[]={2,0,1,3,6,5,8,9,951,950,1100,-1,-1,-1,-1,7};
+    int binding=-1;
+    for(int i=0;i<KB_COUNT;i++)if(key_is(i,key,mods)){binding=i;break;}
+    if(binding<0 && key==SDL_SCANCODE_SPACE && !(mods&SDL_KMOD_SHIFT) && tactical_active())binding=KB_END;
+    if(binding>=0) {
+        if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat && !native_panel() && intgame_mode_get()!=INTGAME_MODE_DIALOG) {
+            tactical_pressed_actor=combat_input_actor();pending_action=actions[binding];
+            if(tactical_active() && binding==KB_INVENTORY)pending_action=1104;
+            if(tactical_active() && binding==KB_CHARACTER)pending_action=1105;
+            if(binding==KB_END && !tactical_active())pending_action=-1;
+        }
+        return true;
+    }
+    /* Unassigned defaults must not trigger an engine shortcut. */
+    for(int i=0;i<KB_COUNT;i++)if((i<KB_UP || i==KB_COMBAT) && key_defaults[i]==key_chord(key,mods))return true;
     return false;
 }
 
@@ -1997,28 +2023,14 @@ static bool handle_ui_event(SDL_Event* event)
                     if(n) {do {n--;} while(n>0 && ((unsigned char)search[n]&0xC0)==0x80);search[n]=0;dirty=true;spread=0;}
                 } else if(searching && key==SDL_SCANCODE_RETURN) search_focus(false);
                 else if(!searching) {
-                    if(key_is(KB_JOURNAL,key)) pending_action=200;
+                    if(key_is(KB_JOURNAL,key,event->key.mod)) pending_action=200;
                     if(key==SDL_SCANCODE_RIGHT || key==SDL_SCANCODE_PAGEDOWN) pending_action=205;
                     if(key==SDL_SCANCODE_LEFT || key==SDL_SCANCODE_PAGEUP) pending_action=204;
                 }
             }
             return true;
         }
-        if(!(event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) && !SDL_TextInputActive(window)) {
-            for(int i=KB_UP;i<KB_COUNT;i++)if(key_is(i,key))return modern_camera_enabled();
-            const int actions[]={2,0,1,3,6,5,8,9,951,950,1100};
-            for(int i=0;i<KB_UP;i++)if(key_is(i,key)) {
-                if(down && !event->key.repeat && !native_panel() && intgame_mode_get()!=INTGAME_MODE_DIALOG) {
-                    tactical_pressed_actor=combat_input_actor();pending_action=actions[i];
-                    if(tactical_active() && i==KB_INVENTORY)pending_action=1104;
-                    if(tactical_active() && i==KB_CHARACTER)pending_action=1105;
-                    if(i==KB_END && !tactical_active())pending_action=-1;
-                }
-                return true;
-            }
-            /* Reassigned keys must not fall through to their old engine action. */
-            for(int i=0;i<KB_UP;i++)if(key_defaults[i]==key)return true;
-        }
+        return handle_binding_event(event);
     }
     return false;
 }

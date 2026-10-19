@@ -173,7 +173,7 @@ def package(exe, build_dir, output, include_game=None):
         files['ArcanumModern/INSTALL.txt'] = (ROOT/'tools/windows/INSTALL-FULL.txt').read_bytes()
     readme = ROOT/'README.md'
     if readme.exists():
-        files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode()
+        files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode()
     cache = (build_dir/'CMakeCache.txt').read_text()
     dependencies = [('SDL3', 'LICENSE.txt'), ('SDL3_mixer','LICENSE.txt'), ('fpattern','LICENSE'), ('zlib','LICENSE')]
     for name, license_file in dependencies:

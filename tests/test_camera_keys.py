@@ -7,7 +7,9 @@ import tempfile
 
 source = (Path(__file__).resolve().parents[1] / 'source/src/ui/modern_ui.c').read_text()
 start = source.index('static bool modern_camera_enabled(void)')
-end = source.index('static bool handle_ui_event(SDL_Event* event)\n{', start)
+end = source.index('static bool handle_binding_event(SDL_Event* event)\n{', start)
+bindings = (Path(__file__).resolve().parents[1] / 'source/src/ui/modern_keys.inc').read_text()
+helpers = bindings[bindings.index('static int key_chord'):bindings.index('static const char* key_name')]
 code = r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -16,7 +18,7 @@ enum { INTGAME_MODE_MAIN, INTGAME_MODE_SPELL, INTGAME_MODE_SKILL, INTGAME_MODE_I
        INTGAME_MODE_DIALOG, SDL_SCANCODE_COUNT=512 };
 enum {SDL_SCANCODE_W=26,SDL_SCANCODE_A=4,SDL_SCANCODE_S=22,SDL_SCANCODE_D=7,KB_UP=0};
 static int key_binding[]={26,4,22,7};
-enum { SDL_KMOD_CTRL=1, SDL_KMOD_ALT=2, SDL_KMOD_GUI=4 };
+enum { SDL_KMOD_CTRL=1, SDL_KMOD_ALT=2, SDL_KMOD_GUI=4, SDL_KMOD_SHIFT=8, KEY_SHIFT=1<<16 };
 static bool enabled=true, in_game=true, journal, searching, menu_suspended;
 static bool menu, panel, slide, typing, keys[512];
 static int mode, mods, dummy;
@@ -29,7 +31,7 @@ static void *SDL_GetKeyboardFocus(void){return focus;}
 static bool SDL_TextInputActive(void *w){(void)w;return typing;}
 static int SDL_GetModState(void){return mods;}
 static bool *SDL_GetKeyboardState(void *n){(void)n;return keys;}
-''' + source[start:end] + r'''
+''' + helpers + source[start:end] + r'''
 int main(void){
     keys[26]=true; /* SDL physical W: Z on an AZERTY layout. */
     assert(modern_camera_key(26));assert(!modern_camera_key(4));
@@ -47,6 +49,8 @@ int main(void){
     assert(!modern_camera_key(26));
     keys[26]=false;mode=0;assert(!modern_camera_key(26));
     key_binding[0]=29;keys[29]=true;assert(modern_camera_key(26));
+    key_binding[0]=29|KEY_SHIFT;assert(!modern_camera_key(26));
+    mods=SDL_KMOD_SHIFT;assert(modern_camera_key(26));mods=0;
     key_binding[0]=0;assert(!modern_camera_key(26));
 }
 '''

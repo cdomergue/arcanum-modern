@@ -105,7 +105,7 @@ def package(app, build_dir, output):
         stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
         (licenses/'stb.txt').write_text(stb[stb.rindex('/*\n---'):])
         shutil.copyfile(ROOT/'tools/macos/INSTALL.txt', notices/'INSTALL.txt')
-        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
+        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
         git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]
         manifest = {
             'target': 'macos-arm64', 'minimum_macos': '11.0', 'signature': 'ad-hoc',
