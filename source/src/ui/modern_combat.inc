@@ -169,7 +169,8 @@ static void draw_tactical_preview(void)
 static void tactical_button(SDL_FRect r,int action,const char* label,bool selected,bool available)
 {
     button(r,action,"",-1,selected,available);
-    text_compact(label,r.x+5,r.y+(r.h-fonts[0].size)/2,r.w-10,true,available?GOLD:MUTED);
+    if(!control_symbol(r,label,available,selected || (available && inside(r,mouse_x,mouse_y))))
+        text_compact(label,r.x+5,r.y+(r.h-fonts[0].size)/2,r.w-10,true,available?GOLD:MUTED);
 }
 static void draw_tactical_hud(void)
 {

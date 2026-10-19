@@ -437,7 +437,7 @@ static bool control_symbol(SDL_FRect rect,const char* label,bool available,bool 
 
 static void button(SDL_FRect rect, int action, const char* label, int icon, bool active, bool available)
 {
-    bool hover=inside(rect,mouse_x,mouse_y);
+    bool hover=available && inside(rect,mouse_x,mouse_y);
     fill(rect,(SDL_Color){(active||hover)?69:35,(active||hover)?48:25,(active||hover)?27:18,245});
     outline(rect,active?GOLD:(SDL_Color){112,83,45,255});
     rule(rect.x+1,rect.y+1,rect.w-2,(SDL_Color){145,111,62,100});
@@ -748,23 +748,7 @@ static void draw_hud(void)
         SDL_FRect r={x+600+i*62,y+12,53,48};
         button(r,small_actions[i],"",small_icons[i],false,controls_enabled);
         text_compact(small_labels[i],r.x-3,y+62,r.w+6,true,MUTED);
-        if(inside(r,mouse_x,mouse_y)) {
-            float tw=text_measure(0,small_labels[i])+24;
-            fill((SDL_FRect){r.x+r.w/2-tw/2,y-32,tw,27},(SDL_Color){20,15,10,245});
-            centered(0,small_labels[i],r.x+r.w/2,y-28,GOLD);
-        }
-    }
-    for(int i=0;i<2;i++) {
-        int skill=i==0?1:0;
-        SDL_FRect r={x+630+i*142,y+83,130,26};
-        button(r,950+i,"",-1,skill==0?critter_is_concealed(pc):intgame_mode_get()==INTGAME_MODE_SKILL && sub_579F90()==1,controls_enabled);
-        draw_art(sub_579F50(skill),(SDL_FRect){r.x+3,r.y+2,23,22},true);
-        text_compact(game_text(sub_57A700(skill)),r.x+30,r.y+4,96,false,GOLD);
-        if(inside(r,mouse_x,mouse_y)) {
-            const char* label=game_text(sub_57A700(skill));float tw=text_measure(1,label)+24;
-            fill((SDL_FRect){r.x+r.w/2-tw/2,y-34,tw,30},(SDL_Color){20,15,10,245});
-            centered(1,label,r.x+r.w/2,y-31,GOLD);
-        }
+
     }
     rule(sx,y+69,480,(SDL_Color){117,87,44,255});
     if(*message_text && SDL_GetTicks()-message_time<12000) {
