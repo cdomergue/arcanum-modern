@@ -1,0 +1,16 @@
+Arcanum Modern — macOS Apple Silicon (arm64)
+
+Requires macOS 11 or later and your own Arcanum 1.0.7.4 game data.
+
+1. Copy your installed game's files into a writable folder on your Mac.
+2. Extract the ZIP there: Arcanum Modern.app and modern-ui/ must sit
+   alongside arcanum1.dat, not inside the .app or in /Applications.
+3. Open Arcanum Modern.app. Close the game before installing updates.
+
+No Rosetta, Wine, Python or separate SDL installation is required to play.
+The application is ad-hoc signed, not notarized by Apple. For a download
+you trust, use the macOS Privacy & Security "Open Anyway" action if blocked.
+
+Game data, saved games and personal preferences are not included. Existing
+modern-ui settings and notebook files are retained when updating.
+Bink cinematics are unavailable. This port needs gameplay validation on a Mac.

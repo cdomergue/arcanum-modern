@@ -1,0 +1,15 @@
+Arcanum Modern — build sur Mac Apple Silicon
+
+Cette archive inclut le projet, les données locales du jeu et les sauvegardes présentes au moment de sa création. Elle contient des fichiers du jeu qui ne sont pas redistribuables publiquement. Garde cette archive pour ton usage personnel.
+
+Sur le Mac (macOS 11 ou plus récent) :
+1. Décompresse cette archive.
+2. Ouvre Terminal dans le dossier ArcanumModern.
+3. Lance : ./build-macos.sh
+4. Quand le build réussit, installe le ZIP créé dans game/ :
+   ditto -x -k dist/ArcanumModern-macos-arm64.zip game
+5. Ouvre game/Arcanum Modern.app.
+
+Il faut Xcode Command Line Tools, CMake, Git et Python 3. Le premier build télécharge les dépendances SDL et nécessite Internet. Les archives et sauvegardes du jeu restent dans game/. Le ZIP compilé place l’application et modern-ui/ à côté des fichiers du jeu.
+
+La signature de l’application est locale (ad-hoc), sans notarisation Apple. Si macOS bloque cette copie que tu as créée, autorise-la dans Réglages Système > Confidentialité et sécurité.

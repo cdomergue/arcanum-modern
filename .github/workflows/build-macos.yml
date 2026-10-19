@@ -1,0 +1,18 @@
+name: macOS Apple Silicon
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and package arm64
+        run: bash ./build-macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ArcanumModern-macos-arm64
+          path: dist/ArcanumModern-macos-arm64.zip
+          if-no-files-found: error
