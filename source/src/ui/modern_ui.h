@@ -53,6 +53,8 @@ void modern_mainmenu_gender(int direction);
 void modern_mainmenu_name(const char* name);
 const char* modern_mainmenu_save_name(int index);
 void modern_mainmenu_save_select(int index);
+const char* modern_mainmenu_save_description(void);
+void modern_mainmenu_save_description_set(const char* name);
 struct GameSaveInfo;
 const struct GameSaveInfo* modern_mainmenu_save_info(void);
 const char* modern_mainmenu_save_location(void);

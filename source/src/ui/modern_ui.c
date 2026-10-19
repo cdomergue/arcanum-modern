@@ -784,7 +784,7 @@ static bool native_menu(void)
     if (slide_ui_is_active()) return false;
     MainMenuWindowType type = mainmenu_ui_window_type_get();
     return type == MM_WINDOW_NEW_CHAR || type == MM_WINDOW_PREGEN_CHAR
-        || type == MM_WINDOW_LOAD_GAME || type == MM_WINDOW_CHAREDIT
+        || type == MM_WINDOW_LOAD_GAME || type == MM_WINDOW_SAVE_GAME || type == MM_WINDOW_CHAREDIT
         || type == MM_WINDOW_MAINMENU || type == MM_WINDOW_SINGLE_PLAYER
         || type == MM_WINDOW_PICK_NEW_OR_PREGEN || type == MM_WINDOW_26
         || type == MM_WINDOW_MAINMENU_IN_PLAY || type == MM_WINDOW_MAINMENU_IN_PLAY_LOCKED
@@ -1017,31 +1017,44 @@ static void draw_character_menu(void)
 
 static void draw_load_menu(void)
 {
-    MainMenuWindowInfo* info=sub_5496C0(MM_WINDOW_LOAD_GAME);
+    bool saving=mainmenu_ui_window_type_get()==MM_WINDOW_SAVE_GAME;
+    MainMenuWindowInfo* info=sub_5496C0(saving?MM_WINDOW_SAVE_GAME:MM_WINDOW_LOAD_GAME);
     float w=fminf(1360,canvas_w-40),h=800,x=(canvas_w-w)/2,y=(canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
-    centered(3,menu_text(7020),canvas_w/2,y+22,GOLD);
+    centered(3,menu_text(saving?7021:7020),canvas_w/2,y+22,GOLD);
     rule(x+30,y+75,w-60,MUTED);
     float left=x+30,lw=w*.39f,right=left+lw+30,rw=w-lw-90;
     int pages=(info->cnt+7)/8;if(pages<1)pages=1;
     if(save_page>=pages)save_page=pages-1;
     for(int row=0;row<8;row++) {
         int index=save_page*8+row;if(index>=info->cnt)break;
-        text_in_button((SDL_FRect){left,y+104+row*62,lw,56},550+row,
+        text_in_button((SDL_FRect){left,y+104+row*62,lw,54},550+row,
             game_text(modern_mainmenu_save_name(index)),info->selected_index==index,true);
     }
     if(!info->cnt) centered(1,menu_text(5005),left+lw/2,y+290,MUTED);
-    menu_button((SDL_FRect){left,y+618,65,48},560,"<",save_page>0);
-    menu_button((SDL_FRect){left+lw-65,y+618,65,48},561,">",save_page+1<pages);
+    menu_button((SDL_FRect){left,y+632,65,48},560,"<",save_page>0);
+    menu_button((SDL_FRect){left+lw-65,y+632,65,48},561,">",save_page+1<pages);
     char count[64];snprintf(count,sizeof(count),"%d / %d",save_page+1,pages);
-    centered(0,count,left+lw/2,y+631,MUTED);
+    centered(0,count,left+lw/2,y+645,MUTED);
     const GameSaveInfo* save=modern_mainmenu_save_info();
     if(thumbnail_index!=info->selected_index) {
         SDL_DestroyTexture(save_texture);save_texture=NULL;thumbnail_index=info->selected_index;
         if(save)save_texture=texture_from_buffer(save->thumbnail_video_buffer,&thumbnail_width,&thumbnail_height);
     }
-    SDL_FRect preview={right,y+104,rw,300};fill(preview,(SDL_Color){15,10,8,255});
-    fitted_texture(save_texture,thumbnail_width,thumbnail_height,preview);outline(preview,MUTED);
+    SDL_FRect preview={right,y+104,rw,300};
+    if(saving && info->selected_index==0) {
+        int64_t pc=player_get_local_pc_obj();
+        if(pc) {
+            draw_portrait(portrait_get(pc),(SDL_FRect){right+rw/2-100,y+110,200,200});
+            char name[2048];object_examine(pc,pc,name);
+            centered(2,game_text(name),right+rw/2,y+334,GOLD);
+            char level[160];snprintf(level,sizeof(level),"%s : %d",game_text(stat_name(STAT_LEVEL)),stat_level_get(pc,STAT_LEVEL));
+            centered(1,level,right+rw/2,y+374,MUTED);
+        }
+    } else {
+        fill(preview,(SDL_Color){15,10,8,255});
+        fitted_texture(save_texture,thumbnail_width,thumbnail_height,preview);outline(preview,MUTED);
+    }
     if(save) {
         text_draw(2,game_text(save->pc_name),right,y+422,GOLD);
         char level[160],date[80],time[80];
@@ -1053,11 +1066,18 @@ static void draw_load_menu(void)
         char when[180];snprintf(when,sizeof(when),"%s  %s",date,time);
         text_draw(0,game_text(when),right,y+535,MUTED);
         menu_paragraph(game_text(save->description),(SDL_FRect){right,y+574,rw,81},0,GOLD);
-        if(save->version!=25)text_draw(1,menu_text(5004),right,y+666,(SDL_Color){230,120,95,255});
+        if(!saving && save->version!=25)text_draw(1,menu_text(5004),right,y+666,(SDL_Color){230,120,95,255});
+    }
+    if(saving && info->selected_index==0) {
+        text_draw(1,menu_text(2210),right,y+434,GOLD);
+        SDL_FRect field={right,y+480,rw,58};
+        char name[160];SDL_strlcpy(name,game_text(modern_mainmenu_save_description()),sizeof(name));
+        if(name_focused && (SDL_GetTicks()/500)%2==0)SDL_strlcat(name," |",sizeof(name));
+        text_in_button(field,522,name,name_focused,true);
     }
     menu_button((SDL_FRect){left,y+716,230,54},501,menu_text(54),true);
-    text_in_button((SDL_FRect){x+w/2-220,y+716,440,54},502,menu_text(7022),false,info->selected_index>=0);
-    menu_button((SDL_FRect){x+w-260,y+716,230,54},500,menu_text(7020),save && save->version==25);
+    text_in_button((SDL_FRect){x+w/2-220,y+716,440,54},502,menu_text(7022),false,info->selected_index>=(saving?1:0));
+    menu_button((SDL_FRect){x+w-260,y+716,230,54},500,menu_text(saving?7021:7020),saving?info->selected_index>=0:save && save->version==25);
 }
 
 static const int sheet_stats[]={-1,-1,STAT_STRENGTH,STAT_CONSTITUTION,STAT_DEXTERITY,STAT_BEAUTY,
@@ -1147,7 +1167,7 @@ static void draw_menu(void)
     draw_menu_background();
     if (confirming_menu) {draw_confirmation();return;}
     if(type==MM_WINDOW_NEW_CHAR || type==MM_WINDOW_PREGEN_CHAR) {draw_character_menu();return;}
-    if(type==MM_WINDOW_LOAD_GAME) {draw_load_menu();return;}
+    if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME) {draw_load_menu();return;}
     if(type==MM_WINDOW_CHAREDIT) {draw_character_sheet();return;}
     float w = options ? 1180 : 610, h = options ? 760 : 660;
     float x = (canvas_w-w)/2, y = (canvas_h-h)/2;
@@ -1252,8 +1272,10 @@ static void menu_name_focus(bool focus)
 
 static void menu_name_input(const char* utf8,bool backspace)
 {
-    ModernCharacter c;if(!modern_mainmenu_character(&c,description_tab) || !c.editable)return;
-    char name[24];SDL_strlcpy(name,c.name,sizeof(name));
+    bool saving=mainmenu_ui_window_type_get()==MM_WINDOW_SAVE_GAME;
+    ModernCharacter c;
+    if(!saving && (!modern_mainmenu_character(&c,description_tab) || !c.editable))return;
+    char name[24];SDL_strlcpy(name,saving?modern_mainmenu_save_description():c.name,sizeof(name));
     if(name_replace)name[0]=0;
     size_t n=strlen(name);
     if(backspace) {if(n)name[--n]=0;}
@@ -1266,7 +1288,8 @@ static void menu_name_input(const char* utf8,bool backspace)
             name[n]=0;SDL_free(encoded);
         }
     }
-    name_replace=false;modern_mainmenu_name(name);
+    name_replace=false;
+    if(saving)modern_mainmenu_save_description_set(name);else modern_mainmenu_name(name);
 }
 
 static bool creation_menu_action(int action)
@@ -1280,11 +1303,11 @@ static bool creation_menu_action(int action)
             if(action==504 || action==505)description_tab=1;
             if(action==506 || action==507)description_tab=2;
         }
-        if(type==MM_WINDOW_LOAD_GAME)thumbnail_index=-2;
+        if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME)thumbnail_index=-2;
         modern_mainmenu_activate(action-500);button_count=0;return true;
     }
     if(action==522) {
-        if(type==MM_WINDOW_NEW_CHAR)menu_name_focus(!name_focused);
+        if(type==MM_WINDOW_NEW_CHAR || (type==MM_WINDOW_SAVE_GAME && sub_5496C0(type)->selected_index==0))menu_name_focus(!name_focused);
         return true;
     }
     if(action==520 || action==521) {
@@ -1298,8 +1321,9 @@ static bool creation_menu_action(int action)
         if(description_scroll>description_max)description_scroll=description_max;
         return true;
     }
-    if(type==MM_WINDOW_LOAD_GAME) {
-        if(action>=550 && action<558) {modern_mainmenu_save_select(save_page*8+action-550);thumbnail_index=-2;return true;}
+    if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME) {
+        if(action>=550 && action<558) {modern_mainmenu_save_select(save_page*8+action-550);thumbnail_index=-2;
+            if(type==MM_WINDOW_SAVE_GAME && sub_5496C0(type)->selected_index==0)menu_name_focus(true);return true;}
         if(action==560 || action==561) {
             int pages=(sub_5496C0(type)->cnt+7)/8;
             save_page+=action==560?-1:1;
@@ -1405,8 +1429,13 @@ void modern_ui_menu_tick(void)
         description_scroll=0;description_tab=2;derived_stats=false;
         sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);message_text[0]=0;
         thumbnail_index=-2;
-        if(type==MM_WINDOW_LOAD_GAME) {
+        if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME) {
             int selected=sub_5496C0(type)->selected_index;
+            if(type==MM_WINDOW_SAVE_GAME) {
+                if(selected<0)selected=0;
+                modern_mainmenu_save_select(selected);
+                if(selected==0)menu_name_focus(true);
+            }
             save_page=selected>=0?selected/8:0;
         }
         options_tab=-1;key_edit=-1;
@@ -1665,13 +1694,15 @@ static bool handle_ui_event(SDL_Event* event)
             menu_name_input(event->text.text,false);return true;
         }
         if(!confirming_menu && event->type==SDL_EVENT_MOUSE_WHEEL) {
-            if(type==MM_WINDOW_LOAD_GAME)pending_action=event->wheel.y>0?560:561;
+            if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME)pending_action=event->wheel.y>0?560:561;
             else pending_action=event->wheel.y>0?540:541;
             return true;
         }
         if(!confirming_menu && name_focused && event->type==SDL_EVENT_KEY_DOWN) {
-            if(event->key.scancode==SDL_SCANCODE_ESCAPE || event->key.scancode==SDL_SCANCODE_RETURN || event->key.scancode==SDL_SCANCODE_TAB)
+            if(event->key.scancode==SDL_SCANCODE_ESCAPE || event->key.scancode==SDL_SCANCODE_RETURN || event->key.scancode==SDL_SCANCODE_TAB) {
                 menu_name_focus(false);
+                if(type==MM_WINDOW_SAVE_GAME && event->key.scancode==SDL_SCANCODE_RETURN && !event->key.repeat)pending_action=500;
+            }
             else if(event->key.scancode==SDL_SCANCODE_BACKSPACE)menu_name_input("",true);
             else if(event->key.scancode==SDL_SCANCODE_A && (event->key.mod&SDL_KMOD_CTRL))name_replace=true;
             return true;
@@ -1688,14 +1719,14 @@ static bool handle_ui_event(SDL_Event* event)
                         pending_action=500+sub_5496C0(type)->num_buttons-1;
                     else if(type!=MM_WINDOW_MAINMENU) pending_action=405;
                 } else if(event->key.scancode==SDL_SCANCODE_RETURN && modern_graphics.deadline) pending_action=415;
-                else if(type==MM_WINDOW_LOAD_GAME) {
+                else if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME) {
                     int selected=sub_5496C0(type)->selected_index;
                     if(event->key.scancode==SDL_SCANCODE_UP && selected>0) {
                         modern_mainmenu_save_select(selected-1);save_page=(selected-1)/8;thumbnail_index=-2;
                     } else if(event->key.scancode==SDL_SCANCODE_DOWN && selected+1<sub_5496C0(type)->cnt) {
                         modern_mainmenu_save_select(selected+1);save_page=(selected+1)/8;thumbnail_index=-2;
-                    } else if(event->key.scancode==SDL_SCANCODE_RETURN && modern_mainmenu_save_info()
-                        && modern_mainmenu_save_info()->version==25)pending_action=500;
+                    } else if(event->key.scancode==SDL_SCANCODE_RETURN
+                        && (type==MM_WINDOW_SAVE_GAME ? selected>=0 : modern_mainmenu_save_info() && modern_mainmenu_save_info()->version==25))pending_action=500;
                     else if(event->key.scancode==SDL_SCANCODE_PAGEUP)pending_action=560;
                     else if(event->key.scancode==SDL_SCANCODE_PAGEDOWN)pending_action=561;
                 } else if(type==MM_WINDOW_PREGEN_CHAR) {

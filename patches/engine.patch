@@ -78,6 +78,22 @@ diff --git a/first_party/tig/include/tig/window.h b/first_party/tig/include/tig/
  #ifdef __cplusplus
  }
  #endif
+diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
+--- a/first_party/tig/src/file.c
++++ b/first_party/tig/src/file.c
+@@ -1215,7 +1215,11 @@
+         if ((repo->type & TIG_FILE_PLAIN) != 0) {
+             compat_join_path(path, sizeof(path), repo->path, file_name);
+ 
+-            if (SDL_RemovePath(path)) {
++            /* Repository-relative paths need case resolution after joining.
++             * SDL can also report success for a missing path: keep searching. */
++            compat_resolve_path(path);
++            SDL_PathInfo info;
++            if (SDL_GetPathInfo(path, &info) && SDL_RemovePath(path)) {
+                 repo = repo->next;
+                 while (repo != NULL) {
+                     if ((repo->type & TIG_FILE_DATABASE) != 0
 diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
 --- a/first_party/tig/src/message.c
 +++ b/first_party/tig/src/message.c
@@ -726,6 +742,15 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
+@@ -1200,7 +1203,7 @@
+     }
+ 
+     snprintf(path, sizeof(path), "save\\%s.gsi", name);
+-    tig_file_remove(path);
++    if (tig_file_remove(path) != 0) return false;
+ 
+     snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
+     tig_file_remove(path);
 @@ -1752,11 +1755,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
@@ -2488,7 +2513,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          tig_ping();
          tig_timer_now(&timestamp);
          timeevent_ping(timestamp);
-@@ -1781,6 +1784,115 @@
+@@ -1781,6 +1784,151 @@
      return mainmenu_ui_active;
  }
  
@@ -2565,26 +2590,62 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
 +        SDL_strlcpy(mainmenu_ui_textedit_buffer, name, 24);
 +}
 +
++static bool modern_mainmenu_save_screen(void)
++{
++    return mainmenu_ui_window_type == MM_WINDOW_LOAD_GAME
++        || mainmenu_ui_window_type == MM_WINDOW_SAVE_GAME;
++}
++
 +const char* modern_mainmenu_save_name(int index)
 +{
-+    if (mainmenu_ui_window_type != MM_WINDOW_LOAD_GAME || index < 0
-+        || index >= (int)mainmenu_ui_gsl.count) return "";
++    if (!modern_mainmenu_save_screen()) return "";
++    if (mainmenu_ui_window_type == MM_WINDOW_SAVE_GAME) {
++        if (index == 0) {
++            MesFileEntry entry = { .num = 5055 };
++            mes_get_msg(mainmenu_ui_mainmenu_mes_file, &entry);
++            return entry.str;
++        }
++        index--;
++    }
++    if (index < 0 || index >= (int)mainmenu_ui_gsl.count) return "";
 +    return sub_543040(index);
 +}
 +
 +void modern_mainmenu_save_select(int index)
 +{
-+    if (mainmenu_ui_window_type != MM_WINDOW_LOAD_GAME || index < 0
-+        || index >= (int)mainmenu_ui_gsl.count) return;
++    if (!modern_mainmenu_save_screen()) return;
++    bool saving = mainmenu_ui_window_type == MM_WINDOW_SAVE_GAME;
++    if (index < 0 || index >= (int)mainmenu_ui_gsl.count + saving) return;
 +    main_menu_window_info[mainmenu_ui_window_type]->selected_index = index;
 +    if (mainmenu_ui_gsi_loaded) gamelib_saveinfo_exit(&mainmenu_ui_gsi);
-+    mainmenu_ui_gsi_loaded = gamelib_saveinfo_load(mainmenu_ui_gsl.names[index], &mainmenu_ui_gsi);
-+    mainmenu_ui_load_game_refresh(NULL);
++    mainmenu_ui_gsi_loaded = false;
++    int slot = index - saving;
++    if (slot >= 0)
++        mainmenu_ui_gsi_loaded = gamelib_saveinfo_load(mainmenu_ui_gsl.names[slot], &mainmenu_ui_gsi);
++    if (saving) mainmenu_ui_save_game_refresh(NULL);
++    else mainmenu_ui_load_game_refresh(NULL);
++}
++
++const char* modern_mainmenu_save_description(void)
++{
++    return mainmenu_ui_textedit_buffer;
++}
++
++void modern_mainmenu_save_description_set(const char* name)
++{
++    if (mainmenu_ui_window_type != MM_WINDOW_SAVE_GAME
++        || main_menu_window_info[mainmenu_ui_window_type]->selected_index != 0) return;
++    /* Match the original save-name limit and TEXTEDIT_PATH_SAFE validation. */
++    int n = 0;
++    for (const unsigned char* p = (const unsigned char*)name; *p && n < 23; p++)
++        if (*p >= 32 && *p != 127 && !strchr("\"'*/:<>?\\|", *p))
++            mainmenu_ui_textedit_buffer[n++] = *p;
++    mainmenu_ui_textedit_buffer[n] = 0;
 +}
 +
 +const GameSaveInfo* modern_mainmenu_save_info(void)
 +{
-+    return mainmenu_ui_window_type == MM_WINDOW_LOAD_GAME && mainmenu_ui_gsi_loaded
++    return modern_mainmenu_save_screen() && mainmenu_ui_gsi_loaded
 +        ? &mainmenu_ui_gsi : NULL;
 +}
 +
@@ -2604,7 +2665,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  // 0x541690
  TigWindowModalDialogChoice mainmenu_ui_confirm_quit(void)
  {
-@@ -1796,6 +1908,11 @@
+@@ -1796,6 +1944,11 @@
  
      mes_file_entry.num = num;
      mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
@@ -2616,7 +2677,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      modal_info.type = TIG_WINDOW_MODAL_DIALOG_TYPE_OK_CANCEL;
      modal_info.x = 237;
-@@ -1806,7 +1923,9 @@
+@@ -1806,7 +1959,9 @@
      modal_info.process = NULL;
      modal_info.redraw = gamelib_redraw;
      hrp_center(&(modal_info.x), &(modal_info.y));
@@ -2626,7 +2687,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      return choice;
  }
-@@ -2022,7 +2141,7 @@
+@@ -2022,7 +2177,7 @@
      MainMenuWindowInfo* window;
  
      window = main_menu_window_info[mainmenu_ui_window_type];
@@ -2635,7 +2696,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (mainmenu_ui_confirm_quit() != TIG_WINDOW_MODAL_DIALOG_CHOICE_OK) {
              return false;
          }
-@@ -2032,7 +2151,7 @@
+@@ -2032,7 +2187,7 @@
          return sub_549310(button_handle);
      }
  
@@ -2644,7 +2705,25 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stru_5C36B0[mainmenu_ui_type][0]) {
              sub_5412D0();
              return false;
-@@ -6053,3 +6172,15 @@
+@@ -2851,7 +3006,7 @@
+ 
+     gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
+     window->selected_index = -1;
+-    window->cnt--;
++    window->cnt = mainmenu_ui_gsl.count;
+     window->refresh_func(NULL);
+ 
+     return true;
+@@ -3533,7 +3688,7 @@
+     gamelib_savelist_create(&mainmenu_ui_gsl);
+     gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
+     window->selected_index = -1;
+-    window->cnt--;
++    window->cnt = mainmenu_ui_gsl.count + 1;
+     window->refresh_func(NULL);
+ 
+     return true;
+@@ -6053,3 +6208,15 @@
          }
      }
  }
