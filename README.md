@@ -121,6 +121,11 @@ interface resources. By default, they exclude game data, saves and personal
 preferences. Running an extracted package does not require a compiler, Python
 or a separate SDL installation.
 
+The repository also provides a [Windows setup generator](tools/package-windows-setup.py)
+and a [release workflow](.github/workflows/release.yml). They produce downloadable
+packages from the source; see [Windows setup](#create-a-windows-setup) and
+[GitHub releases](#github-releases) below.
+
 ### Linux
 
 Install Git, CMake, a C17 compiler, a build tool and the X11/audio development
@@ -236,7 +241,41 @@ The output is written to the host's `dist/ArcanumModern-windows-x64.zip`.
 The container needs network access for the first uncached build. This produces
 a Windows executable; Docker is only used during the build.
 
-### Create a complete Windows ZIP
+### Create a Windows setup
+
+First build the standard Windows ZIP using one of the methods above. Install
+[NSIS 3](https://nsis.sourceforge.io/Download) on the build machine, then run:
+
+```sh
+python3 tools/package-windows-setup.py
+```
+
+On Windows, use `python` if that is your Python command. NSIS's `makensis` must
+be on `PATH`, or supplied explicitly:
+
+```sh
+python tools/package-windows-setup.py --makensis "C:/Program Files (x86)/NSIS/makensis.exe"
+```
+
+The script also runs on Linux or macOS with NSIS installed. It reads
+`dist/ArcanumModern-windows-x64.zip` and creates
+**`dist/ArcanumModern-windows-x64-setup.exe`**. Use `--zip` and `--output` to
+override those paths. It checks the ZIP's file list and hashes and refuses
+packages containing game data. The setup contains the same engine, interface
+resources and license notices as the standard ZIP.
+
+Run the generated setup on Windows and select your existing **Arcanum 1.0.7.4**
+folder. It checks for the required game archives, installs the mod, and creates
+desktop and Start menu shortcuts. The game folder must be writable by your user
+account. Close the game before installing or updating.
+
+The original executable, game data, saves and personal settings are preserved.
+The setup also adds an uninstaller to Windows's installed-apps list. Uninstalling
+removes the mod's installed files and shortcuts while keeping game data, saves,
+preferences and any separately generated maps. No Python, NSIS or separate SDL
+installation is needed to use the generated setup. The setup is unsigned.
+
+### Create a complete Windows ZIP for local use
 
 This optional package must be generated locally; it is not included in the
 repository. First populate `game/` with your own installed game files as described
@@ -302,6 +341,28 @@ Useful environment variables:
 | `ARCANUM_ENGINE_SOURCE` | Local upstream Git checkout containing the pinned engine revision. |
 | `CMAKE`, `PYTHON` | Tool commands used by the macOS and Windows packaging scripts. |
 | `NINJA` | Ninja executable for the Linux-to-Windows cross-build. |
+
+## GitHub releases
+
+The [Release packages workflow](.github/workflows/release.yml) builds the Windows
+x64 ZIP, Windows setup and macOS Apple Silicon ZIP from a clean checkout. It
+never uses `--include-game`, and none of these artifacts contain commercial
+game files, saves, personal settings or generated maps.
+
+Run it manually in **Actions → Release packages** to download build artifacts.
+Pushing a version tag such as `v0.1.0` runs the same builds and creates a **draft
+GitHub Release** with these files and `SHA256SUMS.txt`. The Windows setup must
+pass an installation, upgrade and uninstall test on a disposable Windows runner
+before the release draft is created. Review the draft before publishing it.
+Rerunning the workflow can replace draft assets but will not alter a published
+release. No release files are stored in Git; the optional full ZIP is for local
+packaging only and is never uploaded by this workflow.
+
+When a release has been published, Windows users can choose the setup to select
+their installed game's folder and create shortcuts, or extract the standard ZIP
+into that folder themselves. macOS users extract its ZIP beside their game
+archives and open `Arcanum Modern.app`. Linux currently uses the source build
+described above.
 
 ## Detailed local maps
 

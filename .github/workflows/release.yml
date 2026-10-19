@@ -1,0 +1,94 @@
+name: Release packages
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test package boundaries
+        run: |
+          python3 tests/test_windows_full_package.py
+          python3 tests/test_windows_setup.py
+      - name: Build Windows ZIP
+        run: |
+          docker run --rm \
+            --mount "type=bind,source=$PWD,target=/work" --workdir /work \
+            -e LLVM_MINGW=/opt/llvm-mingw \
+            mstorsjo/llvm-mingw:latest bash ./build-windows.sh
+      - name: Build setup and verify ZIP
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nsis
+          sudo chown -R "$(id -u):$(id -g)" dist
+          python3 tests/test_windows_package.py
+          python3 tools/package-windows-setup.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            dist/ArcanumModern-windows-x64.zip
+            dist/ArcanumModern-windows-x64-setup.exe
+          if-no-files-found: error
+
+  windows-install:
+    needs: windows
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: dist
+      - name: Test installation and removal on Windows
+        shell: pwsh
+        run: ./tests/test-windows-setup.ps1 -Setup ./dist/ArcanumModern-windows-x64-setup.exe
+
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash ./build-macos.sh
+      - run: python3 tests/test_macos_package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: dist/ArcanumModern-macos-arm64.zip
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows-install, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release'
+          path: dist
+          merge-multiple: true
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip)
+          sha256sum "${files[@]}" > SHA256SUMS.txt
+          if gh release view "$RELEASE_TAG" --json isDraft > release.json; then
+            test "$(jq -r .isDraft release.json)" = true || { echo 'Refusing to replace a published release.' >&2; exit 1; }
+            gh release upload "$RELEASE_TAG" "${files[@]}" SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" "${files[@]}" SHA256SUMS.txt \
+              --verify-tag --draft --title "Arcanum Modern $RELEASE_TAG" --generate-notes
+          fi
