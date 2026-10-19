@@ -31,6 +31,12 @@ quand aucun objet n’est survolé.
 
 ## Journal et carte
 
+Les quêtes peuvent être filtrées par **En cours**, **Terminée**, **Interrompue**
+ou **Mentionnée**, avec les libellés de la langue installée. Un objectif atteint
+mais pas encore validé reste en cours ; les quêtes effectuées par un rival sont
+classées avec les quêtes interrompues. Recherche et favoris se combinent avec
+ces filtres.
+
 L’astérisque d’une entrée ajoute ou retire un favori. Le bouton rond d’une quête
 active permet de la suivre hors combat ; cliquez sur son rappel pour retrouver
 l’entrée complète. Le suivi n’indique aucune destination inconnue.

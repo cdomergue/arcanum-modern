@@ -2453,7 +2453,7 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
          return;
      }
  
-@@ -1776,3 +1792,41 @@
+@@ -1776,3 +1792,49 @@
          }
      }
  }
@@ -2495,6 +2495,14 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
 +
 +int modern_logbook_id(int index)
 +{ return index>=0 && index<logbook_ui_entry_count?logbook_ui_entry_ids[index]:-1; }
++
++const char* modern_logbook_state_label(int state)
++{
++    if(state<QUEST_STATE_UNKNOWN || state>=QUEST_STATE_COUNT)return "";
++    MesFileEntry entry={.num=19+state};
++    mes_get_msg(logbook_ui_mes_file,&entry);
++    return entry.str;
++}
 diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
 --- a/src/ui/mainmenu_ui.c
 +++ b/src/ui/mainmenu_ui.c

@@ -517,6 +517,17 @@ static void fold(const char* src,char* dst,size_t size)
     dst[n]=0;
 }
 
+static bool quest_filter_matches(int filter,int state)
+{
+    switch(filter) {
+    case 1:return state==QUEST_STATE_ACCEPTED || state==QUEST_STATE_ACHIEVED;
+    case 2:return state==QUEST_STATE_COMPLETED;
+    case 3:return state==QUEST_STATE_BOTCHED || state==QUEST_STATE_OTHER_COMPLETED;
+    case 4:return state==QUEST_STATE_MENTIONED;
+    default:return state!=QUEST_STATE_UNKNOWN;
+    }
+}
+
 static void rebuild_book(void)
 {
     char raw[32768],utf8[65536],haystack[65536],needle[256];
@@ -528,7 +539,7 @@ static void rebuild_book(void)
         int style=modern_logbook_entry(i,raw,sizeof(raw));
         current_entry=modern_logbook_id(i);
         if(journal_favorites && journal_mark_index(chapter,current_entry)<0)continue;
-        if(chapter==1 && ((quest_filter==1 && style!=1) || (quest_filter==2 && style!=2))) continue;
+        if(chapter==1 && !quest_filter_matches(quest_filter,quest_state_get(player_get_local_pc_obj(),current_entry)))continue;
         from_game(raw,utf8,sizeof(utf8));
         fold(utf8,haystack,sizeof(haystack));
         if(*needle && !strstr(haystack,needle)) continue;
@@ -656,10 +667,12 @@ static void draw_journal(void)
     button((SDL_FRect){book.x+book.w-130,panel.y+panel.h-44,110,28},205,"Suivantes >",-1,false,spread+1<spread_count);
     char footer[100];snprintf(footer,sizeof(footer),"%d entrée%s   ·   %d / %d",matched_count,matched_count>1?"s":"",spread+1,spread_count);
     centered(0,footer,book.x+book.w/2,panel.y+panel.h-40,GOLD);
-    button((SDL_FRect){book.x+355,panel.y+panel.h+14,140,30},2300,tr("Favoris (*)","Favorites (*)"),-1,journal_favorites,true);
+    float filter_y=panel.y+panel.h+14;
+    button((SDL_FRect){book.x+book.w-155,filter_y,140,30},2300,tr("Favoris (*)","Favorites (*)"),-1,journal_favorites,true);
     if(chapter==1) {
-        const char* filters[]={"Toutes","En cours","Terminées"};
-        for(int i=0;i<3;i++) button((SDL_FRect){book.x+35+i*103,panel.y+panel.h+14,96,30},210+i,filters[i],-1,quest_filter==i,true);
+        const char* filters[]={tr("Toutes","All"),tr("En cours","In progress"),game_text(modern_logbook_state_label(QUEST_STATE_COMPLETED)),game_text(modern_logbook_state_label(QUEST_STATE_BOTCHED)),game_text(modern_logbook_state_label(QUEST_STATE_MENTIONED))};
+        float width=(book.w-190)/5;
+        for(int i=0;i<5;i++)button((SDL_FRect){book.x+15+i*width,filter_y,width-6,30},210+i,filters[i],-1,quest_filter==i,true);
     }
 }
 
@@ -1654,7 +1667,7 @@ static void activate(int action)
     case 203: if(body_size<26) {body_size+=2;dirty=true;spread=0;save_settings();} break;
     case 204: if(spread>0) spread--;break;
     case 205: if(spread+1<spread_count) spread++;break;
-    case 210:case 211:case 212:quest_filter=action-210;spread=0;dirty=true;break;
+    case 210:case 211:case 212:case 213:case 214:quest_filter=action-210;spread=0;dirty=true;break;
     default:
         if(action>=300 && action<310) {
             Hotkey* hk=sub_57F240(action-300);
