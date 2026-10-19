@@ -7,6 +7,43 @@ permissions:
   contents: read
 
 jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build git python3 binutils unzip \
+            libx11-dev libxext-dev libxrandr-dev libxi-dev libxinerama-dev libxcursor-dev \
+            libasound2-dev libpulse-dev libxss-dev libxtst-dev libxfixes-dev libxkbcommon-dev libudev-dev
+      - name: Build and package Linux x64
+        env:
+          ARCANUM_BUILD_DIR: build/linux-x64
+        run: |
+          python3 tests/test_linux_package.py
+          ./build.sh
+          python3 tools/package-linux.py --exe build/linux-x64/arcanum-ce --build-dir build/linux-x64
+          python3 tests/test_linux_package.py dist/ArcanumModern-linux-x64.zip
+      - name: Check extracted runtime
+        run: |
+          mkdir "$RUNNER_TEMP/linux-package"
+          unzip -q dist/ArcanumModern-linux-x64.zip -d "$RUNNER_TEMP/linux-package"
+          cd "$RUNNER_TEMP/linux-package"
+          test -x arcanum-modern
+          test -x "Play Arcanum Modern.sh"
+          ldd ./arcanum-modern > dependencies.txt
+          cat dependencies.txt
+          if grep -q 'not found' dependencies.txt; then exit 1; fi
+          if ./"Play Arcanum Modern.sh" 2> missing-game.txt; then exit 1; fi
+          grep -q arcanum1.dat missing-game.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: dist/ArcanumModern-linux-x64.zip
+          if-no-files-found: error
+
   windows:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -66,7 +103,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-install, macos]
+    needs: [windows-install, macos, linux]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -83,7 +120,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd dist
-          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip)
+          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip ArcanumModern-linux-x64.zip)
           sha256sum "${files[@]}" > SHA256SUMS.txt
           if gh release view "$RELEASE_TAG" --json isDraft > release.json; then
             test "$(jq -r .isDraft release.json)" = true || { echo 'Refusing to replace a published release.' >&2; exit 1; }
