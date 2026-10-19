@@ -13,7 +13,7 @@ if [[ -x "$arcanum_sdk/usr/bin/cmake" ]]; then
     args+=(-G Ninja "-DCMAKE_MAKE_PROGRAM=$arcanum_sdk/usr/bin/ninja"
         "-DCMAKE_PREFIX_PATH=$arcanum_sdk/usr" "-DCMAKE_C_FLAGS=-I$arcanum_sdk/usr/include")
 else
-    arcanum_cmake=$(command -v cmake) || { echo 'CMake et les dépendances de compilation sont nécessaires (voir README.txt).' >&2; exit 1; }
+    arcanum_cmake=$(command -v cmake) || { echo 'CMake et les dépendances de compilation sont nécessaires (voir README.md).' >&2; exit 1; }
 fi
 for dep in fpattern sdl3 sdl3_mixer zlib; do
     if [[ -d "$arcanum_cache/$dep-src" ]]; then
