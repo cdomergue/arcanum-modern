@@ -3083,24 +3083,79 @@ diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
  
  #include "game/critter.h"
  #include "game/descriptions.h"
-@@ -1277,3 +1278,30 @@
+@@ -298,6 +299,8 @@
+  * 0x67BE00
+  */
+ static char written_ui_text[TEN * MAX_STRING];
++/* Exact supplementary articles reached by the original newspaper layout. */
++static int modern_newspaper_fillers[128],modern_newspaper_filler_count;
+ 
+ /**
+  * Array of text offsets for book pages.
+@@ -726,6 +729,8 @@
+     char* str;
+     TigRect rect;
+ 
++    modern_newspaper_filler_count=0;
++
+     // Hide book navigation buttons by default.
+     if (written_ui_type == WRITTEN_TYPE_BOOK) {
+         tig_button_hide(written_ui_book_buttons[WRITTEN_UI_BOOK_BUTTON_PREV].button_handle);
+@@ -853,6 +858,8 @@
+ 
+                     // NOTE: The layout approach is exactly the same as above.
+                     while (true) {
++                        if(modern_newspaper_filler_count<(int)SDL_arraysize(modern_newspaper_fillers))
++                            modern_newspaper_fillers[modern_newspaper_filler_count++]=mes_file_entry.num;
+                         while (!written_ui_draw_paragraph(str, font_num, centered, &rect, &offset)) {
+                             index++;
+                             if (index >= MAX_NEWSPAPER_COLUMNS) {
+@@ -1277,3 +1284,58 @@
          pch++;
      }
  }
 +
-+/* Expose installed text; the modern UI owns wrapping, never book contents. */
++/* Expose installed text; the modern UI owns wrapping, never document contents. */
++int modern_written_kind(void)
++{
++    return written_ui_created ? written_ui_type : -1;
++}
 +const char* modern_written_text(void)
 +{
-+    return written_ui_created && (written_ui_type==WRITTEN_TYPE_NOTE || written_ui_type==WRITTEN_TYPE_BOOK) ? written_ui_text : NULL;
++    int type=modern_written_kind();
++    return type==WRITTEN_TYPE_NOTE || type==WRITTEN_TYPE_BOOK || type==WRITTEN_TYPE_NEWSPAPER
++        || type==WRITTEN_TYPE_TELEGRAM || type==WRITTEN_TYPE_PLAQUE ? written_ui_text : NULL;
 +}
 +bool modern_written_is_book(void)
 +{
-+    return written_ui_created && written_ui_type==WRITTEN_TYPE_BOOK;
++    return modern_written_kind()==WRITTEN_TYPE_BOOK;
++}
++const char* modern_written_heading(int index)
++{
++    if(modern_written_kind()!=WRITTEN_TYPE_NEWSPAPER || index<0 || index>3)return "";
++    const int ids[]={written_ui_is_vendigroth_times?4:1,written_ui_is_vendigroth_times?5:3,2,0};
++    MesFileEntry entry={0};entry.num=ids[index];
++    return mes_search(written_ui_mes_files[WRITTEN_MES_NEWSPAPER],&entry)?entry.str:"";
++}
++int modern_written_paragraph_count(void)
++{
++    if(!modern_written_text())return 0;
++    if(written_ui_type==WRITTEN_TYPE_NEWSPAPER)return TEN+modern_newspaper_filler_count;
++    if(written_ui_type==WRITTEN_TYPE_TELEGRAM)return 13;
++    return TEN;
 +}
 +const char* modern_written_book_paragraph(int index,bool* centered,int* font)
 +{
-+    if(!modern_written_is_book() || index<0 || index>=TEN)return NULL;
++    if(index<0 || index>=modern_written_paragraph_count())return NULL;
 +    MesFileEntry entry={0};entry.num=written_ui_num+index;
++    *centered=false;*font=0;
++    if(written_ui_type==WRITTEN_TYPE_NEWSPAPER && index>=TEN)entry.num=modern_newspaper_fillers[index-TEN];
++    if(written_ui_type==WRITTEN_TYPE_TELEGRAM){
++        if(index==11)return written_ui_text;
++        entry.num=index==12?1011:written_ui_telegram_elements[index].message_num;
++        *centered=index<11 && written_ui_telegram_elements[index].alignment==WRITTEN_TEXT_ALIGNMENT_CENTER;
++        return mes_search(written_ui_mes_file,&entry)?entry.str:NULL;
++    }
 +    if(!mes_search(written_ui_mes_file,&entry))return NULL;
 +    int alignment;char* text;
 +    written_ui_parse(entry.str,font,&alignment,&text);

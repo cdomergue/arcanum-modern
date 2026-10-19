@@ -923,7 +923,7 @@ static void draw_portrait(int number,SDL_FRect rect)
 
 /* Wrap at Unicode character boundaries, preserving text and explicit newlines.
  * Return the full line count so long translations remain reachable by scrolling. */
-static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color)
+static int menu_paragraph_aligned(const char* text,SDL_FRect rect,int offset,SDL_Color color,bool align_center)
 {
     int row=0, visible_rows=(int)(rect.h/27);
     while(*text) {
@@ -940,12 +940,18 @@ static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color c
         }
         size_t length=(size_t)(scan-start);
         memcpy(line,start,length);line[length]=0;
-        if(row>=offset && row<offset+visible_rows) text_draw(1,line,rect.x,rect.y+(row-offset)*27,color);
+        if(row>=offset && row<offset+visible_rows) {
+            float x=align_center?rect.x+(rect.w-text_measure(1,line))/2:rect.x;
+            text_draw(1,line,x,rect.y+(row-offset)*27,color);
+        }
         row++;text=scan;
         if(*text=='\n') text++;
     }
     return row;
 }
+
+static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color)
+{return menu_paragraph_aligned(text,rect,offset,color,false);}
 
 static void description_panel(const char* text,SDL_FRect rect)
 {

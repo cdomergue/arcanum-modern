@@ -408,10 +408,10 @@ static void draw_inventory(void)
     }
 }
 /* Font 744 is the game's book illustration atlas, not a text alphabet. */
-static void written_book_picture(const char* text,SDL_FRect rect,int offset)
+static void written_book_picture(const char* text,SDL_FRect rect,int offset,int font)
 {
     tig_art_id_t id;
-    if(!*text || tig_art_interface_id_create(744,0,0,0,&id)!=TIG_OK)return;
+    if(!*text || tig_art_interface_id_create(font,0,0,0,&id)!=TIG_OK)return;
     ArtTexture* art=art_get(tig_art_id_frame_set(id,(unsigned char)*text-31));
     if(!art || !art->texture)return;
     float scale=fminf(rect.w/art->width,162.0f/art->height);
@@ -424,25 +424,67 @@ static void written_book_picture(const char* text,SDL_FRect rect,int offset)
     SDL_RenderTexture(renderer,art->texture,&src,&dst);
     SDL_SetTextureColorMod(art->texture,255,255,255);
 }
-static int written_book_page(SDL_FRect rect,int offset)
+static int written_document_page(SDL_FRect rect,int offset,SDL_Color color)
 {
     int row=0,visible_rows=(int)(rect.h/27);
-    for(int i=0;i<10;i++) {
+    for(int i=0;i<modern_written_paragraph_count();i++) {
         bool centered_text=false;int font=0;
         const char* source=modern_written_book_paragraph(i,&centered_text,&font);
-        if(!source)break;
+        if(!source)continue;
         const char* text=game_text(source);
-        int rows=font==744?6:menu_paragraph(text,(SDL_FRect){0,0,rect.w,0},0,INK);
+        int rows=(font==744 || font==488)?6:menu_paragraph(text,(SDL_FRect){0,0,rect.w,0},0,INK);
         int skip=offset>row?offset-row:0,start=row>offset?row-offset:0;
         if(start<visible_rows && skip<rows) {
             SDL_FRect part={rect.x,rect.y+start*27,rect.w,(visible_rows-start)*27};
-            if(font==744)written_book_picture(source,part,skip);
-            else if(centered_text && rows==1)centered(1,text,part.x+part.w/2,part.y,INK);
-            else menu_paragraph(text,part,skip,INK);
+            if(font==744 || font==488)written_book_picture(source,part,skip,font);
+            else menu_paragraph_aligned(text,part,skip,color,centered_text);
         }
         row+=rows+1;
     }
     return row>0?row-1:0;
+}
+static int written_book_page(SDL_FRect rect,int offset)
+{return written_document_page(rect,offset,INK);}
+static void draw_written_document(void)
+{
+    bool news=modern_written_kind()==WRITTEN_TYPE_NEWSPAPER;
+    bool plaque=modern_written_kind()==WRITTEN_TYPE_PLAQUE;
+    float w=fminf(news?1300:920,canvas_w-80),h=canvas_h-110,x=(canvas_w-w)/2,y=30;
+    SDL_Color ink=plaque?(SDL_Color){223,219,203,255}:INK;
+    fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){10,8,6,150});
+    frame((SDL_FRect){x-12,y-12,w+24,h+74});
+    if(plaque){
+        fill((SDL_FRect){x,y,w,h},(SDL_Color){36,40,41,255});
+        outline((SDL_FRect){x+10,y+10,w-20,h-20},(SDL_Color){127,132,129,255});
+        outline((SDL_FRect){x+14,y+14,w-28,h-28},(SDL_Color){61,65,64,255});
+    }else material(paper_texture,(SDL_FRect){x,y,w,h});
+    float top=35;
+    if(news){
+        /* Masthead uses installed translations, drawn in ink on paper. */
+        centered(2,game_text(modern_written_heading(0)),x+w/2,y+24,INK);
+        menu_paragraph_aligned(game_text(modern_written_heading(1)),(SDL_FRect){x+100,y+72,w-200,54},0,INK,true);
+        text_draw(0,game_text(modern_written_heading(2)),x+30,y+18,INK);
+        const char* exclusive=game_text(modern_written_heading(3));
+        text_draw(0,exclusive,x+w-30-text_measure(0,exclusive),y+18,INK);
+        rule(x+30,y+130,w-60,INK);top=150;
+    }
+    int columns=news?3:1;
+    float column_width=(w-80-(columns-1)*44)/columns;
+    SDL_FRect page={x+40,y+top,column_width,h-top-25};
+    int rows=(int)(page.h/27);if(rows<1)rows=1;
+    written_step=rows*columns;
+    int total=written_document_page((SDL_FRect){0,0,column_width,0},0,ink);
+    written_max=total>0?((total-1)/written_step)*written_step:0;
+    if(written_scroll>written_max)written_scroll=written_max;
+    written_scroll=(written_scroll/written_step)*written_step;
+    for(int i=0;i<columns;i++){
+        written_document_page(page,written_scroll+i*rows,ink);
+        if(i+1<columns)fill((SDL_FRect){page.x+page.w+21,page.y,1,page.h},(SDL_Color){108,94,68,180});
+        page.x+=column_width+44;
+    }
+    menu_button((SDL_FRect){x+15,y+h+12,80,42},991,"<",written_scroll>0);
+    menu_button((SDL_FRect){x+w-95,y+h+12,80,42},992,">",written_scroll<written_max);
+    menu_button((SDL_FRect){x+w/2-115,y+h+12,230,42},990,menu_text(4003),true);
 }
 static void draw_written_book(void)
 {
@@ -473,6 +515,7 @@ static void draw_written_book(void)
 static void draw_written(void)
 {
     if(modern_written_is_book()){draw_written_book();return;}
+    if(modern_written_kind()!=WRITTEN_TYPE_NOTE){draw_written_document();return;}
     written_step=3;
     const char* text=game_text(modern_written_text());
     float w=fminf(880,canvas_w-80),h=canvas_h-90,x=(canvas_w-w)/2,y=30;

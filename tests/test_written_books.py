@@ -4,7 +4,7 @@ from pathlib import Path
 import os, subprocess, tempfile
 
 source=(Path(__file__).resolve().parents[1]/'source/src/ui/modern_panels.inc').read_text()
-start=source.index('static int written_book_page(')
+start=source.index('static int written_document_page(')
 function=source[start:source.index('\n}',start)+2]
 code=r'''
 #include <assert.h>
@@ -12,6 +12,8 @@ code=r'''
 #include <stddef.h>
 #include <string.h>
 typedef struct {float x,y,w,h;} SDL_FRect;
+typedef int SDL_Color;
+static int modern_written_paragraph_count(void){return 10;}
 #define INK 0
 static int seen[256];
 static const char* paragraphs[]={"A","BCDEF","GHIJ","KL","M"};
@@ -25,20 +27,21 @@ static int menu_paragraph(const char* s,SDL_FRect r,int offset,int color){
     for(int i=offset;i<rows && i<offset+count;i++)seen[(unsigned char)s[i]]++;
     return rows;
 }
-static void centered(int font,const char* s,float x,float y,int color){
-    (void)font;(void)x;(void)y;(void)color;assert(strlen(s)==1);seen[(unsigned char)*s]++;
+static int menu_paragraph_aligned(const char* s,SDL_FRect r,int offset,int color,bool center){
+    (void)center;return menu_paragraph(s,r,offset,color);
 }
-static void written_book_picture(const char* s,SDL_FRect r,int offset){
+static void written_book_picture(const char* s,SDL_FRect r,int offset,int font){
+    (void)font;
     (void)s;menu_paragraph("MNOPQR",r,offset,INK);
 }
 '''+function+r'''
 int main(void){
     for(int page_rows=1;page_rows<=7;page_rows++){
         memset(seen,0,sizeof(seen));
-        int total=written_book_page((SDL_FRect){0,0,400,0},0);
+        int total=written_document_page((SDL_FRect){0,0,400,0},0,INK);
         assert(total==22);
         for(int offset=0;offset<total;offset+=page_rows){
-            assert(written_book_page((SDL_FRect){0,0,400,page_rows*27},offset)==total);
+            assert(written_document_page((SDL_FRect){0,0,400,page_rows*27},offset,INK)==total);
         }
         for(int c='A';c<='R';c++)assert(seen[c]==1);
     }

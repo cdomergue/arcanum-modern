@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parents[1]
 ui = (root / 'source/src/ui/modern_ui.c').read_text()
 engine = (root / 'source/src/ui/charedit_ui.c').read_text()
 adapter = engine[engine.index('void modern_charedit_adjust('):engine.index('int64_t modern_charedit_object(')]
-wrap = ui[ui.index('static int menu_paragraph('):ui.index('\nstatic void description_panel(')]
+wrap = ui[ui.index('static int menu_paragraph_aligned('):ui.index('\nstatic void description_panel(')]
 decode = ui[ui.index('static int codepoint('):ui.index('/* Game strings are Windows-1252;')]
 harness = r'''
 #include <assert.h>
@@ -46,6 +46,7 @@ typedef struct {float x,y,w,h;} SDL_FRect;
 typedef struct {unsigned char r,g,b,a;} SDL_Color;
 static struct {struct {float xadvance;} glyphs[GLYPH_COUNT];float density;} fonts[2];
 static char drawn[32768];
+static float text_measure(int font,const char* s){(void)font;return strlen(s);}
 static void text_draw(int font,const char* s,float x,float y,SDL_Color c){
  (void)font;(void)x;(void)y;(void)c;
  strcat(drawn,s);
