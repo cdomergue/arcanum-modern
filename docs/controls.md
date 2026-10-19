@@ -11,6 +11,10 @@ de caméra sur ZQSD ou WASD. Les flèches restent utilisables.
 Le survol des boutons affiche leur raccourci actuel. Les chiffres de la barre
 rapide, les touches de fonction et les touches de navigation restent réservés.
 La saisie d’une recherche ou d’une note suspend les raccourcis de jeu.
+Dans l’inventaire, survolez un objet puis appuyez sur une touche de la rangée
+**1–0** pour l’affecter à la barre : cela quitte la saisie sans effacer le filtre.
+Un clic hors du champ quitte également la saisie. Les chiffres restent saisissables
+quand aucun objet n’est survolé.
 
 ## Inventaire
 

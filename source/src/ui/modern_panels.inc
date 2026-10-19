@@ -198,6 +198,29 @@ static bool binding_event(SDL_Event* event)
     return false;
 }
 
+/* A numbered assignment over an item ends text focus before SDL emits text. */
+static bool inventory_search_event(SDL_Event* event)
+{
+    if(inventory_searching && event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat
+        && event->key.scancode>=SDL_SCANCODE_1 && event->key.scancode<=SDL_SCANCODE_0
+        && binding_hover().type!=HOTKEY_NONE) {
+        inventory_search_focus(false);
+        return binding_event(event);
+    }
+    if(inventory_searching && event->type==SDL_EVENT_MOUSE_BUTTON_DOWN
+        && hit(mouse_x,mouse_y)!=2400)inventory_search_focus(false);
+    if(inventory_searching){
+        if(event->type==SDL_EVENT_TEXT_INPUT){inventory_query_edit(event->text.text,false);return true;}
+        if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP){
+            if(event->type==SDL_EVENT_KEY_DOWN){
+                if(event->key.scancode==SDL_SCANCODE_ESCAPE || event->key.scancode==SDL_SCANCODE_RETURN)inventory_search_focus(false);
+                else if(event->key.scancode==SDL_SCANCODE_BACKSPACE)inventory_query_edit("",true);
+            }return true;
+        }
+    }
+    return false;
+}
+
 static void panel_backdrop(void)
 {
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){15,12,10,255});
@@ -996,15 +1019,7 @@ static bool panels_event(SDL_Event* event)
             }return true;
         }
     }
-    if(p==2 && inventory_searching){
-        if(event->type==SDL_EVENT_TEXT_INPUT){inventory_query_edit(event->text.text,false);return true;}
-        if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP){
-            if(event->type==SDL_EVENT_KEY_DOWN){
-                if(event->key.scancode==SDL_SCANCODE_ESCAPE || event->key.scancode==SDL_SCANCODE_RETURN)inventory_search_focus(false);
-                else if(event->key.scancode==SDL_SCANCODE_BACKSPACE)inventory_query_edit("",true);
-            }return true;
-        }
-    }
+    if(p==2 && inventory_search_event(event))return true;
     if(p==2 && inventory_quick_release && event->type==SDL_EVENT_MOUSE_BUTTON_UP && event->button.button==SDL_BUTTON_LEFT){
         inventory_quick_release=false;
         if(inside(inventory_quick_region,mouse_x,mouse_y) && modern_inventory_at(inventory_quick_x,inventory_quick_y)==inventory_quick_item)
