@@ -37,7 +37,7 @@ mais pas encore validé reste en cours ; les quêtes effectuées par un rival so
 classées avec les quêtes interrompues. Recherche et favoris se combinent avec
 ces filtres.
 
-L’astérisque d’une entrée ajoute ou retire un favori. Le bouton rond d’une quête
+L’étoile d’une entrée ajoute ou retire un favori. Le marqueur d’une quête
 active permet de la suivre hors combat ; cliquez sur son rappel pour retrouver
 l’entrée complète. Le suivi n’indique aucune destination inconnue.
 

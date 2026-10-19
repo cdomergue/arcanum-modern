@@ -596,8 +596,47 @@ static void update_geometry(void)
     if(lines_per_page<1) lines_per_page=1;
 }
 
+/* Small journal symbols rendered at output resolution, independent of fonts. */
+static void journal_symbol(SDL_FRect r,bool pin,bool active,bool available)
+{
+    SDL_FPoint points[18];int count=pin?16:10;
+    float cx=r.x+r.w/2,cy=r.y+r.h/2,scale=fminf(r.w,r.h)*.43f;
+    if(pin) {
+        for(int i=0;i<15;i++) {
+            float a=(150+i*(240.0f/14))*.017453293f;
+            points[i]=(SDL_FPoint){cx+cosf(a)*scale*.72f,cy-scale*.32f+sinf(a)*scale*.72f};
+        }
+        points[15]=(SDL_FPoint){cx,cy+scale};
+    } else {
+        for(int i=0;i<10;i++) {
+            float a=(-90+i*36)*.017453293f,rad=scale*(i%2?.45f:1);
+            points[i]=(SDL_FPoint){cx+cosf(a)*rad,cy+sinf(a)*rad};
+        }
+    }
+    SDL_Vertex vertices[19];int indices[54];
+    SDL_FColor face=active?(SDL_FColor){.90f,.69f,.29f,1}:(SDL_FColor){.23f,.17f,.09f,1};
+    if(!available)face=(SDL_FColor){.22f,.20f,.16f,.7f};
+    vertices[0]=(SDL_Vertex){{cx,cy-scale*.2f},face,{0,0}};
+    for(int i=0;i<count;i++) {
+        SDL_FColor edge=face;float shade=points[i].y<cy?1.15f:.72f;
+        edge.r=fminf(1,edge.r*shade);edge.g=fminf(1,edge.g*shade);edge.b=fminf(1,edge.b*shade);
+        vertices[i+1]=(SDL_Vertex){points[i],edge,{0,0}};
+        indices[i*3]=0;indices[i*3+1]=i+1;indices[i*3+2]=(i+1)%count+1;
+    }
+    SDL_RenderGeometry(renderer,NULL,vertices,count+1,indices,count*3);
+    points[count]=points[0];SDL_Color border=available?GOLD:MUTED;
+    SDL_SetRenderDrawColor(renderer,border.r,border.g,border.b,available?255:110);
+    SDL_RenderLines(renderer,points,count+1);
+    if(pin) {
+        SDL_FPoint hole[13];
+        for(int i=0;i<=12;i++){float a=i*.523598776f;hole[i]=(SDL_FPoint){cx+cosf(a)*scale*.25f,cy-scale*.32f+sinf(a)*scale*.25f};}
+        SDL_SetRenderDrawColor(renderer,37,26,15,255);SDL_RenderLines(renderer,hole,13);
+    }
+}
+
 static void draw_journal(void)
 {
+    const char* symbol_hint=NULL;SDL_FRect symbol_hover={0};
     notebook_sync();journal_target_count=0;
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){8,6,4,160});
     frame(panel);
@@ -655,9 +694,16 @@ static void draw_journal(void)
             text_draw(l->heading?0:1,l->text,x,y,c);
             if(l->entry_start && l->entry>=0 && journal_target_count<64){
                 int index=journal_target_count++;journal_targets[index]=(JournalMark){chapter,l->entry};
-                float bx=pages[side].x+pages[side].w-57;
-                button((SDL_FRect){bx,y,23,23},2000+index*2,"*",-1,journal_mark_index(chapter,l->entry)>=0,true);
-                if(chapter==1)button((SDL_FRect){bx+26,y,23,23},2001+index*2,"o",-1,tracked_quest==l->entry,l->style==1);
+                float bx=pages[side].x+pages[side].w-63;
+                bool favorite=journal_mark_index(chapter,l->entry)>=0,tracked=tracked_quest==l->entry;
+                SDL_FRect star={bx,y,27,27},pin={bx+30,y,27,27};
+                button(star,2000+index*2,"",-1,favorite,true);journal_symbol(star,false,favorite,true);
+                if(inside(star,mouse_x,mouse_y)){symbol_hover=star;symbol_hint=favorite?tr("Retirer des favoris","Remove favorite"):tr("Ajouter aux favoris","Add favorite");}
+                if(chapter==1){
+                    bool can_track=l->style==1 || tracked;
+                    button(pin,2001+index*2,"",-1,tracked,can_track);journal_symbol(pin,true,tracked,can_track);
+                    if(inside(pin,mouse_x,mouse_y)){symbol_hover=pin;symbol_hint=tracked?tr("Ne plus suivre cette quête","Stop tracking quest"):can_track?tr("Suivre cette quête","Track quest"):tr("Cette quête n’est pas en cours","This quest is not in progress");}
+                }
             }
             if(l->style==4 && !l->heading) rule(x,y+body_size*.65f,text_measure(1,l->text),c);
         }
@@ -669,11 +715,20 @@ static void draw_journal(void)
     char footer[100];snprintf(footer,sizeof(footer),"%d entrée%s   ·   %d / %d",matched_count,matched_count>1?"s":"",spread+1,spread_count);
     centered(0,footer,book.x+book.w/2,panel.y+panel.h-40,GOLD);
     float filter_y=panel.y+panel.h+14;
-    button((SDL_FRect){book.x+book.w-155,filter_y,140,30},2300,tr("Favoris (*)","Favorites (*)"),-1,journal_favorites,true);
+    SDL_FRect favorites={book.x+book.w-155,filter_y,140,30};
+    button(favorites,2300,"",-1,journal_favorites,true);
+    journal_symbol((SDL_FRect){favorites.x+5,favorites.y+2,26,26},false,journal_favorites,true);
+    text_compact(tr("Favoris","Favorites"),favorites.x+36,favorites.y+6,favorites.w-42,false,GOLD);
     if(chapter==1) {
         const char* filters[]={tr("Toutes","All"),tr("En cours","In progress"),game_text(modern_logbook_state_label(QUEST_STATE_COMPLETED)),game_text(modern_logbook_state_label(QUEST_STATE_BOTCHED)),game_text(modern_logbook_state_label(QUEST_STATE_MENTIONED))};
         float width=(book.w-190)/5;
         for(int i=0;i<5;i++)button((SDL_FRect){book.x+15+i*width,filter_y,width-6,30},210+i,filters[i],-1,quest_filter==i,true);
+    }
+    if(symbol_hint){
+        float width=fminf(canvas_w-16,text_measure(0,symbol_hint)+36);
+        SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,symbol_hover.x)),symbol_hover.y+32,width,31};
+        fill(tip,(SDL_Color){24,17,11,245});outline(tip,GOLD);
+        text_compact(symbol_hint,tip.x+12,tip.y+6,tip.w-24,false,GOLD);
     }
 }
 
@@ -1695,7 +1750,6 @@ static void render_overlay(SDL_Renderer* target)
     if(key_edit<0)for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
         int action=buttons[i].action,binding=key_for_action(action);char hint[256]="";
         if(binding>=0)snprintf(hint,sizeof(hint),"%s [%s]",key_label(binding),key_name(binding));
-        else if(action>=2000 && action<2128)SDL_strlcpy(hint,(action%2)?tr("Activer / arrêter le suivi de cette quête","Track / untrack this quest"):tr("Ajouter / retirer des favoris","Add / remove favorite"),sizeof(hint));
         if(*hint) {
             float width=fminf(450,text_measure(0,hint)+24),xx=fminf(canvas_w-width-8,fmaxf(8,mouse_x-width/2));
             float yy=buttons[i].rect.y>canvas_h/2?buttons[i].rect.y-34:buttons[i].rect.y+buttons[i].rect.h+6;
