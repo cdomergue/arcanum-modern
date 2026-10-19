@@ -76,7 +76,7 @@ Back up your saved games before trying an experimental engine.
 - **Journal and exploration:** quest filters, search, favorites, quest tracking
   and personal map notes.
 - **Automatically prepared HD local maps:** maps rendered from the installed game data,
-  with opaque roofs, exploration fog and separately drawn localized labels and
+  with exploration fog and separately drawn localized labels and
   markers. Original maps remain available when the detailed cache is absent.
 - **Readable game text:** books, letters, newspapers, inscriptions, telegrams
   and floating dialogue use the installed game's content.
@@ -105,7 +105,7 @@ support. Click an image to enlarge it.
 | --- | --- |
 | [![Exploring Tarant with the modern HUD](docs/screenshots/exploration.jpg)](docs/screenshots/exploration.jpg) | [![Inventory with search, categories and equipment details](docs/screenshots/inventory.jpg)](docs/screenshots/inventory.jpg) |
 
-**HD local maps**, generated from your game files with roofs preserved.
+**HD local maps**, generated from your game files.
 
 [![Detailed local map of Tarant](docs/screenshots/local-map.jpg)](docs/screenshots/local-map.jpg)
 
@@ -128,16 +128,12 @@ available.
 | Close panel or open pause menu | Escape |
 
 Hover an item, spell or skill and press **1–0** to assign a quick slot.
-Double-click an inventory item to transfer it where the game's rules allow;
 **Shift-click** transfers a whole stack. Drag the map to pan it. In the journal,
 the **star** marks favorites and the **pin** tracks a quest.
 
 Turn-based combat is the default for fresh installations. Each controllable ally
-acts during their own turn. Selecting a portrait moves the camera without
-transferring the turn or restoring action points. A `~` on an action cost marks
-an estimate; the engine determines the final cost.
-
-A [more detailed control guide](docs/controls.md) is available in French.
+acts during their own turn. Selecting a portrait moves the camera. A `~` on an
+action cost marks an estimate; the engine determines the final cost.
 
 ## Preferences and saves
 
@@ -152,8 +148,6 @@ Paths are relative to the game folder:
 | `arcanum.cfg` | Engine and game settings. |
 | `modules/<module>/Save/` | Saved games for that module. |
 
-A separate `HighRes/config.ini` is not required. The world follows the actual
-window dimensions, including when no saved display configuration exists.
 Notebook files are independent of saves: loading an older save does not roll
 back its notes. Keep both when moving your installation.
 

@@ -18,7 +18,7 @@ package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
 REQUIRED_FILES = {'arcanum-modern.exe', 'Play Arcanum Modern.bat',
                   'ArcanumModern/INSTALL.txt', 'ArcanumModern/README.md',
-                  'ArcanumModern/docs/controls.md', 'ArcanumModern/licenses/arcanum-ce.md',
+                  'ArcanumModern/licenses/arcanum-ce.md',
                   'ArcanumModern/licenses/SDL3.txt', 'ArcanumModern/licenses/SDL3_mixer.txt',
                   'ArcanumModern/licenses/SDL3-hidapi.txt', 'ArcanumModern/licenses/SDL3_mixer-dr_libs.txt',
                   'ArcanumModern/licenses/fpattern.txt', 'ArcanumModern/licenses/zlib.txt',

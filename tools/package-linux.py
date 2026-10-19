@@ -50,7 +50,6 @@ def package(exe, build_dir, output):
              'Play Arcanum Modern.sh': (ROOT/'tools/linux/Play Arcanum Modern.sh').read_bytes(),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/linux/INSTALL.txt').read_bytes(),
              'ArcanumModern/README.md': (ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode(),
-             'ArcanumModern/docs/controls.md': (ROOT/'docs/controls.md').read_bytes(),
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
     movies = resources.movie_files(build_dir, 'linux')
     with tempfile.TemporaryDirectory(prefix='arcanum-elf-') as temporary:
