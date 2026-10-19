@@ -1529,6 +1529,52 @@ static int hit(float x,float y)
     return -1;
 }
 
+static void quickslot_hint(int slot,char* hint,size_t capacity)
+{
+    hint[0]=0;
+    if(slot<0 || slot>=10)return;
+    Hotkey* hk=sub_57F240(slot);
+    if(!hk || hk->type==HOTKEY_NONE)return;
+    char name[2048]="";
+    if(hk->type==HOTKEY_ITEM || hk->type==HOTKEY_ITEM_SPELL) {
+        int64_t item=hk->item_obj.obj;
+        if(!item || !obj_handle_is_valid(item))return;
+        /* Examine preserves identification rules and the installed translation. */
+        object_examine(item,player_get_local_pc_obj(),name);
+    } else if(hk->type==HOTKEY_SPELL && hk->data>=0 && hk->data<SPELL_COUNT)
+        SDL_strlcpy(name,spell_name(hk->data),sizeof(name));
+    else if(hk->type==HOTKEY_SKILL && hk->data>=0 && hk->data<4)
+        SDL_strlcpy(name,sub_57A700(hk->data),sizeof(name));
+    if(!*name)return;
+    snprintf(hint,capacity,"[%d] %s",(slot+1)%10,game_text(name));
+    if(hk->type==HOTKEY_ITEM_SPELL && hk->data>=0 && hk->data<SPELL_COUNT) {
+        SDL_strlcat(hint," · ",capacity);
+        SDL_strlcat(hint,game_text(spell_name(hk->data)),capacity);
+    }
+}
+
+static void draw_quickslot_hint(void)
+{
+    SDL_FRect anchor={0};int slot=-1;
+    if(native_panel()) {
+        slot=binding_slot_at(mouse_x,mouse_y);
+        if(slot>=0)anchor=binding_slots[slot];
+    } else if(hud) {
+        for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
+            if(buttons[i].action>=300 && buttons[i].action<310){slot=buttons[i].action-300;anchor=buttons[i].rect;}
+            break;
+        }
+    }
+    char hint[4096];quickslot_hint(slot,hint,sizeof(hint));if(!*hint)return;
+    float width=fminf(fminf(540,canvas_w-24),fmaxf(150,text_measure(1,hint)+28));
+    float xx=fmaxf(12,fminf(canvas_w-width-12,anchor.x+anchor.w/2-width/2));
+    SDL_FRect content={xx+14,0,width-28,0};
+    int lines=menu_paragraph(hint,content,0,GOLD);if(lines>4)lines=4;
+    float height=lines*27+18,yy=fmaxf(8,anchor.y-height-8);
+    SDL_FRect box={xx,yy,width,height};fill(box,(SDL_Color){19,14,10,245});outline(box,MUTED);
+    content.y=yy+9;content.h=height-18;menu_paragraph(hint,content,0,GOLD);
+}
+
 static void render_overlay(SDL_Renderer* target)
 {
     if(slide_ui_is_active())return;
@@ -1570,6 +1616,7 @@ static void render_overlay(SDL_Renderer* target)
         }
         break;
     }
+    if(!menu && !journal)draw_quickslot_hint();
     if(menu || journal || native_panel() || (hud && hud_region(mouse_x,mouse_y))) draw_art(0,(SDL_FRect){mouse_x,mouse_y,28,35},true);
     SDL_SetRenderDrawBlendMode(renderer,old_blend);
     SDL_SetRenderLogicalPresentation(renderer,old_w,old_h,old_mode);
