@@ -64,6 +64,91 @@ static void tactical_portrait(int64_t actor,SDL_FRect rect)
 }
 
 static bool tactical_active(void) {return combat_tactical_enabled() && combat_turn_based_is_active();}
+static struct {
+    bool moving;
+    int64_t target, x, y, dx, dy;
+    Uint64 started, unlock;
+    Uint32 buttons;
+    bool keys[SDL_SCANCODE_COUNT];
+} tactical_camera;
+
+bool modern_combat_input_blocked(void)
+{
+    if(!enabled || !tactical_active() || mainmenu_ui_is_active())return false;
+    int64_t actor=combat_turn_based_whos_turn_get();
+    return (actor!=tactical_actor && combat_player_controls(actor))
+        || tactical_camera.moving || SDL_GetTicks()<tactical_camera.unlock;
+}
+
+static void tactical_camera_focus(int64_t actor,bool notify)
+{
+    if(!actor || !obj_handle_is_valid(actor))return;
+    tactical_camera.target=actor;
+    location_origin_get(&tactical_camera.x,&tactical_camera.y);
+    location_calc_dist_from_screen_center(obj_field_int64_get(actor,OBJ_F_LOCATION),&tactical_camera.dx,&tactical_camera.dy);
+    tactical_camera.started=SDL_GetTicks();
+    tactical_camera.moving=true;
+    tactical_camera.unlock=0;
+    tactical_camera.buttons|=SDL_GetMouseState(NULL,NULL);
+    const bool* keys=SDL_GetKeyboardState(NULL);
+    for(int key=1;key<SDL_SCANCODE_COUNT;key++)
+        if(key!=SDL_SCANCODE_ESCAPE && keys[key])tactical_camera.keys[key]=true;
+    scroll_stop();
+    for(int button=TIG_MOUSE_BUTTON_LEFT;button<=TIG_MOUSE_BUTTON_MIDDLE;button++)tig_mouse_cancel_button(button);
+    pending_action=pressed_action=-1;click_captured=false;tactical_has_preview=false;
+    if(notify){
+        tig_sound_handle_t sound=gsound_play_sfx(SND_INTERFACE_BUTTON_LOW_RELEASE,1);
+        if(sound!=TIG_SOUND_HANDLE_INVALID)tig_sound_set_volume(sound,tig_sound_get_volume(sound)/3);
+    }
+}
+
+static void tactical_camera_tick(void)
+{
+    if(!tactical_camera.moving || mainmenu_ui_is_active())return;
+    if(!obj_handle_is_valid(tactical_camera.target)){
+        tactical_camera.moving=false;tactical_camera.unlock=0;return;
+    }
+    Uint64 elapsed=SDL_GetTicks()-tactical_camera.started;
+    double t=elapsed>=250?1.0:elapsed/250.0;
+    double eased=t*t*(3.0-2.0*t);
+    int64_t x,y;location_origin_get(&x,&y);
+    location_origin_scroll(tactical_camera.x+(int64_t)llround(tactical_camera.dx*eased)-x,
+        tactical_camera.y+(int64_t)llround(tactical_camera.dy*eased)-y);
+    iso_invalidate_rect(NULL);
+    if(elapsed>=250){
+        location_origin_set(obj_field_int64_get(tactical_camera.target,OBJ_F_LOCATION));
+        tactical_camera.moving=false;
+        tactical_camera.unlock=SDL_GetTicks()+500;
+    }
+}
+
+static bool tactical_camera_event(SDL_Event* event)
+{
+    if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP){
+        int key=event->key.scancode;
+        if(key>SDL_SCANCODE_UNKNOWN && key<SDL_SCANCODE_COUNT && tactical_camera.keys[key]){
+            if(event->type==SDL_EVENT_KEY_UP)tactical_camera.keys[key]=false;
+            return true;
+        }
+    }
+    if(event->type==SDL_EVENT_MOUSE_BUTTON_UP && (tactical_camera.buttons&SDL_BUTTON_MASK(event->button.button))){
+        tactical_camera.buttons&=~SDL_BUTTON_MASK(event->button.button);
+        return true;
+    }
+    if(!modern_combat_input_blocked())return false;
+    if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN){
+        tactical_camera.buttons|=SDL_BUTTON_MASK(event->button.button);
+        return true;
+    }
+    if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP){
+        int key=event->key.scancode;
+        if(key==SDL_SCANCODE_ESCAPE)return false;
+        if(event->type==SDL_EVENT_KEY_DOWN && key>SDL_SCANCODE_UNKNOWN && key<SDL_SCANCODE_COUNT)tactical_camera.keys[key]=true;
+        return true;
+    }
+    return event->type==SDL_EVENT_MOUSE_BUTTON_UP || event->type==SDL_EVENT_MOUSE_WHEEL;
+}
+
 static bool tactical_region(float x,float y)
 {
     return maintained_region(x,y) || party_region(x,y) || inside((SDL_FRect){(canvas_w-930)/2,10,930,66},x,y)
@@ -74,6 +159,7 @@ static void tactical_tick(void)
 {
     bool active=tactical_active();
     if(!active){
+        tactical_camera.moving=false;tactical_camera.unlock=0;
         if(tactical_was_active){tactical_portraits_clear();tactical_actor=0;tactical_has_preview=false;}
         tactical_count=0;tactical_pressed_actor=0;
         memset(tactical_order,0,sizeof(tactical_order));
@@ -85,18 +171,20 @@ static void tactical_tick(void)
     if(!tactical_was_active){tactical_line_count=0;tactical_page=0;tactical_log_open=false;}
     tactical_count=combat_turn_order(tactical_order,128);
     if(actor!=tactical_actor){
+        tactical_camera.moving=false;tactical_camera.unlock=0;
         tactical_actor=actor;tactical_preview_time=0;tactical_has_preview=false;
         selector=0;tactical_spell_page=0;
         if(!mainmenu_ui_is_active() && inven_ui_is_created())inven_ui_destroy();
         pending_action=-1;pressed_action=-1;button_count=0;
         if(!mainmenu_ui_is_active() && (intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_ITEM))intgame_mode_set(INTGAME_MODE_MAIN);
         for(int i=0;i<tactical_count;i++)if(tactical_order[i]==actor)tactical_page=i/10;
-        if(actor && combat_player_controls(actor) && !mainmenu_ui_is_active())location_origin_set(obj_field_int64_get(actor,OBJ_F_LOCATION));
+        if(actor && combat_player_controls(actor) && !mainmenu_ui_is_active())tactical_camera_focus(actor,true);
     }
     tactical_was_active=true;
+    tactical_camera_tick();
     if(SDL_GetTicks()-tactical_preview_time>=80){
         tactical_preview_time=SDL_GetTicks();
-        tactical_has_preview=!native_panel() && !native_menu() && !tactical_region(mouse_x,mouse_y)
+        tactical_has_preview=!modern_combat_input_blocked() && !native_panel() && !native_menu() && !tactical_region(mouse_x,mouse_y)
             && modern_combat_preview(&tactical_preview);
     }
 }
@@ -249,7 +337,7 @@ static bool tactical_action(int action)
     if(action==1111){if(tactical_spell_page<7)tactical_spell_page++;return true;}
     if(action==1106){tactical_log_open=!tactical_log_open;return true;}
     if(action>=1200 && action<1328){
-        int64_t obj=tactical_order_actor(action-1200);if(obj)location_origin_set(obj_field_int64_get(obj,OBJ_F_LOCATION));
+        int64_t obj=tactical_order_actor(action-1200);if(obj)tactical_camera_focus(obj,false);
         return true; /* Camera only: selecting a portrait never changes turn/AP. */
     }
     bool command=action==5 || action==6 || action==950 || action==951

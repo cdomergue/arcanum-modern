@@ -25,6 +25,7 @@ typedef struct { int type; struct { SDL_Scancode scancode; bool repeat; } key; }
 static bool ui_visible;
 static bool movie_playing;
 static bool tig_movie_is_playing(void) { return movie_playing; }
+static bool tactical_camera_event(SDL_Event* event) { (void)event; return false; }
 static int dispatches;
 static bool handle_ui_event(SDL_Event* event) {
     (void)event;

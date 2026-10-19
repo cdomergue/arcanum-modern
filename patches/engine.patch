@@ -760,7 +760,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
  #define _USE_MATH_DEFINES
  #include <math.h>
-@@ -195,6 +196,73 @@
+@@ -195,6 +196,74 @@
  static CombatCallbacks combat_callbacks;
  
  // 0x4B1D50
@@ -805,6 +805,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 +bool combat_input_ready(int64_t obj)
 +{
 +    AnimID current, fidget;
++    if(modern_combat_input_blocked())return false;
 +    if (!obj || obj != combat_input_actor() || !critter_is_active(obj)) return false;
 +    if (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & (OCF_PARALYZED | OCF_STUNNED)) return false;
 +    if (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_STONED) return false;
@@ -834,7 +835,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
-@@ -215,7 +283,7 @@
+@@ -215,7 +284,7 @@
          }
      }
  
@@ -843,7 +844,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
  
      settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
-@@ -282,7 +350,7 @@
+@@ -282,7 +351,7 @@
  // 0x4B2020
  bool combat_load(GameLoadInfo* load_info)
  {
@@ -852,7 +853,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      ObjectID oid;
      int64_t obj;
      ObjectNode* node;
-@@ -292,10 +360,12 @@
+@@ -292,10 +361,12 @@
      if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
      if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
  
@@ -865,7 +866,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_callbacks.field_4();
  
      if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
-@@ -307,6 +377,7 @@
+@@ -307,6 +378,7 @@
      }
  
      combat_action_points = saved_action_points;
@@ -873,7 +874,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
      qword_5FC238 = obj_pool_perm_lookup(oid);
-@@ -422,7 +493,7 @@
+@@ -422,7 +494,7 @@
  // 0x4B2410
  void fast_turn_based_changed(void)
  {
@@ -882,7 +883,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B24F0
-@@ -1813,6 +1884,7 @@
+@@ -1813,6 +1885,7 @@
              }
          }
  
@@ -890,7 +891,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -2857,12 +2929,19 @@
+@@ -2857,12 +2930,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -910,7 +911,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3037,7 @@
+@@ -2958,7 +3038,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -919,7 +920,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2997,7 +3076,11 @@
+@@ -2997,7 +3077,11 @@
  
      tig_debug_printf("Combat: TB: Action Points Available: %d.\n", combat_action_points);
  
@@ -932,7 +933,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3108,7 @@
+@@ -3025,6 +3109,7 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
@@ -940,7 +941,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3138,9 @@
+@@ -3054,8 +3139,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -952,7 +953,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3169,10 @@
+@@ -3084,9 +3170,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -965,7 +966,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3205,7 +3291,7 @@
+@@ -3205,7 +3292,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -974,7 +975,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3549,6 +3635,8 @@
+@@ -3549,6 +3636,8 @@
          return true;
      }
  
@@ -983,7 +984,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3741,6 +3829,12 @@
+@@ -3741,6 +3830,12 @@
          return false;
      }
  
@@ -1722,12 +1723,21 @@ diff --git a/src/main.c b/src/main.c
          tig_ping();
          gamelib_ping();
          iso_redraw();
-@@ -743,25 +775,25 @@
+@@ -698,6 +730,7 @@
+ // 0x401F50
+ void handle_mouse_scroll(void)
+ {
++    if(modern_combat_input_blocked()){scroll_stop();return;}
+     TigMouseState mouse_state;
+     int width;
+     int height;
+@@ -743,25 +776,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
 -    if (tig_kb_is_key_pressed(SDL_SCANCODE_UP)) {
 -        if (tig_kb_is_key_pressed(SDL_SCANCODE_LEFT)) {
++    if(modern_combat_input_blocked()){scroll_stop();return;}
 +    if ((tig_kb_is_key_pressed(SDL_SCANCODE_UP) || modern_camera_key(SDL_SCANCODE_W))) {
 +        if ((tig_kb_is_key_pressed(SDL_SCANCODE_LEFT) || modern_camera_key(SDL_SCANCODE_A))) {
              scroll_start(SCROLL_DIRECTION_UP_LEFT);
@@ -2351,12 +2361,16 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_button_state_get(intgame_secondary_buttons[btn].button_handle, &state);
      if (state != TIG_BUTTON_STATE_PRESSED) {
          opposite_btn = btn == INTGAME_SECONDARY_BUTTON_SPELLS
-@@ -2677,12 +2681,22 @@
+@@ -2677,12 +2681,26 @@
      TigMouseState mouse_state;
      TigMessage fake_mouse_move;
  
 -    pc_obj = player_get_local_pc_obj();
 -
++    if(modern_combat_input_blocked()
++        && (msg->type==TIG_MESSAGE_MOUSE
++            || (msg->type==TIG_MESSAGE_KEYBOARD && msg->data.keyboard.scancode!=SDL_SCANCODE_ESCAPE)))return;
++
 +    pc_obj = combat_input_actor();
 +
 +    if (!pc_obj) return;
@@ -2376,7 +2390,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      }
  
      if (msg->type == TIG_MESSAGE_KEYBOARD
-@@ -2699,6 +2713,7 @@
+@@ -2699,6 +2717,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -2384,7 +2398,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && sub_552050(msg->data.mouse.x, msg->data.mouse.y, &td)) {
                      if (td.is_loc) {
-@@ -2972,6 +2987,7 @@
+@@ -2972,6 +2991,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -2392,7 +2406,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && target_pick_at_screen_xy(msg->data.mouse.x, msg->data.mouse.y, &td, intgame_fullscreen)
                      && td.is_loc
-@@ -3117,7 +3133,7 @@
+@@ -3117,7 +3137,7 @@
      int64_t pc_obj;
      S4F2680 v1;
  
@@ -2401,7 +2415,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!combat_turn_based_is_active()
          || combat_turn_based_whos_turn_get() == pc_obj) {
-@@ -3261,16 +3277,18 @@
+@@ -3261,16 +3281,18 @@
      int anim;
      bool v26 = false;
  
@@ -2422,7 +2436,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,7 +3332,7 @@
+@@ -3314,7 +3336,7 @@
              }
          }
  
@@ -2431,7 +2445,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              switch (target_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
-@@ -3396,8 +3414,8 @@
+@@ -3396,8 +3418,8 @@
                      }
  
                      if (!td->is_loc
@@ -2442,7 +2456,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3712,10 +3730,12 @@
+@@ -3712,10 +3734,12 @@
          return;
      }
  
@@ -2456,7 +2470,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3801,7 @@
+@@ -3781,7 +3805,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -2465,7 +2479,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4051,6 +4071,8 @@
+@@ -4051,6 +4075,8 @@
  // 0x5506C0
  void iso_interface_window_set(RotatingWindowType window_type)
  {
@@ -2474,7 +2488,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4088,6 +4110,10 @@
+@@ -4088,6 +4114,10 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
  {
@@ -2485,7 +2499,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4126,7 @@
+@@ -4100,6 +4130,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -2493,7 +2507,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4190,16 @@
+@@ -4163,9 +4194,16 @@
      }
  }
  
@@ -2510,7 +2524,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4236,11 @@
+@@ -4202,6 +4240,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -2522,7 +2536,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4872,14 @@
+@@ -4833,14 +4876,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -2539,7 +2553,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4951,13 @@
+@@ -4912,13 +4955,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -2555,7 +2569,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -5888,6 +5927,8 @@
+@@ -5888,6 +5931,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
  {
@@ -2564,7 +2578,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = func;
      tc_show();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -5899,6 +5940,8 @@
+@@ -5899,6 +5944,8 @@
  // 0x553350
  void intgame_dialog_end(void)
  {
@@ -2573,7 +2587,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6239,6 +6282,15 @@
+@@ -6239,6 +6286,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -2589,7 +2603,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6334,7 @@
+@@ -6282,6 +6338,7 @@
              }
          }
      }
@@ -2597,7 +2611,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6626,7 @@
+@@ -6573,6 +6630,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -2605,7 +2619,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6665,16 @@
+@@ -6611,6 +6669,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -2622,7 +2636,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6859,11 @@
+@@ -6795,6 +6863,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -2634,7 +2648,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7681,7 @@
+@@ -7612,6 +7685,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -2642,7 +2656,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7710,7 @@
+@@ -7640,7 +7714,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -2651,7 +2665,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7854,7 @@
+@@ -7784,7 +7858,7 @@
          mes_file_entry.str,
          value);
  
@@ -2660,7 +2674,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8903,198 @@
+@@ -8833,3 +8907,198 @@
  
      follower_ui_show();
  }

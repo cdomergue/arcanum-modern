@@ -18,6 +18,11 @@ jobs:
           sudo apt-get install -y build-essential cmake ninja-build git python3 binutils unzip \
             libx11-dev libxext-dev libxrandr-dev libxi-dev libxinerama-dev libxcursor-dev \
             libasound2-dev libpulse-dev libxss-dev libxtst-dev libxfixes-dev libxkbcommon-dev libudev-dev
+      - name: Check tactical camera and input handling
+        run: |
+          python3 tests/test_tactical_camera.py
+          python3 tests/test_keyboard_capture.py
+          python3 tests/test_tactical_combat.py
       - name: Build and package Linux x64
         env:
           ARCANUM_BUILD_DIR: build/linux-x64

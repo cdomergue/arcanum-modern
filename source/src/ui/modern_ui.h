@@ -14,6 +14,7 @@ typedef struct ModernCombatPreview {
 } ModernCombatPreview;
 bool modern_combat_preview(ModernCombatPreview* preview);
 void modern_combat_sync(void);
+bool modern_combat_input_blocked(void);
 void modern_combat_log(int64_t object, const char* text);
 int modern_spell_selected(void);
 bool modern_spell_resources(int64_t actor, int spell, int* fatigue_cost);

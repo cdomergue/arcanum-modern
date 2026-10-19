@@ -45,6 +45,8 @@ typedef struct {int type;} TimeEvent;
 typedef struct {int delay;} DateTime;
 static ObjectNode turn={2};static ObjectNode* dword_5FC240=&turn;
 static bool tactical_enabled=true,combat_turn_based_active=true;
+static bool camera_blocked;
+static bool modern_combat_input_blocked(void){return camera_blocked;}
 static int combat_action_points=8,combat_required_action_points;
 static int64_t qword_5FC258;
 static int dword_5FC260,dword_5FC264;
@@ -84,6 +86,10 @@ checks=r'''
 int main(void){
  assert(combat_input_actor()==2&&player_get_local_pc_obj()==1);
  assert(combat_input_ready(2)&&!combat_input_ready(1)&&!combat_input_ready(3));
+ camera_blocked=true;
+ assert(!combat_input_ready(2));
+ assert(!combat_input_end_turn(2)&&advanced==0&&combat_action_points==8);
+ camera_blocked=false;
  int before=combat_action_points;
  for(int i=0;i<100;i++)assert(combat_input_actor()==2);
  assert(combat_action_points==before); /* inspecting/selecting never refills PA */

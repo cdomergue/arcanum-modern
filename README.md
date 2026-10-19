@@ -132,8 +132,9 @@ Hover an item, spell or skill and press **1–0** to assign a quick slot.
 the **star** marks favorites and the **pin** tracks a quest.
 
 Turn-based combat is the default for fresh installations. Each controllable ally
-acts during their own turn. Selecting a portrait moves the camera. A `~` on an
-action cost marks an estimate; the engine determines the final cost.
+acts during their own turn. The camera pans smoothly to the active character,
+with a brief input guard to prevent accidental actions. Selecting a portrait also moves the camera. A `~`
+on an action cost marks an estimate; the engine determines the final cost.
 
 ## Preferences and saves
 
@@ -533,12 +534,12 @@ in `modern-ui/.map-work/progress`. The optional Python validator can check a cac
 python3 tools/verify-map-cache.py /absolute/path/to/Arcanum/modern-ui/local-maps
 ```
 
-The older macOS developer exporter remains available through
+The macOS developer exporter is available through
 `tools/build-map-exporter.py` and `tools/generate-map-cache.py`. Standard packages
 include the native generator, not the generated images or commercial game assets.
 
 See [the detailed map guide](docs/local-map-cache.md) for export options and
-storage details. That guide is currently in French.
+storage details.
 
 ### GitHub releases
 

@@ -16,6 +16,10 @@
 #include "game/critter.h"
 #include "game/combat.h"
 #include "game/location.h"
+#include "game/gsound.h"
+#include "game/scroll.h"
+#include "game/snd.h"
+#include "ui/iso.h"
 #include "game/dialog.h"
 #include "game/hrp.h"
 #include "ui/charedit_ui.h"
@@ -1810,6 +1814,7 @@ static void save_settings(void)
 
 static void activate(int action)
 {
+    if(modern_combat_input_blocked())return;
     if((action>=2000 && action<2128) || action==2300 || action==2301){notebook_action(action);return;}
     if(maintained_action(action))return;
     if(party_action(action))return;
@@ -1847,6 +1852,7 @@ static bool handle_event(SDL_Event* event)
         return false;
     }
 
+    bool camera_consumed = tactical_camera_event(event);
     /* A key press belongs to the UI that consumed it, including its release.
      * Escape may close that UI before KEY_UP arrives; forwarding the release
      * would reopen the pause menu in the legacy game loop.
@@ -1855,7 +1861,7 @@ static bool handle_event(SDL_Event* event)
         if (event->type == SDL_EVENT_KEY_UP) captured_keys[key] = false;
         return true;
     }
-    bool consumed = handle_ui_event(event);
+    bool consumed = camera_consumed || handle_ui_event(event);
     if (consumed && event->type == SDL_EVENT_KEY_DOWN && valid_key) captured_keys[key] = true;
     return consumed;
 }
