@@ -32,6 +32,7 @@
 #include "game/level.h"
 #include "game/resistance.h"
 #include "game/player.h"
+#include "game/quest.h"
 #include "game/portrait.h"
 #include "game/skill.h"
 #include "game/spell.h"
@@ -73,7 +74,8 @@ typedef struct Button {
 typedef struct BookLine {
     char text[512];
     int style;
-    bool heading;
+    bool heading,entry_start;
+    int entry;
 } BookLine;
 
 static const SDL_Color GOLD = {210, 178, 105, 255};
@@ -133,6 +135,7 @@ static void panels_tick(void);
 static void draw_play_panels(void);
 static bool play_sheet(void);
 static const char* game_text(const char* source);
+static const char* tr(const char* fr,const char* en);
 static bool handle_event(SDL_Event* event);
 static bool handle_ui_event(SDL_Event* event);
 static void rebuild_book(void);
@@ -447,6 +450,8 @@ static void button(SDL_FRect rect, int action, const char* label, int icon, bool
     if(button_count<MAX_BUTTONS) buttons[button_count++]=(Button){rect,action,available};
 }
 
+#include "modern_notebook.inc"
+
 static void add_line(const char* text,int style,bool heading)
 {
     if(line_count==line_capacity) {
@@ -456,7 +461,8 @@ static void add_line(const char* text,int style,bool heading)
         lines=grown;line_capacity=capacity;
     }
     SDL_strlcpy(lines[line_count].text,text,sizeof(lines[line_count].text));
-    lines[line_count].style=style;lines[line_count].heading=heading;line_count++;
+    lines[line_count].style=style;lines[line_count].heading=heading;
+    lines[line_count].entry=current_entry;lines[line_count].entry_start=false;line_count++;
 }
 
 static void wrap_text(const char* input,int style)
@@ -514,19 +520,23 @@ static void fold(const char* src,char* dst,size_t size)
 static void rebuild_book(void)
 {
     char raw[32768],utf8[65536],haystack[65536],needle[256];
+    notebook_sync();
     line_count=0;matched_count=0;
     entry_count=modern_logbook_select(chapter);
     fold(search,needle,sizeof(needle));
     for(int i=0;i<entry_count;i++) {
         int style=modern_logbook_entry(i,raw,sizeof(raw));
+        current_entry=modern_logbook_id(i);
+        if(journal_favorites && journal_mark_index(chapter,current_entry)<0)continue;
         if(chapter==1 && ((quest_filter==1 && style!=1) || (quest_filter==2 && style!=2))) continue;
         from_game(raw,utf8,sizeof(utf8));
         fold(utf8,haystack,sizeof(haystack));
         if(*needle && !strstr(haystack,needle)) continue;
         if(!*utf8) continue;
         matched_count++;
-        wrap_text(utf8,style);
+        size_t first=line_count;wrap_text(utf8,style);if(line_count>first)lines[first].entry_start=true;
     }
+    current_entry=-1;
     if(line_count==0) add_line(*search?"Aucune entrée ne correspond à la recherche.":"Aucune entrée dans cette rubrique.",0,false);
     /* Keep a date heading with its following line, including on narrow screens. */
     BookLine* unpaged=lines;
@@ -537,10 +547,15 @@ static void rebuild_book(void)
             && line_count % lines_per_page == (size_t)(lines_per_page-1)) add_line("",0,false);
         if(!unpaged[i].text[0] && line_count % lines_per_page == 0) continue;
         add_line(unpaged[i].text,unpaged[i].style,unpaged[i].heading);
+        lines[line_count-1].entry=unpaged[i].entry;lines[line_count-1].entry_start=unpaged[i].entry_start;
     }
     free(unpaged);
     spread_count=(int)((line_count+2*lines_per_page-1)/(2*lines_per_page));
     if(spread_count<1) spread_count=1;
+    if(journal_jump>=0){
+        for(size_t i=0;i<line_count;i++)if(lines[i].entry==journal_jump){spread=(int)i/(2*lines_per_page);break;}
+        journal_jump=-1;
+    }
     if(spread>=spread_count) spread=spread_count-1;
     if(spread<0) spread=0;
     dirty=false;
@@ -564,13 +579,14 @@ static void update_geometry(void)
     float width=fminf(1270,canvas_w-56);
     panel=(SDL_FRect){(canvas_w-width)/2,90,width,650};
     book=(SDL_FRect){panel.x+219,panel.y+65,panel.w-251,panel.h-118};
-    text_width=(book.w-104)/2-32;
+    text_width=(book.w-104)/2-70;
     lines_per_page=(int)((book.h-115)/(body_size*1.48f));
     if(lines_per_page<1) lines_per_page=1;
 }
 
 static void draw_journal(void)
 {
+    notebook_sync();journal_target_count=0;
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){8,6,4,160});
     frame(panel);
     text_draw(3,"Journal",panel.x+26,panel.y+17,GOLD);
@@ -625,6 +641,12 @@ static void draw_journal(void)
             else if(l->style==3) c=(SDL_Color){121,44,36,255};
             float x=pages[side].x+22,y=book.y+80+row*body_size*1.48f;
             text_draw(l->heading?0:1,l->text,x,y,c);
+            if(l->entry_start && l->entry>=0 && journal_target_count<64){
+                int index=journal_target_count++;journal_targets[index]=(JournalMark){chapter,l->entry};
+                float bx=pages[side].x+pages[side].w-57;
+                button((SDL_FRect){bx,y,23,23},2000+index*2,"*",-1,journal_mark_index(chapter,l->entry)>=0,true);
+                if(chapter==1)button((SDL_FRect){bx+26,y,23,23},2001+index*2,"o",-1,tracked_quest==l->entry,l->style==1);
+            }
             if(l->style==4 && !l->heading) rule(x,y+body_size*.65f,text_measure(1,l->text),c);
         }
         char number[32];snprintf(number,sizeof(number),"- %d -",spread*2+side+1);
@@ -634,6 +656,7 @@ static void draw_journal(void)
     button((SDL_FRect){book.x+book.w-130,panel.y+panel.h-44,110,28},205,"Suivantes >",-1,false,spread+1<spread_count);
     char footer[100];snprintf(footer,sizeof(footer),"%d entrée%s   ·   %d / %d",matched_count,matched_count>1?"s":"",spread+1,spread_count);
     centered(0,footer,book.x+book.w/2,panel.y+panel.h-40,GOLD);
+    button((SDL_FRect){book.x+355,panel.y+panel.h+14,140,30},2300,tr("Favoris (*)","Favorites (*)"),-1,journal_favorites,true);
     if(chapter==1) {
         const char* filters[]={"Toutes","En cours","Terminées"};
         for(int i=0;i<3;i++) button((SDL_FRect){book.x+35+i*103,panel.y+panel.h+14,96,30},210+i,filters[i],-1,quest_filter==i,true);
@@ -944,6 +967,8 @@ static void text_in_button(SDL_FRect rect,int action,const char* label,bool sele
     else menu_paragraph(label,(SDL_FRect){rect.x+12,rect.y+4,rect.w-24,rect.h-6},0,available?GOLD:MUTED);
 }
 
+#include "modern_keys.inc"
+
 static void draw_character_menu(void)
 {
     ModernCharacter c;if(!modern_mainmenu_character(&c,description_tab))return;
@@ -1164,6 +1189,8 @@ static void draw_menu(void)
     button((SDL_FRect){x+30,y+140,182,45},407,"Graphismes",-1,options_tab<0,!confirming);
     const int tab_actions[]={406,408,409};
     for(int i=0;i<3;i++)button((SDL_FRect){x+30,y+197+i*57,182,45},tab_actions[i],menu_text(4000+i),-1,options_tab==i,!confirming);
+    button((SDL_FRect){x+30,y+368,182,45},418,tr("Raccourcis","Key bindings"),-1,options_tab==3,!confirming);
+    if(options_tab==3){draw_key_options(x,y,w,h);return;}
     if(options_tab>=0) {
         float ox=x+246,ow=w-280,cw=(ow-24)/2;
         for(int i=0;i<8;i++) {
@@ -1392,7 +1419,7 @@ void modern_ui_menu_tick(void)
             int selected=sub_5496C0(type)->selected_index;
             save_page=selected>=0?selected/8:0;
         }
-        options_tab=-1;
+        options_tab=-1;key_edit=-1;
         if (type==MM_WINDOW_OPTIONS) modern_graphics_begin();
         menu_previous_type=type;
         button_count=0;
@@ -1405,6 +1432,7 @@ void modern_ui_menu_tick(void)
         if(options_tab>=0 && !modern_graphics.deadline)modern_options_adjust((action-430)/2,action%2?1:-1);
         return;
     }
+    if(type==MM_WINDOW_OPTIONS && key_options_action(action))return;
     if(creation_menu_action(action))return;
     bool locked=type==MM_WINDOW_MAINMENU_IN_PLAY_LOCKED;
     menu_suspended=true; /* Classic confirmation dialogs must remain interactive. */
@@ -1442,9 +1470,35 @@ void modern_ui_menu_tick(void)
 #include "modern_combat.inc"
 #include "modern_party.inc"
 
+static void draw_quest_tracker(void)
+{
+    if(journal || native_panel() || tactical_active() || !hud)return;
+    notebook_sync();if(tracked_quest<0)return;
+    if(!tracked_refresh || SDL_GetTicks()-tracked_refresh>2000){
+        tracked_refresh=SDL_GetTicks();tracked_text[0]=0;
+        int64_t pc=player_get_local_pc_obj();QuestLogbookEntry quests[2000];
+        int count=quest_get_logbook_data(pc,quests);
+        for(int i=0;i<count;i++)if(quests[i].num==tracked_quest){
+            if(quests[i].state==QUEST_STATE_ACCEPTED || quests[i].state==QUEST_STATE_ACHIEVED){
+                char raw[32768];quest_copy_description(pc,tracked_quest,raw,sizeof(raw));
+                from_game(raw,tracked_text,sizeof(tracked_text));
+            }
+            break;
+        }
+    }
+    if(!*tracked_text)return;
+    SDL_FRect r={canvas_w-335,85,320,100};
+    fill(r,(SDL_Color){19,14,10,205});outline(r,MUTED);
+    text_draw(0,tr("Quête suivie","Tracked quest"),r.x+10,r.y+7,GOLD);
+    menu_paragraph(tracked_text,(SDL_FRect){r.x+10,r.y+29,r.w-20,64},0,GOLD);
+    if(button_count<MAX_BUTTONS)buttons[button_count++]=(Button){r,2301,true};
+}
+
+
 static bool hud_region(float x,float y)
 {
     if(party_region(x,y))return true;
+    if(!tactical_active() && tracked_quest>=0 && *tracked_text && inside((SDL_FRect){canvas_w-335,85,320,100},x,y))return true;
     if(tactical_active())return tactical_region(x,y);
     return inside((SDL_FRect){(canvas_w-930)/2,10,930,60},x,y)
         || inside((SDL_FRect){(canvas_w-980)/2,canvas_h-126,980,116},x,y);
@@ -1480,9 +1534,22 @@ static void render_overlay(SDL_Renderer* target)
         if(!hud_region(mouse_x,mouse_y))draw_world_hover();
         if(hud){if(tactical_active()){draw_tactical_preview();draw_tactical_hud();}else draw_hud();}
         draw_party();
+        draw_quest_tracker();
         if(journal) draw_journal();
         draw_play_panels();
         draw_binding_bar();
+    }
+    if(key_edit<0)for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
+        int action=buttons[i].action,binding=key_for_action(action);char hint[256]="";
+        if(binding>=0)snprintf(hint,sizeof(hint),"%s [%s]",key_label(binding),key_name(binding));
+        else if(action>=2000 && action<2128)SDL_strlcpy(hint,(action%2)?tr("Activer / arrêter le suivi de cette quête","Track / untrack this quest"):tr("Ajouter / retirer des favoris","Add / remove favorite"),sizeof(hint));
+        if(*hint) {
+            float width=fminf(450,text_measure(0,hint)+24),xx=fminf(canvas_w-width-8,fmaxf(8,mouse_x-width/2));
+            float yy=buttons[i].rect.y>canvas_h/2?buttons[i].rect.y-34:buttons[i].rect.y+buttons[i].rect.h+6;
+            fill((SDL_FRect){xx,yy,width,28},(SDL_Color){19,14,10,245});outline((SDL_FRect){xx,yy,width,28},MUTED);
+            text_compact(hint,xx+12,yy+6,width-24,true,GOLD);
+        }
+        break;
     }
     if(menu || journal || native_panel() || (hud && hud_region(mouse_x,mouse_y))) draw_art(0,(SDL_FRect){mouse_x,mouse_y,28,35},true);
     SDL_SetRenderDrawBlendMode(renderer,old_blend);
@@ -1506,6 +1573,7 @@ static void save_settings(void)
 
 static void activate(int action)
 {
+    if((action>=2000 && action<2128) || action==2300 || action==2301){notebook_action(action);return;}
     if(party_action(action))return;
     if(tactical_action(action))return;
     if(panels_action(action))return;
@@ -1561,7 +1629,9 @@ static bool modern_camera_enabled(void)
 bool modern_camera_key(int scancode)
 {
     if(!modern_camera_enabled() || scancode<0 || scancode>=SDL_SCANCODE_COUNT)return false;
-    return SDL_GetKeyboardState(NULL)[scancode];
+    const int directions[]={SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D};
+    for(int i=0;i<4;i++)if(scancode==directions[i])return key_binding[KB_UP+i] && SDL_GetKeyboardState(NULL)[key_binding[KB_UP+i]];
+    return false;
 }
 
 static bool handle_ui_event(SDL_Event* event)
@@ -1600,6 +1670,7 @@ static bool handle_ui_event(SDL_Event* event)
     }
     if(menu) {
         MainMenuWindowType type=mainmenu_ui_window_type_get();
+        if(type==MM_WINDOW_OPTIONS && key_options_event(event))return true;
         if(!confirming_menu && event->type==SDL_EVENT_TEXT_INPUT && name_focused) {
             menu_name_input(event->text.text,false);return true;
         }
@@ -1670,26 +1741,28 @@ static bool handle_ui_event(SDL_Event* event)
                     if(n) {do {n--;} while(n>0 && ((unsigned char)search[n]&0xC0)==0x80);search[n]=0;dirty=true;spread=0;}
                 } else if(searching && key==SDL_SCANCODE_RETURN) search_focus(false);
                 else if(!searching) {
-                    if(key==SDL_SCANCODE_J || key==SDL_SCANCODE_L) pending_action=200;
+                    if(key_is(KB_JOURNAL,key)) pending_action=200;
                     if(key==SDL_SCANCODE_RIGHT || key==SDL_SCANCODE_PAGEDOWN) pending_action=205;
                     if(key==SDL_SCANCODE_LEFT || key==SDL_SCANCODE_PAGEUP) pending_action=204;
                 }
             }
             return true;
         }
-        if(modern_camera_enabled() && (key==SDL_SCANCODE_W || key==SDL_SCANCODE_A || key==SDL_SCANCODE_S || key==SDL_SCANCODE_D))return true;
-        if(tactical_active() && !native_panel() && (key==SDL_SCANCODE_E || key==SDL_SCANCODE_SPACE)) {
-            if(down && !event->key.repeat){tactical_pressed_actor=combat_input_actor();pending_action=1100;}return true;
+        if(!(event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) && !SDL_TextInputActive(window)) {
+            for(int i=KB_UP;i<KB_COUNT;i++)if(key_is(i,key))return modern_camera_enabled();
+            const int actions[]={2,0,1,3,6,5,8,9,951,950,1100};
+            for(int i=0;i<KB_UP;i++)if(key_is(i,key)) {
+                if(down && !event->key.repeat && !native_panel() && intgame_mode_get()!=INTGAME_MODE_DIALOG) {
+                    tactical_pressed_actor=combat_input_actor();pending_action=actions[i];
+                    if(tactical_active() && i==KB_INVENTORY)pending_action=1104;
+                    if(tactical_active() && i==KB_CHARACTER)pending_action=1105;
+                    if(i==KB_END && !tactical_active())pending_action=-1;
+                }
+                return true;
+            }
+            /* Reassigned keys must not fall through to their old engine action. */
+            for(int i=0;i<KB_UP;i++)if(key_defaults[i]==key)return true;
         }
-        if(!native_panel() && (key==SDL_SCANCODE_M || key==SDL_SCANCODE_K)) {
-            if(down && !event->key.repeat)pending_action=key==SDL_SCANCODE_M?6:5;
-            return true;
-        }
-        if(!native_panel() && key==SDL_SCANCODE_I) {
-            if(down && !event->key.repeat)pending_action=tactical_active()?1104:2;
-            return true;
-        }
-        if(key==SDL_SCANCODE_J) {if(down && !event->key.repeat) pending_action=0;return true;}
     }
     return false;
 }
@@ -1719,6 +1792,7 @@ bool modern_ui_init(void)
     if(!book_font_data || !heading_font_data) {modern_ui_exit();return false;}
     FILE* settings=fopen("modern-ui/settings.ini","r");
     if(settings) {int n;if(fscanf(settings,"TextSize=%d",&n)==1 && n>=16 && n<=26) body_size=n;fclose(settings);}
+    key_load();
     update_geometry();
     if(!fonts[0].texture || !fonts[1].texture || !fonts[2].texture || !fonts[3].texture) {modern_ui_exit();return false;}
     wood_texture=make_material(false);paper_texture=make_material(true);

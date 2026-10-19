@@ -30,6 +30,8 @@
 !/source/src/ui/modern_ui.h
 !/source/src/ui/modern_panels.inc
 !/source/src/ui/modern_sheet.inc
+!/source/src/ui/modern_keys.inc
+!/source/src/ui/modern_notebook.inc
 !/source/src/ui/modern_combat.inc
 !/source/src/ui/modern_party.inc
 !/source/src/ui/modern_graphics.c

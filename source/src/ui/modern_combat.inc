@@ -133,12 +133,20 @@ static void draw_tactical_preview(void)
     const char* action=p->kind==0?tactical_text(TC_MOVE):p->kind==1?tactical_text(TC_ATTACK):game_text(spell_name(modern_spell_selected()));
     /* Movement is a quote: the original animation stack can charge a partial
      * first/last tile differently from the geometric path. */
-    snprintf(line,sizeof(line),"%s  ·  %s %s%d %s",action,game_text(modern_intgame_text(15)),p->count>1?"≈ ":"",p->cost,tactical_text(TC_AP));
-    if(!p->in_range)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_RANGE),sizeof(line));
-    else if(!p->reachable)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_BLOCKED),sizeof(line));
-    if(p->chance>=0){char chance[64];snprintf(chance,sizeof(chance),"  ·  %s %d%%",game_text(modern_intgame_text(20)),p->chance);SDL_strlcat(line,chance,sizeof(line));}
-    if(p->kind==1 && p->count>1)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_AFTER_MOVE),sizeof(line));
-    if(p->fatigue)SDL_strlcat(line,"  ·  ",sizeof(line)),SDL_strlcat(line,tactical_text(TC_FATIGUE),sizeof(line));
+    snprintf(line,sizeof(line),"%s  ·  %s %s%d %s",action,game_text(modern_intgame_text(15)),p->count>1?"~ ":"",p->cost,tactical_text(TC_AP));
+    int remaining=combat_action_points_get()-p->cost;
+    char budget[120];snprintf(budget,sizeof(budget),"  ·  %s %s%d %s",tr("Restants","Remaining"),p->count>1?"~":"",remaining>0?remaining:0,tactical_text(TC_AP));
+    SDL_strlcat(line,budget,sizeof(line));
+    char detail[512]="";
+    if(!p->in_range)SDL_strlcat(detail,tactical_text(TC_RANGE),sizeof(detail));
+    else if(!p->reachable)SDL_strlcat(detail,tactical_text(TC_BLOCKED),sizeof(detail));
+    if(p->blocked)SDL_strlcat(detail,tr("  ·  Ligne de vue bloquée","  ·  Line of sight blocked"),sizeof(detail));
+    if(!p->resources)SDL_strlcat(detail,tr("  ·  Fatigue insuffisante","  ·  Insufficient fatigue"),sizeof(detail));
+    else if(p->reachable && !p->affordable)SDL_strlcat(detail,tr("  ·  PA insuffisants","  ·  Insufficient AP"),sizeof(detail));
+    if(p->range>0){snprintf(budget,sizeof(budget),"  ·  %s %d",tr("Portée","Range"),p->range);SDL_strlcat(detail,budget,sizeof(detail));}
+    if(p->chance>=0){snprintf(budget,sizeof(budget),"  ·  %s %d%%",game_text(modern_intgame_text(20)),p->chance);SDL_strlcat(detail,budget,sizeof(detail));}
+    if(p->kind==1 && p->count>1)SDL_strlcat(detail,"  ·  ",sizeof(detail)),SDL_strlcat(detail,tactical_text(TC_AFTER_MOVE),sizeof(detail));
+    if(p->fatigue)SDL_strlcat(detail,"  ·  ",sizeof(detail)),SDL_strlcat(detail,tactical_text(TC_FATIGUE),sizeof(detail));
     char health[1200]="";
     /* Exact party health is useful while aiming, including a one-point deficit.
      * Read the current engine values; do not predict healing or reveal enemies. */
@@ -150,12 +158,13 @@ static void draw_tactical_preview(void)
         snprintf(health,sizeof(health),"%s  ·  %s : %d / %d",game_text(name),character_text(106),current,maximum);
         if(current<maximum){char deficit[40];snprintf(deficit,sizeof(deficit),"  (−%d)",maximum-current);SDL_strlcat(health,deficit,sizeof(health));}
     }
-    float height=*health?55:31;
-    float width=fminf(900,fmaxf(text_measure(0,line),text_measure(0,health))+42);
+    float height=31+(*health?24:0)+(*detail?24:0);
+    float width=fminf(900,fmaxf(text_measure(0,detail),fmaxf(text_measure(0,line),text_measure(0,health)))+42);
     float x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(canvas_h-137-height,mouse_y+36);
     fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,225});outline((SDL_FRect){x,y,width,height},p->affordable?green:red);
     text_compact(line,x+10,y+6,width-20,false,p->affordable?GOLD:red);
-    if(*health)text_compact(health,x+10,y+30,width-20,false,GOLD);
+    if(*detail)text_compact(detail,x+10,y+30,width-20,false,p->affordable?MUTED:red);
+    if(*health)text_compact(health,x+10,y+30+(*detail?24:0),width-20,false,GOLD);
 }
 static void tactical_button(SDL_FRect r,int action,const char* label,bool selected,bool available)
 {
@@ -196,10 +205,13 @@ static void draw_tactical_hud(void)
     char points[120];int max=stat_level_get(actor,STAT_SPEED);if(max<5)max=5;
     snprintf(points,sizeof(points),"%s  %d / %d",tactical_text(TC_AP),combat_action_points_get(),max);
     text_draw(1,points,x+165,y+32,GOLD);
+    bool preview=tactical_has_preview && tactical_preview.actor==actor && !native_panel() && !tactical_region(mouse_x,mouse_y);
+    int after=preview?combat_action_points_get()-tactical_preview.cost:combat_action_points_get();
+    if(preview){char next[96];snprintf(next,sizeof(next),"%s %s%d %s",tr("Après :","After:"),tactical_preview.count>1?"~":"",after>0?after:0,tactical_text(TC_AP));text_compact(next,x+350,y+35,185,false,tactical_preview.affordable?GOLD:(SDL_Color){236,128,95,255});}
     if(!ready)text_compact(tactical_text(owned?TC_BUSY:TC_WAIT),x+350,y+35,185,false,MUTED);
     int pa=combat_action_points_get();
     int cells=max>30?30:max;
-    for(int i=0;i<cells;i++)fill((SDL_FRect){x+165+i*370.0f/cells,y+62,370.0f/cells-3,8},i*max<pa*cells?(SDL_Color){126,173,108,255}:(SDL_Color){57,49,35,255});
+    for(int i=0;i<cells;i++)fill((SDL_FRect){x+165+i*370.0f/cells,y+62,370.0f/cells-3,8},i*max<pa*cells?(preview && i*max>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
     const int ids[]={1103,6,5,1104};
     const char* names[]={tactical_text(TC_ATTACK),game_text(modern_intgame_text(1000)),game_text(modern_intgame_text(1001)),game_text(modern_intgame_text(1006))};
     for(int i=0;i<4;i++)tactical_button((SDL_FRect){x+100+i*112,y+82,106,25},ids[i],names[i],false,ready);
@@ -214,7 +226,7 @@ static void draw_tactical_hud(void)
     }
     tactical_button((SDL_FRect){x+550,y+83,210,24},1106,tactical_text(TC_LOG),tactical_log_open,true);
     tactical_button((SDL_FRect){x+775,y+18,125,56},1100,tactical_text(TC_END),false,ready);
-    centered(0,"[E / Space]",x+837,y+84,MUTED);
+    centered(0,key_name(KB_END),x+837,y+84,MUTED);
     if(*message_text && SDL_GetTicks()-message_time<8000){
         float width=fminf(940,text_measure(0,message_text)+32);
         SDL_FRect r={(canvas_w-width)/2,y-39,width,30};
@@ -284,6 +296,7 @@ static void draw_tactical_spells(void)
         draw_art(spell_icon(spell),(SDL_FRect){r.x+8,r.y+10,44,44},true);
         text_compact(game_text(spell_name(spell)),r.x+62,r.y+10,r.w-72,false,available?GOLD:MUTED);
         char price[100];snprintf(price,sizeof(price),"4 %s  ·  %s %d",tactical_text(TC_AP),game_text(modern_intgame_text(44)),cost);
+        if(!available)snprintf(price,sizeof(price),"%s",!ready?tactical_text(TC_BUSY):!ap?tr("PA insuffisants","Insufficient AP"):tr("Fatigue insuffisante","Insufficient fatigue"));
         text_compact(price,r.x+62,r.y+39,r.w-72,false,available?GOLD:(SDL_Color){210,134,103,255});
     }
     if(!count)centered(1,"—",canvas_w/2,y+111,MUTED);

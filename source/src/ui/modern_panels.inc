@@ -17,6 +17,37 @@ static int64_t inventory_hover,inventory_detail_object;
 static int inventory_detail_kind,inventory_detail_scroll,inventory_detail_max;
 static ModernDetails inventory_details;
 static SDL_FRect inventory_detail_rect;
+static char inventory_query[128];
+static int inventory_filter,inventory_compare_scroll,inventory_compare_max;
+static bool inventory_searching,inventory_compare=true;
+static SDL_FRect inventory_compare_rect;
+static bool inventory_quick_release;
+static int inventory_quick_x,inventory_quick_y;
+static SDL_FRect inventory_quick_region;
+static int64_t inventory_quick_item;
+static void inventory_search_focus(bool on)
+{
+    inventory_searching=on;if(on)SDL_StartTextInput(window);else SDL_StopTextInput(window);
+}
+static bool inventory_match(int64_t obj)
+{
+    if(!obj || !obj_handle_is_valid(obj))return false;
+    int type=obj_field_int32_get(obj,OBJ_F_TYPE);
+    int category=type==OBJ_TYPE_WEAPON?1:type==OBJ_TYPE_ARMOR?2:
+        (type==OBJ_TYPE_FOOD || type==OBJ_TYPE_SCROLL)?3:4;
+    if(inventory_filter && inventory_filter!=category)return false;
+    if(*inventory_query){
+        char raw[2048],name[4096],needle[256];object_examine(obj,player_get_local_pc_obj(),raw);
+        fold(game_text(raw),name,sizeof(name));fold(inventory_query,needle,sizeof(needle));
+        if(!strstr(name,needle))return false;
+    }
+    return true;
+}
+static void inventory_query_edit(const char* text,bool backspace)
+{
+    if(backspace){size_t n=strlen(inventory_query);if(n){do{n--;}while(n && ((unsigned char)inventory_query[n]&0xc0)==0x80);inventory_query[n]=0;}}
+    else if(strlen(inventory_query)+strlen(text)<sizeof(inventory_query))SDL_strlcat(inventory_query,text,sizeof(inventory_query));
+}
 static bool map_pressed,map_dragged;
 static PanelRegion map_drag_region;
 static float map_start_x,map_start_y,map_last_x,map_last_y,map_pan_x,map_pan_y;
@@ -77,7 +108,7 @@ static QuickBinding binding_hover(void)
             int x=r->x+(mouse_x-r->rect.x)*r->w/r->rect.w;
             int y=r->y+(mouse_y-r->rect.y)*r->h/r->rect.h;
             int64_t item=modern_inventory_at(x,y),owner;
-            if(item && item_parent(item,&owner) && owner==result.actor) {
+            if(item && (!r->w || inventory_match(item)) && item_parent(item,&owner) && owner==result.actor) {
                 int type=obj_field_int32_get(item,OBJ_F_TYPE);
                 if(type!=OBJ_TYPE_GOLD && type!=OBJ_TYPE_AMMO) {result.type=HOTKEY_ITEM;result.item=item;}
             }
@@ -190,7 +221,7 @@ static void inventory_grid(SDL_FRect r,int legacy_x,int legacy_y,int rows,int sc
     int64_t seen[120];int seen_count=0;
     for(int row=0;row<rows;row++)for(int col=0;col<10;col++) {
         int64_t obj=modern_inventory_at(legacy_x+col*32+16,legacy_y+row*32+16);
-        if(!obj || obj==inven_ui_drag_item_obj_get())continue;
+        if(!obj || obj==inven_ui_drag_item_obj_get() || !inventory_match(obj))continue;
         bool duplicate=false;for(int k=0;k<seen_count;k++)if(seen[k]==obj)duplicate=true;
         if(duplicate)continue;seen[seen_count++]=obj;
         int loc=item_inventory_location_get(obj),iw,ih;item_inv_icon_size(obj,&iw,&ih);
@@ -239,32 +270,32 @@ static void equipment_slots(SDL_FRect r,int side,int mode)
 }
 static void inventory_detail_update(int64_t pc,int64_t object,int kind)
 {
-    if(object!=inventory_detail_object || kind!=inventory_detail_kind)inventory_detail_scroll=0;
+    if(object!=inventory_detail_object || kind!=inventory_detail_kind)inventory_detail_scroll=inventory_compare_scroll=0;
     inventory_detail_object=object;inventory_detail_kind=kind;
     modern_inventory_details(pc,object,kind,&inventory_details);
 }
-static void inventory_detail_draw(void)
+static int inventory_detail_card(SDL_FRect r,ModernDetails* details,int scroll,int action)
 {
-    SDL_FRect r=inventory_detail_rect;
     fill(r,(SDL_Color){19,16,12,245});outline(r,(SDL_Color){130,100,57,255});
-    if(!inventory_details.count)return;
-    if(inventory_details.icon>=0)draw_art(inventory_details.icon,(SDL_FRect){r.x+18,r.y+18,76,76},true);
-    menu_paragraph(game_text(inventory_details.lines[0]),(SDL_FRect){r.x+110,r.y+20,r.w-132,81},0,GOLD);
+    if(!details->count)return 0;
+    if(details->icon>=0)draw_art(details->icon,(SDL_FRect){r.x+18,r.y+18,76,76},true);
+    menu_paragraph(game_text(details->lines[0]),(SDL_FRect){r.x+110,r.y+20,r.w-132,81},0,GOLD);
     rule(r.x+18,r.y+110,r.w-36,MUTED);
     char body[40000]={0};
-    for(int i=1;i<inventory_details.count;i++) {
-        SDL_strlcat(body,game_text(inventory_details.lines[i]),sizeof(body));
+    for(int i=1;i<details->count;i++) {
+        SDL_strlcat(body,game_text(details->lines[i]),sizeof(body));
         SDL_strlcat(body,"\n",sizeof(body));
     }
     SDL_FRect content={r.x+20,r.y+126,r.w-58,r.h-150};
     int rows=menu_paragraph(body,(SDL_FRect){0,0,content.w,0},0,GOLD);
-    inventory_detail_max=rows-(int)(content.h/27);if(inventory_detail_max<0)inventory_detail_max=0;
-    if(inventory_detail_scroll>inventory_detail_max)inventory_detail_scroll=inventory_detail_max;
-    menu_paragraph(body,content,inventory_detail_scroll,GOLD);
-    if(inventory_detail_max) {
-        menu_button((SDL_FRect){r.x+r.w-36,r.y+125,28,38},770,"^",inventory_detail_scroll>0);
-        menu_button((SDL_FRect){r.x+r.w-36,r.y+r.h-55,28,38},771,"v",inventory_detail_scroll<inventory_detail_max);
+    int maximum=rows-(int)(content.h/27);if(maximum<0)maximum=0;
+    if(scroll>maximum)scroll=maximum;
+    menu_paragraph(body,content,scroll,GOLD);
+    if(maximum) {
+        menu_button((SDL_FRect){r.x+r.w-36,r.y+125,28,38},action,"^",scroll>0);
+        menu_button((SDL_FRect){r.x+r.w-36,r.y+r.h-55,28,38},action+1,"v",scroll<maximum);
     }
+    return maximum;
 }
 static void draw_inventory(void)
 {
@@ -275,7 +306,13 @@ static void draw_inventory(void)
     centered(3,actor_name(inv.pc),canvas_w/2,y+22,GOLD);
     bool single=inv.mode==INVEN_UI_MODE_INVENTORY || inv.mode>=INVEN_UI_MODE_NPC_IDENTIFY;
     float left=x+25,right=x+440,cw=360;
-    inventory_detail_rect=(SDL_FRect){x+830,y+120,w-855,610};
+    inventory_detail_rect=(SDL_FRect){x+830,y+182,w-855,548};
+    SDL_FRect query={x+830,y+83,w-855,34};
+    button(query,2400,"",-1,inventory_searching,true);
+    text_compact(*inventory_query?inventory_query:tr("Rechercher un objet...","Find an item..."),query.x+10,query.y+8,query.w-20,false,GOLD);
+    const char* filters[]={tr("Tous","All"),tr("Armes","Weapons"),tr("Armures","Armor"),tr("Consomm.","Consumables"),tr("Autres","Other")};
+    for(int i=0;i<5;i++)button((SDL_FRect){query.x+i*(query.w+4)/5,y+127,(query.w-16)/5,34},2401+i,filters[i],-1,inventory_filter==i,true);
+    button((SDL_FRect){right,y+688,cw,32},2406,tr("Comparer l'équipement","Compare equipment"),-1,inventory_compare,true);
     char info[320];snprintf(info,sizeof(info),"%s : %d / %d   ·   %s : %d",game_text(modern_inventory_text(9)),item_total_weight(inv.pc),stat_level_get(inv.pc,STAT_CARRY_WEIGHT),game_text(stat_name(STAT_SPEED)),stat_level_get(inv.pc,STAT_SPEED));
     text_draw(0,info,right,y+93,MUTED);
     char gold[80];snprintf(gold,sizeof(gold),"%d",item_gold_get(inv.pc));
@@ -332,7 +369,24 @@ static void draw_inventory(void)
     }
     if(inventory_hover)inventory_detail_update(inv.pc,inventory_hover,0);
     else if(!inventory_details.count)inventory_detail_update(inv.pc,inv.pc,1);
-    inventory_detail_draw();
+    int64_t equipped=0;
+    if(inventory_compare && inventory_detail_kind==0 && inventory_detail_object && obj_handle_is_valid(inventory_detail_object)) {
+        int slot=item_location_get(inventory_detail_object);
+        if(slot>=FIRST_WEAR_INV_LOC && slot<=LAST_WEAR_INV_LOC)equipped=item_wield_get(inv.pc,slot);
+        if(equipped==inventory_detail_object)equipped=0;
+    }
+    SDL_FRect primary=inventory_detail_rect;inventory_compare_rect=(SDL_FRect){0};
+    if(equipped)primary.h=(primary.h-34)/2;
+    inventory_detail_max=inventory_detail_card(primary,&inventory_details,inventory_detail_scroll,770);
+    if(inventory_detail_scroll>inventory_detail_max)inventory_detail_scroll=inventory_detail_max;
+    if(equipped){
+        ModernDetails comparison;modern_inventory_details(inv.pc,equipped,0,&comparison);
+        inventory_compare_rect=(SDL_FRect){primary.x,primary.y+primary.h+34,primary.w,primary.h};
+        text_draw(0,tr("Actuellement équipé","Currently equipped"),primary.x+8,primary.y+primary.h+9,GOLD);
+        inventory_compare_max=inventory_detail_card(inventory_compare_rect,&comparison,inventory_compare_scroll,776);
+        if(inventory_compare_scroll>inventory_compare_max)inventory_compare_scroll=inventory_compare_max;
+    }
+    if(inv.mode==INVEN_UI_MODE_BARTER || inv.mode==INVEN_UI_MODE_LOOT)text_compact(tr("Maj + clic : transférer la pile","Shift + click: transfer stack"),left,y+722,790,false,MUTED);
     if(mainmenu_ui_is_active())menu_button((SDL_FRect){left+140,y+748,220,48},737,menu_text(7002),true);
     if(inv.mode==INVEN_UI_MODE_LOOT)menu_button((SDL_FRect){left+140,y+748,190,48},732,menu_text(260),true);
     menu_button((SDL_FRect){x+w-275,y+748,240,48},730,menu_text(260),true);
@@ -436,6 +490,51 @@ static void draw_written(void)
     }
     menu_button((SDL_FRect){x+w-250,y+h-55,230,45},990,menu_text(4003),true);
 }
+static SDL_FRect memo_map_rect;
+static ModernMap memo_map_state;
+static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)
+{
+    notebook_sync();memo_map_rect=dest;memo_map_state=*map;
+    if(memos_visible)for(int i=0;i<map_memo_count;i++) {
+        MapMemo* memo=&map_memos[i];if(memo->mode!=map->mode || memo->map!=map->map)continue;
+        float x=dest.x+(memo->x-map->offset_x)*scale,y=dest.y+(memo->y-map->offset_y)*scale;
+        if(x<dest.x+12 || y<dest.y+12 || x>dest.x+dest.w-12 || y>dest.y+dest.h-12)continue;
+        SDL_FRect r={x-12,y-12,24,24};button(r,2200+i,"*",-1,false,true);
+        if(inside(r,mouse_x,mouse_y)) {
+            float width=fminf(420,text_measure(0,memo->text)+20),xx=fminf(canvas_w-width-10,x);
+            fill((SDL_FRect){xx,y+17,width,32},(SDL_Color){19,14,10,240});
+            text_compact(memo->text,xx+10,y+24,width-20,false,GOLD);
+        }
+    }
+}
+static bool memo_action(int action)
+{
+    if(action==2190){memo_placing=!memo_placing;return true;}
+    if(action==2191){memos_visible=!memos_visible;return true;}
+    if(action>=2200 && action<2200+map_memo_count){memo_draft=map_memos[action-2200];memo_focus(action-2200);return true;}
+    if(action==2194){memo_close();return true;}
+    if(memo_edit<0)return false;
+    if(action==2192 && *memo_draft.text){
+        if(memo_edit<map_memo_count)map_memos[memo_edit]=memo_draft;
+        else if(map_memo_count<64)map_memos[map_memo_count++]=memo_draft;
+        notebook_save();memo_close();return true;
+    }
+    if(action==2193 && memo_edit<map_memo_count){map_memos[memo_edit]=map_memos[--map_memo_count];notebook_save();memo_close();return true;}
+    return false;
+}
+static void draw_memo_editor(void)
+{
+    if(memo_edit<0)return;
+    fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){0,0,0,155});
+    float x=canvas_w/2-300,y=canvas_h/2-110;
+    frame((SDL_FRect){x,y,600,220});button_count=panel_region_count=0;
+    text_draw(2,tr("Note personnelle","Personal note"),x+25,y+18,GOLD);
+    fill((SDL_FRect){x+25,y+62,550,70},(SDL_Color){19,14,10,255});
+    menu_paragraph(memo_draft.text,(SDL_FRect){x+35,y+68,530,60},0,GOLD);
+    button((SDL_FRect){x+25,y+155,170,42},2192,menu_text(260),-1,false,*memo_draft.text!=0);
+    button((SDL_FRect){x+215,y+155,170,42},2193,tr("Supprimer","Delete"),-1,false,memo_edit<map_memo_count);
+    button((SDL_FRect){x+405,y+155,170,42},2194,menu_text(54),-1,false,true);
+}
 static void draw_map(void)
 {
     ModernMap map;if(!modern_map_state(&map))return;
@@ -444,6 +543,8 @@ static void draw_map(void)
     centered(3,game_text(modern_map_text(map.mode==1?502:501)),canvas_w/2,y+22,GOLD);
     menu_button((SDL_FRect){x+30,y+78,260,48},741,game_text(modern_map_text(501)),true);
     menu_button((SDL_FRect){x+310,y+78,260,48},742,game_text(modern_map_text(502)),true);
+    button((SDL_FRect){x+590,y+78,220,48},2190,tr("Ajouter une note","Add note"),-1,memo_placing,map_memo_count<64 && !map.moving);
+    button((SDL_FRect){x+830,y+78,200,48},2191,tr("Notes visibles","Show notes"),-1,memos_visible,true);
     if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || !map_texture) {
         float ww,hh;SDL_DestroyTexture(map_texture);map_texture=texture_from_buffer(map.buffer,&ww,&hh);
         map_texture_time=SDL_GetTicks();map_texture_mode=map.mode;
@@ -455,9 +556,12 @@ static void draw_map(void)
     fill(available,(SDL_Color){12,10,8,255});
     if(map_texture)SDL_RenderTexture(renderer,map_texture,&src,&dest);outline(dest,GOLD);
     panel_region(dest,map.x,map.y,map.width,map.height,3);
+    draw_map_memos(&map,dest,scale);
     menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
     text_in_button((SDL_FRect){x+w-350,y+741,320,50},743,game_text(modern_map_text(512)),false,map.mode!=1);
+    if(memo_placing)text_draw(0,tr("Cliquez sur la carte pour placer la note.","Click the map to place your note."),x+35,y+711,GOLD);
     if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+290,y+736,w-670,54},0,GOLD);
+    draw_memo_editor();
 }
 
 static SDL_FRect dialogue_reply_view;
@@ -705,6 +809,19 @@ static bool panels_action(int action)
         return true;
     }
     if(p==8 && action>=969 && action<982){modern_fate_choose(action-970);return true;}
+    if(p==3 && memo_action(action))return true;
+    if(p==2 && action>=2400 && action<=2406){
+        if(action==2400)inventory_search_focus(!inventory_searching);
+        else if(action==2406){inventory_compare=!inventory_compare;inventory_compare_scroll=0;}
+        else inventory_filter=action-2401;
+        return true;
+    }
+    if(p==2 && (action==776 || action==777)){
+        inventory_compare_scroll+=action==776?-3:3;
+        if(inventory_compare_scroll<0)inventory_compare_scroll=0;
+        if(inventory_compare_scroll>inventory_compare_max)inventory_compare_scroll=inventory_compare_max;
+        return true;
+    }
     if(p==2 && (action==738 || action==739)) {
         ModernInventory inv;if(modern_inventory_state(&inv))inventory_detail_update(inv.pc,inv.pc,action-737);return true;
     }
@@ -749,12 +866,15 @@ static void panels_tick(void)
     int p=native_panel();
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
+        if(memo_edit>=0)memo_close();memo_placing=false;
+        if(inventory_searching)inventory_search_focus(false);
+        inventory_quick_release=false;
         if(p==9)written_scroll=0;
         if(p==1){sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);}
         if(p!=5)selector=0;
         binding_cancel=binding_pressed;binding_pressed=binding_moved=false;binding_bar_visible=false;
         map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;SDL_CaptureMouse(false);
-        if(p==2){memset(&inventory_details,0,sizeof(inventory_details));inventory_detail_object=0;inventory_detail_scroll=0;}
+        if(p==2){inventory_query[0]=0;inventory_filter=0;inventory_compare_scroll=0;memset(&inventory_details,0,sizeof(inventory_details));inventory_detail_object=0;inventory_detail_scroll=0;}
         panel_previous=p;
     }
     if(p==3 && ((int)map_pan_x || (int)map_pan_y)) {
@@ -762,6 +882,10 @@ static void panels_tick(void)
         map_pan_x-=dx;map_pan_y-=dy;map_texture_time=0;
     }
     for(int i=0;i<panel_event_count;i++) {
+        if(p==2 && panel_events[i].kind==4){
+            modern_inventory_mouse(panel_events[i].x,panel_events[i].y,TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP);
+            if(intgame_mode_get()==INTGAME_MODE_QUANTITY){int value,maximum;modern_quantity_state(&value,&maximum);modern_quantity_action(maximum,true);}
+        }
         if(panel_events[i].kind==p) {
             if(p==2)modern_inventory_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
             if(p==3)modern_map_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
@@ -806,17 +930,62 @@ static bool panels_event(SDL_Event* event)
 {
     int p=native_panel();if(!p)return false;
     if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST) {
-        binding_event(event);
+        binding_event(event);inventory_quick_release=false;
         map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;SDL_CaptureMouse(false);return false;
     }
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);if(ww<=0 || wh<=0)return false;
     if(event->type==SDL_EVENT_MOUSE_MOTION){mouse_x=event->motion.x*canvas_w/ww;mouse_y=event->motion.y*canvas_h/wh;}
     if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP){mouse_x=event->button.x*canvas_w/ww;mouse_y=event->button.y*canvas_h/wh;}
+    if(p==3 && memo_event(event))return true;
+    if(p==3 && memo_edit<0 && (event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP)) {
+        int action=hit(mouse_x,mouse_y);
+        if(action>=2200 && action<2264){
+            if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN)pressed_action=action;
+            else if(pressed_action==action){pending_action=action;pressed_action=-1;}
+            return true;
+        }
+        if(memo_placing && inside(memo_map_rect,mouse_x,mouse_y)){
+            if(event->type==SDL_EVENT_MOUSE_BUTTON_UP && event->button.button==SDL_BUTTON_LEFT){
+                memo_draft=(MapMemo){.mode=memo_map_state.mode,.map=memo_map_state.map,
+                    .x=memo_map_state.offset_x+(mouse_x-memo_map_rect.x)*memo_map_state.width/memo_map_rect.w,
+                    .y=memo_map_state.offset_y+(mouse_y-memo_map_rect.y)*memo_map_state.height/memo_map_rect.h};
+                memo_placing=false;memo_focus(64);
+            }return true;
+        }
+    }
+    if(p==2 && inventory_searching){
+        if(event->type==SDL_EVENT_TEXT_INPUT){inventory_query_edit(event->text.text,false);return true;}
+        if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP){
+            if(event->type==SDL_EVENT_KEY_DOWN){
+                if(event->key.scancode==SDL_SCANCODE_ESCAPE || event->key.scancode==SDL_SCANCODE_RETURN)inventory_search_focus(false);
+                else if(event->key.scancode==SDL_SCANCODE_BACKSPACE)inventory_query_edit("",true);
+            }return true;
+        }
+    }
+    if(p==2 && inventory_quick_release && event->type==SDL_EVENT_MOUSE_BUTTON_UP && event->button.button==SDL_BUTTON_LEFT){
+        inventory_quick_release=false;
+        if(inside(inventory_quick_region,mouse_x,mouse_y) && modern_inventory_at(inventory_quick_x,inventory_quick_y)==inventory_quick_item)
+            panel_mouse_queue(4,inventory_quick_x,inventory_quick_y,0);
+        return true;
+    }
+    if(p==2 && event->type==SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button==SDL_BUTTON_LEFT && (SDL_GetModState()&SDL_KMOD_SHIFT)){
+        ModernInventory inv;
+        if(modern_inventory_state(&inv) && (inv.mode==INVEN_UI_MODE_BARTER || inv.mode==INVEN_UI_MODE_LOOT))
+        for(int i=0;i<panel_region_count;i++){
+            PanelRegion* r=&panel_regions[i];if(r->kind!=2 || !inside(r->rect,mouse_x,mouse_y))continue;
+            int xx=r->x+(mouse_x-r->rect.x)*r->w/r->rect.w,yy=r->y+(mouse_y-r->rect.y)*r->h/r->rect.h;
+            if(inventory_match(modern_inventory_at(xx,yy))){
+                inventory_quick_release=true;inventory_quick_x=xx;inventory_quick_y=yy;
+                inventory_quick_item=modern_inventory_at(xx,yy);
+                inventory_quick_region=(SDL_FRect){mouse_x-5,mouse_y-5,10,10};return true;
+            }
+        }
+    }
     if((p==2 || p==5) && binding_event(event))return true;
     if(event->type==SDL_EVENT_MOUSE_WHEEL) {
         if(p==9)pending_action=event->wheel.y>0?991:992;
         else if(p==4)pending_action=inside(dialogue_reply_view,mouse_x,mouse_y)?(event->wheel.y>0?822:823):(event->wheel.y>0?820:821);
-        else if(p==2)pending_action=inside(inventory_detail_rect,mouse_x,mouse_y)?(event->wheel.y>0?770:771):(event->wheel.y>0?735:736);
+        else if(p==2)pending_action=inside(inventory_compare_rect,mouse_x,mouse_y)?(event->wheel.y>0?776:777):inside(inventory_detail_rect,mouse_x,mouse_y)?(event->wheel.y>0?770:771):(event->wheel.y>0?735:736);
         else if(p==1 || p==7){description_scroll+=event->wheel.y>0?-3:3;if(description_scroll<0)description_scroll=0;if(description_scroll>description_max)description_scroll=description_max;}
         return true;
     }
@@ -825,12 +994,13 @@ static bool panels_event(SDL_Event* event)
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
             if(p==9 && (event->key.scancode==SDL_SCANCODE_PAGEUP || event->key.scancode==SDL_SCANCODE_PAGEDOWN))pending_action=event->key.scancode==SDL_SCANCODE_PAGEUP?991:992;
             if(p==9 && modern_written_is_book() && (event->key.scancode==SDL_SCANCODE_LEFT || event->key.scancode==SDL_SCANCODE_RIGHT))pending_action=event->key.scancode==SDL_SCANCODE_LEFT?991:992;
-            if(p==2 && event->key.scancode==SDL_SCANCODE_I && !mainmenu_ui_is_active()
+            if(p==2 && key_is(KB_INVENTORY,event->key.scancode) && !mainmenu_ui_is_active()
                 && intgame_mode_get()!=INTGAME_MODE_QUANTITY)pending_action=730;
-            if(p==5 && (event->key.scancode==SDL_SCANCODE_M || event->key.scancode==SDL_SCANCODE_K)) {
-                int next=event->key.scancode==SDL_SCANCODE_M?1:2;
+            if(p==5 && (key_is(KB_SPELLS,event->key.scancode) || key_is(KB_SKILLS,event->key.scancode))) {
+                int next=key_is(KB_SPELLS,event->key.scancode)?1:2;
                 selector=selector==next?0:next;
             }
+            if((p==1 && key_is(KB_CHARACTER,event->key.scancode)) || (p==3 && key_is(KB_MAP,event->key.scancode)))pending_action=p==1?720:740;
             if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=p==9?990:p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
             if(p==4 && event->key.scancode>=SDL_SCANCODE_1 && event->key.scancode<=SDL_SCANCODE_5)pending_action=800+event->key.scancode-SDL_SCANCODE_1;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEDOWN)pending_action=821;
@@ -843,6 +1013,10 @@ static bool panels_event(SDL_Event* event)
         if(p==3 && map_pressed && map_drag_event(event->type,motion?0:event->button.button,NULL))return true;
         for(int i=0;i<panel_region_count;i++)if(inside(panel_regions[i].rect,mouse_x,mouse_y)) {
             PanelRegion* r=&panel_regions[i];int xx=r->x+(mouse_x-r->rect.x)*r->w/r->rect.w,yy=r->y+(mouse_y-r->rect.y)*r->h/r->rect.h;
+            if(p==2 && r->w && !inven_ui_drag_item_obj_get()){
+                int64_t obj=modern_inventory_at(xx,yy);
+                if(obj && !inventory_match(obj))return true;
+            }
             if(p==3 && map_drag_event(event->type,motion?0:event->button.button,r))return true;
             int e=motion?TIG_MESSAGE_MOUSE_MOVE:event->type==SDL_EVENT_MOUSE_BUTTON_DOWN?TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
                 event->button.button==SDL_BUTTON_RIGHT?TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP:TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP;

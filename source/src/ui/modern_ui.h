@@ -8,8 +8,8 @@
 
 typedef struct ModernCombatPreview {
     int64_t actor, target, location;
-    int kind, cost, step_cost, chance, radius, count;
-    bool reachable, affordable, fatigue, blocked, in_range;
+    int kind, cost, step_cost, chance, radius, count, range, fatigue_cost;
+    bool reachable, affordable, fatigue, blocked, in_range, resources;
     int64_t path[201];
 } ModernCombatPreview;
 bool modern_combat_preview(ModernCombatPreview* preview);
@@ -61,6 +61,7 @@ void modern_ui_message(const char* text);
 
 /* Read-only adapter over the original journal's localization and game data. */
 int modern_logbook_select(int tab);
+int modern_logbook_id(int index);
 int modern_logbook_entry(int index, char* text, size_t capacity);
 void modern_intgame_hud_hide(bool hide);
 void modern_intgame_action(int action);
@@ -122,7 +123,7 @@ void modern_inventory_action(int action);
 void modern_inventory_scroll(int direction);
 const char* modern_inventory_text(int number);
 typedef struct ModernMap {
-    int mode, x, y, width, height;
+    int mode, x, y, width, height, offset_x, offset_y, map;
     void* buffer;
     bool moving;
 } ModernMap;

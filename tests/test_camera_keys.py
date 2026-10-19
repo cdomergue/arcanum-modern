@@ -14,6 +14,8 @@ code = r'''
 #include <stddef.h>
 enum { INTGAME_MODE_MAIN, INTGAME_MODE_SPELL, INTGAME_MODE_SKILL, INTGAME_MODE_ITEM,
        INTGAME_MODE_DIALOG, SDL_SCANCODE_COUNT=512 };
+enum {SDL_SCANCODE_W=26,SDL_SCANCODE_A=4,SDL_SCANCODE_S=22,SDL_SCANCODE_D=7,KB_UP=0};
+static int key_binding[]={26,4,22,7};
 enum { SDL_KMOD_CTRL=1, SDL_KMOD_ALT=2, SDL_KMOD_GUI=4 };
 static bool enabled=true, in_game=true, journal, searching, menu_suspended;
 static bool menu, panel, slide, typing, keys[512];
@@ -44,6 +46,8 @@ int main(void){
     for(mode=0;mode<=INTGAME_MODE_ITEM;mode++)assert(modern_camera_key(26));
     assert(!modern_camera_key(26));
     keys[26]=false;mode=0;assert(!modern_camera_key(26));
+    key_binding[0]=29;keys[29]=true;assert(modern_camera_key(26));
+    key_binding[0]=0;assert(!modern_camera_key(26));
 }
 '''
 with tempfile.TemporaryDirectory(prefix='arcanum-camera-') as folder:

@@ -2080,7 +2080,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8903,195 @@
+@@ -8833,3 +8903,198 @@
  
      follower_ui_show();
  }
@@ -2195,7 +2195,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +/* Read-only previews: never invoke an action, a script, or a random roll. */
 +bool modern_combat_preview(ModernCombatPreview* p)
 +{
-+    memset(p, 0, sizeof(*p)); p->chance = -1; p->in_range = true;
++    memset(p, 0, sizeof(*p)); p->chance = -1; p->in_range = true; p->resources = true;
 +    p->actor = combat_input_actor();
 +    if (!combat_turn_based_is_active() || !combat_input_ready(p->actor)) return false;
 +    TigMouseState mouse; TargetDescriptor td;
@@ -2222,7 +2222,9 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        int spl = modern_spell_selected();
 +        if (spl < 0 || spl >= SPELL_COUNT) return false;
 +        p->kind = 2; p->cost = 4; p->radius = sub_4502B0(spl);
-+        p->in_range = location_dist(from, p->location) <= magictech_get_range(spl);
++        p->range = magictech_get_range(spl);
++        p->resources = modern_spell_resources(p->actor, spl, &p->fatigue_cost);
++        p->in_range = location_dist(from, p->location) <= p->range;
 +        /* LOS check only reads the invocation. The run/charge APIs are excluded. */
 +        MagicTechInvocation invocation;
 +        magictech_invocation_init(&invocation, p->actor, spl);
@@ -2237,6 +2239,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        p->kind = 1; p->cost = combat_attack_cost(p->actor);
 +        int64_t weapon = item_wield_get(p->actor, ITEM_INV_LOC_WEAPON);
 +        int range = weapon ? item_weapon_range(weapon, p->actor) : 1;
++        p->range = range;
 +        needs_path = range <= 1 && location_dist(from, p->location) > 1;
 +        adjacent = true;
 +        p->in_range = range <= 1 || location_dist(from, p->location) <= range;
@@ -2273,7 +2276,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    }
 +    int ap = combat_action_points_get();
 +    p->fatigue = p->cost > ap && ap > 0 && player_is_local_pc_obj(p->actor) && critter_fatigue_current(p->actor) > 1;
-+    p->affordable = p->reachable && (p->cost <= ap || p->fatigue);
++    p->affordable = p->reachable && p->resources && (p->cost <= ap || p->fatigue);
 +    return true;
 +}
 diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
@@ -2425,7 +2428,7 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
          return;
      }
  
-@@ -1776,3 +1792,38 @@
+@@ -1776,3 +1792,41 @@
          }
      }
  }
@@ -2464,6 +2467,9 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
 +    if (logbook_ui_entry_fonts[index] == logbook_ui_font_struck) return 4;
 +    return 0;
 +}
++
++int modern_logbook_id(int index)
++{ return index>=0 && index<logbook_ui_entry_count?logbook_ui_entry_ids[index]:-1; }
 diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
 --- a/src/ui/mainmenu_ui.c
 +++ b/src/ui/mainmenu_ui.c
@@ -2996,7 +3002,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4984,3 +4988,69 @@
+@@ -4984,3 +4988,71 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
@@ -3010,6 +3016,8 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    TigVideoBuffer* buffer=NULL;tig_window_vbid_get(wmap_ui_window,&buffer);
 +    *state=(ModernMap){.mode=wmap_ui_mode,.x=info->field_14.x,.y=info->field_14.y,
 +        .width=info->field_14.width,.height=info->field_14.height,.buffer=buffer,
++        .offset_x=info->field_34,.offset_y=info->field_38,
++        .map=wmap_ui_mode==WMAP_UI_MODE_TOWN?map_current_map():0,
 +        .moving=wmap_ui_state==WMAP_UI_STATE_MOVING};
 +    return buffer!=NULL;
 +}
