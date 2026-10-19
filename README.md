@@ -9,8 +9,10 @@ original artwork and game systems.
 
 This is an **experimental, playable project**. You need the game data from your
 own Arcanum installation, updated to **1.0.7.4**. This repository contains the
-mod's source code and interface resources; it does not contain the commercial
-game data.
+mod's source code, build scripts and interface resources. It does not contain
+commercial game data, compiled executables, ZIP packages or generated map caches.
+Build the engine using the instructions below, then add your own game files to
+play.
 
 ## Features
 
@@ -53,7 +55,8 @@ folder. Keep the original directory structure, including all game archives,
 module patches and loose data files. The repository already supplies
 `game/modern-ui/`; keep those resources in place.
 
-A typical source checkout looks like this:
+After adding your own game files, the layout should look like this. The game
+archives and module data shown below are not supplied by the repository:
 
 ```text
 ArcanumModern/
@@ -78,56 +81,17 @@ ArcanumModern/
         ├── Book.ttf
         ├── Heading.ttf
         ├── ...
-        └── local-maps/              # Optional detailed map cache
+        └── local-maps/              # Optional cache you generate separately
 ```
 
 Use a writable folder so the game can create preferences, caches and saves.
 A separate copy of your installation is recommended. Back up existing saves
 before using a different engine.
 
-For a packaged build, the same layout applies without the source files:
+After generating a package, the same layout applies without the source files:
 `arcanum-modern.exe` and its launcher on Windows, or `Arcanum Modern.app` on macOS,
 must sit **beside `arcanum1.dat` and `modern-ui/`**. On macOS, the game data stays
 outside the `.app` bundle; keep the application in the game folder.
-
-## Play a packaged build
-
-Players do not need a compiler, Python or a separate SDL installation.
-
-### Windows 10/11, x64
-
-For the standard **`ArcanumModern-windows-x64.zip`**:
-
-1. Extract the ZIP into your Arcanum game folder using the layout above.
-2. Open **Play Arcanum Modern.bat**.
-3. Adjust display, audio, gameplay and key bindings in **Options**.
-
-The standard ZIP contains the engine, launcher and interface resources. It keeps
-the original `Arcanum.exe` and excludes game data, saves and personal preferences.
-
-A locally created **`ArcanumModern-windows-x64-full.zip`** also contains the game
-data supplied when packaging. Extract the entire ZIP into a writable folder,
-then open **Play Arcanum Modern.bat**. No separate game-file copying is needed.
-Always extract the archive before launching the game.
-
-### macOS, Apple Silicon
-
-The macOS package targets **arm64, macOS 11 or later**.
-
-1. Copy your installed game's files into a writable folder on the Mac.
-2. Extract **`ArcanumModern-macos-arm64.zip`** into that folder.
-3. Open **Arcanum Modern.app** beside the game archives.
-
-Wine and Rosetta are not required. The application is ad-hoc signed and is not
-notarized by Apple. If macOS blocks a download you trust, use **System Settings →
-Privacy & Security → Open Anyway**.
-
-### Updating
-
-Close the game, then extract the updated package into the same game folder.
-Keep your saved games and the personal files in `modern-ui/`. Standard packages
-exclude those files. Display changes in Options have a timed confirmation and
-revert if they are not confirmed.
 
 ## Build from source
 
@@ -150,6 +114,12 @@ and mod-only packages use the interface resources already in the repository.
 | macOS arm64 | macOS with Xcode Command Line Tools | `bash ./build-macos.sh` | `dist/ArcanumModern-macos-arm64.zip` |
 | Windows x64 | Windows with Visual Studio 2022 and Git Bash | `PYTHON=python ./build-windows.sh` | `dist/ArcanumModern-windows-x64.zip` |
 | Windows x64 | Linux with LLVM-MinGW, or Docker on Linux/macOS | See below | `dist/ArcanumModern-windows-x64.zip` |
+
+These outputs are created by the build scripts; none are included in a fresh
+checkout. Generated Windows and macOS packages contain the engine, launcher and
+interface resources. By default, they exclude game data, saves and personal
+preferences. Running an extracted package does not require a compiler, Python
+or a separate SDL installation.
 
 ### Linux
 
@@ -199,14 +169,21 @@ ditto -x -k dist/ArcanumModern-macos-arm64.zip game
 open "game/Arcanum Modern.app"
 ```
 
-The script explicitly targets arm64, builds static dependencies, verifies the
+The script targets Apple Silicon (arm64), macOS 11 or later. Wine and Rosetta
+are not required. It builds static dependencies, verifies the
 executable's architecture and linked libraries, and signs the application
 ad-hoc. Building alone does not install the application into `game/`.
+The application is not notarized by Apple.
 
 The repository also includes a **macOS Apple Silicon** GitHub Actions workflow
 that can be started manually when Actions is enabled for the repository.
 
 ### Windows: native build
+
+The Windows builds target Windows 10/11, x64. After any of the Windows build
+methods below finishes, extract the generated ZIP into your prepared game folder
+and open **Play Arcanum Modern.bat**. Always extract the archive before launching
+the game. The package keeps the original `Arcanum.exe`.
 
 Install:
 
@@ -261,7 +238,9 @@ a Windows executable; Docker is only used during the build.
 
 ### Create a complete Windows ZIP
 
-Add `--include-game` to include data from an installed game:
+This optional package must be generated locally; it is not included in the
+repository. First populate `game/` with your own installed game files as described
+above. Add `--include-game` when building to include those files in the ZIP:
 
 ```sh
 ./build-windows.sh --include-game ./game
@@ -281,12 +260,13 @@ docker run --rm \
 This creates **`dist/ArcanumModern-windows-x64-full.zip`** with the game's language
 files, installed module patches, loose data and any detailed maps present in
 `game/modern-ui/local-maps/`. A map-cache symlink is packaged as actual files.
-The complete generated map collection adds about **8 GB**.
+Generating and including a complete map collection can add several gigabytes.
 
 Saved games, player files, notes, personal preferences, screenshots, temporary
-caches and macOS applications are excluded. The recipient extracts the ZIP and
-launches the included `.bat` file. Without `--include-game`, packaging remains
-mod-only.
+caches and macOS applications are excluded. Once generated, extract the complete
+ZIP into a writable folder and open **Play Arcanum Modern.bat**; no separate
+game-file copying is needed for that package. Without `--include-game`, packaging
+remains mod-only.
 
 To package an existing executable without rebuilding, run the packager in the
 same environment used for the build:
