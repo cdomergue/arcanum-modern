@@ -52,7 +52,8 @@ static int64_t qword_5FC258;
 static int dword_5FC260,dword_5FC264;
 static int flags[5],spells[5],leader[5]={0,0,1,0,1},controller[5],fatigue[5]={0,30,30,30,30};
 static bool busy[5],fidget[5],active[5]={false,true,true,true,true};
-static int advanced,scheduled,damage,callback_value;
+static int advanced,scheduled,damage,callback_value,rejections;
+static void modern_combat_rejected(int64_t actor,int64_t target,int reason,int cost){assert(actor==2&&target==0&&reason==0&&cost==4&&combat_action_points==1);rejections++;}
 static void ap_callback(int value){callback_value=value;}
 static struct {void(*field_C)(int);} combat_callbacks={ap_callback};
 static bool player_is_local_pc_obj(int64_t obj){return obj==1;}
@@ -104,7 +105,7 @@ int main(void){
  leader[2]=0;assert(combat_input_actor()==0);leader[2]=1;
  assert(combat_check_action_points(2,4));
  assert(combat_consume_action_points(2,4)&&combat_action_points==4&&damage==0);
- assert(!combat_check_action_points(2,6)); /* no PC-only overexertion for NPCs */
+ assert(!combat_check_action_points(2,6)&&rejections==0); /* no PC-only overexertion for NPCs */
  sub_4B7080();assert(scheduled==0);
  TimeEvent event={0};combat_tb_timeevent_process(&event);assert(advanced==0);
  assert(combat_input_end_turn(2)&&advanced==1&&combat_action_points==0);
@@ -116,7 +117,7 @@ int main(void){
  assert(combat_check_action_points(1,4));
  assert(combat_consume_action_points(1,4)&&damage==2&&combat_action_points==0);
  turn.obj=2;combat_action_points=1;damage=0;advanced=0;
- assert(!combat_consume_action_points(2,4)&&damage==0&&advanced==1);
+ assert(!combat_consume_action_points(2,4)&&damage==0&&advanced==1&&rejections==1);
  /* Incapacitation after an action must release the manual turn. */
  turn.obj=2;combat_action_points=4;advanced=scheduled=0;active[2]=false;
  sub_4B7080();assert(combat_action_points==0&&scheduled==1);

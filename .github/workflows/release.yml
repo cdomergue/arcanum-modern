@@ -30,6 +30,13 @@ jobs:
           python3 tests/test_tactical_combat.py
           python3 tests/test_shared_turns.py
           python3 tests/test_party_combat.py
+          python3 tests/test_party_grouping.py
+          python3 tests/test_autosave.py
+          python3 tests/test_map_camera.py
+          python3 tests/test_map_fog.py
+          python3 tests/test_map_local_input.py
+          python3 tests/test_map_travel.py
+          python3 tests/test_combat_feedback.py
       - name: Build and package Linux x64
         env:
           ARCANUM_BUILD_DIR: build/linux-x64

@@ -429,6 +429,13 @@ python3 tests/test_lock_states.py
 python3 tests/test_map_route.py
 python3 tests/test_shared_turns.py
 python3 tests/test_party_combat.py
+python3 tests/test_party_grouping.py
+python3 tests/test_autosave.py
+python3 tests/test_map_camera.py
+python3 tests/test_map_fog.py
+python3 tests/test_map_local_input.py
+python3 tests/test_map_travel.py
+python3 tests/test_combat_feedback.py
 python3 tests/test_windows_full_package.py
 python3 tests/test_windows_package.py dist/ArcanumModern-windows-x64.zip
 ```

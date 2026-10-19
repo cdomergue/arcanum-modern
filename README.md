@@ -60,7 +60,8 @@ Back up your saved games before trying an experimental engine.
 - **BG3-inspired tactical combat:** take direct control of eligible companions
   and switch freely between allies with consecutive turns, each keeping their
   own remaining action points. Preview movement and actions, inspect costs and
-  spell availability, and follow the fight in a combat log. Turn-based combat is
+  spell availability, and inspect actual attack rolls, hit chances and outcomes
+  in a scrollable combat log. Turn-based combat is
   enabled by default. Initiative, action points, fatigue, damage and spell
   restrictions follow Arcanum's rules.
 - **Native-resolution interface:** readable text and controls that keep their
@@ -74,11 +75,16 @@ Back up your saved games before trying an experimental engine.
   modes. The world adapts to the window's aspect ratio.
 - **Inventory tools:** search, categories, equipment comparison, item details,
   transfer shortcuts and editable quick slots with hover descriptions.
+- **Companion grouping:** detach companions to position them independently, then
+  regroup them from their portraits. They remain members of your party.
+- **Rotating autosaves:** keep the three latest automatic saves after combat and
+  before eligible area transitions, separately from manual saves.
 - **Journal and exploration:** quest filters, search, favorites, quest tracking
   and personal map notes.
 - **Automatically prepared HD local maps:** maps rendered from the installed game data,
   with exploration fog and separately drawn localized labels and
-  markers. Original maps remain available when the detailed cache is absent.
+  markers. Zoom in or out, inspect planned routes and clear their waypoints.
+  Original maps also support zoom when the detailed cache is absent.
 - **Readable game text:** books, letters, newspapers, inscriptions, telegrams
   and floating dialogue use the installed game's content.
 - **Original cinematics:** the integrated player reads the installed BIK videos
@@ -126,6 +132,7 @@ available.
 | End turn | E or Space |
 | Move camera | WASD positions, ZQSD on AZERTY, or arrow keys |
 | Zoom world | Mouse wheel over the world |
+| Zoom local map | Mouse wheel over the map, or its − / + buttons |
 | Use quick slot | 1–0 |
 | Close panel or open pause menu | Escape |
 
@@ -135,7 +142,21 @@ the **star** marks favorites and the **pin** tracks a quest.
 
 On the local map, distant destinations automatically add intermediate waypoints
 when a valid route fits within the six-point limit. Use the travel button to
-start following the route.
+start following the route. The line and destination marker show your planned
+journey; clear it with the route cancel control. Drag to pan, and use the mouse
+wheel or − / + buttons to zoom in or out.
+
+Outside combat, the **`=` / `/`** control on a companion portrait toggles grouping.
+Click a portrait to select and detach that companion, then click the ground to
+move them or a door/container to interact. Click the portrait again, the
+**Player** button, or right-click the world to return to your main character.
+Conversations use the main character. Grouping is saved with the game;
+area transitions retain the game's normal party travel behavior.
+
+The combat log retains up to 128 recent lines during the session and remains
+available after combat. Scroll it with the wheel or its page buttons. Attack
+entries show the resolved outcome and, when applicable, the actual roll and hit
+chance. Rejected actions display feedback from the engine.
 
 Turn-based combat is the default for fresh installations. Allies with consecutive
 turns share a turn group: click an available portrait to choose who acts, then
@@ -159,6 +180,10 @@ Paths are relative to the game folder:
 | `modern-ui/notebook-*.txt` | Favorites, tracked quests and map notes per character. |
 | `arcanum.cfg` | Engine and game settings. |
 | `modules/<module>/Save/` | Saved games for that module. |
+
+Automatic saves use dedicated slots and retain the three latest completed saves.
+They run only when the character and game state permit saving; dialogue, combat,
+menus and some transitions can defer or skip them. Manual saves remain separate.
 
 Notebook files are independent of saves: loading an older save does not roll
 back its notes. Keep both when moving your installation.

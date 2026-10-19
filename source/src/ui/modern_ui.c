@@ -1672,6 +1672,7 @@ static void draw_quest_tracker(void)
 
 static bool hud_region(float x,float y)
 {
+    if(tactical_log_region(x,y))return true;
     if(maintained_region(x,y) || party_region(x,y))return true;
     if(!tactical_active() && tracked_quest>=0 && *tracked_text && inside((SDL_FRect){canvas_w-335,85,320,100},x,y))return true;
     if(tactical_active())return tactical_region(x,y);
@@ -1755,6 +1756,7 @@ static void render_overlay(SDL_Renderer* target)
         if(!hud_region(mouse_x,mouse_y))draw_world_hover();
         draw_maintained_spells();
         if(hud){if(tactical_active()){draw_tactical_preview();draw_tactical_hud();}else draw_hud();}
+        if(hud && !journal && !native_panel())draw_tactical_log();
         draw_party();
         draw_quest_tracker();
         if(journal) draw_journal();
@@ -1921,6 +1923,7 @@ static bool handle_ui_event(SDL_Event* event)
     }
     if(!menu && panels_event(event))return true;
     if(!menu && party_event(event))return true;
+    if(!menu && hud && !journal && !native_panel() && tactical_log_event(event))return true;
     if(world_zoom_event(event))return true;
     if(!menu && (!visible() || (!hud && !journal))) return false;
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);

@@ -6,7 +6,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root/'source/src/ui/modern_combat.inc').read_text()
-start = source.index('static struct {', source.index('static bool tactical_active'))
+start = source.index('static struct {', source.index('static bool tactical_active(void) {'))
 code = source[start:source.index('static bool tactical_region', start)]
 harness = r'''
 #include <assert.h>

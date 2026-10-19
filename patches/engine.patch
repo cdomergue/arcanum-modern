@@ -9,10 +9,12 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # ------------------------------------------------------------------------------
  # ARCANUM
-@@ -24,6 +25,14 @@
+@@ -24,6 +25,16 @@
  
  # Keep alphabetically sorted.
  set(SRCS
++    "src/game/modern_autosave.c"
++    "src/game/modern_autosave.h"
 +    "src/ui/modern_movie.c"
 +    "src/ui/modern_movie.h"
 +    "src/ui/modern_graphics.c"
@@ -24,7 +26,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +342,29 @@
+@@ -333,7 +344,29 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -217,6 +219,17 @@ diff --git a/first_party/tig/src/database.c b/first_party/tig/src/database.c
 diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
 --- a/first_party/tig/src/file.c
 +++ b/first_party/tig/src/file.c
+@@ -267,8 +267,8 @@
+         }
+     }
+ 
+-    tig_file_fclose(data_stream);
+-    tig_file_fclose(index_stream);
++    if (tig_file_fclose(data_stream) != 0) success = false;
++    if (tig_file_fclose(index_stream) != 0) success = false;
+ 
+     if (!success) {
+         tig_file_remove_native(data_path);
 @@ -1215,7 +1215,11 @@
          if ((repo->type & TIG_FILE_PLAIN) != 0) {
              compat_join_path(path, sizeof(path), repo->path, file_name);
@@ -585,16 +598,23 @@ diff --git a/first_party/tig/src/window.c b/first_party/tig/src/window.c
 diff --git a/src/game/ai.c b/src/game/ai.c
 --- a/src/game/ai.c
 +++ b/src/game/ai.c
-@@ -299,6 +299,8 @@
+@@ -1,3 +1,4 @@
++#include "ui/follower_ui.h"
+ #include "game/ai.h"
+ 
+ #include "game/anim.h"
+@@ -299,7 +300,9 @@
          return;
      }
  
+-    if (!ai_heal(&ai) && !ai_look_for_item(&ai)) {
 +    if (combat_turn_based_is_active() && combat_player_controls(obj)) return;
 +
-     if (!ai_heal(&ai) && !ai_look_for_item(&ai)) {
++    if (modern_party_detached(obj) || (!ai_heal(&ai) && !ai_look_for_item(&ai))) {
          sub_4A92D0(&ai);
      }
-@@ -1048,6 +1050,7 @@
+ 
+@@ -1048,6 +1051,7 @@
              source_obj,
              NULL);
      }
@@ -602,7 +622,15 @@ diff --git a/src/game/ai.c b/src/game/ai.c
  }
  
  // 0x4A9AD0
-@@ -3186,7 +3189,7 @@
+@@ -2415,6 +2419,7 @@
+             return;
+         }
+ 
++        if (modern_party_detached(ai->obj)) return;
+         anim_goal_follow_obj(ai->obj, ai->leader_obj);
+ 
+         if (!sub_423300(ai->obj, NULL)) {
+@@ -3186,7 +3191,7 @@
          return AI_FOLLOW_LOW_LEVEL;
      }
  
@@ -614,7 +642,13 @@ diff --git a/src/game/ai.c b/src/game/ai.c
 diff --git a/src/game/anim.c b/src/game/anim.c
 --- a/src/game/anim.c
 +++ b/src/game/anim.c
-@@ -17,6 +17,7 @@
+@@ -1,4 +1,5 @@
+ #include "game/anim.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -17,6 +18,7 @@
  #include "game/mt_item.h"
  #include "game/multiplayer.h"
  #include "game/object.h"
@@ -622,7 +656,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  #include "game/path.h"
  #include "game/player.h"
  #include "game/portal.h"
-@@ -3737,7 +3738,7 @@
+@@ -3737,7 +3739,7 @@
  
              if ((state_change & 0x90000000) == 0x90000000) {
                  run_info->flags |= 0x02;
@@ -631,7 +665,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      combat_consume_action_points(run_info->anim_obj, combat_required_action_points_get());
                  }
  
-@@ -4848,7 +4849,7 @@
+@@ -4848,7 +4850,7 @@
      if (run_info->path.max == 0 || run_info->path.max > range) {
          path_create_info.flags = PATH_FLAG_0x0001;
          if (!sub_425BF0(&path_create_info, 1)) {
@@ -640,7 +674,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4856,7 +4857,7 @@
+@@ -4856,7 +4858,7 @@
  
          run_info->path.max = path_make(&path_create_info);
          if (run_info->path.max == 0 || run_info->path.max > range) {
@@ -649,7 +683,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4973,7 +4974,7 @@
+@@ -4973,7 +4975,7 @@
      if (run_info->path.max == 0 || run_info->path.max > range) {
          path_create_info.flags = PATH_FLAG_0x0001;
          if (!sub_425BF0(&path_create_info, 1)) {
@@ -658,7 +692,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4981,7 +4982,7 @@
+@@ -4981,7 +4983,7 @@
  
          run_info->path.max = path_make(&path_create_info);
          if (run_info->path.max == 0 || run_info->path.max > range) {
@@ -667,7 +701,23 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -5168,7 +5169,7 @@
+@@ -5037,6 +5039,7 @@
+     }
+ 
+     if ((run_info->flags & 0x400) != 0 || !player_is_pc_obj(obj)) {
++        modern_combat_rejected(obj, OBJ_HANDLE_NULL, 2, 0);
+         return false;
+     }
+ 
+@@ -5044,6 +5047,7 @@
+ 
+     rc = sub_426500(obj, run_info->params[1].loc, &(run_info->path), flags | PATH_FLAG_0x0040 | PATH_FLAG_0x0020 | PATH_FLAG_0x0010 | PATH_FLAG_0x0008);
+ 
++    if (!rc) modern_combat_rejected(obj, OBJ_HANDLE_NULL, 2, 0);
+     return rc;
+ }
+ 
+@@ -5168,7 +5172,7 @@
  }
  
  // 0x426560
@@ -676,7 +726,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  {
      int v1;
      int8_t* rotations;
-@@ -5211,7 +5212,8 @@
+@@ -5211,7 +5215,8 @@
      offset_x = obj_field_int32_get(obj, OBJ_F_OFFSET_X);
      offset_y = obj_field_int32_get(obj, OBJ_F_OFFSET_Y);
  
@@ -686,7 +736,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          v1--;
          rotations++;
          v2 = false;
-@@ -5244,7 +5246,7 @@
+@@ -5244,7 +5249,7 @@
      }
  
      if (path->max == 0) {
@@ -695,7 +745,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
              combat_turn_based_end_critter_turn(obj);
          }
          return false;
-@@ -5261,6 +5263,27 @@
+@@ -5261,6 +5266,27 @@
  
      return true;
  }
@@ -723,7 +773,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  
  // 0x426840
  bool sub_426840(AnimRunInfo* run_info)
-@@ -5926,7 +5949,7 @@
+@@ -5926,7 +5952,7 @@
          }
  
          if (run_info->path.max == 0) {
@@ -732,7 +782,15 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -11333,7 +11356,7 @@
+@@ -10416,6 +10442,7 @@
+     sub_42EDC0(run_info, obj, &art_id, (run_info->flags & 0x40) != 0, &v2);
+ 
+     if (!combat_check_action_points(obj, v2)) {
++        modern_combat_rejected(obj, OBJ_HANDLE_NULL, 0, v2);
+         anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
+         return false;
+     }
+@@ -11333,7 +11360,7 @@
  
      always_run = settings_get_value(&settings, ALWAYS_RUN_KEY);
  
@@ -741,7 +799,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          if (always_run) {
              if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
                  return false;
-@@ -11480,8 +11503,11 @@
+@@ -11480,8 +11507,11 @@
              if (tig_art_anim_data(art_id, &art_anim_data) == TIG_OK) {
                  frame = tig_art_id_frame_get(art_id);
                  if (frame == 3 || frame == 8) {
@@ -755,7 +813,15 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  }
              }
          }
-@@ -13334,7 +13360,7 @@
+@@ -11568,6 +11598,7 @@
+                 }
+ 
+                 if (!combat_check_action_points(obj, v3)) {
++                    modern_combat_rejected(obj, OBJ_HANDLE_NULL, 0, v3);
+                     anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
+                     return false;
+                 }
+@@ -13334,7 +13365,7 @@
          return false;
      }
  
@@ -764,7 +830,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)
          && critter_encumbrance_level_get(obj) < 4) {
          return anim_goal_run_to_tile(obj, loc);
-@@ -13441,7 +13467,7 @@
+@@ -13441,7 +13472,7 @@
          return false;
      }
  
@@ -773,6 +839,14 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)) {
          return sub_434030(obj, loc);
      }
+@@ -13901,6 +13932,7 @@
+         return true;
+     }
+ 
++    modern_combat_rejected(obj, OBJ_HANDLE_NULL, 0, action_points);
+     return false;
+ }
+ 
 diff --git a/src/game/anim.h b/src/game/anim.h
 --- a/src/game/anim.h
 +++ b/src/game/anim.h
@@ -789,13 +863,14 @@ diff --git a/src/game/anim.h b/src/game/anim.h
 diff --git a/src/game/combat.c b/src/game/combat.c
 --- a/src/game/combat.c
 +++ b/src/game/combat.c
-@@ -1,4 +1,5 @@
+@@ -1,4 +1,6 @@
  #include "game/combat.h"
 +#include "ui/modern_ui.h"
++#include "game/modern_autosave.h"
  
  #define _USE_MATH_DEFINES
  #include <math.h>
-@@ -195,6 +196,100 @@
+@@ -195,6 +197,100 @@
  static CombatCallbacks combat_callbacks;
  
  // 0x4B1D50
@@ -896,7 +971,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
-@@ -215,7 +310,7 @@
+@@ -215,7 +311,7 @@
          }
      }
  
@@ -905,7 +980,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
  
      settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
-@@ -256,7 +351,7 @@
+@@ -256,7 +352,7 @@
      if (tig_file_fwrite(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, stream) != 1) return false;
  
      if (!combat_turn_based_active) {
@@ -914,7 +989,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      }
  
      if (tig_file_fwrite(&combat_action_points, sizeof(combat_action_points), 1, stream) != 1) return false;
-@@ -276,13 +371,13 @@
+@@ -276,13 +372,13 @@
      oid = obj_get_id(qword_5FC248);
      if (tig_file_fwrite(&oid, sizeof(oid), 1, stream) != 1) return false;
  
@@ -930,7 +1005,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      ObjectID oid;
      int64_t obj;
      ObjectNode* node;
-@@ -292,10 +387,12 @@
+@@ -292,10 +388,12 @@
      if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
      if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
  
@@ -946,7 +1021,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_callbacks.field_4();
  
      if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
-@@ -307,6 +404,7 @@
+@@ -307,6 +405,7 @@
      }
  
      combat_action_points = saved_action_points;
@@ -954,7 +1029,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
      qword_5FC238 = obj_pool_perm_lookup(oid);
-@@ -343,7 +441,7 @@
+@@ -343,7 +442,7 @@
  
      combat_callbacks.field_C(combat_action_points);
  
@@ -963,7 +1038,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B2210
-@@ -422,7 +520,7 @@
+@@ -422,7 +521,7 @@
  // 0x4B2410
  void fast_turn_based_changed(void)
  {
@@ -972,7 +1047,91 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B24F0
-@@ -1237,6 +1335,7 @@
+@@ -783,12 +882,52 @@
+     }
+ }
+ 
++static void combat_report_attack(CombatContext* combat, int chance, int roll,
++    int armor_penalty, int dodge_chance, int dodge_roll, bool dodged)
++{
++    if (!combat_turn_based_is_active()) return;
++    MesFileEntry outcome;
++    mes_file_handle_t messages = MES_FILE_HANDLE_INVALID;
++    bool hit = (combat->flags & CF_HIT) != 0;
++    bool critical = (combat->flags & CF_CRITICAL) != 0;
++    char text[1024];
++    if (critical || (dodged && !hit)) {
++        outcome.num = critical ? (hit ? 12 : 2) : 11;
++        mes_get_msg(combat_mes_file, &outcome);
++    } else {
++        if (!mes_load("mes\\skill_ui.mes", &messages)) return;
++        outcome.num = hit ? 500 : 501;
++        mes_get_msg(messages, &outcome);
++    }
++    snprintf(text, sizeof(text), "%s", outcome.str);
++    if (roll > 0) {
++        int percent = chance < 0 ? 0 : chance > 100 ? 100 : chance;
++        snprintf(text + strlen(text), sizeof(text) - strlen(text), " | %s %d%% (%d %s %d)",
++            modern_intgame_text(20), percent, roll, roll <= chance ? "<=" : ">", chance);
++    }
++    if (armor_penalty > 0) {
++        snprintf(text + strlen(text), sizeof(text) - strlen(text), " | %s %d (-%d)",
++            modern_intgame_text(70), object_get_ac(combat->target_obj, false), armor_penalty);
++    }
++    if (dodge_roll > 0) {
++        MesFileEntry dodge = { .num = 11 };
++        mes_get_msg(combat_mes_file, &dodge);
++        snprintf(text + strlen(text), sizeof(text) - strlen(text), " | %s %s (%d %s %d)",
++            dodge.str, dodged ? "+" : "-", dodge_roll, dodge_roll <= dodge_chance ? "<=" : ">", dodge_chance);
++    }
++    modern_combat_event(combat->attacker_obj, combat->target_obj, text);
++    if (messages != MES_FILE_HANDLE_INVALID) mes_unload(messages);
++}
++
+ // 0x4B3170
+ int sub_4B3170(CombatContext* combat)
+ {
+     bool was_in_bed = false;
+     int sound_id;
+     int aptitude_crit_failure_chance;
++    int hit_chance = 0, hit_roll = 0, armor_penalty = 0;
++    int dodge_chance = 0, dodge_roll = 0;
++    bool dodged = false;
+ 
+     if (combat->target_obj != OBJ_HANDLE_NULL
+         && obj_field_int32_get(combat->target_obj, OBJ_F_TYPE) == OBJ_TYPE_SCENERY) {
+@@ -924,6 +1063,10 @@
+                 return 0;
+             }
+ 
++            hit_chance = skill_invocation.result_chance;
++            hit_roll = skill_invocation.result_roll;
++            armor_penalty = skill_invocation.result_armor_penalty;
++
+             if ((skill_invocation.flags & SKILL_INVOCATION_SUCCESS) != 0) {
+                 combat->flags |= CF_HIT;
+             }
+@@ -941,7 +1084,10 @@
+                     return 0;
+                 }
+ 
++                dodge_chance = skill_invocation.result_chance;
++                dodge_roll = skill_invocation.result_roll;
+                 if ((skill_invocation.flags & SKILL_INVOCATION_SUCCESS) != 0) {
++                    dodged = true;
+                     MesFileEntry mes_file_entry;
+ 
+                     mes_file_entry.num = 11; // "Dodge!"
+@@ -973,6 +1119,8 @@
+             combat->flags |= CF_CRITICAL;
+         }
+     }
++
++    combat_report_attack(combat, hit_chance, hit_roll, armor_penalty, dodge_chance, dodge_roll, dodged);
+ 
+     if ((combat->flags & CF_HIT) == 0
+         && (combat->flags & CF_CRITICAL) != 0) {
+@@ -1237,6 +1385,7 @@
      if (!combat_critter_is_combat_mode_active(obj)) {
          combat_critter_toggle_combat_mode(obj);
      }
@@ -980,7 +1139,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B3F80
-@@ -1813,6 +1912,7 @@
+@@ -1813,6 +1962,7 @@
              }
          }
  
@@ -988,7 +1147,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -2857,12 +2957,19 @@
+@@ -2857,12 +3007,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -1008,7 +1167,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3065,7 @@
+@@ -2958,7 +3115,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -1017,7 +1176,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2990,14 +3097,20 @@
+@@ -2990,14 +3147,20 @@
          }
      }
  
@@ -1042,7 +1201,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3138,7 @@
+@@ -3025,6 +3188,7 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
@@ -1050,7 +1209,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3168,9 @@
+@@ -3054,8 +3218,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -1062,7 +1221,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3199,10 @@
+@@ -3084,9 +3249,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -1075,7 +1234,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3160,6 +3276,7 @@
+@@ -3160,10 +3326,12 @@
  {
      ObjectNode* node;
  
@@ -1083,7 +1242,12 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_debug(OBJ_HANDLE_NULL, "TB End");
  
      if (combat_turn_based_active) {
-@@ -3189,6 +3306,7 @@
+         combat_turn_based_active = false;
++        if (!in_combat_reset) modern_autosave_after_combat();
+ 
+         sub_423FE0(NULL);
+ 
+@@ -3189,6 +3357,7 @@
  
      dword_5FC250 = 0;
      pc_obj = player_get_local_pc_obj();
@@ -1091,7 +1255,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based_turn++;
      pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
      combat_recalc_perception_range();
-@@ -3205,7 +3323,7 @@
+@@ -3205,7 +3374,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1100,7 +1264,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3243,6 +3361,9 @@
+@@ -3243,6 +3412,9 @@
          return true;
      }
  
@@ -1110,7 +1274,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!critter_is_active(object_node->obj)) {
          sub_427000(object_node->obj);
          return true;
-@@ -3286,6 +3407,7 @@
+@@ -3286,6 +3458,7 @@
  
      dword_5FC250++;
      combat_turn_based_subturn_end();
@@ -1118,7 +1282,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      dword_5FC240 = dword_5FC240->next;
      if (dword_5FC240 == NULL) {
-@@ -3549,6 +3671,8 @@
+@@ -3549,6 +3722,8 @@
          return true;
      }
  
@@ -1127,7 +1291,15 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3741,6 +3865,12 @@
+@@ -3574,6 +3749,7 @@
+         return true;
+     }
+ 
++    modern_combat_rejected(obj, OBJ_HANDLE_NULL, 0, action_points);
+     combat_action_points = 0;
+     combat_turn_based_next_subturn();
+ 
+@@ -3741,6 +3917,12 @@
          return false;
      }
  
@@ -1198,13 +1370,14 @@ diff --git a/src/game/critter.h b/src/game/critter.h
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -1,4 +1,5 @@
+@@ -1,4 +1,6 @@
++#include "game/modern_autosave.h"
  #include "game/gamelib.h"
 +#include "ui/modern_ui.h"
  
  #include <stdio.h>
  
-@@ -324,6 +325,7 @@
+@@ -324,6 +326,7 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -1212,7 +1385,15 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      difficulty_changed();
  
      gamelib_mod_loaded = false;
-@@ -456,6 +458,7 @@
+@@ -410,6 +413,7 @@
+     tig_debug_printf("gamelib_reset: Resetting.\n");
+     tig_timer_now(&reset_started_at);
+ 
++    modern_autosave_reset();
+     in_reset = true;
+     strcpy(gamelib_current_module_name, "Arcanum");
+     sector_art_cache_disable();
+@@ -456,6 +460,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -1220,7 +1401,33 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -1200,7 +1203,7 @@
+@@ -940,6 +945,8 @@
+     int version;
+     GameSaveInfo save_info;
+ 
++    if (modern_autosave_is_slot(name)) return false;
++
+     tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
+     tig_timer_now(&start_time);
+ 
+@@ -1004,7 +1011,7 @@
+         }
+     }
+ 
+-    tig_file_fclose(stream);
++    if (tig_file_fclose(stream) != 0) index = 0;
+ 
+     if (index < MODULE_COUNT) {
+         tig_file_remove(path);
+@@ -1078,6 +1085,7 @@
+     tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
+     tig_timer_now(&start_time);
+ 
++    modern_autosave_reset();
+     in_load = true;
+ 
+     ui_progressbar_init(MODULE_COUNT + 2);
+@@ -1200,7 +1208,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -1229,7 +1436,33 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1752,11 +1755,81 @@
+@@ -1394,13 +1402,9 @@
+     const GameSaveEntry* b = (const GameSaveEntry*)vb;
+ 
+     if (gamelib_savelist_sort_check_autosave) {
+-        if (SDL_toupper(a->path[4]) == 'A') {
+-            return -1;
+-        }
+-
+-        if (SDL_toupper(b->path[4]) == 'A') {
+-            return 1;
+-        }
++        bool a_auto = SDL_toupper(a->path[4]) == 'A';
++        bool b_auto = SDL_toupper(b->path[4]) == 'A';
++        if (a_auto != b_auto) return a_auto ? -1 : 1;
+     }
+ 
+     if (a->modify_time < b->modify_time) {
+@@ -1555,7 +1559,7 @@
+         } while (0);
+     }
+ 
+-    tig_file_fclose(stream);
++    if (tig_file_fclose(stream) != 0) success = false;
+ 
+     return success;
+ }
+@@ -1752,11 +1756,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -1312,7 +1545,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1873,7 @@
+@@ -1800,6 +1874,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -1487,7 +1720,16 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
  
  #include <stdio.h>
  
-@@ -7132,3 +7133,59 @@
+@@ -4947,6 +4948,8 @@
+     if (mt_invocation->parent_obj.obj != OBJ_HANDLE_NULL) {
+         int64_t parent_loc = obj_field_int64_get(mt_invocation->parent_obj.obj, OBJ_F_LOCATION);
+         if (!sub_454700(parent_loc, mt_invocation->target_loc, mt_invocation->target_obj.obj, mt_invocation->spell)) {
++            modern_combat_rejected(mt_invocation->parent_obj.obj, mt_invocation->target_obj.obj,
++                mt_invocation->target_obj.obj != OBJ_HANDLE_NULL || mt_invocation->target_loc != 0 ? 1 : 3, 0);
+             return false;
+         }
+     }
+@@ -7132,3 +7135,59 @@
              obj_field_int64_get(obj, OBJ_F_LOCATION));
      }
  }
@@ -1653,7 +1895,38 @@ diff --git a/src/game/script.c b/src/game/script.c
 diff --git a/src/game/skill.c b/src/game/skill.c
 --- a/src/game/skill.c
 +++ b/src/game/skill.c
-@@ -2668,6 +2668,9 @@
+@@ -1489,6 +1489,9 @@
+     skill_invocation->target_loc = 0;
+     skill_invocation->modifier = 0;
+     skill_invocation->skill = -1;
++    skill_invocation->result_chance = 0;
++    skill_invocation->result_roll = 0;
++    skill_invocation->result_armor_penalty = 0;
+ }
+ 
+ /**
+@@ -1562,6 +1565,9 @@
+     rnd_difficulty_roll = basic_skill == BASIC_SKILL_GAMBLING
+         ? skill_gambling_random_roll()
+         : random_between(1, 100);
++
++    skill_invocation->result_chance = effectiveness - difficulty;
++    skill_invocation->result_roll = rnd_difficulty_roll;
+ 
+     // Determine if roll is successful - the skill succeds if it's success rate
+     // is greater than difficulty plus random modifier, or the invocation is a
+@@ -2325,7 +2331,9 @@
+         // bypasses).
+         if ((skill_invocation->flags & SKILL_INVOCATION_BACKSTAB) == 0
+             || basic_skill_training_get(source_obj, BASIC_SKILL_BACKSTAB) == TRAINING_NONE) {
+-            difficulty += effectiveness * (object_get_ac(target_obj, false) / 2) / 100;
++            int armor_penalty = effectiveness * (object_get_ac(target_obj, false) / 2) / 100;
++            difficulty += armor_penalty;
++            skill_invocation->result_armor_penalty = armor_penalty;
+         }
+     }
+ 
+@@ -2668,6 +2676,9 @@
      int best_effectiveness;
      int64_t best_follower_obj;
  
@@ -1663,6 +1936,19 @@ diff --git a/src/game/skill.c b/src/game/skill.c
      // Ensure the source is a PC.
      if (obj_field_int32_get(skill_invocation->source.obj, OBJ_F_TYPE) != OBJ_TYPE_PC) {
          return;
+diff --git a/src/game/skill.h b/src/game/skill.h
+--- a/src/game/skill.h
++++ b/src/game/skill.h
+@@ -128,6 +128,9 @@
+     /* 009C */ int skill;
+     /* 00A0 */ int modifier;
+     /* 00A4 */ int hit_loc;
++    int result_chance;
++    int result_roll;
++    int result_armor_penalty;
+ } SkillInvocation;
+ 
+ extern const char* basic_skill_lookup_keys_tbl[BASIC_SKILL_COUNT];
 diff --git a/src/game/tb.c b/src/game/tb.c
 --- a/src/game/tb.c
 +++ b/src/game/tb.c
@@ -1759,6 +2045,26 @@ diff --git a/src/game/tc.c b/src/game/tc.c
      // Make sure we're not in the editor.
      if (tc_editor) {
          return;
+diff --git a/src/game/teleport.c b/src/game/teleport.c
+--- a/src/game/teleport.c
++++ b/src/game/teleport.c
+@@ -1,3 +1,4 @@
++#include "game/modern_autosave.h"
+ #include "game/teleport.h"
+ 
+ #include <stdio.h>
+@@ -119,6 +120,11 @@
+         }
+     }
+ 
++    if (player_is_local_pc_obj(teleport_data->obj)
++        && teleport_data->map != -1 && teleport_data->map != map_current_map()) {
++        modern_autosave_before_map_change();
++    }
++
+     current_teleport_data = *teleport_data;
+     teleport_pending = true;
+ 
 diff --git a/src/game/tf.c b/src/game/tf.c
 --- a/src/game/tf.c
 +++ b/src/game/tf.c
@@ -1779,7 +2085,12 @@ diff --git a/src/game/tf.c b/src/game/tf.c
 diff --git a/src/main.c b/src/main.c
 --- a/src/main.c
 +++ b/src/main.c
-@@ -9,6 +9,7 @@
+@@ -1,3 +1,4 @@
++#include "game/modern_autosave.h"
+ #include <stdio.h>
+ 
+ #include <SDL3/SDL_main.h>
+@@ -9,6 +10,7 @@
  #endif
  
  #include <tig/tig.h>
@@ -1787,7 +2098,7 @@ diff --git a/src/main.c b/src/main.c
  
  #include "game/ai.h"
  #include "game/anim.h"
-@@ -46,10 +47,13 @@
+@@ -46,10 +48,13 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
@@ -1801,7 +2112,7 @@ diff --git a/src/main.c b/src/main.c
  
  static void main_loop(void);
  static void handle_mouse_scroll(void);
-@@ -65,6 +69,10 @@
+@@ -65,6 +70,10 @@
  // 0x401000
  int main(int argc, char** argv)
  {
@@ -1812,7 +2123,7 @@ diff --git a/src/main.c b/src/main.c
      TigInitInfo init_info;
      TigVideoScreenshotSettings screenshotter;
      GameInitInfo game_init_info;
-@@ -205,10 +213,19 @@
+@@ -205,10 +214,19 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -1833,7 +2144,7 @@ diff --git a/src/main.c b/src/main.c
      }
  
      screenshotter.key = SDL_SCANCODE_F12;
-@@ -290,9 +307,25 @@
+@@ -290,9 +308,25 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
@@ -1859,7 +2170,7 @@ diff --git a/src/main.c b/src/main.c
  
      if (!mainmenu_ui_handle()) {
          gameuilib_exit();
-@@ -317,6 +350,7 @@
+@@ -317,6 +351,7 @@
  
      main_loop();
  
@@ -1867,15 +2178,18 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,6 +417,7 @@
+@@ -383,8 +418,10 @@
              output_profile_data = false;
          }
  
 +        modern_ui_tick();
          tig_ping();
          gamelib_ping();
++        modern_autosave_tick();
          iso_redraw();
-@@ -698,6 +733,7 @@
+         tig_window_display();
+ 
+@@ -698,6 +735,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -1883,7 +2197,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +779,26 @@
+@@ -743,25 +781,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
@@ -2133,10 +2447,11 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
 diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 --- a/src/ui/follower_ui.c
 +++ b/src/ui/follower_ui.c
-@@ -3,10 +3,12 @@
+@@ -3,10 +3,13 @@
  #include <stdio.h>
  
  #include "game/broadcast.h"
++#include "game/anim.h"
 +#include "game/combat.h"
  #include "game/critter.h"
  #include "game/hrp.h"
@@ -2146,7 +2461,16 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  #include "game/object.h"
  #include "game/player.h"
  #include "game/portrait.h"
-@@ -153,6 +155,8 @@
+@@ -17,6 +20,8 @@
+ #include "ui/intgame.h"
+ #include "ui/inven_ui.h"
+ #include "ui/tb_ui.h"
++
++#include "ui/modern_party_control.inc"
+ 
+ /**
+  * Commands available in the follower drop-down context menu.
+@@ -153,6 +158,8 @@
   */
  #define FOLLOWER_UI_DROP_DOWN_MENU_ART 826
  
@@ -2155,7 +2479,33 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  static void follower_ui_create(int index);
  static bool follower_ui_message_filter(TigMessage* msg);
  static void follower_ui_drop_down_menu_create(int index);
-@@ -643,9 +647,7 @@
+@@ -549,6 +556,7 @@
+  */
+ void follower_ui_reset(void)
+ {
++    party_detached_count=0;party_selected=OBJ_HANDLE_NULL;
+     int index;
+ 
+     follower_ui_visible = true;
+@@ -618,7 +626,7 @@
+ 
+     follower_ui_refresh();
+ 
+-    return true;
++    return party_control_load();
+ }
+ 
+ /**
+@@ -631,7 +639,7 @@
+     if (tig_file_fwrite(&follower_ui_visible, sizeof(follower_ui_visible), 1, stream) != 1) return false;
+     if (tig_file_fwrite(&follower_ui_top_index, sizeof(follower_ui_top_index), 1, stream) != 1) return false;
+ 
+-    return true;
++    return party_control_save();
+ }
+ 
+ /**
+@@ -643,9 +651,7 @@
  {
      int64_t pc_obj;
      int index;
@@ -2165,7 +2515,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      TargetDescriptor td;
  
      pc_obj = player_get_local_pc_obj();
-@@ -681,40 +683,7 @@
+@@ -681,40 +687,7 @@
                  for (index = 0; index < FOLLOWER_UI_COMMAND_COUNT; index++) {
                      if (msg->data.button.button_handle == follower_ui_drop_menu_item_buttons[index]) {
                          follower_ui_drop_down_menu_destroy();
@@ -2207,7 +2557,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                          return true;
                      }
                  }
-@@ -1139,7 +1108,7 @@
+@@ -1139,7 +1112,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -2216,7 +2566,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
  
          tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
-@@ -1212,7 +1181,7 @@
+@@ -1212,7 +1185,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -2225,7 +2575,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
      }
  
-@@ -1243,7 +1212,7 @@
+@@ -1243,7 +1216,7 @@
  void update_toggle_button_visibility(void)
  {
      if (follower_ui_followers_count > 0) {
@@ -2234,7 +2584,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
      }
-@@ -1271,7 +1240,7 @@
+@@ -1271,7 +1244,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
@@ -2243,7 +2593,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
          // Scroll-down button is active if not already at the bottom.
          if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
-@@ -1280,7 +1249,7 @@
+@@ -1280,7 +1253,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
@@ -2252,7 +2602,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          // Either all portraits fit into existing slots, or the follower UI is
          // hidden.
-@@ -1351,3 +1320,106 @@
+@@ -1351,3 +1324,106 @@
          follower_ui_refresh();
      }
  }
@@ -2362,10 +2712,14 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 diff --git a/src/ui/follower_ui.h b/src/ui/follower_ui.h
 --- a/src/ui/follower_ui.h
 +++ b/src/ui/follower_ui.h
-@@ -18,4 +18,10 @@
+@@ -18,4 +18,14 @@
  void follower_ui_hide(void);
  void follower_ui_show(void);
  
++bool modern_party_detached(int64_t obj);
++bool modern_party_set_grouped(int64_t obj, bool grouped);
++int64_t modern_party_selected(void);
++bool modern_party_select(int64_t obj);
 +void modern_followers_sync(bool hidden);
 +int modern_followers_get(int64_t* objects, int capacity);
 +const char* modern_follower_text(int command);
@@ -2513,7 +2867,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_button_state_get(intgame_secondary_buttons[btn].button_handle, &state);
      if (state != TIG_BUTTON_STATE_PRESSED) {
          opposite_btn = btn == INTGAME_SECONDARY_BUTTON_SPELLS
-@@ -2677,12 +2681,26 @@
+@@ -2677,12 +2681,32 @@
      TigMouseState mouse_state;
      TigMessage fake_mouse_move;
  
@@ -2524,6 +2878,12 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +            || (msg->type==TIG_MESSAGE_KEYBOARD && msg->data.keyboard.scancode!=SDL_SCANCODE_ESCAPE)))return;
 +
 +    pc_obj = combat_input_actor();
++    if(modern_ui_enabled() && !combat_turn_based_is_active() && intgame_mode_get()==INTGAME_MODE_MAIN){
++        if(msg->type==TIG_MESSAGE_MOUSE && msg->data.mouse.event==TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP
++            && modern_party_selected()){modern_party_select(OBJ_HANDLE_NULL);return;}
++        if(modern_party_selected())pc_obj=modern_party_selected();
++    }
++
 +
 +    if (!pc_obj) return;
      if (combat_turn_based_is_active()) {
@@ -2542,15 +2902,36 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      }
  
      if (msg->type == TIG_MESSAGE_KEYBOARD
-@@ -2699,6 +2717,7 @@
+@@ -2699,6 +2723,8 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
++                modern_map_route_cancel_tracking();
 +                if (combat_turn_based_is_active() && !combat_input_ready(pc_obj)) break;
                  if (sub_5517A0(msg)
                      && sub_552050(msg->data.mouse.x, msg->data.mouse.y, &td)) {
                      if (td.is_loc) {
-@@ -2972,6 +2991,7 @@
+@@ -2728,9 +2754,9 @@
+                             if ((tig_kb_get_modifier(SDL_KMOD_CTRL)
+                                     || tig_kb_get_modifier(SDL_KMOD_NUM))
+                                 && !settings_get_value(&settings, ALWAYS_RUN_KEY)) {
+-                                anim_goal_run_to_tile(pc_obj, td.loc);
++                                if (!anim_goal_run_to_tile(pc_obj, td.loc)) modern_combat_rejected(pc_obj, OBJ_HANDLE_NULL, 3, 0);
+                             } else {
+-                                anim_goal_move_to_tile(pc_obj, td.loc);
++                                if (!anim_goal_move_to_tile(pc_obj, td.loc)) modern_combat_rejected(pc_obj, OBJ_HANDLE_NULL, 3, 0);
+                             }
+ 
+                             if (dword_64C6D8) {
+@@ -2747,6 +2773,7 @@
+                 dword_64C6D8 = false;
+                 break;
+             case TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP:
++                modern_map_route_cancel_tracking();
+                 if (pc_obj != OBJ_HANDLE_NULL) {
+                     unsigned int spell_flags;
+                     unsigned int critter_flags;
+@@ -2972,6 +2999,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -2558,7 +2939,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && target_pick_at_screen_xy(msg->data.mouse.x, msg->data.mouse.y, &td, intgame_fullscreen)
                      && td.is_loc
-@@ -3117,7 +3137,7 @@
+@@ -3117,7 +3145,7 @@
      int64_t pc_obj;
      S4F2680 v1;
  
@@ -2567,12 +2948,19 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!combat_turn_based_is_active()
          || combat_turn_based_whos_turn_get() == pc_obj) {
-@@ -3261,16 +3281,18 @@
+@@ -3261,16 +3289,25 @@
      int anim;
      bool v26 = false;
  
 -    pc_obj = player_get_local_pc_obj();
 +    pc_obj = combat_input_actor();
++    if(modern_ui_enabled() && !combat_turn_based_is_active() && intgame_mode_get()==INTGAME_MODE_MAIN
++        && modern_party_selected() && !td->is_loc){
++        int type=obj_field_int32_get(td->obj,OBJ_F_TYPE);
++        if(type==OBJ_TYPE_PORTAL || type==OBJ_TYPE_CONTAINER || type==OBJ_TYPE_SCENERY)pc_obj=modern_party_selected();
++        else modern_party_select(OBJ_HANDLE_NULL);
++    }
++
      if (pc_obj == OBJ_HANDLE_NULL) {
          return;
      }
@@ -2588,7 +2976,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,7 +3336,7 @@
+@@ -3314,7 +3351,7 @@
              }
          }
  
@@ -2597,7 +2985,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              switch (target_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
-@@ -3396,8 +3418,8 @@
+@@ -3396,8 +3433,8 @@
                      }
  
                      if (!td->is_loc
@@ -2608,7 +2996,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3712,10 +3734,12 @@
+@@ -3570,6 +3607,7 @@
+         }
+ 
+         if (!anim_goal_add_ex(&goal_data, &anim_id, flags)) {
++            modern_combat_rejected(pc_obj, td->is_loc ? OBJ_HANDLE_NULL : td->obj, 3, 0);
+             return;
+         }
+ 
+@@ -3712,10 +3750,12 @@
          return;
      }
  
@@ -2622,7 +3018,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3805,7 @@
+@@ -3781,7 +3821,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -2631,7 +3027,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4051,6 +4075,8 @@
+@@ -4051,6 +4091,8 @@
  // 0x5506C0
  void iso_interface_window_set(RotatingWindowType window_type)
  {
@@ -2640,18 +3036,20 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4088,6 +4114,10 @@
+@@ -4088,6 +4130,12 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
  {
 +    if (ui_message->type >= UI_MSG_TYPE_POISON
 +        && ui_message->type <= UI_MSG_TYPE_FEEDBACK) {
 +        modern_ui_message(ui_message->str);
++        if ((ui_message->type == UI_MSG_TYPE_FEEDBACK || ui_message->type == UI_MSG_TYPE_EXCLAMATION) && combat_turn_based_is_active())
++            modern_combat_log(combat_input_actor(), ui_message->str);
 +    }
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4130,7 @@
+@@ -4100,6 +4148,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -2659,7 +3057,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4194,16 @@
+@@ -4163,9 +4212,16 @@
      }
  }
  
@@ -2676,7 +3074,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4240,11 @@
+@@ -4202,6 +4258,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -2688,7 +3086,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4876,14 @@
+@@ -4833,14 +4894,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -2705,7 +3103,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4955,13 @@
+@@ -4912,13 +4973,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -2721,7 +3119,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -5888,6 +5931,8 @@
+@@ -5888,6 +5949,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
  {
@@ -2730,7 +3128,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = func;
      tc_show();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -5899,6 +5944,8 @@
+@@ -5899,6 +5962,8 @@
  // 0x553350
  void intgame_dialog_end(void)
  {
@@ -2739,7 +3137,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6239,6 +6286,15 @@
+@@ -6239,6 +6304,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -2755,7 +3153,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6338,7 @@
+@@ -6282,6 +6356,7 @@
              }
          }
      }
@@ -2763,7 +3161,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6630,7 @@
+@@ -6573,6 +6648,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -2771,7 +3169,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6669,16 @@
+@@ -6611,6 +6687,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -2788,7 +3186,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6863,11 @@
+@@ -6795,6 +6881,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -2800,7 +3198,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7685,7 @@
+@@ -7612,6 +7703,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -2808,7 +3206,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7714,7 @@
+@@ -7640,7 +7732,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -2817,7 +3215,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7858,7 @@
+@@ -7784,7 +7876,7 @@
          mes_file_entry.str,
          value);
  
@@ -2826,7 +3224,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8907,198 @@
+@@ -8833,3 +8925,198 @@
  
      follower_ui_show();
  }
@@ -3227,13 +3625,14 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
 diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
 --- a/src/ui/mainmenu_ui.c
 +++ b/src/ui/mainmenu_ui.c
-@@ -1,4 +1,5 @@
+@@ -1,4 +1,6 @@
++#include "game/modern_autosave.h"
  #include "ui/mainmenu_ui.h"
 +#include "ui/modern_ui.h"
  
  #include <stdio.h>
  
-@@ -1740,6 +1741,8 @@
+@@ -1740,6 +1742,8 @@
      broadcast_ui_close();
  
      while (mainmenu_ui_active) {
@@ -3242,7 +3641,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          tig_ping();
          tig_timer_now(&timestamp);
          timeevent_ping(timestamp);
-@@ -1781,6 +1784,151 @@
+@@ -1781,6 +1785,151 @@
      return mainmenu_ui_active;
  }
  
@@ -3394,7 +3793,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  // 0x541690
  TigWindowModalDialogChoice mainmenu_ui_confirm_quit(void)
  {
-@@ -1796,6 +1944,11 @@
+@@ -1796,6 +1945,11 @@
  
      mes_file_entry.num = num;
      mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
@@ -3406,7 +3805,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      modal_info.type = TIG_WINDOW_MODAL_DIALOG_TYPE_OK_CANCEL;
      modal_info.x = 237;
-@@ -1806,7 +1959,9 @@
+@@ -1806,7 +1960,9 @@
      modal_info.process = NULL;
      modal_info.redraw = gamelib_redraw;
      hrp_center(&(modal_info.x), &(modal_info.y));
@@ -3416,7 +3815,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      return choice;
  }
-@@ -2022,7 +2177,7 @@
+@@ -2022,7 +2178,7 @@
      MainMenuWindowInfo* window;
  
      window = main_menu_window_info[mainmenu_ui_window_type];
@@ -3425,7 +3824,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (mainmenu_ui_confirm_quit() != TIG_WINDOW_MODAL_DIALOG_CHOICE_OK) {
              return false;
          }
-@@ -2032,7 +2187,7 @@
+@@ -2032,7 +2188,7 @@
          return sub_549310(button_handle);
      }
  
@@ -3434,7 +3833,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stru_5C36B0[mainmenu_ui_type][0]) {
              sub_5412D0();
              return false;
-@@ -2851,7 +3006,7 @@
+@@ -2851,7 +3007,7 @@
  
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -3443,7 +3842,81 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -3533,7 +3688,7 @@
+@@ -3032,53 +3188,31 @@
+         return false;
+     }
+ 
++    if (v1 > 0 && modern_autosave_is_slot(mainmenu_ui_gsl.names[v1 - 1])) {
++        v1 = 0;
++    }
+     if (v1 > 0) {
+         name = strcpy(fname, mainmenu_ui_gsl.names[v1 - 1]);
+         strcpy(mainmenu_ui_textedit_buffer, mainmenu_ui_gsl.names[v1 - 1] + 8);
+         fname[8] = '\0';
+-
+-        if (mainmenu_ui_confirm(5064)) {
+-            return false;
+-        }
++        if (mainmenu_ui_confirm(5064)) return false;
+     } else {
+-        gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_NAME, false);
+-
+-        if (mainmenu_ui_gsl.count > 0) {
+-            if (SDL_toupper(mainmenu_ui_gsl.names[0][4]) == 'A') {
+-                if (mainmenu_ui_gsl.count > 1
+-                    && mainmenu_ui_gsl.names[1] != NULL) {
+-                    strncpy(fname, mainmenu_ui_gsl.names[1], 8);
+-                    fname[8] = '\0';
+-                    num = atoi(&(fname[4])) + 1;
+-                    if (num >= 9999) {
+-                        return false;
+-                    }
+-
+-                    strcpy(fname, mainmenu_ui_gsl.names[0]);
+-                    snprintf(&(fname[4]), sizeof(fname) - 4, "%04d", num);
+-                    name = fname;
+-                } else {
+-                    name = "Slot0000";
+-                }
+-            } else {
+-                if (mainmenu_ui_gsl.names[0] != NULL) {
+-                    strncpy(fname, mainmenu_ui_gsl.names[0], 8);
+-                    fname[8] = '\0';
+-                    num = atoi(&(fname[4])) + 1;
+-                    if (num >= 9999) {
+-                        return false;
+-                    }
+-
+-                    strcpy(fname, mainmenu_ui_gsl.names[0]);
+-                    snprintf(&(fname[4]), sizeof(fname) - 4, "%04d", num);
+-                    name = fname;
+-                } else {
+-                    name = "Slot0000";
+-                }
+-            }
+-        } else {
+-            name = "Slot0000";
+-        }
++        num = 0;
++        for (unsigned int index = 0; index < mainmenu_ui_gsl.count; index++) {
++            const char* existing = mainmenu_ui_gsl.names[index];
++            if (strlen(existing) >= 8 && strncmp(existing, "Slot", 4) == 0
++                && existing[4] >= '0' && existing[4] <= '9'
++                && existing[5] >= '0' && existing[5] <= '9'
++                && existing[6] >= '0' && existing[6] <= '9'
++                && existing[7] >= '0' && existing[7] <= '9') {
++                int existing_num = (existing[4] - '0') * 1000 + (existing[5] - '0') * 100
++                    + (existing[6] - '0') * 10 + existing[7] - '0';
++                if (existing_num >= num) num = existing_num + 1;
++            }
++        }
++        if (num >= 9999) return false;
++        snprintf(fname, sizeof(fname), "Slot%04d", num);
++        name = fname;
+     }
+ 
+     sub_542200();
+@@ -3533,7 +3667,7 @@
      gamelib_savelist_create(&mainmenu_ui_gsl);
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -3452,7 +3925,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -6053,3 +6208,15 @@
+@@ -6053,3 +6187,15 @@
          }
      }
  }
@@ -3758,7 +4231,32 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  #include <stdio.h>
  
-@@ -314,6 +316,7 @@
+@@ -7,6 +9,7 @@
+ #include "game/antiteleport.h"
+ #include "game/area.h"
+ #include "game/critter.h"
++#include "game/combat.h"
+ #include "game/gamelib.h"
+ #include "game/gsound.h"
+ #include "game/hrp.h"
+@@ -15,6 +18,7 @@
+ #include "game/map.h"
+ #include "game/mes.h"
+ #include "game/obj.h"
++#include "game/obj_pool.h"
+ #include "game/path.h"
+ #include "game/player.h"
+ #include "game/sector.h"
+@@ -25,6 +29,8 @@
+ #include "ui/intgame.h"
+ #include "ui/textedit_ui.h"
+ #include "ui/types.h"
++
++static bool modern_town_route_start(void);
+ 
+ typedef enum WmapUiMode {
+     WMAP_UI_MODE_WORLD,
+@@ -314,6 +320,7 @@
  
  // 0x5C9B00
  static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
@@ -3766,7 +4264,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x5C9B08
  static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
-@@ -435,6 +438,7 @@
+@@ -435,6 +442,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -3774,7 +4272,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +752,7 @@
+@@ -748,7 +756,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -3783,7 +4281,23 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -1411,6 +1415,8 @@
+@@ -911,6 +919,7 @@
+ // 0x560200
+ void wmap_ui_reset(void)
+ {
++    modern_map_route_cancel_tracking();
+     int index;
+ 
+     if (wmap_ui_initialized) {
+@@ -1017,6 +1026,7 @@
+ // 0x5604B0
+ bool wmap_ui_load(GameLoadInfo* load_info)
+ {
++    modern_map_route_cancel_tracking();
+     int mode;
+     int cnt;
+     int note;
+@@ -1411,6 +1421,8 @@
      if (!wmap_ui_created) {
          return;
      }
@@ -3792,7 +4306,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      pc_obj = player_get_local_pc_obj();
      if (pc_obj != OBJ_HANDLE_NULL
-@@ -1523,6 +1529,7 @@
+@@ -1523,6 +1535,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -3800,16 +4314,25 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -3569,6 +3576,8 @@
+@@ -2188,6 +2201,7 @@
+                         }
+                     } else {
+                         if (wmap_ui_mode == WMAP_UI_MODE_TOWN && wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length > 0) {
++                            if(modern_ui_enabled())return modern_town_route_start();
+                             anim_goal_move_to_tile(player_get_local_pc_obj(),
+                                 wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].waypoints[0].loc);
+ 
+@@ -3569,6 +3583,9 @@
      return false;
  }
  
 +#include "modern_map_route.inc"
++#include "modern_map_travel.inc"
 +
  // 0x5643E0
  bool sub_5643E0(WmapCoords* coords)
  {
-@@ -3592,6 +3601,10 @@
+@@ -3592,6 +3609,10 @@
              return false;
          }
          route_type = WMAP_ROUTE_TYPE_TOWN;
@@ -3820,7 +4343,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      wp_idx = wmap_ui_routes[route_type].length;
-@@ -4212,7 +4225,7 @@
+@@ -4212,7 +4233,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -3829,7 +4352,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4426,7 +4439,7 @@
+@@ -4426,7 +4447,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -3838,7 +4361,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4684,8 @@
+@@ -4671,7 +4692,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -3848,7 +4371,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4710,7 @@
+@@ -4696,7 +4718,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -3857,7 +4380,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4865,7 @@
+@@ -4851,7 +4873,7 @@
          object_list_destroy(&objects);
      }
  
@@ -3866,7 +4389,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4984,3 +4998,82 @@
+@@ -4984,3 +5006,144 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
@@ -3949,6 +4472,88 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    info->field_34=x;info->field_38=y;
 +    if(info->refresh_rect)info->refresh_rect(&info->rect);
 +}
++
++bool modern_map_local_state(ModernLocalMap* state)
++{
++    if(!wmap_ui_created || wmap_ui_mode!=WMAP_UI_MODE_TOWN)return false;
++    WmapInfo* info=&wmap_ui_mode_info[wmap_ui_mode];
++    WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
++    *state=(ModernLocalMap){.width=info->map_width,.height=info->map_height,
++        .columns=info->num_hor_tiles,.rows=info->num_vert_tiles,
++        .count=route->length>6?6:route->length};
++    state->x[0]=info->field_3C.x;state->y[0]=info->field_3C.y;
++    for(int i=0;i<state->count;i++) {
++        state->x[i+1]=route->waypoints[i].coords.x;
++        state->y[i+1]=route->waypoints[i].coords.y;
++    }
++    return true;
++}
++
++void modern_map_local_mouse(int x,int y,int event,int radius)
++{
++    if(!wmap_ui_created || wmap_ui_mode!=WMAP_UI_MODE_TOWN
++        || wmap_ui_state!=WMAP_UI_STATE_NORMAL)return;
++    WmapInfo* info=&wmap_ui_mode_info[wmap_ui_mode];
++    if(x<0 || y<0 || x>=info->map_width || y>=info->map_height)return;
++    WmapCoords coords={x,y};
++    WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
++    int selected=-1;
++    for(int i=route->length-1;i>=0;i--) {
++        int64_t dx=(int64_t)x-route->waypoints[i].coords.x,dy=(int64_t)y-route->waypoints[i].coords.y;
++        if(dx*dx+dy*dy<=(int64_t)radius*radius){selected=i;break;}
++    }
++    if(event==TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP) {
++        if(selected>=0) {
++            dword_5C9AD8=selected;
++            sub_5649D0(route->waypoints[selected].field_4);
++        } else sub_5643E0(&coords);
++    } else if(event==TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP && selected>=0) {
++        sub_564840(selected);dword_5C9AD8=-1;
++    }
++}
++
++void modern_map_route_clear(void)
++{
++    if(!wmap_ui_created || wmap_ui_mode!=WMAP_UI_MODE_TOWN)return;
++    if(wmap_ui_state==WMAP_UI_STATE_MOVING)wmap_ui_state_set(WMAP_UI_STATE_NORMAL);
++    if(wmap_ui_state!=WMAP_UI_STATE_NORMAL)return;
++    wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length=0;
++    dword_5C9AD8=-1;dword_65E968=0;
++    sub_5649C0();wmap_ui_mode_info[wmap_ui_mode].refresh();
++}
++
++void* modern_map_local_tile(int index)
++{
++    if(!wmap_ui_created || wmap_ui_mode!=WMAP_UI_MODE_TOWN)return NULL;
++    WmapInfo* info=&wmap_ui_mode_info[wmap_ui_mode];
++    if(index<0 || index>=info->num_tiles || !wmTileArtLock(index))return NULL;
++    return info->tiles[index].video_buffer;
++}
++
++void modern_map_local_tile_release(int index)
++{
++    wmTileArtUnlock(index);
++}
+diff --git a/src/ui/wmap_ui.h b/src/ui/wmap_ui.h
+--- a/src/ui/wmap_ui.h
++++ b/src/ui/wmap_ui.h
+@@ -23,4 +23,16 @@
+ void wmap_ui_notify_sector_changed(int64_t pc_obj, int64_t sec);
+ void wmap_ui_get_current_location(int64_t* loc_ptr);
+ 
++typedef struct ModernLocalMap {
++    int width,height,columns,rows,count;
++    int x[7],y[7];
++} ModernLocalMap;
++bool modern_map_local_state(ModernLocalMap* state);
++void modern_map_local_mouse(int x,int y,int event,int radius);
++void* modern_map_local_tile(int index);
++void modern_map_local_tile_release(int index);
++void modern_map_route_clear(void);
++void modern_map_route_tick(void);
++void modern_map_route_cancel_tracking(void);
++
+ #endif /* ARCANUM_UI_WMAP_UI_H_ */
 diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
 --- a/src/ui/written_ui.c
 +++ b/src/ui/written_ui.c

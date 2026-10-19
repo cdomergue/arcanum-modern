@@ -4,11 +4,13 @@ static int64_t tactical_order[128];
 static int tactical_count, tactical_page, tactical_spell_page;
 static int tactical_maintained_ids[32],tactical_maintained_spells[32],tactical_maintained_count;
 static bool tactical_was_active, tactical_log_open;
+static bool tactical_active(void);
 static ModernCombatPreview tactical_preview;
 static bool tactical_has_preview;
 static Uint64 tactical_preview_time;
-static char tactical_lines[32][1200];
-static int tactical_line_count;
+enum { TACTICAL_LOG_CAPACITY = 128, TACTICAL_LOG_ROWS = 4 };
+static char tactical_lines[TACTICAL_LOG_CAPACITY][4096];
+static int tactical_line_count, tactical_line_head, tactical_log_scroll;
 static struct { int number; SDL_Texture* texture; float width,height; } tactical_portraits[32];
 static int tactical_portrait_count;
 
@@ -31,13 +33,128 @@ static const char* tactical_text(int id)
     return strcmp(modern_intgame_text(0),"Niveau")==0?fr[id]:en[id];
 }
 
+static void tactical_log_append_line(const char* text)
+{
+    SDL_strlcpy(tactical_lines[tactical_line_head],text,sizeof(tactical_lines[0]));
+    tactical_line_head=(tactical_line_head+1)%TACTICAL_LOG_CAPACITY;
+    if(tactical_line_count<TACTICAL_LOG_CAPACITY)tactical_line_count++;
+    if(tactical_log_scroll>0 && tactical_log_scroll<tactical_line_count-TACTICAL_LOG_ROWS)tactical_log_scroll++;
+}
+
+static void tactical_log_append(const char* text)
+{
+    while(*text){
+        const char* end=text;
+        const char* space=NULL;
+        for(int count=0;*end && count<120;count++){
+            if(*end==' ')space=end;
+            end++;
+            while((*end & 0xc0)==0x80)end++;
+        }
+        if(*end && space && space>text)end=space;
+        char row[512];size_t length=(size_t)(end-text);
+        if(length>=sizeof(row))length=sizeof(row)-1;
+        memcpy(row,text,length);row[length]=0;tactical_log_append_line(row);
+        text=end;while(*text==' ')text++;
+    }
+}
+
+void modern_combat_event(int64_t attacker,int64_t target,const char* raw)
+{
+    if(!enabled || !raw || !*raw)return;
+    int64_t viewer=player_get_local_pc_obj();
+    if(!viewer || !obj_handle_is_valid(viewer))return;
+    char from[1024]="",to[1024]="",name[1024],text[2048],line[8192];
+    if(attacker && obj_handle_is_valid(attacker)){
+        object_examine(attacker,viewer,name);from_game(name,from,sizeof(from));
+    }
+    if(target && target!=attacker && obj_handle_is_valid(target)){
+        object_examine(target,viewer,name);from_game(name,to,sizeof(to));
+    }
+    from_game(raw,text,sizeof(text));
+    snprintf(line,sizeof(line),"%s%s%s%s%s",from,*to?" -> ":"",to,*from || *to?" : ":"",text);
+    tactical_log_append(line);
+}
+
 void modern_combat_log(int64_t object,const char* raw)
 {
-    if(!enabled || !combat_turn_based_is_active() || !raw || !*raw || !obj_handle_is_valid(object))return;
-    char name[1000],text[1000];object_examine(object,player_get_local_pc_obj(),name);
-    from_game(raw,text,sizeof(text));
-    char line[1200];snprintf(line,sizeof(line),"%s : %.900s",game_text(name),text);
-    SDL_strlcpy(tactical_lines[tactical_line_count++%32],line,sizeof(tactical_lines[0]));
+    if(combat_turn_based_is_active())modern_combat_event(object,OBJ_HANDLE_NULL,raw);
+}
+
+void modern_combat_feedback(int64_t actor,int64_t target,const char* raw)
+{
+    modern_ui_message(raw);
+    modern_combat_event(actor,target,raw);
+}
+
+void modern_combat_rejected(int64_t actor,int64_t target,int reason,int required)
+{
+    if(!enabled || !actor || !obj_handle_is_valid(actor)
+        || (!combat_player_controls(actor) && actor!=modern_party_selected()))return;
+    char text[1024];
+    if(reason==0)snprintf(text,sizeof(text),"%s %d %s > %d %s",game_text(modern_intgame_text(15)),required,tactical_text(TC_AP),combat_action_points_get(),tactical_text(TC_AP));
+    else if(reason==1)SDL_strlcpy(text,tactical_text(TC_RANGE),sizeof(text));
+    else if(reason==2)SDL_strlcpy(text,tactical_text(TC_BLOCKED),sizeof(text));
+    else {
+        mes_file_handle_t file;
+        if(!mes_load("mes\\skill_ui.mes",&file))return;
+        MesFileEntry entry={.num=501};mes_get_msg(file,&entry);from_game(entry.str,text,sizeof(text));mes_unload(file);
+    }
+    static int64_t last_actor;
+    static char last_text[1024];
+    static Uint64 last_time;
+    Uint64 now=SDL_GetTicks();
+    if(last_actor==actor && !strcmp(last_text,text) && now-last_time<750)return;
+    last_actor=actor;last_time=now;SDL_strlcpy(last_text,text,sizeof(last_text));
+    SDL_strlcpy(message_text,text,sizeof(message_text));message_time=now;
+    char name[1024],from[1024],to[1024]="",line[4096];
+    object_examine(actor,player_get_local_pc_obj(),name);from_game(name,from,sizeof(from));
+    if(target && obj_handle_is_valid(target)){object_examine(target,player_get_local_pc_obj(),name);from_game(name,to,sizeof(to));}
+    snprintf(line,sizeof(line),"%s%s%s : %s",from,*to?" -> ":"",to,text);tactical_log_append(line);
+}
+
+static SDL_FRect tactical_log_rect(void)
+{
+    return (SDL_FRect){(canvas_w-980)/2,canvas_h-492,980,318};
+}
+
+static bool tactical_log_region(float x,float y)
+{
+    return (tactical_log_open && inside(tactical_log_rect(),x,y))
+        || (!tactical_active() && tactical_line_count && inside((SDL_FRect){(canvas_w-980)/2,canvas_h-164,190,30},x,y));
+}
+
+static void tactical_log_move(int amount)
+{
+    int limit=tactical_line_count>TACTICAL_LOG_ROWS?tactical_line_count-TACTICAL_LOG_ROWS:0;
+    tactical_log_scroll+=amount;
+    if(tactical_log_scroll<0)tactical_log_scroll=0;
+    if(tactical_log_scroll>limit)tactical_log_scroll=limit;
+}
+
+static bool tactical_log_event(SDL_Event* event)
+{
+    if(event->type!=SDL_EVENT_MOUSE_WHEEL || !tactical_log_open || !inside(tactical_log_rect(),mouse_x,mouse_y))return false;
+    tactical_log_move(event->wheel.y>0?1:-1);
+    return true;
+}
+
+static void draw_tactical_log(void)
+{
+    if(!tactical_active() && tactical_line_count)
+        button((SDL_FRect){(canvas_w-980)/2,canvas_h-164,190,30},1106,tactical_text(TC_LOG),-1,tactical_log_open,true);
+    if(!tactical_log_open)return;
+    SDL_FRect r=tactical_log_rect();fill(r,(SDL_Color){16,12,9,240});outline(r,GOLD);
+    text_draw(0,tactical_text(TC_LOG),r.x+12,r.y+10,GOLD);
+    button((SDL_FRect){r.x+r.w-120,r.y+5,32,27},1107,"<",-1,false,tactical_log_scroll<tactical_line_count-TACTICAL_LOG_ROWS);
+    button((SDL_FRect){r.x+r.w-80,r.y+5,32,27},1108,">",-1,false,tactical_log_scroll>0);
+    button((SDL_FRect){r.x+r.w-40,r.y+5,32,27},1106,"×",-1,false,true);
+    int end=tactical_line_count-tactical_log_scroll;
+    int first=end>TACTICAL_LOG_ROWS?end-TACTICAL_LOG_ROWS:0;
+    for(int i=first;i<end;i++){
+        int index=(tactical_line_head-tactical_line_count+i+TACTICAL_LOG_CAPACITY)%TACTICAL_LOG_CAPACITY;
+        menu_paragraph(tactical_lines[index],(SDL_FRect){r.x+12,r.y+40+(i-first)*68,r.w-24,66},0,MUTED);
+    }
 }
 
 static void tactical_portraits_clear(void)
@@ -153,7 +270,7 @@ static bool tactical_region(float x,float y)
 {
     return maintained_region(x,y) || party_region(x,y) || inside((SDL_FRect){(canvas_w-930)/2,10,930,66},x,y)
         || inside((SDL_FRect){(canvas_w-980)/2,canvas_h-126,980,116},x,y)
-        || (tactical_log_open && inside((SDL_FRect){(canvas_w-980)/2,canvas_h-290,540,158},x,y));
+        || tactical_log_region(x,y);
 }
 static void tactical_tick(void)
 {
@@ -168,7 +285,7 @@ static void tactical_tick(void)
     enabled=true;
     modern_combat_sync();
     int64_t actor=combat_turn_based_whos_turn_get();
-    if(!tactical_was_active){tactical_line_count=0;tactical_page=0;tactical_log_open=false;}
+    if(!tactical_was_active){tactical_page=0;}
     tactical_count=combat_turn_order(tactical_order,128);
     if(actor!=tactical_actor){
         tactical_camera.moving=false;tactical_camera.unlock=0;
@@ -323,20 +440,18 @@ static void draw_tactical_hud(void)
         fill(r,(SDL_Color){16,12,9,235});outline(r,GOLD);
         text_compact(message_text,r.x+12,r.y+6,r.w-24,true,GOLD);
     }
-    if(tactical_log_open){
-        SDL_FRect r={x,y-164,540,158};fill(r,(SDL_Color){16,12,9,220});outline(r,GOLD);
-        int first=tactical_line_count>6?tactical_line_count-6:0;
-        for(int i=first;i<tactical_line_count;i++)text_compact(tactical_lines[i%32],x+10,r.y+9+(i-first)*24,520,false,MUTED);
-    }
+
 }
 static bool tactical_action(int action)
 {
+    if(action==1106){tactical_log_open=!tactical_log_open;return true;}
+    if(action==1107){tactical_log_move(TACTICAL_LOG_ROWS);return true;}
+    if(action==1108){tactical_log_move(-TACTICAL_LOG_ROWS);return true;}
     if(!tactical_active())return false;
     if(action==1101){if(tactical_page>0)tactical_page--;return true;}
     if(action==1102){if((tactical_page+1)*10<tactical_count)tactical_page++;return true;}
     if(action==1110){if(tactical_spell_page>0)tactical_spell_page--;return true;}
     if(action==1111){if(tactical_spell_page<7)tactical_spell_page++;return true;}
-    if(action==1106){tactical_log_open=!tactical_log_open;return true;}
     if(action>=1200 && action<1328){
         int64_t obj=tactical_order_actor(action-1200);
         if(obj && !combat_shared_turn_select(obj))tactical_camera_focus(obj,false);

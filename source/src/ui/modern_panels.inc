@@ -52,6 +52,20 @@ static bool map_pressed,map_dragged;
 static PanelRegion map_drag_region;
 static float map_start_x,map_start_y,map_last_x,map_last_y,map_pan_x,map_pan_y;
 static int map_press_x,map_press_y;
+#include "modern_map_camera.inc"
+static MapCamera map_camera;
+static ModernLocalMap map_local;
+static SDL_FRect map_viewport,map_destination;
+static bool map_camera_active;
+static int map_camera_id=-1;
+
+static void map_zoom(float factor,float x,float y)
+{
+    if(!map_camera_active || map_pressed)return;
+    map_camera_zoom(&map_camera,factor,x-map_destination.x,y-map_destination.y,
+        map_viewport.w,map_viewport.h,map_local.width,map_local.height);
+}
+
 
 static bool play_sheet(void) { return !mainmenu_ui_is_active() && charedit_is_created(); }
 static int native_panel(void)
@@ -601,11 +615,13 @@ static void draw_memo_editor(void)
     button((SDL_FRect){x+215,y+155,170,42},2193,tr("Supprimer","Delete"),-1,false,memo_edit<map_memo_count);
     button((SDL_FRect){x+405,y+155,170,42},2194,menu_text(54),-1,false,true);
 }
+#include "modern_map_bitmap.inc"
 static void draw_map(void)
 {
     ModernMap map;if(!modern_map_state(&map))return;
+    bool local=modern_map_local_state(&map_local);
     bool hd=map_cache_prepare(&map);
-    modern_map_hd_enable(hd);
+    modern_map_hd_enable(local);
     panel_backdrop();float w=fminf(1440,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-820)/2;
     frame((SDL_FRect){x,y,w,820});
     centered(3,game_text(modern_map_text(map.mode==1?502:501)),canvas_w/2,y+22,GOLD);
@@ -613,29 +629,77 @@ static void draw_map(void)
     menu_button((SDL_FRect){x+310,y+78,260,48},742,game_text(modern_map_text(502)),true);
     button((SDL_FRect){x+590,y+78,220,48},2190,tr("Ajouter une note","Add note"),-1,memo_placing,map_memo_count<64 && !map.moving);
     button((SDL_FRect){x+830,y+78,200,48},2191,tr("Notes visibles","Show notes"),-1,memos_visible,true);
-    if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || map_texture_hd!=hd || !map_texture) {
+    if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || map_texture_hd!=local || !map_texture) {
         float ww,hh;SDL_DestroyTexture(map_texture);
-        map_texture=hd?map_overlay_texture(map.buffer):texture_from_buffer(map.buffer,&ww,&hh);
+        map_texture=local?map_overlay_texture(map.buffer):texture_from_buffer(map.buffer,&ww,&hh);
         map_texture_time=SDL_GetTicks();map_texture_mode=map.mode;
-        map_texture_hd=hd;
+        map_texture_hd=local;
     }
     SDL_FRect available={x+30,y+150,w-60,550};
     float scale=fminf(available.w/map.width,available.h/map.height);
-    SDL_FRect dest={available.x+(available.w-map.width*scale)/2,available.y+(available.h-map.height*scale)/2,map.width*scale,map.height*scale};
-    SDL_FRect src={map.x,map.y-41,map.width,map.height};
-    fill(available,(SDL_Color){12,10,8,255});
-    if(hd && !map_cache_draw(&map,dest,scale)) {
-        modern_map_hd_enable(false);
-        float ww,hh;SDL_DestroyTexture(map_texture);map_texture=texture_from_buffer(map.buffer,&ww,&hh);
-        map_texture_hd=false;
+    ModernMap native=map;
+    map_camera_active=local;
+    map_viewport=available;
+    if(map_camera_active) {
+        if(map_camera_id!=map.townmap) {
+            map_camera=(MapCamera){
+                .x=map.offset_x-map.origin_x+(map.width-fminf(map_local.width,available.w/scale))/2,
+                .y=map.offset_y-map.origin_y+(map.height-fminf(map_local.height,available.h/scale))/2,.scale=scale};
+            map_camera_id=map.townmap;
+        }
+        map_camera.min_scale=fminf(available.w/map_local.width,available.h/map_local.height);
+        map_camera.max_scale=fmaxf(scale,hd && map_cache_info.scale>0?1/map_cache_info.scale:4);
+        map_camera_zoom(&map_camera,1,0,0,available.w,available.h,map_local.width,map_local.height);
+        scale=map_camera.scale;
+        map.width=(int)ceilf(map_camera.width);map.height=(int)ceilf(map_camera.height);
+        map.offset_x=(int)map_camera.x;map.offset_y=(int)map_camera.y;
+        map.origin_x=map.origin_y=0;
     }
-    if(map_texture)SDL_RenderTexture(renderer,map_texture,&src,&dest);outline(dest,GOLD);
-    panel_region(dest,map.x,map.y,map.width,map.height,3);
+    SDL_FRect dest={available.x+(available.w-map.width*scale)/2,available.y+(available.h-map.height*scale)/2,map.width*scale,map.height*scale};
+    map_destination=dest;
+    SDL_FRect src={native.x,native.y-41,native.width,native.height};
+    fill(available,(SDL_Color){12,10,8,255});
+    if(local && (!hd || !map_cache_draw(&map,dest,scale)))map_bitmap_draw(&map,dest,scale);
+    SDL_Rect saved_clip;bool clipped=SDL_RenderClipEnabled(renderer);
+    SDL_GetRenderClipRect(renderer,&saved_clip);
+    SDL_Rect clip={(int)dest.x,(int)dest.y,(int)dest.w,(int)dest.h};
+    SDL_SetRenderClipRect(renderer,&clip);
+    SDL_FRect overlay=dest;
+    if(map_camera_active)overlay=(SDL_FRect){
+        dest.x+(native.offset_x-native.origin_x-map.offset_x)*scale,
+        dest.y+(native.offset_y-native.origin_y-map.offset_y)*scale,
+        native.width*scale,native.height*scale};
+    if(map_texture)SDL_RenderTexture(renderer,map_texture,&src,&overlay);
+    if(local) {
+        float origin_x=map_camera_active?0:map.origin_x,origin_y=map_camera_active?0:map.origin_y;
+        for(int i=0;i<=map_local.count;i++) {
+            float xx=dest.x+(map_local.x[i]+origin_x-map.offset_x)*scale;
+            float yy=dest.y+(map_local.y[i]+origin_y-map.offset_y)*scale;
+            if(i) {
+                float previous_x=dest.x+(map_local.x[i-1]+origin_x-map.offset_x)*scale;
+                float previous_y=dest.y+(map_local.y[i-1]+origin_y-map.offset_y)*scale;
+                SDL_SetRenderDrawColor(renderer,235,193,100,255);
+                SDL_RenderLine(renderer,previous_x,previous_y,xx,yy);
+                SDL_RenderLine(renderer,previous_x,previous_y+1,xx,yy+1);
+            }
+            float radius=i==map_local.count && i?7:4;
+            fill((SDL_FRect){xx-radius,yy-radius,radius*2,radius*2},i?GOLD:(SDL_Color){240,240,230,255});
+            outline((SDL_FRect){xx-radius-2,yy-radius-2,radius*2+4,radius*2+4},GOLD);
+        }
+    }
     draw_map_memos(&map,dest,scale);
+    SDL_SetRenderClipRect(renderer,clipped?&saved_clip:NULL);
+    outline(dest,GOLD);
+    panel_region(dest,map_camera_active?map.offset_x:map.x,map_camera_active?map.offset_y:map.y,map.width,map.height,3);
+    if(local) {
+        button((SDL_FRect){x+w-140,y+78,48,48},749,"-",-1,false,map_camera_active && map_camera.scale>map_camera.min_scale+0.001f);
+        button((SDL_FRect){x+w-82,y+78,48,48},750,"+",-1,false,map_camera_active && map_camera.scale<map_camera.max_scale-0.001f);
+        menu_button((SDL_FRect){x+w-585,y+741,220,50},748,menu_text(54),map_local.count>0);
+    }
     menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
     text_in_button((SDL_FRect){x+w-350,y+741,320,50},743,game_text(modern_map_text(512)),false,map.mode!=1);
     if(memo_placing)text_draw(0,tr("Cliquez sur la carte pour placer la note.","Click the map to place your note."),x+35,y+711,GOLD);
-    if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+290,y+736,w-670,54},0,GOLD);
+    else if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+35,y+704,w-70,34},0,GOLD);
     draw_memo_editor();
 }
 
@@ -919,6 +983,8 @@ static bool panels_action(int action)
         else modern_inventory_action(action-730);
         return true;
     }
+    if(p==3 && action==748){modern_map_route_clear();map_texture_time=0;return true;}
+    if(p==3 && (action==749 || action==750)){map_zoom(action==749?0.8f:1.25f,map_destination.x+map_destination.w/2,map_destination.y+map_destination.h/2);return true;}
     if(action>=740 && action<=747 && p==3){modern_map_action(action-740);return true;}
     if(action>=760 && action<=764 && p==2) {
         int amount,max;modern_quantity_state(&amount,&max);
@@ -938,6 +1004,7 @@ static bool panels_action(int action)
 }
 static void panels_tick(void)
 {
+    modern_map_route_tick();
     int p=native_panel();
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
@@ -948,12 +1015,14 @@ static void panels_tick(void)
         if(p==1){sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);}
         if(p!=5)selector=0;
         binding_cancel=binding_pressed;binding_pressed=binding_moved=false;binding_bar_visible=false;
-        map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;SDL_CaptureMouse(false);
+        map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;map_camera_id=-1;map_camera_active=false;map_bitmap_clear();SDL_CaptureMouse(false);
         if(p==2){inventory_query[0]=0;inventory_filter=0;inventory_compare_scroll=0;memset(&inventory_details,0,sizeof(inventory_details));inventory_detail_object=0;inventory_detail_scroll=0;}
         panel_previous=p;
     }
     if(p==3 && ((int)map_pan_x || (int)map_pan_y)) {
-        int dx=(int)map_pan_x,dy=(int)map_pan_y;modern_map_pan(dx,dy);
+        int dx=(int)map_pan_x,dy=(int)map_pan_y;
+        if(map_camera_active){map_camera.x+=dx;map_camera.y+=dy;map_camera_clamp(&map_camera,map_local.width,map_local.height);}
+        else modern_map_pan(dx,dy);
         map_pan_x-=dx;map_pan_y-=dy;map_texture_time=0;
     }
     for(int i=0;i<panel_event_count;i++) {
@@ -963,7 +1032,10 @@ static void panels_tick(void)
         }
         if(panel_events[i].kind==p) {
             if(p==2)modern_inventory_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
-            if(p==3)modern_map_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
+            if(p==3){
+                if(map_camera_active)modern_map_local_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event,(int)ceilf(10/map_camera.scale));
+                else modern_map_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
+            }
         }
     }
     panel_event_count=0;
@@ -1050,7 +1122,11 @@ static bool panels_event(SDL_Event* event)
     }
     if((p==2 || p==5) && binding_event(event))return true;
     if(event->type==SDL_EVENT_MOUSE_WHEEL) {
-        if(p==9)pending_action=event->wheel.y>0?991:992;
+        if(p==3 && inside(map_destination,mouse_x,mouse_y)){
+            float amount=event->wheel.direction==SDL_MOUSEWHEEL_FLIPPED?-event->wheel.y:event->wheel.y;
+            if(amount)map_zoom(powf(1.25f,amount),mouse_x,mouse_y);
+        }
+        else if(p==9)pending_action=event->wheel.y>0?991:992;
         else if(p==4)pending_action=inside(dialogue_reply_view,mouse_x,mouse_y)?(event->wheel.y>0?822:823):(event->wheel.y>0?820:821);
         else if(p==2)pending_action=inside(inventory_compare_rect,mouse_x,mouse_y)?(event->wheel.y>0?776:777):inside(inventory_detail_rect,mouse_x,mouse_y)?(event->wheel.y>0?770:771):(event->wheel.y>0?735:736);
         else if(p==1 || p==7){description_scroll+=event->wheel.y>0?-3:3;if(description_scroll<0)description_scroll=0;if(description_scroll>description_max)description_scroll=description_max;}
