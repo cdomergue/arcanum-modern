@@ -7,7 +7,7 @@ Magick Obscura**, based on [Arcanum Community Edition](https://github.com/alexba
 
 ### Windows
 
-**[Download the Windows setup](../../releases/latest/download/ArcanumModern-windows-x64-setup.exe).**
+**[Download the Windows setup](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe).**
 
 1. Install your own copy of **Arcanum**, updated to **1.0.7.4**.
 2. Open the downloaded setup and select the folder where Arcanum is installed.
@@ -17,18 +17,18 @@ The setup installs the mod for you and keeps your original game, saves and
 settings. You do not need to compile anything or install development tools.
 Close the game before installing or updating, and use a folder you can write to.
 
-A Windows ZIP is also available in [Releases](../../releases/latest) for manual
+A Windows ZIP is also available in [Releases](https://github.com/cdomergue/arcanum-modern/releases/latest) for manual
 installation: extract it into your Arcanum folder, then open **Play Arcanum Modern.bat**.
 
 ### macOS
 
-Download the macOS ZIP from [Releases](../../releases/latest), extract it into
+Download the macOS ZIP from [Releases](https://github.com/cdomergue/arcanum-modern/releases/latest), extract it into
 your Arcanum game folder, then open **Arcanum Modern.app** beside the game files.
 This version requires an Apple Silicon Mac (M1 or newer) with macOS 11 or later.
 
 ### Linux
 
-Download the Linux x64 ZIP from [Releases](../../releases/latest) and extract it
+Download the Linux x64 ZIP from [Releases](https://github.com/cdomergue/arcanum-modern/releases/latest) and extract it
 into your Arcanum game folder. Run **Play Arcanum Modern.sh** from that folder.
 If your file manager does not run shell scripts, open a terminal there and enter
 `./"Play Arcanum Modern.sh"`.
@@ -37,8 +37,12 @@ If your file manager does not run shell scripts, open a terminal there and enter
 
 **You must supply your own Arcanum 1.0.7.4 game files.** Release downloads contain
 only the mod: no original game data, saves, personal settings or HD map cache.
-Without the HD cache, the game uses its original local maps. You can generate
-detailed maps from your own installation using the [map instructions below](#detailed-local-maps).
+**On first launch, the game prepares HD local maps automatically**, with a progress
+bar, on Windows, macOS and Linux. No extra tools or downloads are needed. Allow
+about **8 GB** for Arcanum and Vormantown, plus temporary working space; the time
+needed depends on your machine and installed modules. Choose **Play now** to use
+the original maps immediately. Preparation resumes at the next launch, keeping
+completed tiles. A complete cache is reused on subsequent launches.
 
 Downloads become available when a release is published. If no release has been
 published yet, the [build instructions](#build-from-source) explain how to create
@@ -59,7 +63,7 @@ the packages. Back up your saved games before trying an experimental engine.
   transfer shortcuts and editable quick slots with hover descriptions.
 - **Journal and exploration:** quest filters, search, favorites, quest tracking
   and personal map notes.
-- **Optional detailed local maps:** maps rendered from the installed game data,
+- **Automatically prepared HD local maps:** maps rendered from the installed game data,
   with opaque roofs, exploration fog and separately drawn localized labels and
   markers. Original maps remain available when the detailed cache is absent.
 - **Tactical combat:** direct control of eligible companions during their own
@@ -211,7 +215,7 @@ ArcanumModern/
         ├── Book.ttf
         ├── Heading.ttf
         ├── ...
-        └── local-maps/              # Optional cache you generate separately
+        └── local-maps/              # HD cache generated on first launch
 ```
 
 Use a writable folder so the game can create preferences, caches and saves.
@@ -397,7 +401,7 @@ account. Close the game before installing or updating.
 The original executable, game data, saves and personal settings are preserved.
 The setup also adds an uninstaller to Windows's installed-apps list. Uninstalling
 removes the mod's installed files and shortcuts while keeping game data, saves,
-preferences and any separately generated maps. No Python, NSIS or separate SDL
+preferences and locally generated maps. No Python, NSIS or separate SDL
 installation is needed to use the generated setup. The setup is unsigned.
 
 ### Create a complete Windows ZIP for local use
@@ -484,18 +488,31 @@ game/modern-ui/local-maps/
 └── ...
 ```
 
-To generate and validate the cache on macOS after building the engine:
+Normal launches prepare this cache automatically using the engine itself. The
+worker runs in an isolated folder under `modern-ui/.map-work/`, leaving saves
+out of the rendering process. Missing or damaged tiles are repaired; changes to
+the source assets trigger regeneration. Finished maps become usable individually.
+If preparation fails or is skipped, incomplete maps use the original artwork.
+The game folder must be writable.
+
+For an unattended export, run the installed executable with the **absolute** game
+folder path (the same option is available in all three builds):
 
 ```sh
-python3 tools/build-map-exporter.py
-python3 tools/generate-map-cache.py
-python3 tools/verify-map-cache.py
+./arcanum-modern --modern-generate-maps /absolute/path/to/Arcanum
 ```
 
-The output is `dist/local-map-cache/`. Copy its contents into
-`game/modern-ui/local-maps/`, or link that directory to the output. The exporter
-uses an isolated working installation. Standard mod-only packages exclude the
-cache; complete Windows packages include it when installed in the game folder.
+On Windows the executable is `arcanum-modern.exe`; on macOS use the executable
+inside the app's `Contents/MacOS/` directory. For diagnostics, progress is recorded
+in `modern-ui/.map-work/progress`. The optional Python validator can check a cache:
+
+```sh
+python3 tools/verify-map-cache.py /absolute/path/to/Arcanum/modern-ui/local-maps
+```
+
+The older macOS developer exporter remains available through
+`tools/build-map-exporter.py` and `tools/generate-map-cache.py`. Standard packages
+include the native generator, not the generated images or commercial game assets.
 
 See [the detailed map guide](docs/local-map-cache.md) for export options and
 storage details. That guide is currently in French.

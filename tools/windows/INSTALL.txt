@@ -25,3 +25,8 @@ https://github.com/alexbatalov/arcanum-ce
 Changes include the modern interface, presentation and tactical controls.
 See licenses/ for upstream and third-party notices. This package contains no
 commercial Arcanum game data. Distribute it free of charge for non-commercial use.
+
+On first launch, HD local maps are generated from your installed game files.
+A progress bar shows preparation. Allow about 8 GB plus temporary working space
+for Arcanum and Vormantown. Choose "Play now" to skip preparation; it resumes
+next time. Completed maps are reused. No extra downloads or tools are needed.

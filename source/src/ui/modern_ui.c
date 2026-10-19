@@ -1,3 +1,4 @@
+#include "ui/modern_map_generator.h"
 /* Arcanum Modern: native-resolution presentation, independent of world pixels.
  * Original artwork is read from the user's DAT files; gameplay remains upstream.
  */
@@ -2206,3 +2207,5 @@ static void verify_text_layout(void)
     text_width=saved_width;line_count=0;dirty=true;
     tig_debug_printf("MODERN UI TEST PASS: CP1252 accents, search normalization, lossless wrapping at 4 widths\n");
 }
+
+#include "modern_map_startup.inc"

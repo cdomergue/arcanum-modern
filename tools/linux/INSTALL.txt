@@ -28,3 +28,8 @@ trying an experimental engine. The original Arcanum executable is not replaced.
 Based on Arcanum Community Edition by Alex Batalov:
 https://github.com/alexbatalov/arcanum-ce
 See licenses/ for upstream and third-party license notices.
+
+On first launch, HD local maps are generated from your installed game files.
+A progress bar shows preparation. Allow about 8 GB plus temporary working space
+for Arcanum and Vormantown. Choose "Play now" to skip preparation; it resumes
+next time. Completed maps are reused. No extra downloads or tools are needed.

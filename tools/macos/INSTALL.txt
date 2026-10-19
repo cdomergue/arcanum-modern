@@ -14,3 +14,8 @@ you trust, use the macOS Privacy & Security "Open Anyway" action if blocked.
 Game data, saved games and personal preferences are not included. Existing
 modern-ui settings and notebook files are retained when updating.
 Bink cinematics are unavailable. This port needs gameplay validation on a Mac.
+
+On first launch, HD local maps are generated from your installed game files.
+A progress bar shows preparation. Allow about 8 GB plus temporary working space
+for Arcanum and Vormantown. Choose "Play now" to skip preparation; it resumes
+next time. Completed maps are reused. No extra downloads or tools are needed.

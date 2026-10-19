@@ -1,12 +1,14 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -24,6 +24,10 @@
+@@ -24,6 +24,12 @@
  
  # Keep alphabetically sorted.
  set(SRCS
 +    "src/ui/modern_graphics.c"
 +    "src/ui/modern_graphics.h"
++    "src/ui/modern_map_generator.c"
++    "src/ui/modern_map_generator.h"
 +    "src/ui/modern_ui.c"
 +    "src/ui/modern_ui.h"
      "src/game/a_name.c"
@@ -949,6 +951,71 @@ diff --git a/src/game/gsound.c b/src/game/gsound.c
      location_xy(loc, &x, &y);
  
      // Update origin x/y if present.
+diff --git a/src/game/highres_config.c b/src/game/highres_config.c
+--- a/src/game/highres_config.c
++++ b/src/game/highres_config.c
+@@ -1,6 +1,8 @@
+ #include "game/highres_config.h"
+ 
+ #include <ctype.h>
++#include <errno.h>
++#include <limits.h>
+ #include <stdbool.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -22,7 +24,7 @@
+ 
+     highres_config_reset();
+ 
+-    stream = fopen("HighRes/config.ini", "rt");
++    stream = fopen("modern-ui/graphics.ini", "rt");
+     if (stream == NULL) {
+         return;
+     }
+@@ -44,8 +46,8 @@
+ void highres_config_reset(void)
+ {
+     highres_config.loaded = false;
+-    highres_config.width = 800;
+-    highres_config.height = 600;
++    highres_config.width = 1280;
++    highres_config.height = 800;
+     highres_config.windowed = false;
+     highres_config.show_fps = false;
+     highres_config.scroll_fps = 35;
+@@ -99,15 +101,17 @@
+     }
+ 
+     if (SDL_strcasecmp(key_start, "Width") == 0) {
+-        if (value >= 800) {
++        if (value >= 800 && value <= 4096) {
+             highres_config.width = value;
+         }
+     } else if (SDL_strcasecmp(key_start, "Height") == 0) {
+-        if (value >= 600) {
++        if (value >= 600 && value <= 4096) {
+             highres_config.height = value;
+         }
+-    } else if (SDL_strcasecmp(key_start, "Windowed") == 0) {
+-        highres_config.windowed = value != 0;
++    } else if (SDL_strcasecmp(key_start, "Mode") == 0) {
++        if (value >= 0 && value <= 2) {
++            highres_config.windowed = value == 0;
++        }
+     } else if (SDL_strcasecmp(key_start, "ShowFPS") == 0) {
+         highres_config.show_fps = value != 0;
+     } else if (SDL_strcasecmp(key_start, "ScrollFPS") == 0) {
+@@ -145,8 +149,9 @@
+         return false;
+     }
+ 
++    errno = 0;
+     value = strtol(str, &end, 10);
+-    if (end == str) {
++    if (end == str || errno == ERANGE || value < INT_MIN || value > INT_MAX) {
+         return false;
+     }
+ 
 diff --git a/src/game/magictech.c b/src/game/magictech.c
 --- a/src/game/magictech.c
 +++ b/src/game/magictech.c
@@ -1032,6 +1099,76 @@ diff --git a/src/game/mes.c b/src/game/mes.c
              buffer[pos++] = (char)ch;
          } else {
              too_long = true;
+diff --git a/src/game/object.c b/src/game/object.c
+--- a/src/game/object.c
++++ b/src/game/object.c
+@@ -4057,27 +4057,33 @@
+ }
+ 
+ // 0x441DD0
+-bool object_locked_set(int64_t obj, bool locked)
++bool object_locked_set(int64_t obj, int state)
+ {
+     int type;
+     unsigned int flags;
+     DateTime datetime;
+     TimeEvent timeevent;
+ 
+-    if (!object_is_lockable(obj)) {
++    if (state < 0 || state > 2 || !object_is_lockable(obj)) {
+         return false;
+     }
+ 
+     type = obj_field_int32_get(obj, OBJ_F_TYPE);
+     flags = obj_field_int32_get(obj, type == OBJ_TYPE_PORTAL ? OBJ_F_PORTAL_FLAGS : OBJ_F_CONTAINER_FLAGS);
+-    if ((flags & (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED)) != 0 && !locked) {
++    if (state == 0
++        && (flags & (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED)) == 0
++        && (flags & (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED)) != 0) {
+         timeevent.type = TIMEEVENT_TYPE_LOCK;
+         timeevent.params[0].object_value = obj;
+         sub_45A950(&datetime, 3600000);
+         timeevent_add_delay(&timeevent, &datetime);
+     }
+ 
+-    if (locked) {
++    if (state == 2) {
++        flags |= (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED);
++    }
++
++    if (state == 1) {
+         flags |= (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED);
+     } else {
+         flags &= ~(type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED);
+@@ -4097,8 +4103,14 @@
+     tig_art_id_t aid;
+ 
+     obj = timeevent->params[0].object_value;
++    object_jammed_set(obj, false);
++    int type = obj_field_int32_get(obj, OBJ_F_TYPE);
++    unsigned int flags = obj_field_int32_get(obj, type == OBJ_TYPE_PORTAL ? OBJ_F_PORTAL_FLAGS : OBJ_F_CONTAINER_FLAGS);
++    /* A pending temporary relock must not close a permanently unlocked entrance. */
++    if ((flags & (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED)) != 0) {
++        return true;
++    }
+     object_locked_set(obj, true);
+-    object_jammed_set(obj, false);
+     if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PORTAL) {
+         if (portal_is_open(obj)) {
+             portal_toggle(obj);
+diff --git a/src/game/object.h b/src/game/object.h
+--- a/src/game/object.h
++++ b/src/game/object.h
+@@ -177,7 +177,8 @@
+ void object_set_gender_and_race(int64_t obj, int body_type, int gender, int race);
+ bool object_is_lockable(int64_t obj);
+ bool object_locked_get(int64_t obj);
+-bool object_locked_set(int64_t obj, bool locked);
++// States: 0 temporarily unlocked, 1 locked, 2 permanently unlocked.
++bool object_locked_set(int64_t obj, int state);
+ bool object_lock_timeevent_process(TimeEvent* timeevent);
+ bool object_jammed_set(int64_t obj, bool jammed);
+ void sub_441FC0(int64_t obj, int a2);
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
@@ -1188,20 +1325,31 @@ diff --git a/src/main.c b/src/main.c
  
  #include "game/ai.h"
  #include "game/anim.h"
-@@ -46,6 +47,7 @@
+@@ -46,6 +47,8 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
 +#include "ui/modern_ui.h"
++#include "ui/modern_map_generator.h"
  #include "ui/mainmenu_ui.h"
  #include "ui/textedit_ui.h"
  #include "ui/wmap_rnd.h"
-@@ -205,10 +207,18 @@
+@@ -65,6 +68,9 @@
+ // 0x401000
+ int main(int argc, char** argv)
+ {
++    if (argc >= 3 && strcmp(argv[1], "--modern-generate-maps") == 0)
++        return modern_maps_generate(argv[2], argc > 3 ? atoi(argv[3]) : 0);
++
+     TigInitInfo init_info;
+     TigVideoScreenshotSettings screenshotter;
+     GameInitInfo game_init_info;
+@@ -205,10 +211,18 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
 -    init_info.window_name = "Arcanum: Of Steamworks & Magick Obscura - Community Edition";
-+    init_info.window_name = "Arcanum - Atelier interface";
++    init_info.window_name = "Arcanum Modern";
  
      if (tig_init(&init_info) != TIG_OK) {
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
@@ -1216,17 +1364,27 @@ diff --git a/src/main.c b/src/main.c
      }
  
      screenshotter.key = SDL_SCANCODE_F12;
-@@ -290,6 +300,9 @@
+@@ -290,6 +304,19 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
 +    gamelib_splash_clear();
 +    modern_ui_init();
++    char* map_executable = modern_maps_executable(argv[0]);
++    bool maps_continue = modern_ui_prepare_maps(map_executable);
++    SDL_free(map_executable);
++    if (!maps_continue) {
++        modern_ui_exit();
++        gameuilib_exit();
++        gamelib_exit();
++        tig_exit();
++        return EXIT_SUCCESS;
++    }
 +
      if (highres_config->intro) {
          gmovie_play(8, GAME_MOVIE_NO_FINAL_FLIP, 0);
      }
-@@ -317,6 +330,7 @@
+@@ -317,6 +344,7 @@
  
      main_loop();
  
@@ -1234,7 +1392,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,6 +397,7 @@
+@@ -383,6 +411,7 @@
              output_profile_data = false;
          }
  
@@ -1242,7 +1400,7 @@ diff --git a/src/main.c b/src/main.c
          tig_ping();
          gamelib_ping();
          iso_redraw();
-@@ -743,25 +758,25 @@
+@@ -743,25 +772,25 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
@@ -3283,6 +3441,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    info->field_34=x;info->field_38=y;
 +    if(info->refresh_rect)info->refresh_rect(&info->rect);
 +}
+diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
 --- a/src/ui/written_ui.c
 +++ b/src/ui/written_ui.c
 @@ -1,4 +1,5 @@
@@ -3377,117 +3536,3 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    if(modern && !hidden)tig_window_hide(written_ui_window);
 +    else if(!modern && hidden)tig_window_show(written_ui_window);
 +}
---- a/src/game/highres_config.c
-+++ b/src/game/highres_config.c
-@@ -2,4 +2,6 @@
- 
- #include <ctype.h>
-+#include <errno.h>
-+#include <limits.h>
- #include <stdbool.h>
- #include <stdio.h>
-@@ -23,5 +25,5 @@
-     highres_config_reset();
- 
--    stream = fopen("HighRes/config.ini", "rt");
-+    stream = fopen("modern-ui/graphics.ini", "rt");
-     if (stream == NULL) {
-         return;
-@@ -45,6 +47,6 @@
- {
-     highres_config.loaded = false;
--    highres_config.width = 800;
--    highres_config.height = 600;
-+    highres_config.width = 1280;
-+    highres_config.height = 800;
-     highres_config.windowed = false;
-     highres_config.show_fps = false;
-@@ -100,13 +102,15 @@
- 
-     if (SDL_strcasecmp(key_start, "Width") == 0) {
--        if (value >= 800) {
-+        if (value >= 800 && value <= 4096) {
-             highres_config.width = value;
-         }
-     } else if (SDL_strcasecmp(key_start, "Height") == 0) {
--        if (value >= 600) {
-+        if (value >= 600 && value <= 4096) {
-             highres_config.height = value;
-         }
--    } else if (SDL_strcasecmp(key_start, "Windowed") == 0) {
--        highres_config.windowed = value != 0;
-+    } else if (SDL_strcasecmp(key_start, "Mode") == 0) {
-+        if (value >= 0 && value <= 2) {
-+            highres_config.windowed = value == 0;
-+        }
-     } else if (SDL_strcasecmp(key_start, "ShowFPS") == 0) {
-         highres_config.show_fps = value != 0;
-@@ -146,6 +150,7 @@
-     }
- 
-+    errno = 0;
-     value = strtol(str, &end, 10);
--    if (end == str) {
-+    if (end == str || errno == ERANGE || value < INT_MIN || value > INT_MAX) {
-         return false;
-     }
---- a/src/game/object.c
-+++ b/src/game/object.c
-@@ -4058,5 +4058,5 @@
- 
- // 0x441DD0
--bool object_locked_set(int64_t obj, bool locked)
-+bool object_locked_set(int64_t obj, int state)
- {
-     int type;
-@@ -4065,5 +4065,5 @@
-     TimeEvent timeevent;
- 
--    if (!object_is_lockable(obj)) {
-+    if (state < 0 || state > 2 || !object_is_lockable(obj)) {
-         return false;
-     }
-@@ -4071,5 +4071,7 @@
-     type = obj_field_int32_get(obj, OBJ_F_TYPE);
-     flags = obj_field_int32_get(obj, type == OBJ_TYPE_PORTAL ? OBJ_F_PORTAL_FLAGS : OBJ_F_CONTAINER_FLAGS);
--    if ((flags & (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED)) != 0 && !locked) {
-+    if (state == 0
-+        && (flags & (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED)) == 0
-+        && (flags & (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED)) != 0) {
-         timeevent.type = TIMEEVENT_TYPE_LOCK;
-         timeevent.params[0].object_value = obj;
-@@ -4078,5 +4080,9 @@
-     }
- 
--    if (locked) {
-+    if (state == 2) {
-+        flags |= (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED);
-+    }
-+
-+    if (state == 1) {
-         flags |= (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED);
-     } else {
-@@ -4098,6 +4104,12 @@
- 
-     obj = timeevent->params[0].object_value;
-+    object_jammed_set(obj, false);
-+    int type = obj_field_int32_get(obj, OBJ_F_TYPE);
-+    unsigned int flags = obj_field_int32_get(obj, type == OBJ_TYPE_PORTAL ? OBJ_F_PORTAL_FLAGS : OBJ_F_CONTAINER_FLAGS);
-+    /* A pending temporary relock must not close a permanently unlocked entrance. */
-+    if ((flags & (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED)) != 0) {
-+        return true;
-+    }
-     object_locked_set(obj, true);
--    object_jammed_set(obj, false);
-     if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PORTAL) {
-         if (portal_is_open(obj)) {
---- a/src/game/object.h
-+++ b/src/game/object.h
-@@ -178,5 +178,6 @@
- bool object_is_lockable(int64_t obj);
- bool object_locked_get(int64_t obj);
--bool object_locked_set(int64_t obj, bool locked);
-+// States: 0 temporarily unlocked, 1 locked, 2 permanently unlocked.
-+bool object_locked_set(int64_t obj, int state);
- bool object_lock_timeevent_process(TimeEvent* timeevent);
- bool object_jammed_set(int64_t obj, bool jammed);

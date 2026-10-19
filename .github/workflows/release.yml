@@ -94,6 +94,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash ./build-macos.sh
+      - name: Check native map preparation
+        run: |
+          python3 tools/build-map-exporter.py --source tools/check-map-generation.c --name check-map-generation --exclude-object src/ui/modern_map_generator.c.o
+          build/macos-arm64/check-map-generation "$(mktemp -d)"
       - run: python3 tests/test_macos_package.py
       - uses: actions/upload-artifact@v4
         with:
