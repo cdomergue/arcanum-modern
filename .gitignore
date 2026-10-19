@@ -29,6 +29,7 @@
 !/source/src/ui/modern_ui.c
 !/source/src/ui/modern_ui.h
 !/source/src/ui/modern_panels.inc
+!/source/src/ui/modern_map_cache.inc
 !/source/src/ui/modern_sheet.inc
 !/source/src/ui/modern_keys.inc
 !/source/src/ui/modern_notebook.inc
@@ -43,5 +44,7 @@
 !/source/third_party/stb/stb_truetype.h
 
 __pycache__/
+.DS_Store
+._*
 
 /dist/

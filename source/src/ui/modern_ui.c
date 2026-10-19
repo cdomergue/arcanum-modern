@@ -38,6 +38,7 @@
 #include "game/spell.h"
 #include "game/tech.h"
 #include "game/timeevent.h"
+#include "game/townmap.h"
 #include "ui/hotkey_ui.h"
 #include "ui/intgame.h"
 #include "ui/logbook_ui.h"
@@ -1447,10 +1448,17 @@ static bool world_zoom_allowed(void)
 }
 static void world_zoom_sync(void)
 {
-    if(!zoom_base_width) {
-        zoom_base_width=hrp_iso_window_width_get();zoom_base_height=hrp_iso_window_height_get();
-        if(!zoom_base_width || !zoom_base_height)return;
-    }
+    int output_width,output_height;
+    if(!window || !SDL_GetWindowSize(window,&output_width,&output_height)
+        || output_width<=0 || output_height<=0)return;
+    /* Match the usable window, including fullscreen areas reserved by macOS. */
+    float scale=fmaxf(1,fmaxf(800.0f/output_width,600.0f/output_height));
+    scale=fminf(scale,fminf(4096.0f/output_width,4096.0f/output_height));
+    zoom_base_width=(int)lroundf(output_width*scale);
+    zoom_base_height=(int)lroundf(output_height*scale);
+    float minimum=fmaxf(.5f,fmaxf(zoom_base_width/4096.0f,zoom_base_height/4096.0f));
+    float maximum=fminf(zoom_base_width/800.0f,zoom_base_height/600.0f);
+    world_zoom=fmaxf(minimum,fminf(maximum,world_zoom));
     bool active=world_zoom_allowed();
     float zoom=active?world_zoom:1;
     int width=(int)lroundf(zoom_base_width/zoom),height=(int)lroundf(zoom_base_height/zoom);
@@ -1554,6 +1562,7 @@ void modern_ui_menu_tick(void)
 }
 
 /* Native play panels share this file's text, materials and input helpers. */
+#include "modern_map_cache.inc"
 #include "modern_panels.inc"
 #include "modern_combat.inc"
 #include "modern_party.inc"
@@ -2115,6 +2124,7 @@ void modern_ui_exit(void)
     SDL_DestroyTexture(skill_icons_texture);skill_icons_texture=NULL;
     SDL_DestroyTexture(control_icons_texture);control_icons_texture=NULL;
     SDL_DestroyTexture(map_texture);map_texture=NULL;
+    map_cache_clear();
     SDL_DestroyTexture(inventory_actions_texture);inventory_actions_texture=NULL;
     SDL_DestroyTexture(portrait_texture);portrait_texture=NULL;portrait_number=-1;
     SDL_DestroyTexture(save_texture);save_texture=NULL;thumbnail_index=-2;

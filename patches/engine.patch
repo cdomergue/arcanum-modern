@@ -390,7 +390,21 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          if (always_run) {
              if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
                  return false;
-@@ -13334,7 +13347,7 @@
+@@ -11480,8 +11493,11 @@
+             if (tig_art_anim_data(art_id, &art_anim_data) == TIG_OK) {
+                 frame = tig_art_id_frame_get(art_id);
+                 if (frame == 3 || frame == 8) {
+-                    sound_id = sfx_critter_sound(obj, CRITTER_SOUND_FOOTSTEPS);
+-                    gsound_play_sfx_on_obj(sound_id, 1, obj);
++                    int64_t listener = player_get_local_pc_obj();
++                    if (listener != OBJ_HANDLE_NULL && object_dist(obj, listener) <= 10) {
++                        sound_id = sfx_critter_sound(obj, CRITTER_SOUND_FOOTSTEPS);
++                        gsound_play_sfx_on_obj(sound_id, 1, obj);
++                    }
+                 }
+             }
+         }
+@@ -13334,7 +13350,7 @@
          return false;
      }
  
@@ -399,7 +413,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)
          && critter_encumbrance_level_get(obj) < 4) {
          return anim_goal_run_to_tile(obj, loc);
-@@ -13441,7 +13454,7 @@
+@@ -13441,7 +13457,7 @@
          return false;
      }
  
@@ -890,6 +904,51 @@ diff --git a/src/game/gsound.c b/src/game/gsound.c
  
      return true;
  }
+@@ -767,6 +777,10 @@
+     // Throttle updates.
+     if (timestamp - prev > GSOUND_PING_INTERVAL_MS) {
+         prev = timestamp;
++        int64_t listener = player_get_local_pc_obj();
++        if (listener != OBJ_HANDLE_NULL) {
++            gsound_listener_set(obj_field_int64_get(listener, OBJ_F_LOCATION));
++        }
+         gsound_update();
+     }
+ }
+@@ -935,6 +949,13 @@
+         }
+     }
+ 
++    /* In isometric projection, |dx| + 2|dy| spans 80 pixels per tile of
++     * Chebyshev distance, the same metric used by location_dist. */
++    if (player_get_local_pc_obj() != OBJ_HANDLE_NULL
++        && dx + (dy < 0 ? -dy : dy) > 10 * 80) {
++        volume = 0;
++    }
++
+     if (volume_ptr != NULL) {
+         *volume_ptr = volume;
+     }
+@@ -1039,6 +1060,7 @@
+     if (gsound_origin_loc == 0) {
+         gsound_origin_loc = location;
+         location_xy(location, &gsound_origin_x, &gsound_origin_y);
++        gsound_listener_set(location);
+     }
+ 
+     location_xy(location, &x, &y);
+@@ -1864,6 +1886,11 @@
+         return;
+     }
+ 
++    int64_t listener = player_get_local_pc_obj();
++    if (listener != OBJ_HANDLE_NULL) {
++        loc = obj_field_int64_get(listener, OBJ_F_LOCATION);
++    }
++
+     location_xy(loc, &x, &y);
+ 
+     // Update origin x/y if present.
 diff --git a/src/game/magictech.c b/src/game/magictech.c
 --- a/src/game/magictech.c
 +++ b/src/game/magictech.c
@@ -3053,7 +3112,15 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  #include <stdio.h>
  
-@@ -435,6 +437,7 @@
+@@ -314,6 +316,7 @@
+ 
+ // 0x5C9B00
+ static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
++static bool modern_map_hd;
+ 
+ // 0x5C9B08
+ static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
+@@ -435,6 +438,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -3061,7 +3128,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +751,7 @@
+@@ -748,7 +752,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -3070,7 +3137,16 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -1523,6 +1526,7 @@
+@@ -1411,6 +1415,8 @@
+     if (!wmap_ui_created) {
+         return;
+     }
++
++    modern_map_hd = false;
+ 
+     pc_obj = player_get_local_pc_obj();
+     if (pc_obj != OBJ_HANDLE_NULL
+@@ -1523,6 +1529,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -3078,7 +3154,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -4212,7 +4216,7 @@
+@@ -4212,7 +4219,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -3087,7 +3163,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4426,7 +4430,7 @@
+@@ -4426,7 +4433,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -3096,7 +3172,26 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4851,7 +4855,7 @@
+@@ -4671,7 +4678,8 @@
+     dirty_rect.y = rect->y;
+     dirty_rect.width = rect->width;
+     dirty_rect.height = rect->height;
+-    tig_window_fill(wmap_ui_window, &dirty_rect, tig_color_make(0, 0, 0));
++    tig_window_fill(wmap_ui_window, &dirty_rect,
++        modern_map_hd ? tig_color_make(255, 0, 255) : tig_color_make(0, 0, 0));
+ 
+     min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
+     if (min_x < 0) {
+@@ -4696,7 +4704,7 @@
+         max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
+     }
+ 
+-    for (row = min_y; row < max_y; row++) {
++    for (row = min_y; !modern_map_hd && row < max_y; row++) {
+         for (col = min_x; col < max_x; col++) {
+             idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
+             entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
+@@ -4851,7 +4859,7 @@
          object_list_destroy(&objects);
      }
  
@@ -3105,7 +3200,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4984,3 +4988,71 @@
+@@ -4984,3 +4992,82 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
@@ -3121,8 +3216,18 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +        .width=info->field_14.width,.height=info->field_14.height,.buffer=buffer,
 +        .offset_x=info->field_34,.offset_y=info->field_38,
 +        .map=wmap_ui_mode==WMAP_UI_MODE_TOWN?map_current_map():0,
++        .townmap=wmap_ui_mode==WMAP_UI_MODE_TOWN?wmap_ui_townmap:0,
++        .origin_x=info->rect.x-info->field_14.x,
++        .origin_y=info->rect.y+wmap_ui_window_frame.y-info->field_14.y,
 +        .moving=wmap_ui_state==WMAP_UI_STATE_MOVING};
 +    return buffer!=NULL;
++}
++void modern_map_hd_enable(bool enabled)
++{
++    enabled=enabled && modern_ui_enabled() && wmap_ui_mode==WMAP_UI_MODE_TOWN;
++    if(modern_map_hd==enabled)return;
++    modern_map_hd=enabled;
++    if(wmap_ui_created && wmap_ui_mode==WMAP_UI_MODE_TOWN)wmap_town_refresh_rect(NULL);
 +}
 +void modern_map_mouse(int x,int y,int event)
 +{
@@ -3138,6 +3243,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    if(action==0){wmap_ui_close();return;}
 +    if(action==8){
 +        modern_map_buttons_hidden=modern_ui_enabled();
++        if(!modern_map_buttons_hidden)modern_map_hd=false;
 +        for(int i=0;i<2;i++) {
 +            if(modern_map_buttons_hidden)tig_button_hide(wmap_ui_zoom_button_info[i].button_handle);
 +            else tig_button_show(wmap_ui_zoom_button_info[i].button_handle);
@@ -3177,7 +3283,6 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    info->field_34=x;info->field_38=y;
 +    if(info->refresh_rect)info->refresh_rect(&info->rect);
 +}
-diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
 --- a/src/ui/written_ui.c
 +++ b/src/ui/written_ui.c
 @@ -1,4 +1,5 @@
@@ -3272,3 +3377,117 @@ diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
 +    if(modern && !hidden)tig_window_hide(written_ui_window);
 +    else if(!modern && hidden)tig_window_show(written_ui_window);
 +}
+--- a/src/game/highres_config.c
++++ b/src/game/highres_config.c
+@@ -2,4 +2,6 @@
+ 
+ #include <ctype.h>
++#include <errno.h>
++#include <limits.h>
+ #include <stdbool.h>
+ #include <stdio.h>
+@@ -23,5 +25,5 @@
+     highres_config_reset();
+ 
+-    stream = fopen("HighRes/config.ini", "rt");
++    stream = fopen("modern-ui/graphics.ini", "rt");
+     if (stream == NULL) {
+         return;
+@@ -45,6 +47,6 @@
+ {
+     highres_config.loaded = false;
+-    highres_config.width = 800;
+-    highres_config.height = 600;
++    highres_config.width = 1280;
++    highres_config.height = 800;
+     highres_config.windowed = false;
+     highres_config.show_fps = false;
+@@ -100,13 +102,15 @@
+ 
+     if (SDL_strcasecmp(key_start, "Width") == 0) {
+-        if (value >= 800) {
++        if (value >= 800 && value <= 4096) {
+             highres_config.width = value;
+         }
+     } else if (SDL_strcasecmp(key_start, "Height") == 0) {
+-        if (value >= 600) {
++        if (value >= 600 && value <= 4096) {
+             highres_config.height = value;
+         }
+-    } else if (SDL_strcasecmp(key_start, "Windowed") == 0) {
+-        highres_config.windowed = value != 0;
++    } else if (SDL_strcasecmp(key_start, "Mode") == 0) {
++        if (value >= 0 && value <= 2) {
++            highres_config.windowed = value == 0;
++        }
+     } else if (SDL_strcasecmp(key_start, "ShowFPS") == 0) {
+         highres_config.show_fps = value != 0;
+@@ -146,6 +150,7 @@
+     }
+ 
++    errno = 0;
+     value = strtol(str, &end, 10);
+-    if (end == str) {
++    if (end == str || errno == ERANGE || value < INT_MIN || value > INT_MAX) {
+         return false;
+     }
+--- a/src/game/object.c
++++ b/src/game/object.c
+@@ -4058,5 +4058,5 @@
+ 
+ // 0x441DD0
+-bool object_locked_set(int64_t obj, bool locked)
++bool object_locked_set(int64_t obj, int state)
+ {
+     int type;
+@@ -4065,5 +4065,5 @@
+     TimeEvent timeevent;
+ 
+-    if (!object_is_lockable(obj)) {
++    if (state < 0 || state > 2 || !object_is_lockable(obj)) {
+         return false;
+     }
+@@ -4071,5 +4071,7 @@
+     type = obj_field_int32_get(obj, OBJ_F_TYPE);
+     flags = obj_field_int32_get(obj, type == OBJ_TYPE_PORTAL ? OBJ_F_PORTAL_FLAGS : OBJ_F_CONTAINER_FLAGS);
+-    if ((flags & (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED)) != 0 && !locked) {
++    if (state == 0
++        && (flags & (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED)) == 0
++        && (flags & (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED)) != 0) {
+         timeevent.type = TIMEEVENT_TYPE_LOCK;
+         timeevent.params[0].object_value = obj;
+@@ -4078,5 +4080,9 @@
+     }
+ 
+-    if (locked) {
++    if (state == 2) {
++        flags |= (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED);
++    }
++
++    if (state == 1) {
+         flags |= (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED);
+     } else {
+@@ -4098,6 +4104,12 @@
+ 
+     obj = timeevent->params[0].object_value;
++    object_jammed_set(obj, false);
++    int type = obj_field_int32_get(obj, OBJ_F_TYPE);
++    unsigned int flags = obj_field_int32_get(obj, type == OBJ_TYPE_PORTAL ? OBJ_F_PORTAL_FLAGS : OBJ_F_CONTAINER_FLAGS);
++    /* A pending temporary relock must not close a permanently unlocked entrance. */
++    if ((flags & (type == OBJ_TYPE_PORTAL ? OPF_NEVER_LOCKED : OCOF_NEVER_LOCKED)) != 0) {
++        return true;
++    }
+     object_locked_set(obj, true);
+-    object_jammed_set(obj, false);
+     if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PORTAL) {
+         if (portal_is_open(obj)) {
+--- a/src/game/object.h
++++ b/src/game/object.h
+@@ -178,5 +178,6 @@
+ bool object_is_lockable(int64_t obj);
+ bool object_locked_get(int64_t obj);
+-bool object_locked_set(int64_t obj, bool locked);
++// States: 0 temporarily unlocked, 1 locked, 2 permanently unlocked.
++bool object_locked_set(int64_t obj, int state);
+ bool object_lock_timeevent_process(TimeEvent* timeevent);
+ bool object_jammed_set(int64_t obj, bool jammed);

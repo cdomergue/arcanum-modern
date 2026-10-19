@@ -604,6 +604,8 @@ static void draw_memo_editor(void)
 static void draw_map(void)
 {
     ModernMap map;if(!modern_map_state(&map))return;
+    bool hd=map_cache_prepare(&map);
+    modern_map_hd_enable(hd);
     panel_backdrop();float w=fminf(1440,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-820)/2;
     frame((SDL_FRect){x,y,w,820});
     centered(3,game_text(modern_map_text(map.mode==1?502:501)),canvas_w/2,y+22,GOLD);
@@ -611,15 +613,22 @@ static void draw_map(void)
     menu_button((SDL_FRect){x+310,y+78,260,48},742,game_text(modern_map_text(502)),true);
     button((SDL_FRect){x+590,y+78,220,48},2190,tr("Ajouter une note","Add note"),-1,memo_placing,map_memo_count<64 && !map.moving);
     button((SDL_FRect){x+830,y+78,200,48},2191,tr("Notes visibles","Show notes"),-1,memos_visible,true);
-    if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || !map_texture) {
-        float ww,hh;SDL_DestroyTexture(map_texture);map_texture=texture_from_buffer(map.buffer,&ww,&hh);
+    if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || map_texture_hd!=hd || !map_texture) {
+        float ww,hh;SDL_DestroyTexture(map_texture);
+        map_texture=hd?map_overlay_texture(map.buffer):texture_from_buffer(map.buffer,&ww,&hh);
         map_texture_time=SDL_GetTicks();map_texture_mode=map.mode;
+        map_texture_hd=hd;
     }
     SDL_FRect available={x+30,y+150,w-60,550};
     float scale=fminf(available.w/map.width,available.h/map.height);
     SDL_FRect dest={available.x+(available.w-map.width*scale)/2,available.y+(available.h-map.height*scale)/2,map.width*scale,map.height*scale};
     SDL_FRect src={map.x,map.y-41,map.width,map.height};
     fill(available,(SDL_Color){12,10,8,255});
+    if(hd && !map_cache_draw(&map,dest,scale)) {
+        modern_map_hd_enable(false);
+        float ww,hh;SDL_DestroyTexture(map_texture);map_texture=texture_from_buffer(map.buffer,&ww,&hh);
+        map_texture_hd=false;
+    }
     if(map_texture)SDL_RenderTexture(renderer,map_texture,&src,&dest);outline(dest,GOLD);
     panel_region(dest,map.x,map.y,map.width,map.height,3);
     draw_map_memos(&map,dest,scale);

@@ -130,10 +130,12 @@ void modern_inventory_scroll(int direction);
 const char* modern_inventory_text(int number);
 typedef struct ModernMap {
     int mode, x, y, width, height, offset_x, offset_y, map;
+    int townmap, origin_x, origin_y;
     void* buffer;
     bool moving;
 } ModernMap;
 bool modern_map_state(ModernMap* state);
+void modern_map_hd_enable(bool enabled);
 void modern_map_mouse(int x,int y,int event);
 void modern_map_action(int action);
 const char* modern_map_text(int number);
