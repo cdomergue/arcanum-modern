@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package only the Windows executable and explicitly listed mod resources."""
+"""Package Windows resources, optionally including an installed game's data."""
 import argparse
 import hashlib
 import json
@@ -19,6 +19,70 @@ SYSTEM_DLLS = set('kernel32.dll user32.dll winmm.dll advapi32.dll ole32.dll setu
                  'gdi32.dll oleaut32.dll imm32.dll version.dll ws2_32.dll bcrypt.dll comdlg32.dll '
                  'comctl32.dll shlwapi.dll secur32.dll rpcrt4.dll ntdll.dll ucrtbase.dll '
                  'msvcrt.dll winspool.drv cfgmgr32.dll dwmapi.dll'.split())
+REQUIRED_GAME_FILES = {'arcanum1.dat', 'arcanum2.dat', 'arcanum3.dat', 'tig.dat', 'modules/arcanum.dat'}
+
+
+def game_files(directory):
+    directory = directory.resolve(strict=True)
+    files = {}
+    excluded = {'save', 'saves', 'players', 'tigcache', 'screenshots', '__macosx'}
+
+    def collect(folder, prefix):
+        for base, dirs, names in os.walk(folder):
+            dirs[:] = sorted(d for d in dirs if not d.startswith('.')
+                             and d.lower() not in excluded and not d.lower().endswith('.app')
+                             and not (Path(base)/d).is_symlink())
+            for name in sorted(names):
+                path = Path(base)/name
+                if (name.startswith('.') or path.is_symlink()
+                        or path.suffix.lower() in {'.sav', '.gsi', '.tfaf', '.tfai', '.log', '.exe', '.dll'}
+                        or re.fullmatch(r'screen\d+\.bmp', name, re.I)):
+                    continue
+                files[prefix+'/'+path.relative_to(folder).as_posix()] = path
+
+    for path in sorted(directory.iterdir()):
+        if path.is_file() and not path.is_symlink() and path.suffix.lower() == '.dat':
+            files[path.name] = path
+        elif path.is_dir() and not path.is_symlink() and path.name.lower() in {'data', 'modules', 'proto', 'movies', 'sound'}:
+            collect(path, path.name)
+    missing = REQUIRED_GAME_FILES - {name.lower() for name in files}
+    if missing:
+        raise ValueError('Incomplete game installation; missing: '+', '.join(sorted(missing)))
+    # The HD cache may live outside the installation via a directory symlink.
+    maps = directory/'modern-ui/local-maps'
+    if maps.exists():
+        collect(maps.resolve(strict=True), 'modern-ui/local-maps')
+    return files
+
+
+def write_archive(output, files, metadata):
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=output.parent, suffix='.zip', delete=False) as f:
+        temporary = Path(f.name)
+    hashes = {}
+    try:
+        with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+            for index, (name, data) in enumerate(sorted(files.items()), 1):
+                if isinstance(data, Path):
+                    info = zipfile.ZipInfo(name)
+                    info.compress_type = (zipfile.ZIP_STORED if data.suffix.lower() in {'.png', '.bik', '.ogg'}
+                                          else zipfile.ZIP_DEFLATED)
+                    digest = hashlib.sha256()
+                    with data.open('rb') as source, archive.open(info, 'w', force_zip64=True) as target:
+                        while block := source.read(1024*1024):
+                            target.write(block)
+                            digest.update(block)
+                    hashes[name] = digest.hexdigest()
+                else:
+                    archive.writestr(name, data)
+                    hashes[name] = hashlib.sha256(data).hexdigest()
+                if index % 2000 == 0:
+                    print(f'Packed {index}/{len(files)} files', flush=True)
+            archive.writestr('ArcanumModern/manifest.json',
+                             json.dumps({**metadata, 'sha256': hashes}, indent=2)+'\n')
+        temporary.replace(output)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def pe_imports(data):
@@ -64,7 +128,7 @@ def pe_imports(data):
     return names
 
 
-def package(exe, build_dir, output):
+def package(exe, build_dir, output, include_game=None):
     binary = exe.read_bytes()
     imports = pe_imports(binary)
     missing = sorted(n for n in imports if n not in SYSTEM_DLLS and not n.startswith(('api-ms-win-', 'ext-ms-win-')))
@@ -76,6 +140,9 @@ def package(exe, build_dir, output):
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
     for name in ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
+    if include_game:
+        files.update(game_files(include_game))
+        files['ArcanumModern/INSTALL.txt'] = (ROOT/'tools/windows/INSTALL-FULL.txt').read_bytes()
     readme = ROOT/'README.md'
     if readme.exists():
         files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').encode()
@@ -102,30 +169,22 @@ def package(exe, build_dir, output):
     git = ['git','-c',f'safe.directory={ROOT}','-C',str(ROOT)]
     revision = subprocess.check_output(git+['rev-parse','HEAD'],text=True).strip()
     dirty = bool(subprocess.check_output(git+['status','--porcelain'],text=True).strip())
-    files['ArcanumModern/manifest.json'] = (json.dumps({'revision':revision,'working_tree_modified':dirty,
-        'target':'windows-x86_64','imports':sorted(imports),
-        'sha256':{name:hashlib.sha256(data).hexdigest() for name,data in sorted(files.items())}},indent=2)+'\n').encode()
-    output.parent.mkdir(parents=True,exist_ok=True)
-    # Never leave a half-written release ZIP or include local preferences/saves.
-    with tempfile.NamedTemporaryFile(dir=output.parent,suffix='.zip',delete=False) as f:
-        temporary = Path(f.name)
-    try:
-        with zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
-            for name,data in sorted(files.items()):
-                archive.writestr(name,data)
-        temporary.replace(output)
-    finally:
-        temporary.unlink(missing_ok=True)
-    print(f'Created {output} ({output.stat().st_size/1024/1024:.1f} MiB, {len(files)} files)')
+    write_archive(output, files, {'revision':revision,'working_tree_modified':dirty,
+        'target':'windows-x86_64','imports':sorted(imports),'includes_game_data':bool(include_game)})
+    print(f'Created {output} ({output.stat().st_size/1024/1024:.1f} MiB, {len(files)+1} files)')
 
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--exe',type=Path,required=True)
     parser.add_argument('--build-dir',type=Path,required=True)
-    parser.add_argument('--output',type=Path,default=ROOT/'dist/ArcanumModern-windows-x64.zip')
+    parser.add_argument('--output',type=Path)
+    parser.add_argument('--include-game',type=Path,metavar='DIRECTORY',
+                        help='Include game data and HD maps from this installation; exclude saves and personal preferences')
     args=parser.parse_args()
+    output = args.output or ROOT/('dist/ArcanumModern-windows-x64-full.zip' if args.include_game
+                                 else 'dist/ArcanumModern-windows-x64.zip')
     try:
-        package(args.exe,args.build_dir,args.output)
+        package(args.exe,args.build_dir,output,args.include_game)
     except (ValueError,OSError,struct.error) as error:
         parser.exit(1,f'Packaging failed: {error}\n')

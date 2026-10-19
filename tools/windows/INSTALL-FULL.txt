@@ -1,0 +1,15 @@
+ARCANUM MODERN - WINDOWS x64 - VERSION COMPLETE
+
+1. Extraire tout le ZIP dans un dossier, par exemple Documents\Arcanum Modern.
+2. Ouvrir "Play Arcanum Modern.bat" dans ce dossier.
+
+Le jeu, les fichiers francais de cette installation et les cartes HD disponibles
+sont inclus. Aucun compilateur, Python ou installation SDL n'est necessaire.
+Windows 10/11 x64 est requis. Ne pas lancer le jeu directement depuis le ZIP.
+
+Les sauvegardes, notes personnelles et preferences de l'expediteur sont exclues.
+Le jeu cree ses propres preferences et sauvegardes au lancement et en jouant.
+Les reglages d'affichage sont accessibles dans Options.
+
+Il s'agit d'une version modifiee d'Arcanum Community Edition par Alex Batalov.
+Les mentions et licences du moteur et de ses composants sont dans licenses/.

@@ -58,6 +58,21 @@ Close the game before extracting an update. Existing preferences and notebook
 files are not part of the ZIP and are retained. Use a writable game folder so the
 game can save progress and settings.
 
+### macOS Apple Silicon
+
+The build target is native **arm64**, macOS **11 or later**.
+
+1. Copy your Arcanum 1.0.7.4 game installation into a writable folder on the Mac.
+2. Extract `ArcanumModern-macos-arm64.zip` there. `Arcanum Modern.app`,
+   `modern-ui/` and `arcanum1.dat` must be in the same folder.
+3. Open **Arcanum Modern.app**.
+
+Rosetta and Wine are not required. The application uses an ad-hoc signature and
+is not notarized. If macOS blocks a trusted download, use **System Settings →
+Privacy & Security → Open Anyway**. Keep the application beside the game data.
+Close the game before updates; the ZIP excludes saves and personal preferences.
+The macOS build and gameplay still require validation on a Mac.
+
 ### Linux
 
 Place your game files in `game/`, build the engine, then run:
@@ -140,6 +155,10 @@ layout):
 Notebook annotations are separate from saved games. Loading an older save does
 not roll those annotations back. Keep these files when moving your installation.
 Display changes offer a timed confirmation and revert if not confirmed.
+`modern-ui/graphics.ini` also sets the initial world resolution; no `HighRes`
+folder is needed. The world follows the actual window's aspect ratio, including
+when no configuration exists, and keeps the selected camera zoom when resizing
+within the engine's limits.
 
 ## Build and package
 
@@ -162,6 +181,28 @@ required by SDL. On Fedora/Nobara these include `gcc`, `gcc-c++`, `cmake`,
 engine revision. The default SDK/cache paths can reuse a local development setup;
 otherwise the system toolchain and dependency downloads are used.
 
+### macOS Apple Silicon ZIP
+
+On a Mac, install Xcode Command Line Tools (`xcode-select --install`), CMake,
+Git and Python 3, then run:
+
+```sh
+./build-macos.sh
+```
+
+The script targets arm64 explicitly, builds static dependencies and produces
+`dist/ArcanumModern-macos-arm64.zip`. It checks the Mach-O architecture and linked
+libraries, signs the application ad-hoc, and includes resources, licenses and a
+hash manifest. It does not modify the local game installation.
+
+An optional first argument selects the output ZIP. Overrides: `CMAKE`, `PYTHON`,
+`ARCANUM_MACOS_BUILD_DIR`, `ARCANUM_BUILD_JOBS`, `ARCANUM_DEPENDENCY_CACHE`,
+`ARCANUM_ENGINE_SOURCE`. Use a separate build directory for each platform.
+
+Alternatively, after pushing the repository to GitHub, run **Actions → macOS
+Apple Silicon → Run workflow** and download the generated artifact. The workflow
+runs on the [GitHub macOS runner](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job).
+
 ### Windows ZIP from Linux
 
 Install CMake, Ninja, Python 3 and Git. Extract an official Linux
@@ -182,6 +223,23 @@ The script builds the Windows executable with static dependencies and packages
 only an explicit resource list. It checks the executable architecture and imported
 DLLs, includes license notices, and writes a manifest with file hashes and the
 source revision. Game data, preferences and saves are excluded.
+
+To create a complete installation ZIP, including the supplied game data,
+language files, patches and available HD maps:
+
+```sh
+./build-windows.sh --include-game ./game
+```
+
+This creates `dist/ArcanumModern-windows-x64-full.zip`. Extract it into a writable
+folder and open **Play Arcanum Modern.bat**. Saved games, personal notes,
+preferences, screenshots, temporary caches and macOS applications are excluded.
+The HD map directory is copied as actual files even when it is a symlink;
+including all generated maps adds about 8 GB. The default ZIP remains mod-only.
+
+To package an existing Windows executable without recompiling, pass
+`--include-game ./game` to `tools/package-windows.py` together with its usual
+`--exe` and `--build-dir` arguments. `--output` can select another ZIP path.
 
 Overrides: `CMAKE`, `NINJA`, `PYTHON`, `ARCANUM_WINDOWS_BUILD_DIR`,
 `ARCANUM_BUILD_JOBS`, `ARCANUM_DEPENDENCY_CACHE`, `ARCANUM_ENGINE_SOURCE`.

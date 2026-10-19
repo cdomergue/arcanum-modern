@@ -3,7 +3,25 @@
 set -euo pipefail
 arcanum_project=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 arcanum_build=${ARCANUM_WINDOWS_BUILD_DIR:-"$arcanum_project/build/windows-x64"}
-arcanum_output=${1:-"$arcanum_project/dist/ArcanumModern-windows-x64.zip"}
+arcanum_output=
+arcanum_package_args=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --include-game)
+            [[ $# -ge 2 && -d "$2" ]] || { echo '--include-game requires an existing game directory.' >&2; exit 1; }
+            arcanum_package_args+=(--include-game "$2"); shift 2 ;;
+        -h|--help)
+            echo 'Usage: ./build-windows.sh [output.zip] [--include-game GAME_DIRECTORY]'
+            exit 0 ;;
+        -*) echo "Unknown option: $1" >&2; exit 1 ;;
+        *) [[ -z "$arcanum_output" ]] || { echo 'Only one output ZIP may be specified.' >&2; exit 1; }
+            arcanum_output=$1; shift ;;
+    esac
+done
+if [[ -z "$arcanum_output" ]]; then
+    arcanum_output="$arcanum_project/dist/ArcanumModern-windows-x64.zip"
+    [[ ${#arcanum_package_args[@]} -eq 0 ]] || arcanum_output="$arcanum_project/dist/ArcanumModern-windows-x64-full.zip"
+fi
 arcanum_cmake=${CMAKE:-cmake}
 arcanum_python=${PYTHON:-python3}
 command -v "$arcanum_cmake" >/dev/null || { echo "CMake is required (set CMAKE if necessary)." >&2; exit 1; }
@@ -32,4 +50,4 @@ fi
 "$arcanum_cmake" --build "$arcanum_build" --config Release --parallel "${ARCANUM_BUILD_JOBS:-8}"
 arcanum_exe="$arcanum_build/arcanum-ce.exe"
 [[ ! -f "$arcanum_build/Release/arcanum-ce.exe" ]] || arcanum_exe="$arcanum_build/Release/arcanum-ce.exe"
-"$arcanum_python" "$arcanum_project/tools/package-windows.py" --exe "$arcanum_exe" --build-dir "$arcanum_build" --output "$arcanum_output"
+"$arcanum_python" "$arcanum_project/tools/package-windows.py" --exe "$arcanum_exe" --build-dir "$arcanum_build" --output "$arcanum_output" "${arcanum_package_args[@]}"
