@@ -1,0 +1,27 @@
+ARCANUM MODERN - WINDOWS x64
+
+1. Install your own copy of Arcanum (version 1.0.7.4).
+2. Extract this ZIP into its game folder, next to Arcanum.exe and arcanum1.dat.
+3. Open "Play Arcanum Modern.bat".
+
+No compiler, Python, separate SDL installation or administrator rights are needed
+for players. Windows 10/11 x64 is the intended target. Use a writable game folder.
+The original Arcanum.exe is kept. No original game archives, saves or personal
+settings are included in this ZIP. The game reads your installed language files.
+
+Open Options to change fullscreen, resolution, controls, gameplay and audio.
+The modern interface and turn-based combat are enabled by default. The world
+uses an independent rendering resolution; the interface stays sharp when zooming.
+
+To update, close the game, then extract a newer ZIP into the same folder.
+The package does not replace your modern-ui settings or notebook files.
+Back up saves before trying a different engine version. This version remains
+experimental; multiplayer and compatibility with other binary patches are untested.
+Bink cinematics require a compatible decoder; the original 32-bit binkw32.dll
+cannot be loaded by this 64-bit build, so cinematics are currently unavailable.
+
+This is a modified version of Arcanum Community Edition by Alex Batalov:
+https://github.com/alexbatalov/arcanum-ce
+Changes include the modern interface, presentation and tactical controls.
+See licenses/ for upstream and third-party notices. This package contains no
+commercial Arcanum game data. Distribute it free of charge for non-commercial use.

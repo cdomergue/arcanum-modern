@@ -156,7 +156,7 @@ void modern_graphics_confirm(void)
     if (file) {
         int written = fprintf(file, "Mode=%d\nWidth=%d\nHeight=%d\n", settings.mode, settings.width, settings.height);
         int closed = fclose(file);
-        saved = written > 0 && closed == 0 && rename("modern-ui/graphics.ini.tmp", "modern-ui/graphics.ini") == 0;
+        saved = written > 0 && closed == 0 && SDL_RenamePath("modern-ui/graphics.ini.tmp", "modern-ui/graphics.ini");
     }
     g->deadline = 0;
     modern_graphics_begin();

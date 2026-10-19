@@ -21,7 +21,7 @@ static bool notebook_save(void)
     for(int i=0;i<journal_mark_count;i++)fprintf(f,"FAV %d %d\n",journal_marks[i].chapter,journal_marks[i].id);
     for(int i=0;i<map_memo_count;i++)fprintf(f,"NOTE %d %d %d %d %s\n",map_memos[i].mode,map_memos[i].map,map_memos[i].x,map_memos[i].y,map_memos[i].text);
     if(fclose(f)!=0)return false;
-    return rename(temp,notebook_path)==0;
+    return SDL_RenamePath(temp,notebook_path);
 }
 static void notebook_sync(void)
 {

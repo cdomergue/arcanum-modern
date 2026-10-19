@@ -1,0 +1,5 @@
+*.sh text eol=lf
+*.py text eol=lf
+*.bat text eol=crlf
+# Unified patches contain significant single-space context lines.
+patches/*.patch -text whitespace=-blank-at-eol

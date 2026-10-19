@@ -29,7 +29,7 @@ static void key_save(void)
 {
     FILE* f=fopen("modern-ui/keys.ini.tmp","w");if(!f)return;
     for(int i=0;i<KB_COUNT;i++)fprintf(f,"%d=%d\n",i,key_binding[i]);
-    if(fclose(f)==0)rename("modern-ui/keys.ini.tmp","modern-ui/keys.ini");
+    if(fclose(f)==0)SDL_RenamePath("modern-ui/keys.ini.tmp","modern-ui/keys.ini");
 }
 static bool key_allowed(int key)
 {

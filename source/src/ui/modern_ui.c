@@ -1775,7 +1775,7 @@ static void save_settings(void)
     FILE* f=fopen("modern-ui/settings.ini.tmp","w");
     if(f) {
         fprintf(f,"TextSize=%d\n",body_size);
-        if(fclose(f)==0) rename("modern-ui/settings.ini.tmp","modern-ui/settings.ini");
+        if(fclose(f)==0) SDL_RenamePath("modern-ui/settings.ini.tmp","modern-ui/settings.ini");
     }
 }
 

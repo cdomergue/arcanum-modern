@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""Package only the Windows executable and explicitly listed mod resources."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import struct
+import subprocess
+import tempfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[1]
+ASSETS = ('Book.ttf', 'Heading.ttf', 'FONT-LICENSE.txt', 'menu-background.png',
+          'death-background.png', 'inventory-actions.png', 'skill-icons.png',
+          'control-icons.png', 'splash/splash1.png', 'splash/splash2.png', 'splash/splash3.png')
+SYSTEM_DLLS = set('kernel32.dll user32.dll winmm.dll advapi32.dll ole32.dll setupapi.dll shell32.dll '
+                 'gdi32.dll oleaut32.dll imm32.dll version.dll ws2_32.dll bcrypt.dll comdlg32.dll '
+                 'comctl32.dll shlwapi.dll secur32.dll rpcrt4.dll ntdll.dll ucrtbase.dll '
+                 'msvcrt.dll winspool.drv cfgmgr32.dll dwmapi.dll'.split())
+
+
+def pe_imports(data):
+    """Reject non-x64 binaries and inspect normal and delay-loaded DLL imports."""
+    if data[:2] != b'MZ':
+        raise ValueError('Expected a Windows PE executable, not a Linux binary')
+    pe = struct.unpack_from('<I', data, 60)[0]
+    if data[pe:pe+4] != b'PE\0\0':
+        raise ValueError('Invalid PE signature')
+    machine, count = struct.unpack_from('<HH', data, pe+4)
+    opt_size = struct.unpack_from('<H', data, pe+20)[0]
+    opt = pe+24
+    if machine != 0x8664 or struct.unpack_from('<H', data, opt)[0] != 0x20b:
+        raise ValueError('The package requires a Windows x86-64 executable')
+    sections = []
+    for i in range(count):
+        size, rva, raw_size, offset = struct.unpack_from('<IIII', data, opt+opt_size+i*40+8)
+        sections.append((rva, raw_size, offset))
+
+    def offset(rva):
+        for start, size, raw in sections:
+            if start <= rva < start+size:
+                return raw+rva-start
+        raise ValueError(f'Invalid PE address: {rva:x}')
+
+    names = set()
+    directory_count = struct.unpack_from('<I', data, opt+108)[0]
+    for directory, stride, name_offset in ((1,20,12),(13,32,4)):
+        if directory >= directory_count:
+            continue
+        rva, size = struct.unpack_from('<II', data, opt+112+directory*8)
+        if not rva:
+            continue
+        pos = offset(rva)
+        for at in range(pos, pos+size, stride):
+            if not any(data[at:at+stride]):
+                break
+            if directory == 13 and struct.unpack_from('<I',data,at)[0] != 1:
+                raise ValueError('Unsupported delay import format')
+            name = offset(struct.unpack_from('<I',data,at+name_offset)[0])
+            end = data.index(0,name)
+            names.add(data[name:end].decode('ascii').lower())
+    return names
+
+
+def package(exe, build_dir, output):
+    binary = exe.read_bytes()
+    imports = pe_imports(binary)
+    missing = sorted(n for n in imports if n not in SYSTEM_DLLS and not n.startswith(('api-ms-win-', 'ext-ms-win-')))
+    if missing:
+        raise ValueError('Non-system DLLs required; rebuild with static dependencies: '+', '.join(missing))
+    files = {'arcanum-modern.exe': binary,
+             'Play Arcanum Modern.bat': (ROOT/'tools/windows/Play Arcanum Modern.bat').read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'),
+             'ArcanumModern/INSTALL.txt': (ROOT/'tools/windows/INSTALL.txt').read_bytes(),
+             'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
+    for name in ASSETS:
+        files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
+    readme = ROOT/'README.md'
+    if readme.exists():
+        files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').encode()
+    files['ArcanumModern/docs/controls.md'] = (ROOT/'docs/controls.md').read_bytes()
+    cache = (build_dir/'CMakeCache.txt').read_text()
+    dependencies = [('SDL3', 'LICENSE.txt'), ('SDL3_mixer','LICENSE.txt'), ('fpattern','LICENSE'), ('zlib','LICENSE')]
+    for name, license_file in dependencies:
+        match = re.search(r'^'+name+r'_SOURCE_DIR:[^=]+=(.+)$',cache,re.M)
+        if not match:
+            raise ValueError('Missing dependency source for license: '+name)
+        directory = Path(match[1].strip())
+        files['ArcanumModern/licenses/'+name+'.txt'] = (directory/license_file).read_bytes()
+        extras = {'SDL3':['src/hidapi/LICENSE-bsd.txt'], 'SDL3_mixer':['src/dr_libs/LICENSE']}
+        for extra in extras.get(name,[]):
+            files['ArcanumModern/licenses/'+name+'-'+Path(extra).parent.name+'.txt'] = (directory/extra).read_bytes()
+    stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
+    files['ArcanumModern/licenses/stb.txt'] = stb[stb.rindex('/*\n---'):].encode()
+    toolchain = os.environ.get('LLVM_MINGW')
+    if toolchain:
+        tc = Path(toolchain)
+        files['ArcanumModern/licenses/llvm.txt'] = (tc/'LICENSE.TXT').read_bytes()
+        for p in (tc/'x86_64-w64-mingw32/share/mingw32').glob('COPYING*'):
+            files['ArcanumModern/licenses/'+p.name] = p.read_bytes()
+    git = ['git','-c',f'safe.directory={ROOT}','-C',str(ROOT)]
+    revision = subprocess.check_output(git+['rev-parse','HEAD'],text=True).strip()
+    dirty = bool(subprocess.check_output(git+['status','--porcelain'],text=True).strip())
+    files['ArcanumModern/manifest.json'] = (json.dumps({'revision':revision,'working_tree_modified':dirty,
+        'target':'windows-x86_64','imports':sorted(imports),
+        'sha256':{name:hashlib.sha256(data).hexdigest() for name,data in sorted(files.items())}},indent=2)+'\n').encode()
+    output.parent.mkdir(parents=True,exist_ok=True)
+    # Never leave a half-written release ZIP or include local preferences/saves.
+    with tempfile.NamedTemporaryFile(dir=output.parent,suffix='.zip',delete=False) as f:
+        temporary = Path(f.name)
+    try:
+        with zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
+            for name,data in sorted(files.items()):
+                archive.writestr(name,data)
+        temporary.replace(output)
+    finally:
+        temporary.unlink(missing_ok=True)
+    print(f'Created {output} ({output.stat().st_size/1024/1024:.1f} MiB, {len(files)} files)')
+
+
+if __name__ == '__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--exe',type=Path,required=True)
+    parser.add_argument('--build-dir',type=Path,required=True)
+    parser.add_argument('--output',type=Path,default=ROOT/'dist/ArcanumModern-windows-x64.zip')
+    args=parser.parse_args()
+    try:
+        package(args.exe,args.build_dir,args.output)
+    except (ValueError,OSError,struct.error) as error:
+        parser.exit(1,f'Packaging failed: {error}\n')

@@ -24,6 +24,7 @@ typedef uint64_t Uint64;
 static void SDL_strlcpy(char* dst,const char* src,size_t size){snprintf(dst,size,"%s",src);}
 static const char* tr(const char* fr,const char* en){(void)en;return fr;}
 static const char* key_label(int i){(void)i;return "Other action";}
+static bool SDL_RenamePath(const char* a,const char* b){return rename(a,b)==0;}
 static bool dirty;
 static int64_t pc=1;
 static int64_t player_get_local_pc_obj(void){return pc;}
@@ -52,6 +53,7 @@ int main(void){
     tracked_quest=1024;journal_marks[journal_mark_count++]=(JournalMark){1,1024};
     map_memos[map_memo_count++]=(MapMemo){2,504,120,-53,"Entrée derrière l’église"};
     assert(notebook_save());
+    tracked_quest=1025;assert(notebook_save());tracked_quest=1024;assert(notebook_save());
     pc=2;notebook_sync();assert(!journal_mark_count && !map_memo_count && tracked_quest==-1);
     map_memos[map_memo_count++]=(MapMemo){0,0,32,17,"Second character"};assert(notebook_save());
     pc=1;notebook_sync();assert(tracked_quest==1024 && journal_mark_index(1,1024)==0);
