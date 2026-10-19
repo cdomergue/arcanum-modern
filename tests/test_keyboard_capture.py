@@ -23,6 +23,8 @@ enum { SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_ESCAPE, SDL_SCANCODE_J, SDL_SCANCODE_C
 enum { SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP, SDL_EVENT_MOUSE_MOTION };
 typedef struct { int type; struct { SDL_Scancode scancode; bool repeat; } key; } SDL_Event;
 static bool ui_visible;
+static bool movie_playing;
+static bool tig_movie_is_playing(void) { return movie_playing; }
 static int dispatches;
 static bool handle_ui_event(SDL_Event* event) {
     (void)event;
@@ -58,6 +60,18 @@ int main(void) {
     assert(handle_event(&up));
     assert(!handle_event(&down));
     assert(!handle_event(&up));
+    ui_visible = true;
+    assert(handle_event(&down));
+    int before_movie = dispatches;
+    movie_playing = true;
+    assert(!handle_event(&up));
+    assert(!handle_event(&down));
+    assert(!handle_event(&up));
+    assert(dispatches == before_movie);
+    movie_playing = false;
+    ui_visible = false;
+    assert(!handle_event(&down));
+    assert(dispatches == before_movie + 1);
     puts("PASS: delayed release, held key, next press and independent key capture");
 }
 """

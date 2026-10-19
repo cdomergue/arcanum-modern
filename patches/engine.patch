@@ -1,10 +1,20 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -24,6 +24,12 @@
+@@ -17,6 +17,7 @@
+ add_subdirectory("first_party/bink_compat" EXCLUDE_FROM_ALL)
+ add_subdirectory("first_party/mss_compat" EXCLUDE_FROM_ALL)
+ add_subdirectory("first_party/tig" EXCLUDE_FROM_ALL)
++include("../tools/cmake/ffmpeg.cmake")
+ 
+ # ------------------------------------------------------------------------------
+ # ARCANUM
+@@ -24,6 +25,14 @@
  
  # Keep alphabetically sorted.
  set(SRCS
++    "src/ui/modern_movie.c"
++    "src/ui/modern_movie.h"
 +    "src/ui/modern_graphics.c"
 +    "src/ui/modern_graphics.h"
 +    "src/ui/modern_map_generator.c"
@@ -14,16 +24,36 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -335,6 +341,9 @@
-     ${TIG_LIBRARY}
- )
+@@ -333,7 +342,29 @@
  
+ target_link_libraries(arcanum-ce PUBLIC
+     ${TIG_LIBRARY}
++    ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil
+ )
++add_dependencies(arcanum-ce arcanum-ffmpeg)
++if(APPLE)
++    set_target_properties(arcanum-ce PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "@executable_path/../Frameworks")
++    set(movie_library_directory "$<TARGET_FILE_DIR:arcanum-ce>/../Frameworks")
++elseif(UNIX)
++    set_target_properties(arcanum-ce PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "$ORIGIN/ArcanumModern/lib")
++    set(movie_library_directory "$<TARGET_FILE_DIR:arcanum-ce>/ArcanumModern/lib")
++else()
++    set(movie_library_directory "$<TARGET_FILE_DIR:arcanum-ce>")
++endif()
++add_custom_command(TARGET arcanum-ce POST_BUILD
++    COMMAND ${CMAKE_COMMAND} -E make_directory "${movie_library_directory}"
++    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "${movie_library_directory}"
++    VERBATIM)
++
 +add_executable(check-utf8-files EXCLUDE_FROM_ALL "../tools/check-utf8-files.c")
 +target_link_libraries(check-utf8-files PRIVATE ${TIG_LIBRARY})
-+
++add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
++target_include_directories(check-movie PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
++target_link_libraries(check-movie PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
++add_dependencies(check-movie arcanum-ffmpeg)
+ 
  # SDL HID on Android requires C++ linker.
  if(ANDROID)
-     enable_language(CXX)
 diff --git a/first_party/tig/include/tig/compat.h b/first_party/tig/include/tig/compat.h
 --- a/first_party/tig/include/tig/compat.h
 +++ b/first_party/tig/include/tig/compat.h
@@ -84,6 +114,17 @@ diff --git a/first_party/tig/include/tig/mouse.h b/first_party/tig/include/tig/m
  #ifdef __cplusplus
  }
  #endif
+diff --git a/first_party/tig/include/tig/movie.h b/first_party/tig/include/tig/movie.h
+--- a/first_party/tig/include/tig/movie.h
++++ b/first_party/tig/include/tig/movie.h
+@@ -22,6 +22,7 @@
+ 
+ // Play given movie file.
+ int tig_movie_play(const char* path, TigMovieFlags movie_flags, int sound_track);
++void tig_movie_set_player(int (*player)(const char*, TigMovieFlags, int));
+ 
+ // Returns `true` if movie is currently being played.
+ bool tig_movie_is_playing(void);
 diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/video.h
 --- a/first_party/tig/include/tig/video.h
 +++ b/first_party/tig/include/tig/video.h
@@ -251,6 +292,15 @@ diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
  // 0x52B7B0
  void tig_message_ping(void)
  {
+@@ -92,7 +99,7 @@
+     message.timestamp = tig_ping_timestamp;
+     tig_message_enqueue(&message);
+ 
+-    for (index = 0; index < tig_message_key_handlers_count; index++) {
++    for (index = 0; !tig_movie_is_playing() && index < tig_message_key_handlers_count; index++) {
+         if (tig_kb_is_key_pressed(tig_message_key_handlers[index].key)) {
+             if (!tig_message_key_triggers[index]) {
+                 tig_message_key_triggers[index] = true;
 @@ -108,6 +115,18 @@
      }
  
@@ -373,6 +423,45 @@ diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 +        SDL_RenderTexture(renderer, tig_mouse_native_texture, &source, &destination);
 +    }
 +}
+diff --git a/first_party/tig/src/movie.c b/first_party/tig/src/movie.c
+--- a/first_party/tig/src/movie.c
++++ b/first_party/tig/src/movie.c
+@@ -15,6 +15,13 @@
+ 
+ // 0x62B2BC
+ static HBINK tig_movie_bink;
++static int (*native_player)(const char*, TigMovieFlags, int);
++static bool native_playing;
++
++void tig_movie_set_player(int (*player)(const char*, TigMovieFlags, int))
++{
++    native_player = player;
++}
+ 
+ static TigVideoBuffer* tig_movie_video_buffer;
+ static int tig_movie_screen_width;
+@@ -71,6 +78,12 @@
+ // 0x531530
+ int tig_movie_play(const char* path, TigMovieFlags movie_flags, int sound_track)
+ {
++    if (native_player) {
++        native_playing = true;
++        int result = native_player(path, movie_flags, sound_track);
++        native_playing = false;
++        return result;
++    }
+     unsigned int bink_open_flags = 0;
+     TigMessage message;
+     bool stop;
+@@ -171,7 +184,7 @@
+ // 0x5317C0
+ bool tig_movie_is_playing(void)
+ {
+-    return tig_movie_bink != NULL;
++    return native_playing || tig_movie_bink != NULL;
+ }
+ 
+ // 0x5317D0
 diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 --- a/first_party/tig/src/video.c
 +++ b/first_party/tig/src/video.c
@@ -1551,7 +1640,7 @@ diff --git a/src/main.c b/src/main.c
  
  #include "game/ai.h"
  #include "game/anim.h"
-@@ -46,6 +47,8 @@
+@@ -46,10 +47,13 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
@@ -1560,17 +1649,23 @@ diff --git a/src/main.c b/src/main.c
  #include "ui/mainmenu_ui.h"
  #include "ui/textedit_ui.h"
  #include "ui/wmap_rnd.h"
-@@ -65,6 +68,9 @@
+ #include "ui/wmap_ui.h"
++#include "ui/modern_movie.h"
+ 
+ static void main_loop(void);
+ static void handle_mouse_scroll(void);
+@@ -65,6 +69,10 @@
  // 0x401000
  int main(int argc, char** argv)
  {
++    if (argc == 2 && strcmp(argv[1], "--check-movies") == 0) return modern_movie_check();
 +    if (argc >= 3 && strcmp(argv[1], "--modern-generate-maps") == 0)
 +        return modern_maps_generate(argv[2], argc > 3 ? atoi(argv[3]) : 0);
 +
      TigInitInfo init_info;
      TigVideoScreenshotSettings screenshotter;
      GameInitInfo game_init_info;
-@@ -205,10 +211,18 @@
+@@ -205,10 +213,19 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -1580,6 +1675,7 @@ diff --git a/src/main.c b/src/main.c
      if (tig_init(&init_info) != TIG_OK) {
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
 +    }
++    modern_movie_init();
 +
 +    /* Apply the saved output mode before the splash is first presented.
 +     * The world keeps its independent logical resolution from init_info. */
@@ -1590,7 +1686,7 @@ diff --git a/src/main.c b/src/main.c
      }
  
      screenshotter.key = SDL_SCANCODE_F12;
-@@ -290,6 +304,19 @@
+@@ -290,6 +307,19 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
@@ -1610,7 +1706,7 @@ diff --git a/src/main.c b/src/main.c
      if (highres_config->intro) {
          gmovie_play(8, GAME_MOVIE_NO_FINAL_FLIP, 0);
      }
-@@ -317,6 +344,7 @@
+@@ -317,6 +347,7 @@
  
      main_loop();
  
@@ -1618,7 +1714,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,6 +411,7 @@
+@@ -383,6 +414,7 @@
              output_profile_data = false;
          }
  
@@ -1626,7 +1722,7 @@ diff --git a/src/main.c b/src/main.c
          tig_ping();
          gamelib_ping();
          iso_redraw();
-@@ -743,25 +772,25 @@
+@@ -743,25 +775,25 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {

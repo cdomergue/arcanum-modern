@@ -33,6 +33,8 @@
 !/source/src/ui/modern_map_generator.c
 !/source/src/ui/modern_map_generator.h
 !/source/src/ui/modern_map_startup.inc
+!/source/src/ui/modern_movie.c
+!/source/src/ui/modern_movie.h
 !/source/src/ui/modern_sheet.inc
 !/source/src/ui/modern_keys.inc
 !/source/src/ui/modern_notebook.inc

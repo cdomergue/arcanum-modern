@@ -34,6 +34,11 @@ class MacPackageTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 package.validate_dependencies('app:\n\t'+name+' (compatibility version 1.0.0)\n')
 
+    def test_bundled_movie_decoder(self):
+        self.assertEqual(package.validate_dependencies('app:\n\t@rpath/libavcodec.62.dylib (compatibility version 62.0.0)\n'),
+                         ['@rpath/libavcodec.62.dylib'])
+        package.validate_macho(struct.pack('<8I', 0xfeedfacf, 0x100000c, 0, 6, 0, 0, 0, 0), dylib=True)
+
 
 if __name__ == '__main__':
     unittest.main()

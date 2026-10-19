@@ -32,6 +32,9 @@ interface resources. Keep game archives, executables, saves, generated captures,
 logs, and personal settings excluded. Inspect the exact staged list before any
 commit. Do not commit unless requested.
 
+Batch requested changes and finish validation before creating a release tag or
+starting release packaging. Publish one release for the completed set of changes.
+
 The README is a user and contributor guide. Keep it focused on installation,
 features, controls, configuration, build instructions, and limitations. Do not add
 chronological progress reports, descriptions of our own bug fixes, or manual test

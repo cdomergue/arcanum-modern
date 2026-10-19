@@ -20,6 +20,35 @@ SYSTEM_DLLS = set('kernel32.dll user32.dll winmm.dll advapi32.dll ole32.dll setu
                  'comctl32.dll shlwapi.dll secur32.dll rpcrt4.dll ntdll.dll ucrtbase.dll '
                  'msvcrt.dll winspool.drv cfgmgr32.dll dwmapi.dll'.split())
 REQUIRED_GAME_FILES = {'arcanum1.dat', 'arcanum2.dat', 'arcanum3.dat', 'tig.dat', 'modules/arcanum.dat'}
+MOVIE_LIBRARIES = {'windows': ('avformat-62.dll', 'avcodec-62.dll', 'avutil-60.dll'),
+                   'macos': ('libavformat.62.dylib', 'libavcodec.62.dylib', 'libavutil.60.dylib'),
+                   'linux': ('libavformat.so.62', 'libavcodec.so.62', 'libavutil.so.60')}
+
+
+def movie_files(build_dir, platform):
+    cache = (build_dir/'CMakeCache.txt').read_text()
+    match = re.search(r'^ARCANUM_FFMPEG_ROOT:PATH=(.+)$', cache, re.M)
+    if not match:
+        raise ValueError('Missing FFmpeg decoder build')
+    root = Path(match[1].strip())
+    library_dir = root/('bin' if platform == 'windows' else 'lib')
+    destination = '' if platform == 'windows' else 'ArcanumModern/lib/'
+    files = {destination+name: (library_dir/name).read_bytes() for name in MOVIE_LIBRARIES[platform]}
+    for name in ('ffmpeg-8.1.3.tar.xz', 'COPYING.LGPLv2.1', 'build-ffmpeg.py', 'README.txt'):
+        files['ArcanumModern/licenses/ffmpeg/'+name] = (root/'share/arcanum-ffmpeg'/name).read_bytes()
+    if hashlib.sha256(files['ArcanumModern/licenses/ffmpeg/ffmpeg-8.1.3.tar.xz']).hexdigest() != '7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3':
+        raise ValueError('FFmpeg source archive checksum mismatch')
+    return files
+
+
+def validate_pe_dependencies(files):
+    bundled = set(MOVIE_LIBRARIES['windows'])
+    for name in ('arcanum-modern.exe', *bundled):
+        imports = pe_imports(files[name])
+        missing = sorted(n for n in imports if n not in SYSTEM_DLLS | bundled
+                         and not n.startswith(('api-ms-win-', 'ext-ms-win-')))
+        if missing:
+            raise ValueError(name+' requires unbundled DLLs: '+', '.join(missing))
 
 
 def game_files(directory):
@@ -131,13 +160,12 @@ def pe_imports(data):
 def package(exe, build_dir, output, include_game=None):
     binary = exe.read_bytes()
     imports = pe_imports(binary)
-    missing = sorted(n for n in imports if n not in SYSTEM_DLLS and not n.startswith(('api-ms-win-', 'ext-ms-win-')))
-    if missing:
-        raise ValueError('Non-system DLLs required; rebuild with static dependencies: '+', '.join(missing))
     files = {'arcanum-modern.exe': binary,
              'Play Arcanum Modern.bat': (ROOT/'tools/windows/Play Arcanum Modern.bat').read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/windows/INSTALL.txt').read_bytes(),
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
+    files.update(movie_files(build_dir, 'windows'))
+    validate_pe_dependencies(files)
     for name in ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
     if include_game:
@@ -145,7 +173,7 @@ def package(exe, build_dir, output, include_game=None):
         files['ArcanumModern/INSTALL.txt'] = (ROOT/'tools/windows/INSTALL-FULL.txt').read_bytes()
     readme = ROOT/'README.md'
     if readme.exists():
-        files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').encode()
+        files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode()
     files['ArcanumModern/docs/controls.md'] = (ROOT/'docs/controls.md').read_bytes()
     cache = (build_dir/'CMakeCache.txt').read_text()
     dependencies = [('SDL3', 'LICENSE.txt'), ('SDL3_mixer','LICENSE.txt'), ('fpattern','LICENSE'), ('zlib','LICENSE')]

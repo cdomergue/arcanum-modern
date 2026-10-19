@@ -36,6 +36,7 @@ jobs:
           ldd ./arcanum-modern > dependencies.txt
           cat dependencies.txt
           if grep -q 'not found' dependencies.txt; then exit 1; fi
+          ./arcanum-modern --check-movies
           if ./"Play Arcanum Modern.sh" 2> missing-game.txt; then exit 1; fi
           grep -q arcanum1.dat missing-game.txt
       - uses: actions/upload-artifact@v4
@@ -105,6 +106,12 @@ jobs:
         run: |
           ./checks/check-utf8-files.exe "$env:RUNNER_TEMP/Arcanum paths"
           if ($LASTEXITCODE -ne 0) { throw "UTF-8 file test failed: $LASTEXITCODE" }
+      - name: Check packaged movie decoder on Windows
+        shell: pwsh
+        run: |
+          Expand-Archive ./dist/ArcanumModern-windows-x64.zip "$env:RUNNER_TEMP/movie-runtime"
+          $process = Start-Process "$env:RUNNER_TEMP/movie-runtime/arcanum-modern.exe" -ArgumentList '--check-movies' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Movie decoder runtime failed: $($process.ExitCode)" }
 
   macos:
     runs-on: macos-15
@@ -119,6 +126,10 @@ jobs:
           python3 tools/build-map-exporter.py --source tools/check-cursor-scale.c --name check-cursor-scale
           build/macos-arm64/check-cursor-scale
       - run: python3 tests/test_macos_package.py
+      - name: Check packaged movie decoder on macOS
+        run: |
+          ditto -x -k dist/ArcanumModern-macos-arm64.zip "$RUNNER_TEMP/movie-runtime"
+          "$RUNNER_TEMP/movie-runtime/Arcanum Modern.app/Contents/MacOS/Arcanum Community Edition" --check-movies
       - uses: actions/upload-artifact@v4
         with:
           name: macos-release

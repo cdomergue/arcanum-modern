@@ -51,6 +51,9 @@ try {
             $shortcut.WorkingDirectory -ne $game -or $shortcut.Arguments -ne '-geometry=1280x720') {
             throw "Invalid shortcut target, arguments or working directory: $link"
         }
+        if ($shortcut.IconLocation -ne ((Join-Path $game 'Arcanum.exe') + ',0')) {
+            throw "Shortcut does not use the original Arcanum icon: $link"
+        }
     }
     $uninstaller = Join-Path $work 'uninstall-test.exe'
     Copy-Item (Join-Path $game 'Uninstall Arcanum Modern.exe') $uninstaller

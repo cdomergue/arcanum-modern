@@ -56,6 +56,13 @@ class LinuxPackageTests(unittest.TestCase):
             self.assertEqual(Path(lines[0]).resolve(), game.resolve())
             self.assertEqual(lines[1:], ['1', '-window', '-geometry=1280x720', 'argument with spaces'])
 
+    def test_bundled_decoder_search_paths(self):
+        self.p.validate_dependencies('0x1 (NEEDED) Shared library: [libavcodec.so.62]\n'
+                                     '0x1 (RUNPATH) Library runpath: [$ORIGIN/ArcanumModern/lib]')
+        self.p.validate_dependencies('0x1 (RUNPATH) Library runpath: [$ORIGIN]', '$ORIGIN')
+        with self.assertRaises(ValueError):
+            self.p.validate_dependencies('0x1 (RUNPATH) Library runpath: [$ORIGIN:/tmp/libraries]')
+
 
 def verify_archive(path):
     spec = importlib.util.spec_from_file_location('linux_package', ROOT/'tools/package-linux.py')
@@ -68,6 +75,7 @@ def verify_archive(path):
         assert metadata['target'] == 'linux-x86_64' and metadata['includes_game_data'] is False
         assert tuple(map(int, metadata['minimum_glibc'].split('.'))) <= (2, 35)
         required = {'arcanum-modern', 'Play Arcanum Modern.sh'} | {'modern-ui/'+s for s in p.resources.ASSETS}
+        required |= {'ArcanumModern/lib/'+name for name in p.resources.MOVIE_LIBRARIES['linux']}
         assert required.issubset(names)
         for name in names:
             assert name in required or name.startswith('ArcanumModern/'), name

@@ -2,6 +2,7 @@
 import argparse
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
@@ -22,5 +23,7 @@ subprocess.run([link[0], *shlex.split(flags['C_FLAGS']), *shlex.split(flags['C_I
 link = [str(obj) if part.endswith('/src/main.c.o') else part for part in link]
 link = [part for part in link if not any(part.endswith('/' + name) for name in args.exclude_object)]
 link[link.index('-o') + 1] = str(build / args.name)
+if sys.platform == 'darwin' and (build/'ffmpeg/lib').exists():
+    link += ['-Wl,-rpath,'+str(build/'ffmpeg/lib')]
 subprocess.run(link, cwd=build, check=True)
 print(build / args.name)

@@ -14,6 +14,7 @@ InstallDir "$LOCALAPPDATA\Arcanum"
 InstallDirRegKey HKCU "Software\ArcanumModern" "InstallDir"
 ShowInstDetails show
 ShowUninstDetails show
+Var GameIcon
 
 !define MUI_ABORTWARNING
 !define MUI_WELCOMEPAGE_TEXT "Install Arcanum Modern into your existing Arcanum 1.0.7.4 game folder.$\r$\n$\r$\nThe setup includes the engine and interface resources. You must supply your own game installation.$\r$\n$\r$\nClose the game before continuing. Your original executable, saved games and preferences are kept."
@@ -73,15 +74,19 @@ Section "Arcanum Modern"
   WriteUninstaller "$INSTDIR\Uninstall Arcanum Modern.exe"
   IfErrors failed
   SetOutPath "$INSTDIR"
-  CreateShortcut "$DESKTOP\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$INSTDIR\arcanum-modern.exe"
+  StrCpy $GameIcon "$INSTDIR\arcanum-modern.exe"
+  ${If} ${FileExists} "$INSTDIR\Arcanum.exe"
+    StrCpy $GameIcon "$INSTDIR\Arcanum.exe"
+  ${EndIf}
+  CreateShortcut "$DESKTOP\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
   CreateDirectory "$SMPROGRAMS\Arcanum Modern"
-  CreateShortcut "$SMPROGRAMS\Arcanum Modern\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$INSTDIR\arcanum-modern.exe"
+  CreateShortcut "$SMPROGRAMS\Arcanum Modern\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
   CreateShortcut "$SMPROGRAMS\Arcanum Modern\Uninstall.lnk" "$INSTDIR\Uninstall Arcanum Modern.exe"
   WriteRegStr HKCU "Software\ArcanumModern" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayName" "Arcanum Modern"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "UninstallString" '$\"$INSTDIR\Uninstall Arcanum Modern.exe$\"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayIcon" "$INSTDIR\arcanum-modern.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayIcon" "$GameIcon"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "NoRepair" 1
   IfErrors failed

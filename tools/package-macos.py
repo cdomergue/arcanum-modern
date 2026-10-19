@@ -15,11 +15,11 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def validate_macho(data):
+def validate_macho(data, dylib=False):
     # Require a thin, little-endian ARM64 executable, not an Intel/Rosetta build.
     if len(data) < 32 or struct.unpack_from('<III', data) != (0xfeedfacf, 0x100000c, 0):
         raise ValueError('Expected a native arm64 Mach-O binary')
-    if struct.unpack_from('<I', data, 12)[0] != 2:
+    if struct.unpack_from('<I', data, 12)[0] != (6 if dylib else 2):
         raise ValueError('Expected a Mach-O executable')
 
 
@@ -29,7 +29,8 @@ def validate_dependencies(output):
         name = line.strip().split(' (compatibility version', 1)[0]
         if not name:
             continue
-        if not name.startswith(('/System/Library/', '/usr/lib/')):
+        if not name.startswith(('/System/Library/', '/usr/lib/')) and name not in {
+                '@rpath/libavformat.62.dylib', '@rpath/libavcodec.62.dylib', '@rpath/libavutil.60.dylib'}:
             raise ValueError('Non-system library required; rebuild statically: '+name)
         dependencies.append(name)
     return dependencies
@@ -54,6 +55,22 @@ def package(app, build_dir, output):
         stage.mkdir()
         bundle = stage/'Arcanum Modern.app'
         shutil.copytree(app, bundle)
+        movies = resources.movie_files(build_dir, 'macos')
+        frameworks = bundle/'Contents/Frameworks'
+        frameworks.mkdir(exist_ok=True)
+        for name in resources.MOVIE_LIBRARIES['macos']:
+            data = movies.pop('ArcanumModern/lib/'+name)
+            validate_macho(data, dylib=True)
+            library = frameworks/name
+            library.write_bytes(data)
+            validate_dependencies(subprocess.check_output(['otool', '-L', str(library)], text=True))
+            subprocess.run(['codesign', '--force', '--sign', '-', str(library)], check=True)
+        if {p.name for p in frameworks.iterdir()} != set(resources.MOVIE_LIBRARIES['macos']):
+            raise ValueError('Unexpected framework in app bundle')
+        for name, data in movies.items():
+            destination = stage/name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
         info['CFBundleName'] = 'Arcanum Modern'
         info['CFBundleDisplayName'] = 'Arcanum Modern'
         info['CFBundleIdentifier'] = 'org.arcanummodern.game'
@@ -64,14 +81,14 @@ def package(app, build_dir, output):
         # Apple Silicon requires signed code. This is an ad-hoc signature,
         # not Developer ID signing or notarization.
         subprocess.run(['codesign', '--force', '--sign', '-', str(bundle)], check=True)
-        subprocess.run(['codesign', '--verify', '--strict', str(bundle)], check=True)
+        subprocess.run(['codesign', '--verify', '--strict', '--deep', str(bundle)], check=True)
         for name in resources.ASSETS:
             destination = stage/'modern-ui'/name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT/'game/modern-ui'/name, destination)
         notices = stage/'ArcanumModern'
         licenses = notices/'licenses'
-        licenses.mkdir(parents=True)
+        licenses.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT/'source/LICENSE.md', licenses/'arcanum-ce.md')
         cache = (build_dir/'CMakeCache.txt').read_text()
         for name, license_file in [('SDL3', 'LICENSE.txt'), ('SDL3_mixer', 'LICENSE.txt'),
@@ -88,7 +105,7 @@ def package(app, build_dir, output):
         stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
         (licenses/'stb.txt').write_text(stb[stb.rindex('/*\n---'):])
         shutil.copyfile(ROOT/'tools/macos/INSTALL.txt', notices/'INSTALL.txt')
-        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/'))
+        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
         (notices/'docs').mkdir()
         shutil.copyfile(ROOT/'docs/controls.md', notices/'docs/controls.md')
         git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]

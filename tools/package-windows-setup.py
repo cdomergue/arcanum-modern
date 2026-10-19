@@ -22,7 +22,9 @@ REQUIRED_FILES = {'arcanum-modern.exe', 'Play Arcanum Modern.bat',
                   'ArcanumModern/licenses/SDL3.txt', 'ArcanumModern/licenses/SDL3_mixer.txt',
                   'ArcanumModern/licenses/SDL3-hidapi.txt', 'ArcanumModern/licenses/SDL3_mixer-dr_libs.txt',
                   'ArcanumModern/licenses/fpattern.txt', 'ArcanumModern/licenses/zlib.txt',
-                  'ArcanumModern/licenses/stb.txt'} | {'modern-ui/'+name for name in package.ASSETS}
+                  'ArcanumModern/licenses/stb.txt'} | {'modern-ui/'+name for name in package.ASSETS} | set(package.MOVIE_LIBRARIES['windows']) | {
+                  'ArcanumModern/licenses/ffmpeg/'+name for name in
+                  ('ffmpeg-8.1.3.tar.xz', 'COPYING.LGPLv2.1', 'build-ffmpeg.py', 'README.txt')}
 
 
 def extract_payload(archive, target):
@@ -65,10 +67,8 @@ def build(archive, output, makensis):
     with tempfile.TemporaryDirectory(prefix='arcanum-setup-', dir=output.parent) as temp:
         work = Path(temp)
         names = extract_payload(archive, work/'payload')
-        imports = package.pe_imports((work/'payload/arcanum-modern.exe').read_bytes())
-        if any(name not in package.SYSTEM_DLLS and not name.startswith(('api-ms-win-', 'ext-ms-win-'))
-               for name in imports):
-            raise ValueError('The executable requires non-system DLLs')
+        package.validate_pe_dependencies({name: (work/'payload'/name).read_bytes()
+                                          for name in ('arcanum-modern.exe', *package.MOVIE_LIBRARIES['windows'])})
         install = []
         uninstall = []
         directories = set()

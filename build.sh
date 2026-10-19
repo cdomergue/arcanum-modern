@@ -22,6 +22,11 @@ for dep in fpattern sdl3 sdl3_mixer zlib; do
 done
 "$arcanum_cmake" -S "$arcanum_project/source" -B "$arcanum_build" "${args[@]}"
 "$arcanum_cmake" --build "$arcanum_build" --parallel "${ARCANUM_BUILD_JOBS:-8}"
+mkdir -p "$arcanum_project/game/ArcanumModern/lib"
+for arcanum_movie_library in libavformat.so.62 libavcodec.so.62 libavutil.so.60; do
+    cp "$arcanum_build/ArcanumModern/lib/$arcanum_movie_library" "$arcanum_project/game/ArcanumModern/lib/$arcanum_movie_library.new"
+    mv "$arcanum_project/game/ArcanumModern/lib/$arcanum_movie_library.new" "$arcanum_project/game/ArcanumModern/lib/$arcanum_movie_library"
+done
 cp "$arcanum_build/arcanum-ce" "$arcanum_project/game/arcanum-modern.new"
 mv "$arcanum_project/game/arcanum-modern.new" "$arcanum_project/game/arcanum-modern"
 printf '%s\n' 'Compilation installée. Elle sera utilisée au prochain lancement.'

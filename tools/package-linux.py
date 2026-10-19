@@ -26,12 +26,14 @@ def validate_elf(data):
         raise ValueError('Expected a Linux x86-64 ELF executable')
 
 
-def validate_dependencies(output):
+def validate_dependencies(output, allowed_rpath='$ORIGIN/ArcanumModern/lib'):
     imports = set(re.findall(r'\(NEEDED\).*\[([^\]]+)\]', output))
-    if imports - SYSTEM_LIBRARIES:
-        raise ValueError('Non-system libraries required; rebuild statically: '+', '.join(sorted(imports - SYSTEM_LIBRARIES)))
-    if re.search(r'\((?:RPATH|RUNPATH)\)', output):
-        raise ValueError('Executable contains a library search path')
+    missing = imports - SYSTEM_LIBRARIES - set(resources.MOVIE_LIBRARIES['linux'])
+    if missing:
+        raise ValueError('Unbundled libraries required: '+', '.join(sorted(missing)))
+    paths = re.findall(r'\((?:RPATH|RUNPATH)\).*\[([^\]]*)\]', output)
+    if any(path != allowed_rpath for path in paths):
+        raise ValueError('Unexpected library search path')
     return sorted(imports)
 
 
@@ -47,9 +49,21 @@ def package(exe, build_dir, output):
     files = {'arcanum-modern': binary,
              'Play Arcanum Modern.sh': (ROOT/'tools/linux/Play Arcanum Modern.sh').read_bytes(),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/linux/INSTALL.txt').read_bytes(),
-             'ArcanumModern/README.md': (ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').encode(),
+             'ArcanumModern/README.md': (ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode(),
              'ArcanumModern/docs/controls.md': (ROOT/'docs/controls.md').read_bytes(),
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
+    movies = resources.movie_files(build_dir, 'linux')
+    with tempfile.TemporaryDirectory(prefix='arcanum-elf-') as temporary:
+        for name in resources.MOVIE_LIBRARIES['linux']:
+            data = movies['ArcanumModern/lib/'+name]
+            validate_elf(data)
+            library = Path(temporary)/name
+            library.write_bytes(data)
+            validate_dependencies(subprocess.check_output(['readelf', '-d', str(library)], text=True), '$ORIGIN')
+            versions = subprocess.check_output(['readelf', '--version-info', str(library)], text=True)
+            glibc += re.findall(r'GLIBC_(\d+(?:\.\d+)+)', versions)
+    minimum_glibc = max(glibc, key=lambda v: tuple(map(int, v.split('.'))))
+    files.update(movies)
     for name in resources.ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
     cache = (build_dir/'CMakeCache.txt').read_text()

@@ -22,6 +22,11 @@ enum { INTGAME_MODE_MAIN, INTGAME_MODE_DIALOG, INTGAME_MODE_INVEN, INTGAME_MODE_
 enum { ROTWIN_TYPE_MSG, ROTWIN_TYPE_SPELLS };
 static bool enabled=true, in_game, hud, journal;
 static bool menu, compact, classic_hidden;
+static bool native_cursor=true;
+static int redraws;
+static void render_cursor(void) {}
+static void tig_video_set_cursor_overlay(void (*callback)(void)) { native_cursor=callback!=NULL; }
+static void tig_window_invalidate_rect(const void* rect) { assert(rect==NULL); redraws++; }
 static int mode=INTGAME_MODE_MAIN, rotating=ROTWIN_TYPE_MSG, pending_action=-1;
 static void modern_ui_menu_tick(void) {}
 static void world_zoom_sync(void) {}
@@ -59,6 +64,7 @@ static void check(bool expected) {
     modern_ui_tick();
     assert(hud==expected);
     assert(classic_hidden==expected);
+    assert(native_cursor==enabled);
 }
 int main(void) {
     /* New game, then the scripted conversation several frames later. */
@@ -88,6 +94,7 @@ int main(void) {
     journal=true;mode=INTGAME_MODE_LOGBOOK;check(true);
     pending_action=999;check(false);
     assert(!journal);
+    assert(redraws==3);
     /* Events left over after window filters must reach conversation handling
        before any movement code when the original command bars are hidden. */
     TigMessage click={true}, escape={false};

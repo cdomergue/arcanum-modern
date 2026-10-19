@@ -10,6 +10,9 @@ combat**, based on [Arcanum Community Edition](https://github.com/alexbatalov/ar
 
 **[Download the Windows setup](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe).**
 
+You need your own copy of the original game:
+[buy Arcanum on GOG](https://www.gog.com/en/game/arcanum_of_steamworks_and_magick_obscura).
+
 1. Install your own copy of **Arcanum**, updated to **1.0.7.4**.
 2. Open the downloaded setup and select the folder where Arcanum is installed.
 3. Launch **Arcanum Modern** using the shortcut on your desktop or in the Start menu.
@@ -77,12 +80,34 @@ Back up your saved games before trying an experimental engine.
   markers. Original maps remain available when the detailed cache is absent.
 - **Readable game text:** books, letters, newspapers, inscriptions, telegrams
   and floating dialogue use the installed game's content.
+- **Original cinematics:** the integrated player reads the installed BIK videos
+  directly on Windows, macOS and Linux, with their original audio and story
+  triggers. No conversion, video download or extra preparation is required.
 - **Optional unlimited companions:** disabled by default; recruitment conditions
   still apply.
 
 Names, descriptions and most labels follow the language of your game files.
 Additional interface text has partial French and English support. Western game
 text is decoded as Windows-1252; other encodings need validation.
+
+## Screenshots
+
+These screenshots use French game files. In your installation, game text follows
+the language of your own copy of Arcanum; the mod does not require the French
+version. Additional interface text currently has partial French and English
+support. Click an image to enlarge it.
+
+**BG3-inspired tactical combat:** direct companion control, turn order and action points.
+
+[![Controlling Sogg during his turn](docs/screenshots/tactical-combat.jpg)](docs/screenshots/tactical-combat.jpg)
+
+| Exploration | Inventory and equipment |
+| --- | --- |
+| [![Exploring Tarant with the modern HUD](docs/screenshots/exploration.jpg)](docs/screenshots/exploration.jpg) | [![Inventory with search, categories and equipment details](docs/screenshots/inventory.jpg)](docs/screenshots/inventory.jpg) |
+
+**HD local maps**, generated from your game files with roofs preserved.
+
+[![Detailed local map of Tarant](docs/screenshots/local-map.jpg)](docs/screenshots/local-map.jpg)
 
 ## Controls and gameplay
 
@@ -136,8 +161,6 @@ back its notes. Keep both when moving your installation.
 
 - The world uses the original sprites and terrain artwork. Detailed local maps
   improve map presentation without replacing those assets.
-- The native 64-bit engine cannot load the original 32-bit `binkw32.dll`;
-  Bink cinematics are unavailable without a compatible decoder.
 - The supplied macOS script targets Apple Silicon. Intel macOS, mobile platforms,
   multiplayer and combinations with other engine patches are not validated.
 - Do not apply the original High Resolution Patch to the modern executable.
@@ -232,7 +255,8 @@ outside the `.app` bundle; keep the application in the game folder.
 ### Linux
 
 Install Git, CMake, a C17 compiler, a build tool and the X11/audio development
-packages required by SDL. Python 3.10 or later is useful for packaging and tests.
+packages required by SDL, GNU Make and Python 3.10 or later. The build also compiles
+the bundled FFmpeg Bink decoder libraries.
 On Fedora/Nobara, the development packages include:
 
 ```sh
@@ -270,8 +294,10 @@ python3 tools/package-linux.py --exe build/linux-x64/arcanum-ce --build-dir buil
 Packaging requires Python 3.10 or later and `readelf` from binutils. The output is
 `dist/ArcanumModern-linux-x64.zip`, containing the executable, launcher, interface
 resources and license notices. It excludes game data and personal settings.
-SDL and the audio codecs are linked into the executable; the packager rejects
-additional non-system library dependencies and records the required glibc version.
+SDL is linked into the executable. Three FFmpeg shared libraries are included in
+`ArcanumModern/lib`; the packager rejects other non-system dependencies and records
+the required glibc version. FFmpeg's license, exact source and build script are
+included under `ArcanumModern/licenses/ffmpeg`.
 
 The release workflow builds on Ubuntu 22.04 for **x86-64 Linux with glibc 2.35
 or newer**. Packages built on newer distributions may require a newer glibc.
@@ -306,7 +332,7 @@ open "game/Arcanum Modern.app"
 ```
 
 The script targets Apple Silicon (arm64), macOS 11 or later. Wine and Rosetta
-are not required. It builds static dependencies, verifies the
+are not required. It builds SDL statically and bundles the FFmpeg libraries, verifies the
 executable's architecture and linked libraries, and signs the application
 ad-hoc. Building alone does not install the application into `game/`.
 The application is not notarized by Apple.
@@ -326,8 +352,9 @@ Install:
 - Visual Studio 2022 with **Desktop development with C++**, including its Windows SDK.
 - CMake and Git for Windows.
 - Python 3.10 or later, available as `python` in Git Bash.
+- GNU Make and a POSIX shell (for example from MSYS2) available on `PATH` for FFmpeg.
 
-From **Git Bash** at the repository root:
+From **Git Bash**, with the Visual Studio x64 developer environment loaded, at the repository root:
 
 ```sh
 PYTHON=python ./build-windows.sh
@@ -566,6 +593,12 @@ python3 tests/test_windows_package.py dist/ArcanumModern-windows-x64.zip
 Use an isolated game copy for interactive testing. Keep commercial game data,
 generated map caches, builds, personal settings and saves out of Git.
 
+For the native movie player, build the `check-movie` CMake target and run it from
+an isolated game folder containing `tig.dat`, passing an absolute path to a BIK
+video. It checks playback, renderer restoration, skipping and quit propagation
+using SDL's dummy video and audio drivers. The packaged executable also accepts
+`--check-movies` to verify that its Bink decoders load without requiring game data.
+
 ## Credits and licenses
 
 Arcanum was created by **Troika Games**. Arcanum Modern is an unofficial project.
@@ -575,6 +608,11 @@ its [Sustainable Use License](https://github.com/alexbatalov/arcanum-ce/blob/a7f
 Packages include upstream and third-party license notices. Noto fonts use the
 [SIL Open Font License](game/modern-ui/FONT-LICENSE.txt). SDL, SDL_mixer, zlib,
 fpattern and stb retain their respective licenses.
+
+The integrated BIK player uses a minimal shared-library build of
+[FFmpeg](https://ffmpeg.org/), under LGPL 2.1 or later. Packages include its exact
+source archive, build script and license in `ArcanumModern/licenses/ffmpeg/`.
+No GPL or nonfree FFmpeg components are enabled.
 
 Original game data is separate from the software licenses. It is excluded from
 the repository and standard mod-only packages; the complete-package option uses

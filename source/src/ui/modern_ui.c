@@ -1729,7 +1729,7 @@ static void draw_quickslot_hint(void)
 
 static void render_overlay(SDL_Renderer* target)
 {
-    if(slide_ui_is_active())return;
+    if(slide_ui_is_active() || tig_movie_is_playing())return;
     bool menu=native_menu();
     if(!menu && !native_panel() && (!visible() || (!hud && !journal))) return;
     renderer=target;
@@ -1841,6 +1841,11 @@ static bool handle_event(SDL_Event* event)
     bool keyboard = event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP;
     SDL_Scancode key = keyboard ? event->key.scancode : SDL_SCANCODE_UNKNOWN;
     bool valid_key = key > SDL_SCANCODE_UNKNOWN && key < SDL_SCANCODE_COUNT;
+
+    if (tig_movie_is_playing()) {
+        if (valid_key && event->type == SDL_EVENT_KEY_UP) captured_keys[key] = false;
+        return false;
+    }
 
     /* A key press belongs to the UI that consumed it, including its release.
      * Escape may close that UI before KEY_UP arrives; forwarding the release
