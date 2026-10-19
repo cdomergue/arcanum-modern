@@ -76,7 +76,7 @@ static bool party_action(int action)
     if(!obj || !obj_handle_is_valid(obj) || !player_is_local_pc_obj(critter_pc_leader_get(obj)))return true;
     if(intgame_mode_get()==INTGAME_MODE_DIALOG)return true;
     if(tactical_active() && intgame_mode_get()==INTGAME_MODE_MAIN){
-        tactical_camera_focus(obj,false);return true;
+        if(!combat_shared_turn_select(obj))tactical_camera_focus(obj,false);return true;
     }
     if(tactical_active() && !combat_input_ready(combat_input_actor()))return true;
     TargetDescriptor td;target_descriptor_set_obj(&td,obj);sub_54EA80(&td);

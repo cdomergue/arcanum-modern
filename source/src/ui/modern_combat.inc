@@ -273,6 +273,7 @@ static void draw_tactical_hud(void)
         float x=tx+90+j*80;
         SDL_FRect rect={x,16,74,53};bool selected=obj==tactical_actor;
         button(rect,1200+i,"",-1,selected,true);
+        if(combat_shared_turn_available(obj))fill((SDL_FRect){x+2,70,70,3},GOLD);
         tactical_portrait(obj,(SDL_FRect){x+4,19,31,40});
         char name[1024];object_examine(obj,player_get_local_pc_obj(),name);
         text_compact(game_text(name),x+38,20,32,false,selected?GOLD:MUTED);
@@ -337,8 +338,9 @@ static bool tactical_action(int action)
     if(action==1111){if(tactical_spell_page<7)tactical_spell_page++;return true;}
     if(action==1106){tactical_log_open=!tactical_log_open;return true;}
     if(action>=1200 && action<1328){
-        int64_t obj=tactical_order_actor(action-1200);if(obj)tactical_camera_focus(obj,false);
-        return true; /* Camera only: selecting a portrait never changes turn/AP. */
+        int64_t obj=tactical_order_actor(action-1200);
+        if(obj && !combat_shared_turn_select(obj))tactical_camera_focus(obj,false);
+        return true;
     }
     bool command=action==5 || action==6 || action==950 || action==951
         || (action>=300 && action<310) || (action>=870 && action<884)

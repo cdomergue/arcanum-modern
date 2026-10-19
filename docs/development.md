@@ -419,6 +419,8 @@ Examples:
 ```sh
 python3 tests/test_display_config.py
 python3 tests/test_lock_states.py
+python3 tests/test_map_route.py
+python3 tests/test_shared_turns.py
 python3 tests/test_windows_full_package.py
 python3 tests/test_windows_package.py dist/ArcanumModern-windows-x64.zip
 ```

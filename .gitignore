@@ -24,6 +24,9 @@
 /source/*
 !/source/src/
 /source/src/*
+!/source/src/game/
+/source/src/game/*
+!/source/src/game/modern_shared_turn.inc
 !/source/src/ui/
 /source/src/ui/*
 !/source/src/ui/modern_ui.c

@@ -58,8 +58,9 @@ Back up your saved games before trying an experimental engine.
 ## Features
 
 - **BG3-inspired tactical combat:** take direct control of eligible companions
-  on their turns, preview movement and actions, inspect costs and spell
-  availability, and follow the fight in a combat log. Turn-based combat is
+  and switch freely between allies with consecutive turns, each keeping their
+  own remaining action points. Preview movement and actions, inspect costs and
+  spell availability, and follow the fight in a combat log. Turn-based combat is
   enabled by default. Initiative, action points, fatigue, damage and spell
   restrictions follow Arcanum's rules.
 - **Native-resolution interface:** readable text and controls that keep their
@@ -136,9 +137,14 @@ On the local map, distant destinations automatically add intermediate waypoints
 when a valid route fits within the six-point limit. Use the travel button to
 start following the route.
 
-Turn-based combat is the default for fresh installations. Each controllable ally
-acts during their own turn. The camera pans smoothly to the active character,
-with a brief input guard to prevent accidental actions. Selecting a portrait also moves the camera. A `~`
+Turn-based combat is the default for fresh installations. Allies with consecutive
+turns share a turn group: click an available portrait to choose who acts, then
+switch back while they still have action points. A gold underline in the
+initiative bar marks available allies. **End turn** finishes the selected
+character; enemies act once the group has finished.
+
+The camera pans smoothly to the active character, with a brief input guard to
+prevent accidental actions. Selecting any other portrait centers the camera. A `~`
 on an action cost marks an estimate; the engine determines the final cost.
 
 ## Preferences and saves

@@ -28,6 +28,7 @@ jobs:
           python3 tests/test_camera_keys.py
           python3 tests/test_qol_preferences.py
           python3 tests/test_tactical_combat.py
+          python3 tests/test_shared_turns.py
       - name: Build and package Linux x64
         env:
           ARCANUM_BUILD_DIR: build/linux-x64

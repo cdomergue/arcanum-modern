@@ -787,12 +787,12 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
  #define _USE_MATH_DEFINES
  #include <math.h>
-@@ -195,6 +196,74 @@
+@@ -195,6 +196,76 @@
  static CombatCallbacks combat_callbacks;
  
  // 0x4B1D50
 +
-+/* Tactical input never changes player identity or replenishes the engine's PA. */
++/* Tactical control preserves the PC identity used by quests and scripts. */
 +static bool tactical_enabled;
 +
 +void combat_tactical_enable(void)
@@ -859,10 +859,12 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 +    return count;
 +}
 +
++#include "modern_shared_turn.inc"
++
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
-@@ -215,7 +284,7 @@
+@@ -215,7 +286,7 @@
          }
      }
  
@@ -871,7 +873,23 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
  
      settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
-@@ -282,7 +351,7 @@
+@@ -256,7 +327,7 @@
+     if (tig_file_fwrite(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, stream) != 1) return false;
+ 
+     if (!combat_turn_based_active) {
+-        return true;
++        return shared_turn_save();
+     }
+ 
+     if (tig_file_fwrite(&combat_action_points, sizeof(combat_action_points), 1, stream) != 1) return false;
+@@ -276,13 +347,13 @@
+     oid = obj_get_id(qword_5FC248);
+     if (tig_file_fwrite(&oid, sizeof(oid), 1, stream) != 1) return false;
+ 
+-    return true;
++    return shared_turn_save();
+ }
+ 
  // 0x4B2020
  bool combat_load(GameLoadInfo* load_info)
  {
@@ -880,20 +898,23 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      ObjectID oid;
      int64_t obj;
      ObjectNode* node;
-@@ -292,10 +361,12 @@
+@@ -292,10 +363,12 @@
      if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
      if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
  
 +    if (tactical_enabled) combat_turn_based = true;
      if (!combat_turn_based_active) {
-         return true;
-     }
- 
+-        return true;
+-    }
+-
++        return shared_turn_load();
++    }
++
 +    saved_turn = combat_turn_based_turn;
      combat_callbacks.field_4();
  
      if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
-@@ -307,6 +378,7 @@
+@@ -307,6 +380,7 @@
      }
  
      combat_action_points = saved_action_points;
@@ -901,7 +922,16 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
      qword_5FC238 = obj_pool_perm_lookup(oid);
-@@ -422,7 +494,7 @@
+@@ -343,7 +417,7 @@
+ 
+     combat_callbacks.field_C(combat_action_points);
+ 
+-    return true;
++    return shared_turn_load();
+ }
+ 
+ // 0x4B2210
+@@ -422,7 +496,7 @@
  // 0x4B2410
  void fast_turn_based_changed(void)
  {
@@ -910,7 +940,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B24F0
-@@ -1813,6 +1885,7 @@
+@@ -1813,6 +1887,7 @@
              }
          }
  
@@ -918,7 +948,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -2857,12 +2930,19 @@
+@@ -2857,12 +2932,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -938,7 +968,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3038,7 @@
+@@ -2958,7 +3040,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -947,20 +977,32 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2997,7 +3077,11 @@
+@@ -2990,14 +3072,20 @@
+         }
+     }
+ 
+-    combat_action_points = stat_level_get(obj, STAT_SPEED);
+-    if (combat_action_points < 5) {
+-        combat_action_points = 5;
++    bool resumed = shared_turn_restore(obj);
++    if (!resumed) {
++        combat_action_points = stat_level_get(obj, STAT_SPEED);
++        if (combat_action_points < 5) combat_action_points = 5;
++        shared_turn_started(obj);
+     }
  
      tig_debug_printf("Combat: TB: Action Points Available: %d.\n", combat_action_points);
  
 -    if (player_is_local_pc_obj(obj)) {
 +    if (combat_player_controls(obj)) {
-+        if (!player_is_local_pc_obj(obj) && !gamelib_in_load()) {
++        if (!resumed && !player_is_local_pc_obj(obj) && !gamelib_in_load()) {
 +            object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_START_COMBAT, 0);
 +            object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0);
 +        }
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3109,7 @@
+@@ -3025,6 +3113,7 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
@@ -968,7 +1010,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3139,9 @@
+@@ -3054,8 +3143,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -980,7 +1022,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3170,10 @@
+@@ -3084,9 +3174,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -993,7 +1035,23 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3205,7 +3292,7 @@
+@@ -3160,6 +3251,7 @@
+ {
+     ObjectNode* node;
+ 
++    shared_turn_count = 0;
+     combat_debug(OBJ_HANDLE_NULL, "TB End");
+ 
+     if (combat_turn_based_active) {
+@@ -3189,6 +3281,7 @@
+ 
+     dword_5FC250 = 0;
+     pc_obj = player_get_local_pc_obj();
++    shared_turn_count = 0;
+     combat_turn_based_turn++;
+     pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
+     combat_recalc_perception_range();
+@@ -3205,7 +3298,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1002,7 +1060,25 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3549,6 +3636,8 @@
+@@ -3243,6 +3336,9 @@
+         return true;
+     }
+ 
++    SharedTurnMember* member = tactical_enabled ? shared_turn_member(object_node->obj, false) : NULL;
++    if (member != NULL && member->ended) return true;
++
+     if (!critter_is_active(object_node->obj)) {
+         sub_427000(object_node->obj);
+         return true;
+@@ -3286,6 +3382,7 @@
+ 
+     dword_5FC250++;
+     combat_turn_based_subturn_end();
++    if (shared_turn_next()) return;
+ 
+     dword_5FC240 = dword_5FC240->next;
+     if (dword_5FC240 == NULL) {
+@@ -3549,6 +3646,8 @@
          return true;
      }
  
@@ -1011,7 +1087,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3741,6 +3830,12 @@
+@@ -3741,6 +3840,12 @@
          return false;
      }
  
@@ -1027,7 +1103,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 diff --git a/src/game/combat.h b/src/game/combat.h
 --- a/src/game/combat.h
 +++ b/src/game/combat.h
-@@ -93,6 +93,16 @@
+@@ -93,6 +93,18 @@
  // Serializeable.
  static_assert(sizeof(CombatContext) == 0x68, "wrong size");
  
@@ -1040,6 +1116,8 @@ diff --git a/src/game/combat.h b/src/game/combat.h
 +bool combat_input_ready(int64_t obj);
 +bool combat_input_end_turn(int64_t expected_actor);
 +int combat_turn_order(int64_t* actors, int capacity);
++bool combat_shared_turn_available(int64_t actor);
++bool combat_shared_turn_select(int64_t actor);
 +
  bool combat_init(GameInitInfo* init_info);
  void combat_exit(void);
