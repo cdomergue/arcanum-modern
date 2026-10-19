@@ -1,309 +1,458 @@
 # Arcanum Modern
 
-Arcanum Modern is a native engine and interface project for **Arcanum: Of Steamworks
-and Magick Obscura**, built on [Arcanum Community Edition](https://github.com/alexbatalov/arcanum-ce).
-It keeps the original game's wood, brass, parchment and artwork while making its
-interface readable on modern displays.
+Arcanum Modern is an unofficial engine and interface project for **Arcanum: Of
+Steamworks and Magick Obscura**, based on
+[Arcanum Community Edition](https://github.com/alexbatalov/arcanum-ce).
+It brings the game to modern displays with sharp text, a redesigned interface,
+world zoom and direct companion control in turn-based combat, while keeping the
+original artwork and game systems.
 
-The interface renders separately from the world: text and controls stay sharp
-and keep their size when you zoom. Tactical combat adds direct companion control
-while retaining Arcanum's initiative, action points, fatigue, damage and spell rules.
-This is an experimental playable version, not an official remaster.
+This is an **experimental, playable project**. You need the game data from your
+own Arcanum installation, updated to **1.0.7.4**. This repository contains the
+mod's source code and interface resources; it does not contain the commercial
+game data.
 
-## What is included
+## Features
 
-- A modern HUD, party portraits, character sheet, inventory, trading, maps,
-  spell and skill panels, menus, save/load screens and display settings.
-- A character sheet organized around the original attributes and disciplines,
-  including moral alignment and technological/magical aptitude.
-- Clear dialogue and floating text, plus readable books, letters, newspapers,
-  inscriptions and telegrams using the installed game's text.
-- Mouse-wheel world zoom, keyboard camera movement and remappable controls.
-- Inventory search and categories, equipment comparison, item descriptions,
+- **Native-resolution interface:** readable text and controls that keep their
+  size while you zoom the world. The visual style uses wood, brass, parchment
+  and the game's original artwork.
+- **Redesigned screens:** HUD, party portraits, character sheet, inventory,
+  trading, dialogue, journal, maps, spell and skill panels, save/load menus and
+  display options.
+- **Camera and display controls:** mouse-wheel zoom, keyboard camera movement,
+  remappable keys, and windowed, desktop fullscreen and exclusive fullscreen
+  modes. The world adapts to the window's aspect ratio.
+- **Inventory tools:** search, categories, equipment comparison, item details,
   transfer shortcuts and editable quick slots with hover descriptions.
-- A searchable journal with quest status filters, favorites, quest tracking
-  and personal map annotations.
-- Turn-based combat with direct control of eligible companions on their own
-  turns, action previews, available spells and a combat log.
-- Maintained spell icons under the top bar: hover for the name and click to stop
-  an effect when its caster is available.
-- An optional unlimited-companion setting, off by default. Recruitment
-  requirements still apply.
+- **Journal and exploration:** quest filters, search, favorites, quest tracking
+  and personal map notes.
+- **Optional detailed local maps:** maps rendered from the installed game data,
+  with opaque roofs, exploration fog and separately drawn localized labels and
+  markers. Original maps remain available when the detailed cache is absent.
+- **Tactical combat:** direct control of eligible companions during their own
+  turns, action previews, spell availability and a combat log. Initiative,
+  action points, fatigue, damage and spell restrictions follow the game's rules.
+- **Readable game text:** books, letters, newspapers, inscriptions, telegrams
+  and floating dialogue use the installed game's content.
+- **Maintained spell controls:** hover an active effect to identify it and click
+  to stop it when its caster is available.
+- **Nearby world sounds:** footsteps, doors and other positional effects are
+  limited by their distance from the player.
+- **Optional unlimited companions:** disabled by default; recruitment conditions
+  still apply.
 
-Original game data is required and is not distributed with this project.
-Names, descriptions and most labels come from the installed game. Additional
-interface text has partial French and English support; Western game text is
-read as Windows-1252. Other languages and encodings need validation.
+Names, descriptions and most labels follow the language of your game files.
+Additional interface text has partial French and English support. Western game
+text is decoded as Windows-1252; other encodings need validation.
 
-## Install and play
+## Where to put the game files
 
-Use your own Arcanum installation updated to **1.0.7.4**. Back up your saves before
-trying this engine. A separate copy of the game is recommended for testing.
+Copy the contents of your installed Arcanum game into the repository's `game/`
+folder. Keep the original directory structure, including all game archives,
+module patches and loose data files. The repository already supplies
+`game/modern-ui/`; keep those resources in place.
 
-### Windows
+A typical source checkout looks like this:
 
-The intended target is **Windows 10/11, x64**.
+```text
+ArcanumModern/
+├── README.md
+├── build.sh
+├── build-macos.sh
+├── build-windows.sh
+├── source/
+└── game/
+    ├── arcanum1.dat
+    ├── arcanum2.dat
+    ├── arcanum3.dat
+    ├── Arcanum4.dat                 # If supplied by your installation
+    ├── tig.dat
+    ├── data/                       # Installed loose data, if present
+    ├── modules/
+    │   ├── Arcanum.dat
+    │   ├── Arcanum.patch0           # Keep all installed module patches
+    │   ├── Arcanum/                 # Loose module data and saved games
+    │   └── ...                     # Other installed modules
+    └── modern-ui/                  # Resources supplied by this project
+        ├── Book.ttf
+        ├── Heading.ttf
+        ├── ...
+        └── local-maps/              # Optional detailed map cache
+```
 
-1. Extract `ArcanumModern-windows-x64.zip` into your Arcanum game folder, alongside
-   `Arcanum.exe` and `arcanum1.dat`.
+Use a writable folder so the game can create preferences, caches and saves.
+A separate copy of your installation is recommended. Back up existing saves
+before using a different engine.
+
+For a packaged build, the same layout applies without the source files:
+`arcanum-modern.exe` and its launcher on Windows, or `Arcanum Modern.app` on macOS,
+must sit **beside `arcanum1.dat` and `modern-ui/`**. On macOS, the game data stays
+outside the `.app` bundle; keep the application in the game folder.
+
+## Play a packaged build
+
+Players do not need a compiler, Python or a separate SDL installation.
+
+### Windows 10/11, x64
+
+For the standard **`ArcanumModern-windows-x64.zip`**:
+
+1. Extract the ZIP into your Arcanum game folder using the layout above.
 2. Open **Play Arcanum Modern.bat**.
-3. Set display mode, resolution, audio and controls in **Options**.
+3. Adjust display, audio, gameplay and key bindings in **Options**.
 
-Players do not need Python, a compiler or a separate SDL installation. The ZIP
-contains `arcanum-modern.exe`, the `modern-ui/` resources, a launcher and project
-notices. It does not replace `Arcanum.exe` or include game archives, saved games,
-or anyone else's preferences.
+The standard ZIP contains the engine, launcher and interface resources. It keeps
+the original `Arcanum.exe` and excludes game data, saves and personal preferences.
 
-Close the game before extracting an update. Existing preferences and notebook
-files are not part of the ZIP and are retained. Use a writable game folder so the
-game can save progress and settings.
+A locally created **`ArcanumModern-windows-x64-full.zip`** also contains the game
+data supplied when packaging. Extract the entire ZIP into a writable folder,
+then open **Play Arcanum Modern.bat**. No separate game-file copying is needed.
+Always extract the archive before launching the game.
 
-### macOS Apple Silicon
+### macOS, Apple Silicon
 
-The build target is native **arm64**, macOS **11 or later**.
+The macOS package targets **arm64, macOS 11 or later**.
 
-1. Copy your Arcanum 1.0.7.4 game installation into a writable folder on the Mac.
-2. Extract `ArcanumModern-macos-arm64.zip` there. `Arcanum Modern.app`,
-   `modern-ui/` and `arcanum1.dat` must be in the same folder.
-3. Open **Arcanum Modern.app**.
+1. Copy your installed game's files into a writable folder on the Mac.
+2. Extract **`ArcanumModern-macos-arm64.zip`** into that folder.
+3. Open **Arcanum Modern.app** beside the game archives.
 
-Rosetta and Wine are not required. The application uses an ad-hoc signature and
-is not notarized. If macOS blocks a trusted download, use **System Settings →
-Privacy & Security → Open Anyway**. Keep the application beside the game data.
-Close the game before updates; the ZIP excludes saves and personal preferences.
-The macOS build and gameplay still require validation on a Mac.
+Wine and Rosetta are not required. The application is ad-hoc signed and is not
+notarized by Apple. If macOS blocks a download you trust, use **System Settings →
+Privacy & Security → Open Anyway**.
+
+### Updating
+
+Close the game, then extract the updated package into the same game folder.
+Keep your saved games and the personal files in `modern-ui/`. Standard packages
+exclude those files. Display changes in Options have a timed confirmation and
+revert if they are not confirmed.
+
+## Build from source
+
+Clone this repository with Git, then run the commands below from its root.
+The packaging tools use Git metadata to record the source revision, so use a
+Git checkout when creating packages rather than a downloaded source-only ZIP.
+
+The build scripts call `prepare-source.sh` automatically. It obtains the pinned
+upstream engine revision, applies `patches/engine.patch` and leaves the project's
+modern interface modules in place. CMake downloads the required dependencies
+when they are not cached. An uncached build needs internet access.
+
+Use separate build directories for each target platform. Game data is needed to
+play, generate detailed maps or create a complete ZIP; standard engine builds
+and mod-only packages use the interface resources already in the repository.
+
+| Target | Build environment | Command | Result |
+| --- | --- | --- | --- |
+| Linux | Linux with a C17 compiler and SDL development dependencies | `./build.sh` | `game/arcanum-modern` |
+| macOS arm64 | macOS with Xcode Command Line Tools | `bash ./build-macos.sh` | `dist/ArcanumModern-macos-arm64.zip` |
+| Windows x64 | Windows with Visual Studio 2022 and Git Bash | `PYTHON=python ./build-windows.sh` | `dist/ArcanumModern-windows-x64.zip` |
+| Windows x64 | Linux with LLVM-MinGW, or Docker on Linux/macOS | See below | `dist/ArcanumModern-windows-x64.zip` |
 
 ### Linux
 
-Place your game files in `game/`, build the engine, then run:
+Install Git, CMake, a C17 compiler, a build tool and the X11/audio development
+packages required by SDL. Python 3.10 or later is useful for packaging and tests.
+On Fedora/Nobara, the development packages include:
+
+```sh
+sudo dnf install gcc gcc-c++ cmake ninja-build git python3 \
+  libX11-devel libXext-devel libXrandr-devel libXi-devel \
+  libXinerama-devel libXcursor-devel alsa-lib-devel \
+  pulseaudio-libs-devel libXScrnSaver-devel libXtst-devel
+```
+
+After placing the game data in `game/`:
 
 ```sh
 ./build.sh
 ./play.sh
 ```
 
+The build script compiles the engine and installs `game/arcanum-modern`.
 For a windowed session:
 
 ```sh
 ./play.sh -window -geometry=1280x720
 ```
 
-The Linux launcher selects Vulkan by default and writes `game/modern-launch.log`.
-It can use another SDL renderer through `SDL_RENDER_DRIVER`. The current Linux
-build uses X11/XWayland. Display settings are stored separately from world zoom;
-fullscreen mode uses the monitor's output resolution.
+The launcher uses Vulkan by default and writes `game/modern-launch.log`.
+`SDL_RENDER_DRIVER` selects another available SDL renderer. The provided Linux
+build configuration uses X11/XWayland and disables SDL's OpenGL backend.
 
-## Controls
+### macOS Apple Silicon
 
-These are the defaults for a fresh installation. Change them in **Options → Key
-bindings**; AZERTY and QWERTY presets set the camera keys for those layouts.
-
-| Action | Default |
-| --- | --- |
-| Inventory | I |
-| Journal | J |
-| Character sheet | C |
-| Map | G |
-| Spells / skills / schematics | M / K / T |
-| Rest | R |
-| Stealth / pickpocket | H / P |
-| End turn | E or Space |
-| Move camera | WASD positions (ZQSD on AZERTY), or arrow keys |
-| Zoom the world | Mouse wheel over the world |
-| Use a quick slot | 1–0 |
-| Close a panel or open pause menu | Escape |
-
-Hover an item, spell or skill in its panel and press **1–0** to assign it to a
-quick slot. Hover a quick slot to identify its contents. Text entry suspends game
-shortcuts; in inventory search, hovering an item gives quick-slot assignment
-priority without clearing the search.
-
-Double-click an item to transfer it between inventory panels where the game's
-rules allow it. **Shift-click** transfers a whole stack. Purchases still use the
-original prices and restrictions. Drag the map background to pan it.
-
-In the journal, the **star** toggles a favorite and the **pin** toggles quest
-tracking. Filters distinguish **In progress**, **Completed**, **Interrupted** and
-**Mentioned** quests, alongside **All**. An achieved objective awaiting a final
-turn-in stays in progress; a quest completed by a rival is grouped with interrupted
-quests. Search and favorites can be combined with these filters.
-
-A detailed French control guide is available in [docs/controls.md](docs/controls.md).
-
-## Tactical combat
-
-Turn-based combat is the default for new installations and new games. Each
-controllable ally receives orders during their own turn. Selecting another
-portrait moves the camera; it does not transfer the turn or refill action points.
-Allies do not share or interleave turns.
-
-Action previews show range, hit chances and action-point estimates. A `~` marks
-an estimated movement cost: the original engine determines the final cost from
-movement and animation. Spell availability, fatigue costs, fear, incapacitation
-and loss of control continue to follow Arcanum's rules.
-
-## Preferences and personal notes
-
-Files below are relative to the game folder (`game/` in the Linux development
-layout):
-
-- `modern-ui/settings.ini`: interface and gameplay preferences.
-- `modern-ui/graphics.ini`: display mode and resolution.
-- `modern-ui/keys.ini`: key bindings.
-- `modern-ui/notebook-*.txt`: favorites, tracked quests and map notes per character.
-
-Notebook annotations are separate from saved games. Loading an older save does
-not roll those annotations back. Keep these files when moving your installation.
-Display changes offer a timed confirmation and revert if not confirmed.
-`modern-ui/graphics.ini` also sets the initial world resolution; no `HighRes`
-folder is needed. The world follows the actual window's aspect ratio, including
-when no configuration exists, and keeps the selected camera zoom when resizing
-within the engine's limits.
-
-## Build and package
-
-The pinned upstream engine revision is
-`a7ff41b300ef712f0e7d088183a3d08957110cdd`. `prepare-source.sh` exports that revision
-and applies `patches/engine.patch`; dependencies are fetched from their pinned
-upstream repositories. Internet access is needed for an uncached build.
-
-### Linux build
-
-Use a C17 compiler, Git, CMake, a build tool and the X11/audio development packages
-required by SDL. On Fedora/Nobara these include `gcc`, `gcc-c++`, `cmake`,
-`ninja-build`, `libX11-devel`, `libXext-devel`, `libXrandr-devel`, `libXi-devel`,
-`libXinerama-devel`, `libXcursor-devel`, `alsa-lib-devel`, `pulseaudio-libs-devel`,
-`libXScrnSaver-devel` and `libXtst-devel`.
-
-`./build.sh` builds and atomically installs `game/arcanum-modern`. Overrides:
-`ARCANUM_BUILD_DIR`, `ARCANUM_BUILD_SDK`, `ARCANUM_DEPENDENCY_CACHE` and
-`ARCANUM_ENGINE_SOURCE`. The latter points to a checkout containing the pinned
-engine revision. The default SDK/cache paths can reuse a local development setup;
-otherwise the system toolchain and dependency downloads are used.
-
-### macOS Apple Silicon ZIP
-
-On a Mac, install Xcode Command Line Tools (`xcode-select --install`), CMake,
-Git and Python 3, then run:
+Install Xcode Command Line Tools, Git, CMake and Python 3.10 or later. Apple's
+command-line tools can be installed with:
 
 ```sh
-./build-macos.sh
+xcode-select --install
 ```
 
-The script targets arm64 explicitly, builds static dependencies and produces
-`dist/ArcanumModern-macos-arm64.zip`. It checks the Mach-O architecture and linked
-libraries, signs the application ad-hoc, and includes resources, licenses and a
-hash manifest. It does not modify the local game installation.
+Build and extract the package into your prepared `game/` directory:
 
-An optional first argument selects the output ZIP. Overrides: `CMAKE`, `PYTHON`,
-`ARCANUM_MACOS_BUILD_DIR`, `ARCANUM_BUILD_JOBS`, `ARCANUM_DEPENDENCY_CACHE`,
-`ARCANUM_ENGINE_SOURCE`. Use a separate build directory for each platform.
+```sh
+bash ./build-macos.sh
+ditto -x -k dist/ArcanumModern-macos-arm64.zip game
+open "game/Arcanum Modern.app"
+```
 
-Alternatively, after pushing the repository to GitHub, run **Actions → macOS
-Apple Silicon → Run workflow** and download the generated artifact. The workflow
-runs on the [GitHub macOS runner](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job).
+The script explicitly targets arm64, builds static dependencies, verifies the
+executable's architecture and linked libraries, and signs the application
+ad-hoc. Building alone does not install the application into `game/`.
 
-### Windows ZIP from Linux
+The repository also includes a **macOS Apple Silicon** GitHub Actions workflow
+that can be started manually when Actions is enabled for the repository.
 
-Install CMake, Ninja, Python 3 and Git. Extract an official Linux
-[LLVM-MinGW UCRT toolchain](https://github.com/mstorsjo/llvm-mingw/releases), then:
+### Windows: native build
+
+Install:
+
+- Visual Studio 2022 with **Desktop development with C++**, including its Windows SDK.
+- CMake and Git for Windows.
+- Python 3.10 or later, available as `python` in Git Bash.
+
+From **Git Bash** at the repository root:
+
+```sh
+PYTHON=python ./build-windows.sh
+```
+
+This selects the Visual Studio x64 generator and static C runtime. Extract
+`dist/ArcanumModern-windows-x64.zip` into the prepared game folder and run its
+launcher. The native Visual Studio build path still needs validation; the
+LLVM-MinGW route below is also available.
+
+### Windows: cross-build from Linux
+
+Install Git, CMake, Ninja and Python 3.10 or later. Download and extract an
+appropriate Linux-hosted **UCRT** toolchain from the
+[LLVM-MinGW releases](https://github.com/mstorsjo/llvm-mingw/releases), then run:
 
 ```sh
 export LLVM_MINGW=/path/to/llvm-mingw
 ./build-windows.sh
 ```
 
-The result is `dist/ArcanumModern-windows-x64.zip`. To choose another destination:
+The package checks the executable's Windows x64 architecture and imported DLLs,
+and includes the interface assets, license notices and a file-hash manifest.
+
+### Windows: build with Docker on macOS or Linux
+
+Install and start Docker. The LLVM-MinGW image contains the cross-compiler and
+build tools, so the host does not need a Windows SDK.
+
+From the repository root:
 
 ```sh
-./build-windows.sh /path/to/ArcanumModern-windows-x64.zip
+docker run --rm \
+  --mount "type=bind,source=$PWD,target=/work" \
+  --workdir /work \
+  -e LLVM_MINGW=/opt/llvm-mingw \
+  mstorsjo/llvm-mingw:latest \
+  bash ./build-windows.sh
 ```
 
-The script builds the Windows executable with static dependencies and packages
-only an explicit resource list. It checks the executable architecture and imported
-DLLs, includes license notices, and writes a manifest with file hashes and the
-source revision. Game data, preferences and saves are excluded.
+The output is written to the host's `dist/ArcanumModern-windows-x64.zip`.
+The container needs network access for the first uncached build. This produces
+a Windows executable; Docker is only used during the build.
 
-To create a complete installation ZIP, including the supplied game data,
-language files, patches and available HD maps:
+### Create a complete Windows ZIP
+
+Add `--include-game` to include data from an installed game:
 
 ```sh
 ./build-windows.sh --include-game ./game
 ```
 
-This creates `dist/ArcanumModern-windows-x64-full.zip`. Extract it into a writable
-folder and open **Play Arcanum Modern.bat**. Saved games, personal notes,
-preferences, screenshots, temporary caches and macOS applications are excluded.
-The HD map directory is copied as actual files even when it is a symlink;
-including all generated maps adds about 8 GB. The default ZIP remains mod-only.
-
-To package an existing Windows executable without recompiling, pass
-`--include-game ./game` to `tools/package-windows.py` together with its usual
-`--exe` and `--build-dir` arguments. `--output` can select another ZIP path.
-
-Overrides: `CMAKE`, `NINJA`, `PYTHON`, `ARCANUM_WINDOWS_BUILD_DIR`,
-`ARCANUM_BUILD_JOBS`, `ARCANUM_DEPENDENCY_CACHE`, `ARCANUM_ENGINE_SOURCE`.
-
-### Windows ZIP from Windows
-
-Install Visual Studio 2022 with the C++ desktop tools, CMake, Git for Windows and
-Python 3. From **Git Bash**, run:
+For Docker, append the same option to the command inside the container:
 
 ```sh
-PYTHON=python ./build-windows.sh
+docker run --rm \
+  --mount "type=bind,source=$PWD,target=/work" \
+  --workdir /work \
+  -e LLVM_MINGW=/opt/llvm-mingw \
+  mstorsjo/llvm-mingw:latest \
+  bash ./build-windows.sh --include-game ./game
 ```
 
-This selects the Visual Studio x64 generator and static C runtime. This native
-build route needs Windows validation; the Linux cross-build is the development
-packaging route.
+This creates **`dist/ArcanumModern-windows-x64-full.zip`** with the game's language
+files, installed module patches, loose data and any detailed maps present in
+`game/modern-ui/local-maps/`. A map-cache symlink is packaged as actual files.
+The complete generated map collection adds about **8 GB**.
 
-## Development
+Saved games, player files, notes, personal preferences, screenshots, temporary
+caches and macOS applications are excluded. The recipient extracts the ZIP and
+launches the included `.bat` file. Without `--include-game`, packaging remains
+mod-only.
 
-Only the mod's code, resources, scripts, tests and integration patch belong in
-Git. Original game files, generated engine sources, binaries, preferences and
-saves are excluded. New interface code lives in `source/src/ui/modern_*`.
+To package an existing executable without rebuilding, run the packager in the
+same environment used for the build:
 
-After changing an upstream engine file, regenerate the integration patch before
-building:
+```sh
+python3 tools/package-windows.py \
+  --exe build/windows-x64/arcanum-ce.exe \
+  --build-dir build/windows-x64 \
+  --include-game ./game
+```
+
+For a native Visual Studio build, the executable is under
+`build/windows-x64/Release/arcanum-ce.exe`. Use `--output` to choose the ZIP path.
+
+### Build options
+
+Both platform packaging scripts accept an optional output ZIP path:
+
+```sh
+bash ./build-macos.sh /path/to/ArcanumModern-macos-arm64.zip
+./build-windows.sh /path/to/ArcanumModern-windows-x64.zip
+```
+
+Useful environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `ARCANUM_BUILD_JOBS` | Parallel build jobs; defaults to 8. |
+| `ARCANUM_BUILD_DIR` | Linux build directory. |
+| `ARCANUM_MACOS_BUILD_DIR` | macOS build directory. |
+| `ARCANUM_WINDOWS_BUILD_DIR` | Windows build directory. |
+| `ARCANUM_DEPENDENCY_CACHE` | Directory containing reusable dependency source folders such as `sdl3-src`. |
+| `ARCANUM_ENGINE_SOURCE` | Local upstream Git checkout containing the pinned engine revision. |
+| `CMAKE`, `PYTHON` | Tool commands used by the macOS and Windows packaging scripts. |
+| `NINJA` | Ninja executable for the Linux-to-Windows cross-build. |
+
+## Detailed local maps
+
+The detailed map cache is optional and is generated from your installed game
+files. It contains static scenery with opaque roofs; people, portable objects,
+quest markers and localized labels are not baked into the images. Exploration
+fog remains active. Door images reflect the initial map state.
+
+Place the cache's module directories under:
+
+```text
+game/modern-ui/local-maps/
+├── Arcanum/
+│   ├── manifest.json
+│   └── ...
+└── ...
+```
+
+To generate and validate the cache on macOS after building the engine:
+
+```sh
+python3 tools/build-map-exporter.py
+python3 tools/generate-map-cache.py
+python3 tools/verify-map-cache.py
+```
+
+The output is `dist/local-map-cache/`. Copy its contents into
+`game/modern-ui/local-maps/`, or link that directory to the output. The exporter
+uses an isolated working installation. Standard mod-only packages exclude the
+cache; complete Windows packages include it when installed in the game folder.
+
+See [the detailed map guide](docs/local-map-cache.md) for export options and
+storage details. That guide is currently in French.
+
+## Controls and gameplay
+
+Change bindings in **Options → Key bindings**. AZERTY and QWERTY presets are
+available.
+
+| Action | Default |
+| --- | --- |
+| Inventory / journal / character sheet | I / J / C |
+| Map | G |
+| Spells / skills / schematics | M / K / T |
+| Rest | R |
+| Stealth / pickpocket | H / P |
+| End turn | E or Space |
+| Move camera | WASD positions, ZQSD on AZERTY, or arrow keys |
+| Zoom world | Mouse wheel over the world |
+| Use quick slot | 1–0 |
+| Close panel or open pause menu | Escape |
+
+Hover an item, spell or skill and press **1–0** to assign a quick slot.
+Double-click an inventory item to transfer it where the game's rules allow;
+**Shift-click** transfers a whole stack. Drag the map to pan it. In the journal,
+the **star** marks favorites and the **pin** tracks a quest.
+
+Turn-based combat is the default for fresh installations. Each controllable ally
+acts during their own turn. Selecting a portrait moves the camera without
+transferring the turn or restoring action points. A `~` on an action cost marks
+an estimate; the engine determines the final cost.
+
+A [more detailed control guide](docs/controls.md) is available in French.
+
+## Preferences and saves
+
+Paths are relative to the game folder:
+
+| Path | Contents |
+| --- | --- |
+| `modern-ui/settings.ini` | Interface and gameplay preferences. |
+| `modern-ui/graphics.ini` | Display mode and resolution. |
+| `modern-ui/keys.ini` | Key bindings. |
+| `modern-ui/notebook-*.txt` | Favorites, tracked quests and map notes per character. |
+| `arcanum.cfg` | Engine and game settings. |
+| `modules/<module>/Save/` | Saved games for that module. |
+
+A separate `HighRes/config.ini` is not required. The world follows the actual
+window dimensions, including when no saved display configuration exists.
+Notebook files are independent of saves: loading an older save does not roll
+back its notes. Keep both when moving your installation.
+
+## Limitations
+
+- The world uses the original sprites and terrain artwork. Detailed local maps
+  improve map presentation without replacing those assets.
+- The native 64-bit engine cannot load the original 32-bit `binkw32.dll`;
+  Bink cinematics are unavailable without a compatible decoder.
+- The supplied macOS script targets Apple Silicon. Intel macOS, mobile platforms,
+  multiplayer and combinations with other engine patches are not validated.
+- Do not apply the original High Resolution Patch to the modern executable.
+- Some original interface paths remain as fallbacks. F9 switches presentation
+  outside tactical combat.
+- Automated checks and successful packaging do not replace gameplay testing on
+  the target operating system.
+
+## Contributing
+
+Modern interface modules live in `source/src/ui/modern_*`. Changes to upstream
+engine files are stored in `patches/engine.patch`. The pinned engine revision is
+`a7ff41b300ef712f0e7d088183a3d08957110cdd`.
+
+After editing an upstream file, regenerate the integration patch:
 
 ```sh
 ARCANUM_ENGINE_SOURCE=/path/to/arcanum-ce python3 tools/update-engine-patch.py
 ```
 
-Focused tests are in `tests/` and use Python 3 and a C compiler. For example:
+Focused tests are in `tests/` and use Python and, where needed, a C compiler.
+Examples:
 
 ```sh
-python3 tests/test_keyboard_capture.py
-python3 tests/test_quest_filters.py
-python3 tests/test_maintained_spells.py
-python3 tests/test_qol_preferences.py
+python3 tests/test_display_config.py
+python3 tests/test_lock_states.py
+python3 tests/test_windows_full_package.py
 python3 tests/test_windows_package.py dist/ArcanumModern-windows-x64.zip
 ```
 
-Use an isolated game copy for interactive testing. Package checks do not replace
-playing the Windows build on actual Windows hardware.
+Use an isolated game copy for interactive testing. Keep commercial game data,
+generated map caches, builds, personal settings and saves out of Git.
 
-## Current limitations
+## Credits and licenses
 
-- World sprites and terrain retain their original resolution. This project
-  modernizes presentation and interaction rather than replacing every game asset.
-- The native 64-bit build cannot load Arcanum's original 32-bit `binkw32.dll`.
-  Bink cinematics are currently unavailable without a compatible decoder.
-- Multiplayer, mobile use and combinations with other engine/binary patches
-  have not been validated. Do not apply the original High Resolution Patch to
-  the modern executable.
-- Some original presentation paths remain as fallbacks. F9 switches presentation
-  outside tactical combat and can be useful for comparisons.
+Arcanum was created by **Troika Games**. Arcanum Modern is an unofficial project.
 
-## Credits and notices
+The engine is based on **Arcanum Community Edition**, by **Alex Batalov**, under
+its [Sustainable Use License](https://github.com/alexbatalov/arcanum-ce/blob/a7ff41b300ef712f0e7d088183a3d08957110cdd/LICENSE.md).
+Packages include upstream and third-party license notices. Noto fonts use the
+[SIL Open Font License](game/modern-ui/FONT-LICENSE.txt). SDL, SDL_mixer, zlib,
+fpattern and stb retain their respective licenses.
 
-Arcanum was created by Troika Games. This is an unofficial project and requires
-separately obtained game data.
-
-The engine is a modified version of **Arcanum Community Edition**, by Alex Batalov,
-under its [Sustainable Use License](https://github.com/alexbatalov/arcanum-ce/blob/a7ff41b300ef712f0e7d088183a3d08957110cdd/LICENSE.md).
-The Windows package includes the upstream license and third-party notices.
-Noto fonts use the [SIL Open Font License](game/modern-ui/FONT-LICENSE.txt);
-`stb_truetype` carries its license in its header. SDL, SDL_mixer, zlib and fpattern
-retain their respective notices. Original game data is not covered by these
-software licenses and is not included in release packages.
+Original game data is separate from the software licenses. It is excluded from
+the repository and standard mod-only packages; the complete-package option uses
+the installation explicitly supplied to the packaging tool.
