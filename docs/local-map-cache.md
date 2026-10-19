@@ -1,34 +1,84 @@
-# Cartes locales détaillées
+# HD local maps
 
-Le cache est rendu par le moteur à partir des décors installés, à un pixel par pixel du monde. Il contient les 115 cartes locales disponibles d’Arcanum et les 11 de Vormantown. Les cartes sans image locale d’origine ne sont pas inventées.
+The engine renders the cache from the installed game scenery at one pixel per
+world pixel. It generates maps for locations that have an original local map;
+coverage depends on the installed modules and game data.
 
-Chaque morceau couvre 1024 × 1024 pixels du monde. Quatre PNG sans perte conservent cette même couverture aux résolutions 1, 1/2, 1/4 et 1/8. Les fichiers sont nommés `niveau_colonne_ligne.png`. Les morceaux du bord sont plus petits. `manifest.json` conserve les identifiants et dimensions ; les exports Python historiques contiennent aussi les origines et associations aux cartes sources.
+## Automatic preparation
 
-Les images contiennent les décors statiques avec leurs toits opaques, sans personnages, objets transportables, annotations ni noms de lieux ajoutés. Les bâtiments couverts restent masqués ; les cartes intérieures conservent leur géométrie propre. Les portes font partie du décor initial ; leurs changements d’état en cours de partie ne sont pas régénérés dans cet atlas. Les inscriptions appartenant aux sprites du décor restent celles du jeu.
+On Windows, macOS and Linux, the first launch prepares missing maps and displays
+a progress bar. No Python installation, compiler or additional download is
+needed. **Play now** or Escape stops preparation and opens the game with the
+original maps. The next launch resumes preparation, reusing completed tiles.
+Closing the window also stops generation.
 
-L’interface affiche les morceaux directement à sa résolution native. Le brouillard d’exploration reste calculé par `townmap_tile_blit_info`. Le jeu dessine les repères du groupe, les trajets, les notes et les textes localisés séparément. Une carte manquante ou incomplète utilise automatiquement le rendu d’origine. Le cache de textures est limité à 32 morceaux.
+The cache is stored in `modern-ui/local-maps/` inside the game folder, with a
+subfolder for each module, such as `Arcanum`. Allow approximately **8 GB** for
+Arcanum and Vormantown, plus temporary working space. Actual size depends on the
+installed game data. Generated maps are local files and are not included in
+release packages.
 
-## Génération automatique : Windows, macOS et Linux
+Deleting the cache causes preparation to run again at the next launch. You can
+choose **Play now** to continue using the original maps. If preparation fails,
+check the error code on screen and `modern-ui/.map-work/generation.log`.
 
-Au premier lancement, le moteur génère les cartes manquantes et affiche une barre de progression. Aucun Python, compilateur ni téléchargement supplémentaire n’est nécessaire. « Jouer maintenant » (ou Échap) interrompt la préparation et ouvre le jeu ; le prochain lancement reprend les morceaux terminés. Fermer la fenêtre arrête aussi le processus de génération.
+## Map content and display
 
-Les quatre niveaux de chaque morceau sont vérifiés avant réutilisation, avec leurs dimensions et CRC PNG. Une carte n’est activée qu’une fois son fichier `complete` écrit. Le cache complet est réutilisé ; les fichiers manquants ou modifiés déclenchent une nouvelle vérification. Les modifications des sources déclenchent une régénération. Les dates des fichiers libres réécrits à l’identique par le moteur ne suffisent pas à invalider le cache.
+Images contain static scenery, including opaque roofs, without characters,
+portable objects, added annotations or location names. Covered buildings remain
+hidden; interior maps retain their own geometry. Doors appear in their initial
+state: changes during play are not reflected in the cache. Text that is part of
+a scenery sprite remains part of that sprite.
 
-Le processus séparé travaille dans `modern-ui/.map-work/` : archives liées physiquement lorsque possible (sinon copiées), fichiers libres copiés, sauvegardes exclues. Un verrou empêche deux générateurs d’écrire simultanément. Ce dossier de travail peut être supprimé lorsque le jeu est fermé. Le cache actuel d’Arcanum et Vormantown occupe environ **8,18 Go** ; prévoir aussi de la place temporaire. En cas de manque de place ou d’erreur, le joueur peut continuer avec les cartes originales.
+The interface displays tiles at its native resolution. Exploration fog is
+calculated by `townmap_tile_blit_info`. Party markers, routes, notes and localized
+labels are drawn separately by the game. A missing or incomplete map uses the
+original rendering. The texture cache holds up to 32 tiles.
 
-Un export sans interface est également possible :
+## Cache format and validation
+
+Each tile covers up to 1024 × 1024 world pixels. Four lossless PNG files store
+the same area at full, half, quarter and eighth resolution. Files are named
+`level_column_row.png`; edge tiles may be smaller. `manifest.json` records map
+identifiers, dimensions and rendering settings.
+
+All four levels are checked for dimensions and PNG CRCs before reuse. A map is
+available only after its `complete` marker has been written. A complete cache is
+reused; missing or changed cache files trigger validation, and source changes
+trigger regeneration. Rewriting loose source files with identical contents does
+not invalidate the cache solely because their timestamps changed.
+
+Generation runs in a separate process using `modern-ui/.map-work/`. Archives are
+hard-linked when possible and copied otherwise; loose files are copied and saves
+are excluded. A lock prevents simultaneous generators from writing to the same
+cache. The working directory can be deleted while the game is closed.
+
+## Command-line generation
+
+Run the engine with the absolute path to the game folder:
 
 ```sh
-./arcanum-modern --modern-generate-maps /chemin/absolu/vers/Arcanum
+./arcanum-modern --modern-generate-maps /absolute/path/to/Arcanum
 ```
 
-Sous Windows, utiliser `arcanum-modern.exe`. Sous macOS, utiliser l’exécutable dans `Arcanum Modern.app/Contents/MacOS/`. L’argument optionnel suivant limite le nombre de morceaux nouvellement rendus pour les tests (code de sortie 75). Le fichier `modern-ui/.map-work/progress` contient `morceaux_validés total étape` : 0 préparation, 1 rendu/vérification, 2 terminé, 3 interrompu sur erreur ou limite de test.
+On Windows, use `arcanum-modern.exe`. On macOS, use the executable inside
+`Arcanum Modern.app/Contents/MacOS/`.
 
-Les caches de l’ancien exporteur sont adoptés après vérification s’ils déclarent des toits opaques. Les images ne contiennent aucun texte ajouté, quelle que soit la plateforme.
+An optional final argument limits the number of newly rendered tiles. Reaching
+that limit returns exit code 75. The progress file at
+`modern-ui/.map-work/progress` contains `validated_tiles total stage`, where the
+stage is:
 
-## Exporteur historique pour développeurs sur macOS
+| Value | Meaning |
+| --- | --- |
+| 0 | Preparing |
+| 1 | Rendering or validating |
+| 2 | Complete |
+| 3 | Stopped by an error or the tile limit |
 
-Depuis la racine du projet, après le build du moteur :
+## Developer tools on macOS
+
+After building the engine, run these commands from the repository root:
 
 ```sh
 python3 tools/build-map-exporter.py
@@ -36,30 +86,32 @@ python3 tools/generate-map-cache.py
 python3 tools/verify-map-cache.py
 ```
 
-L’exporteur fonctionne hors écran. `build/map-export` contient une installation isolée : liens vers les archives DAT, copies des données libres, aucun lien vers les sauvegardes. Le moteur y écrit ses fichiers temporaires. Les archives et les fichiers du jeu servent de sources en lecture seule. Les patchs du module sont appliqués dans leur ordre normal.
+The exporter renders offscreen in an isolated installation under
+`build/map-export`. It links DAT archives, copies loose data and excludes saves.
+Source game files are read-only inputs, and module patches use their normal
+load order. Output and working directories can be selected with `--output` and
+`--work`.
 
-Une interruption est récupérable : la génération suivante reprend les morceaux dont les quatre niveaux ne sont pas terminés. Un fichier `complete` n’est créé qu’à la fin d’une carte. Si les sources ou la politique de rendu des toits changent, utiliser un nouveau dossier avec `--output` et un nouveau dossier temporaire avec `--work`. Les manifestes portant `roofs: false` sont refusés pour éviter de réutiliser des images sans toits.
+Interrupted exports resume tiles whose four levels are incomplete. A map's
+`complete` marker is written only after all its tiles are ready. Use fresh output
+and working directories when changing the source data or rendering settings.
+Manifests must declare `roofs: true`.
 
-Le passage de Gorgoth possède un ancien identifiant de carte locale qui n’est plus référencé par les secteurs installés. Son image est générée depuis ses coordonnées dans le monde principal, et cette association est indiquée dans le manifeste.
+`tools/verify-map-cache.py` checks expected tiles, dimensions, PNG CRCs and the
+absence of textual PNG metadata. `tests/test_map_archive.py` checks compressed
+DAT reading and local-map identifiers in sectors.
 
-## Installation locale
-
-Le dossier `game/modern-ui/local-maps` doit contenir les sous-dossiers des modules (`Arcanum`, etc.). Pour cette installation, il pointe vers `dist/local-map-cache`, ce qui évite de dupliquer plusieurs gigaoctets. Conserver ce dossier lors d’un nettoyage de `dist`.
-
-Les PNG dérivent des données du jeu et restent locaux. Ils ne sont pas inclus dans le ZIP distribuable de l’application. Supprimer ce cache provoque sa reconstruction au prochain lancement ; choisir « Jouer maintenant » pour utiliser les cartes d’origine.
-
-## Validation
-
-`verify-map-cache.py` contrôle tous les morceaux attendus, leurs dimensions, chaque CRC PNG et l’absence de métadonnées textuelles. `tests/test_map_archive.py` vérifie la lecture des DAT compressés et des identifiants de carte dans les secteurs.
-
-`tools/check-map-cache.c` charge une copie de sauvegarde dans une installation de test, capture la carte native, vérifie le retour au rendu d’origine sans cache, puis vérifie qu’une carte inexplorée est noire et qu’elle devient visible une fois explorée. Il ne doit jamais être lancé dans le dossier du jeu ; le marqueur `.map-export-sandbox` est obligatoire.
+`tools/check-map-cache.c` loads a copied save in a test installation, captures
+the native map, checks the fallback without a cache, and checks that unexplored
+areas remain black until explored. Run it only in an isolated installation with
+the required `.map-export-sandbox` marker:
 
 ```sh
 python3 tools/build-map-exporter.py --source tools/check-map-cache.c --name check-map-cache --exclude-object src/ui/modern_ui.c.o
 build/macos-arm64/check-map-cache "$PWD/build/map-preview" Slot0001 "$PWD/build/map-preview.png"
 ```
 
-Le test natif de la génération vérifie les secteurs tronqués, les PNG et la reprise :
+The native generation check covers truncated sectors, PNG validation and resume:
 
 ```sh
 python3 tools/build-map-exporter.py --source tools/check-map-generation.c --name check-map-generation --exclude-object src/ui/modern_map_generator.c.o
