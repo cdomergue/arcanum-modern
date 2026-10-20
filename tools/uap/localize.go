@@ -258,28 +258,44 @@ func buildFrench(game, extracted, output, planPath string) error {
 	return nil
 }
 func findCase(root, relative string) (string, error) {
-	current := root
-	for _, part := range strings.Split(canonical(relative), "/") {
+	parts := strings.Split(canonical(relative), "/")
+	for _, part := range parts {
 		if part == "" || part == "." || part == ".." {
 			return "", fmt.Errorf("invalid relative path")
 		}
-		entries, err := os.ReadDir(current)
-		if err != nil {
-			return "", err
-		}
-		match := ""
-		for _, e := range entries {
-			if strings.EqualFold(e.Name(), part) {
-				if match != "" {
-					return "", fmt.Errorf("ambiguous file case: %s", relative)
+	}
+	candidates := []string{root}
+	for i, part := range parts {
+		var matches []string
+		for _, current := range candidates {
+			entries, err := os.ReadDir(current)
+			if err != nil {
+				return "", err
+			}
+			for _, e := range entries {
+				if !strings.EqualFold(e.Name(), part) {
+					continue
 				}
-				match = e.Name()
+				match := filepath.Join(current, e.Name())
+				if i < len(parts)-1 {
+					info, err := os.Stat(match)
+					if err != nil {
+						return "", err
+					}
+					if !info.IsDir() {
+						continue
+					}
+				}
+				matches = append(matches, match)
 			}
 		}
-		if match == "" {
+		if len(matches) == 0 {
 			return "", os.ErrNotExist
 		}
-		current = filepath.Join(current, match)
+		candidates = matches
 	}
-	return current, nil
+	if len(candidates) != 1 {
+		return "", fmt.Errorf("ambiguous file case: %s", relative)
+	}
+	return candidates[0], nil
 }
