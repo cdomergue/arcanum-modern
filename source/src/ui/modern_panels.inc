@@ -348,13 +348,13 @@ static void draw_inventory(void)
     centered(3,actor_name(inv.pc),canvas_w/2,y+22,GOLD);
     bool single=inv.mode==INVEN_UI_MODE_INVENTORY || inv.mode>=INVEN_UI_MODE_NPC_IDENTIFY;
     float left=x+25,right=x+440,cw=360;
-    inventory_detail_rect=(SDL_FRect){x+830,y+182,w-855,548};
+    inventory_detail_rect=(SDL_FRect){x+830,y+214,w-855,516};
     SDL_FRect query={x+830,y+83,w-855,34};
     button(query,2400,"",-1,inventory_searching,true);
     text_compact(*inventory_query?inventory_query:tr("Rechercher un objet...","Find an item..."),query.x+10,query.y+8,query.w-20,false,GOLD);
     const char* filters[]={tr("Tous","All"),tr("Armes","Weapons"),tr("Armures","Armor"),tr("Consomm.","Consumables"),tr("Autres","Other")};
     for(int i=0;i<5;i++)button((SDL_FRect){query.x+i*(query.w+4)/5,y+127,(query.w-16)/5,34},2401+i,filters[i],-1,inventory_filter==i,true);
-    button((SDL_FRect){right,y+688,cw,32},2406,tr("Comparer l'équipement","Compare equipment"),-1,inventory_compare,true);
+    button((SDL_FRect){query.x,y+170,query.w,32},2406,tr("Comparer l'équipement","Compare equipment"),-1,inventory_compare,true);
     char info[320];snprintf(info,sizeof(info),"%s : %d / %d   ·   %s : %d",game_text(modern_inventory_text(9)),item_total_weight(inv.pc),stat_level_get(inv.pc,STAT_CARRY_WEIGHT),game_text(stat_name(STAT_SPEED)),stat_level_get(inv.pc,STAT_SPEED));
     text_draw(0,info,right,y+93,MUTED);
     char gold[80];snprintf(gold,sizeof(gold),"%d",item_gold_get(inv.pc));
