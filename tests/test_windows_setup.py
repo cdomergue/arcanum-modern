@@ -44,6 +44,19 @@ class SetupPayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'game data'):
             self.p.extract_payload(self.archive(full=True), self.work/'payload')
 
+    def test_includes_uap_helper_tools_and_notices(self):
+        files = {'ArcanumModern/'+name for name in (
+            'uap/uap-helper.exe', 'uap/7z.exe', 'uap/7z.dll',
+            'docs/uap.md', 'docs/uap-fr.md', 'licenses/Go.txt',
+            'licenses/7zip/LICENSE.txt', 'licenses/7zip/README.txt',
+            'licenses/7zip/7z2604-src.tar.xz')}
+        self.files.update({name: b'uap fixture' for name in files})
+        target = self.work/'payload'
+        names = self.p.extract_payload(self.archive(), target)
+        self.assertTrue(files <= set(names))
+        for name in files:
+            self.assertEqual((target/name).read_bytes(), b'uap fixture')
+
     def test_refuses_game_data_preferences_and_unsafe_paths(self):
         for name in ['arcanum1.dat', 'modern-ui/settings.ini', 'modules/Arcanum.dat',
                      '../escape', '/absolute', 'modern-ui\\Book.ttf',
