@@ -10,7 +10,7 @@ static const int key_defaults[]={SDL_SCANCODE_I,SDL_SCANCODE_J,SDL_SCANCODE_C,SD
 static int key_edit=-1,key_page;
 static char key_status[256];
 static const char* tr(const char* fr,const char* en)
-{return strcmp(modern_intgame_text(0),"Niveau")==0?fr:en;}
+{return modern_ui_translate(fr,en);}
 static const char* key_label(int i)
 {
     const int labels[]={1006,1004,1005,1007,1000,1001,1003,1009};

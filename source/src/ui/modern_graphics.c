@@ -1,4 +1,5 @@
 #include "ui/modern_graphics.h"
+#include "ui/modern_ui.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -125,8 +126,8 @@ void modern_graphics_cancel(void)
     g->deadline = 0;
     bool restored = set_display(g->previous);
     modern_graphics_begin();
-    SDL_strlcpy(g->status, restored ? "Réglages précédents rétablis." :
-        "Restauration impossible. Choisissez un autre mode.", sizeof(g->status));
+    SDL_strlcpy(g->status, restored ? modern_ui_translate("Réglages précédents rétablis.","Previous settings restored.") :
+        modern_ui_translate("Restauration impossible. Choisissez un autre mode.","Could not restore settings. Choose another mode."), sizeof(g->status));
 }
 
 void modern_graphics_apply(void)
@@ -139,7 +140,7 @@ void modern_graphics_apply(void)
     if (!set_display(g->selected)) {
         SDL_Log("Modern graphics: cannot apply mode: %s", SDL_GetError());
         modern_graphics_cancel();
-        SDL_strlcpy(g->status, "Ce mode est indisponible sur cet écran.", sizeof(g->status));
+        SDL_strlcpy(g->status, modern_ui_translate("Ce mode est indisponible sur cet écran.","This mode is unavailable on this display."), sizeof(g->status));
     } else {
         g->deadline = SDL_GetTicks() + 15000;
         g->status[0] = 0;
@@ -160,8 +161,8 @@ void modern_graphics_confirm(void)
     }
     g->deadline = 0;
     modern_graphics_begin();
-    SDL_strlcpy(g->status, saved ? "Réglages enregistrés." :
-        "Réglages appliqués, mais leur enregistrement a échoué.", sizeof(g->status));
+    SDL_strlcpy(g->status, saved ? modern_ui_translate("Réglages enregistrés.","Settings saved.") :
+        modern_ui_translate("Réglages appliqués, mais leur enregistrement a échoué.","Settings applied, but could not be saved."), sizeof(g->status));
 }
 
 void modern_graphics_tick(void)

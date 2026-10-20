@@ -2571,6 +2571,24 @@ diff --git a/src/game/teleport.c b/src/game/teleport.c
      current_teleport_data = *teleport_data;
      teleport_pending = true;
  
+@@ -285,8 +291,16 @@
+     int inventory_list_fld;
+     TeleportObjectNode* node;
+ 
++    if (!obj_handle_is_valid(obj)) {
++        return true;
++    }
++
++    flags = obj_field_int32_get(obj, OBJ_F_FLAGS);
++    // Transferred followers retain source-map references until the destination loads.
++    if ((flags & (OF_DESTROYED | OF_EXTINCT)) != 0) {
++        return true;
++    }
+     obj_type = obj_field_int32_get(obj, OBJ_F_TYPE);
+-    flags = obj_field_int32_get(obj, OBJ_F_FLAGS);
+ 
+     if ((flags & OF_TEXT) != 0) {
+         tb_remove(obj);
 diff --git a/src/game/tf.c b/src/game/tf.c
 --- a/src/game/tf.c
 +++ b/src/game/tf.c
@@ -4207,7 +4225,7 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
          return;
      }
  
-@@ -1776,3 +1792,49 @@
+@@ -1776,3 +1792,57 @@
          }
      }
  }
@@ -4254,6 +4272,14 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
 +{
 +    if(state<QUEST_STATE_UNKNOWN || state>=QUEST_STATE_COUNT)return "";
 +    MesFileEntry entry={.num=19+state};
++    mes_get_msg(logbook_ui_mes_file,&entry);
++    return entry.str;
++}
++
++const char* modern_logbook_tab_label(int tab)
++{
++    if(tab<0 || tab>=LOGBOOK_UI_TAB_COUNT)return "";
++    MesFileEntry entry={.num=tab};
 +    mes_get_msg(logbook_ui_mes_file,&entry);
 +    return entry.str;
 +}

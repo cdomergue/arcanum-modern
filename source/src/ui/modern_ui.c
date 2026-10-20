@@ -87,10 +87,7 @@ typedef struct BookLine {
 static const SDL_Color GOLD = {210, 178, 105, 255};
 static const SDL_Color INK = {47, 35, 25, 255};
 static const SDL_Color MUTED = {163, 145, 111, 255};
-static const char* chapters[] = {"Rumeurs et notes", "Quêtes", "Réputations",
-    "Bénédictions / malédictions", "Combats", "Origines", "Trousseau"};
-static const char* chapter_labels[] = {"Rumeurs et notes", "Quêtes", "Réputations",
-    "Bénéd. / maléd.", "Combats", "Origines", "Trousseau"};
+
 static const int chapter_art[] = {265, 267, 271, 266, 270, 268, 269};
 static SDL_Renderer* renderer;
 static SDL_Window* window;
@@ -143,12 +140,16 @@ static void draw_play_panels(void);
 static bool play_sheet(void);
 static const char* game_text(const char* source);
 static const char* tr(const char* fr,const char* en);
+
 static bool handle_event(SDL_Event* event);
 static bool handle_ui_event(SDL_Event* event);
 static void rebuild_book(void);
 static void capture_reviews(void);
 static void verify_text_layout(void);
 static bool capturing, captured;
+
+const char* modern_ui_translate(const char* fr,const char* en)
+{return strcmp(modern_intgame_text(0),"Niveau")==0?fr:en;}
 
 static int codepoint(const char** text)
 {
@@ -555,7 +556,7 @@ static void rebuild_book(void)
         size_t first=line_count;wrap_text(utf8,style);if(line_count>first)lines[first].entry_start=true;
     }
     current_entry=-1;
-    if(line_count==0) add_line(*search?"Aucune entrée ne correspond à la recherche.":"Aucune entrée dans cette rubrique.",0,false);
+    if(line_count==0) add_line(*search?tr("Aucune entrée ne correspond à la recherche.","No entries match your search."):tr("Aucune entrée dans cette rubrique.","No entries in this section."),0,false);
     /* Keep a date heading with its following line, including on narrow screens. */
     BookLine* unpaged=lines;
     size_t unpaged_count=line_count;
@@ -646,20 +647,20 @@ static void draw_journal(void)
     notebook_sync();journal_target_count=0;
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){8,6,4,160});
     frame(panel);
-    text_draw(3,"Journal",panel.x+26,panel.y+17,GOLD);
-    text_draw(0,"CARNET DE VOYAGE",panel.x+27,panel.y+56,MUTED);
+    text_draw(3,game_text(modern_intgame_text(1004)),panel.x+26,panel.y+17,GOLD);
+    text_draw(0,tr("CARNET DE VOYAGE","TRAVEL JOURNAL"),panel.x+27,panel.y+56,MUTED);
     for(int i=0;i<7;i++) {
         SDL_FRect r={panel.x+21,panel.y+100+i*57,180,48};
-        button(r,100+i,chapter_labels[i],chapter_art[i],chapter==i,true);
+        button(r,100+i,game_text(modern_logbook_tab_label(i)),chapter_art[i],chapter==i,true);
     }
     rule(panel.x+27,panel.y+520,163,(SDL_Color){121,86,44,255});
-    text_draw(0,"Taille du texte",panel.x+28,panel.y+535,MUTED);
+    text_draw(0,tr("Taille du texte","Text size"),panel.x+28,panel.y+535,MUTED);
     button((SDL_FRect){panel.x+28,panel.y+565,64,34},202,"A-",-1,false,body_size>16);
     button((SDL_FRect){panel.x+103,panel.y+565,64,34},203,"A+",-1,false,body_size<26);
     button((SDL_FRect){panel.x+panel.w-49,panel.y+16,30,30},200,"X",-1,false,true);
     SDL_FRect sr={book.x+18,panel.y+20,book.w-80,33};
     fill(sr,(SDL_Color){19,14,10,255});outline(sr,searching?GOLD:(SDL_Color){113,85,47,255});
-    text_draw(0,*search?search:"Rechercher dans cette rubrique...",sr.x+12,sr.y+6,*search?GOLD:MUTED);
+    text_draw(0,*search?search:tr("Rechercher dans cette rubrique...","Search this section..."),sr.x+12,sr.y+6,*search?GOLD:MUTED);
     if(searching) {
         float caret=sr.x+12+text_measure(0,search);
         if((SDL_GetTicks()/450)%2==0) fill((SDL_FRect){caret,sr.y+7,1,18},GOLD);
@@ -682,8 +683,8 @@ static void draw_journal(void)
             rule(pages[i].x,pages[i].y+pages[i].h-j,pages[i].w,(SDL_Color){87,62,30,(Uint8)(35-j*5)});
         }
     }
-    centered(2,chapters[chapter],pages[0].x+pages[0].w/2,book.y+31,INK);
-    centered(2,chapters[chapter],pages[1].x+pages[1].w/2,book.y+31,INK);
+    centered(2,game_text(modern_logbook_tab_label(chapter)),pages[0].x+pages[0].w/2,book.y+31,INK);
+    centered(2,game_text(modern_logbook_tab_label(chapter)),pages[1].x+pages[1].w/2,book.y+31,INK);
     rule(pages[0].x+24,book.y+65,pages[0].w-48,(SDL_Color){137,115,75,150});
     rule(pages[1].x+24,book.y+65,pages[1].w-48,(SDL_Color){137,115,75,150});
     if(dirty) rebuild_book();
@@ -716,9 +717,9 @@ static void draw_journal(void)
         char number[32];snprintf(number,sizeof(number),"- %d -",spread*2+side+1);
         centered(0,number,pages[side].x+pages[side].w/2,book.y+book.h-40,INK);
     }
-    button((SDL_FRect){book.x+20,panel.y+panel.h-44,110,28},204,"< Précédentes",-1,false,spread>0);
-    button((SDL_FRect){book.x+book.w-130,panel.y+panel.h-44,110,28},205,"Suivantes >",-1,false,spread+1<spread_count);
-    char footer[100];snprintf(footer,sizeof(footer),"%d entrée%s   ·   %d / %d",matched_count,matched_count>1?"s":"",spread+1,spread_count);
+    button((SDL_FRect){book.x+20,panel.y+panel.h-44,110,28},204,tr("< Précédentes","< Previous"),-1,false,spread>0);
+    button((SDL_FRect){book.x+book.w-130,panel.y+panel.h-44,110,28},205,tr("Suivantes >","Next >"),-1,false,spread+1<spread_count);
+    char footer[100];snprintf(footer,sizeof(footer),"%d %s   ·   %d / %d",matched_count,matched_count==1?tr("entrée","entry"):tr("entrées","entries"),spread+1,spread_count);
     centered(0,footer,book.x+book.w/2,panel.y+panel.h-40,GOLD);
     float filter_y=panel.y+panel.h+14;
     SDL_FRect favorites={book.x+book.w-155,filter_y,140,30};
@@ -836,12 +837,12 @@ static void draw_hud(void)
         text_draw(0,short_text,sx,y+79,GOLD);
     } else {
         char status[256];
-        snprintf(status,sizeof(status),"Niv. %d   ·   Or : %d   ·   Exp. : %d   ·   %02d:%02d",
+        snprintf(status,sizeof(status),tr("Niv. %d   ·   Or : %d   ·   Exp. : %d   ·   %02d:%02d","Lv. %d   ·   Gold: %d   ·   XP: %d   ·   %02d:%02d"),
             stat_level_get(pc,STAT_LEVEL),item_gold_get(pc),stat_level_get(pc,STAT_EXPERIENCE_POINTS),
             datetime_current_hour(),datetime_current_minute());
         int64_t weapon=item_wield_get(pc,ITEM_INV_LOC_WEAPON);
         if(weapon!=OBJ_HANDLE_NULL && item_weapon_ammo_type(weapon)!=10000) {
-            char ammo[40];snprintf(ammo,sizeof(ammo),"   ·   Munitions : %d",item_ammo_quantity_get(pc,item_weapon_ammo_type(weapon)));
+            char ammo[40];snprintf(ammo,sizeof(ammo),tr("   ·   Munitions : %d","   ·   Ammo: %d"),item_ammo_quantity_get(pc,item_weapon_ammo_type(weapon)));
             SDL_strlcat(status,ammo,sizeof(status));
         }
         text_draw(0,status,sx,y+79,MUTED);
@@ -1272,7 +1273,7 @@ static void draw_menu(void)
     }
     ModernGraphics* g = &modern_graphics;
     bool confirming = g->deadline != 0;
-    button((SDL_FRect){x+30,y+140,182,45},407,"Graphismes",-1,options_tab<0,!confirming);
+    button((SDL_FRect){x+30,y+140,182,45},407,tr("Graphismes","Graphics"),-1,options_tab<0,!confirming);
     const int tab_actions[]={406,408,409};
     for(int i=0;i<3;i++)button((SDL_FRect){x+30,y+197+i*57,182,45},tab_actions[i],menu_text(4000+i),-1,options_tab==i,!confirming);
     button((SDL_FRect){x+30,y+368,182,45},418,tr("Raccourcis","Key bindings"),-1,options_tab==3,!confirming);
@@ -1310,33 +1311,33 @@ static void draw_menu(void)
         return;
     }
     float rx=x+246, rw=w-280;
-    text_draw(2,"Graphismes",rx,y+144,GOLD);
-    text_draw(0,"Mode d'affichage",rx,y+207,MUTED);
-    const char* modes[]={"Fenêtre", "Plein écran sans bordure", "Plein écran exclusif"};
+    text_draw(2,tr("Graphismes","Graphics"),rx,y+144,GOLD);
+    text_draw(0,tr("Mode d'affichage","Display mode"),rx,y+207,MUTED);
+    const char* modes[]={tr("Fenêtre","Windowed"), tr("Plein écran sans bordure","Borderless fullscreen"), tr("Plein écran exclusif","Exclusive fullscreen")};
     menu_button((SDL_FRect){rx,y+238,42,48},410,"<",!confirming);
     centered(2,modes[g->selected.mode],rx+rw/2,y+249,GOLD);
     menu_button((SDL_FRect){rx+rw-42,y+238,42,48},411,">",!confirming);
-    text_draw(0,"Résolution",rx,y+319,MUTED);
+    text_draw(0,tr("Résolution","Resolution"),rx,y+319,MUTED);
     char resolution[64];
     snprintf(resolution,sizeof(resolution),"%d × %d",g->selected.width,g->selected.height);
     bool can_resize=!confirming && g->count>1 && g->selected.mode!=1;
     menu_button((SDL_FRect){rx,y+350,42,48},412,"<",can_resize);
-    centered(2,g->count ? resolution : "Aucun mode disponible",rx+rw/2,y+361,GOLD);
+    centered(2,g->count ? resolution : tr("Aucun mode disponible","No modes available"),rx+rw/2,y+361,GOLD);
     menu_button((SDL_FRect){rx+rw-42,y+350,42,48},413,">",can_resize);
-    text_draw(0,g->selected.mode==1 ? "Le mode sans bordure suit la définition du bureau." :
-        "Choisissez une définition adaptée à votre écran.",rx,y+416,MUTED);
+    text_draw(0,g->selected.mode==1 ? tr("Le mode sans bordure suit la définition du bureau.","Borderless mode uses the desktop resolution.") :
+        tr("Choisissez une définition adaptée à votre écran.","Choose a resolution for your display."),rx,y+416,MUTED);
     if (*g->status) text_draw(0,g->status,rx,y+455,GOLD);
     rule(x+30,y+h-157,w-60,(SDL_Color){117,87,44,255});
     if (confirming) {
         Uint64 now=SDL_GetTicks();
         int seconds=g->deadline>now ? (int)((g->deadline-now+999)/1000) : 0;
-        char question[128];snprintf(question,sizeof(question),"Conserver ces réglages ? Retour automatique dans %d s",seconds);
+        char question[128];snprintf(question,sizeof(question),tr("Conserver ces réglages ? Retour automatique dans %d s","Keep these settings? Reverting in %d s"),seconds);
         centered(0,question,canvas_w/2,y+h-133,GOLD);
-        menu_button((SDL_FRect){x+60,y+h-92,350,52},415,"Conserver",true);
-        menu_button((SDL_FRect){x+w-410,y+h-92,350,52},416,"Rétablir",true);
+        menu_button((SDL_FRect){x+60,y+h-92,350,52},415,tr("Conserver","Keep"),true);
+        menu_button((SDL_FRect){x+w-410,y+h-92,350,52},416,tr("Rétablir","Revert"),true);
     } else {
         menu_button((SDL_FRect){x+40,y+h-102,220,54},405,menu_text(4003),true);
-        menu_button((SDL_FRect){x+w-300,y+h-102,260,54},414,"Appliquer",g->count>0);
+        menu_button((SDL_FRect){x+w-300,y+h-102,260,54},414,tr("Appliquer","Apply"),g->count>0);
     }
 }
 

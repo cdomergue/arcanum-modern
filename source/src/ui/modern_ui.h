@@ -74,6 +74,8 @@ int modern_logbook_select(int tab);
 int modern_logbook_id(int index);
 int modern_logbook_entry(int index, char* text, size_t capacity);
 const char* modern_logbook_state_label(int state);
+const char* modern_logbook_tab_label(int tab);
+const char* modern_ui_translate(const char* fr,const char* en);
 void modern_intgame_hud_hide(bool hide);
 void modern_intgame_action(int action);
 const char* modern_intgame_text(int number);

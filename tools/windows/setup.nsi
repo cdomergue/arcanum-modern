@@ -78,10 +78,18 @@ Section "Arcanum Renaissance"
   ${If} ${FileExists} "$INSTDIR\Arcanum.exe"
     StrCpy $GameIcon "$INSTDIR\Arcanum.exe"
   ${EndIf}
-  CreateShortcut "$DESKTOP\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
-  CreateDirectory "$SMPROGRAMS\Arcanum Modern"
-  CreateShortcut "$SMPROGRAMS\Arcanum Modern\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
-  CreateShortcut "$SMPROGRAMS\Arcanum Modern\Uninstall.lnk" "$INSTDIR\Uninstall Arcanum Modern.exe"
+  ReadRegStr $0 HKCU "Software\ArcanumModern" "InstallDir"
+  ${If} $0 == $INSTDIR
+    Delete "$DESKTOP\Arcanum Modern.lnk"
+    Delete "$SMPROGRAMS\Arcanum Modern\Arcanum Modern.lnk"
+    Delete "$SMPROGRAMS\Arcanum Modern\Uninstall.lnk"
+    RMDir "$SMPROGRAMS\Arcanum Modern"
+  ${EndIf}
+  ClearErrors
+  CreateShortcut "$DESKTOP\Arcanum Renaissance.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
+  CreateDirectory "$SMPROGRAMS\Arcanum Renaissance"
+  CreateShortcut "$SMPROGRAMS\Arcanum Renaissance\Arcanum Renaissance.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
+  CreateShortcut "$SMPROGRAMS\Arcanum Renaissance\Uninstall.lnk" "$INSTDIR\Uninstall Arcanum Modern.exe"
   WriteRegStr HKCU "Software\ArcanumModern" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayName" "Arcanum Renaissance"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "UninstallString" '$\"$INSTDIR\Uninstall Arcanum Modern.exe$\"'
@@ -105,10 +113,10 @@ Section "Uninstall"
   Delete "$INSTDIR\Uninstall Arcanum Modern.exe"
   ReadRegStr $0 HKCU "Software\ArcanumModern" "InstallDir"
   ${If} $0 == $INSTDIR
-    Delete "$DESKTOP\Arcanum Modern.lnk"
-    Delete "$SMPROGRAMS\Arcanum Modern\Arcanum Modern.lnk"
-    Delete "$SMPROGRAMS\Arcanum Modern\Uninstall.lnk"
-    RMDir "$SMPROGRAMS\Arcanum Modern"
+    Delete "$DESKTOP\Arcanum Renaissance.lnk"
+    Delete "$SMPROGRAMS\Arcanum Renaissance\Arcanum Renaissance.lnk"
+    Delete "$SMPROGRAMS\Arcanum Renaissance\Uninstall.lnk"
+    RMDir "$SMPROGRAMS\Arcanum Renaissance"
     DeleteRegKey HKCU "Software\ArcanumModern"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern"
   ${EndIf}

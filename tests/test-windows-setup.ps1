@@ -32,7 +32,16 @@ try {
         $hashes[$name] = (Get-FileHash -LiteralPath $path).Hash
     }
     Invoke-Setup $game $true
+    $oldDesktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Arcanum Modern.lnk'
+    $oldPrograms = Join-Path ([Environment]::GetFolderPath('Programs')) 'Arcanum Modern'
+    New-Item -ItemType Directory -Path $oldPrograms -Force | Out-Null
+    Set-Content $oldDesktop 'previous shortcut'
+    Set-Content (Join-Path $oldPrograms 'Arcanum Modern.lnk') 'previous shortcut'
+    Set-Content (Join-Path $oldPrograms 'Uninstall.lnk') 'previous shortcut'
     Invoke-Setup $game $true
+    if ((Test-Path $oldDesktop) -or (Test-Path $oldPrograms)) {
+        throw 'Previous shortcut names were not cleaned up on reinstall.'
+    }
     $manifest = Get-Content (Join-Path $game 'ArcanumModern/manifest.json') -Raw | ConvertFrom-Json
     foreach ($entry in $manifest.sha256.PSObject.Properties) {
         if ((Get-FileHash (Join-Path $game $entry.Name)).Hash -ne $entry.Value) {
@@ -41,8 +50,8 @@ try {
     }
     $shell = New-Object -ComObject WScript.Shell
     $links = @(
-        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Arcanum Modern.lnk'),
-        (Join-Path ([Environment]::GetFolderPath('Programs')) 'Arcanum Modern/Arcanum Modern.lnk')
+        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Arcanum Renaissance.lnk'),
+        (Join-Path ([Environment]::GetFolderPath('Programs')) 'Arcanum Renaissance/Arcanum Renaissance.lnk')
     )
     foreach ($link in $links) {
         if (-not (Test-Path $link)) { throw "Missing shortcut: $link" }
