@@ -441,6 +441,7 @@ python3 tests/test_hotkey_assignment.py
 python3 tests/test_party_hotkeys.py
 python3 tests/test_inventory_transfer_all.py
 python3 tests/test_combat_music.py
+python3 tests/test_hud_messages.py
 python3 tests/test_uap_compat.py
 python3 tests/test_module_repositories.py
 python3 tests/test_windows_full_package.py

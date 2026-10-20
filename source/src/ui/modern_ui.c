@@ -790,6 +790,26 @@ static void gauge(float x,float y,int value,int maximum,bool fatigue)
     centered(0,number,cx,y+89,GOLD);
 }
 
+static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color);
+
+static bool hud_message_expanded(void)
+{
+    return *message_text && SDL_GetTicks()-message_time<12000
+        && text_measure(0,message_text)>475;
+}
+
+static void draw_hud_message(void)
+{
+    float width=fminf(940,canvas_w-80);
+    SDL_FRect content={(canvas_w-width)/2+16,0,width-32,0};
+    int rows=menu_paragraph(message_text,content,0,GOLD);
+    content.h=rows*27;
+    content.y=canvas_h-180-content.h;
+    SDL_FRect box={content.x-16,content.y-12,width,content.h+24};
+    fill(box,(SDL_Color){16,12,9,240});outline(box,MUTED);
+    menu_paragraph(message_text,content,0,GOLD);
+}
+
 static void draw_hud(void)
 {
     bool controls_enabled=intgame_mode_get()!=INTGAME_MODE_DIALOG;
@@ -825,13 +845,8 @@ static void draw_hud(void)
 
     }
     rule(sx,y+69,480,(SDL_Color){117,87,44,255});
-    if(*message_text && SDL_GetTicks()-message_time<12000) {
-        char short_text[512];SDL_strlcpy(short_text,message_text,sizeof(short_text));
-        while(*short_text && text_measure(0,short_text)>475) {
-            size_t n=strlen(short_text);do {n--;} while(n>0 && ((unsigned char)short_text[n]&0xC0)==0x80);
-            short_text[n]=0;
-        }
-        text_draw(0,short_text,sx,y+79,GOLD);
+    if(*message_text && SDL_GetTicks()-message_time<12000 && !hud_message_expanded()) {
+        text_draw(0,message_text,sx,y+79,GOLD);
     } else {
         char status[256];
         snprintf(status,sizeof(status),tr("Niv. %d   ·   Or : %d   ·   Exp. : %d   ·   %02d:%02d","Lv. %d   ·   Gold: %d   ·   XP: %d   ·   %02d:%02d"),
@@ -844,6 +859,7 @@ static void draw_hud(void)
         }
         text_draw(0,status,sx,y+79,MUTED);
     }
+    if(hud_message_expanded() && !journal && !native_panel())draw_hud_message();
 }
 
 static bool visible(void)
@@ -1732,7 +1748,7 @@ static void render_overlay(SDL_Renderer* target)
     if(menu) draw_menu();
     else {
         draw_world_bubbles();
-        if(!hud_region(mouse_x,mouse_y))draw_world_hover();
+        if(!hud_region(mouse_x,mouse_y) && !(hud && !tactical_active() && hud_message_expanded()))draw_world_hover();
         draw_maintained_spells();
         if(hud){if(tactical_active()){draw_tactical_preview();draw_tactical_hud();}else draw_hud();}
         if(hud && !journal && !native_panel())draw_tactical_log();
