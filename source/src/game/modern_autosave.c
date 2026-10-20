@@ -77,7 +77,9 @@ static void autosave_remove_stage(void)
     tig_file_list_create(&files, "save\\MdrnAuto*");
     for (unsigned int index = 0; index < files.count; index++) {
         char path[TIG_MAX_PATH];
-        snprintf(path, sizeof(path), "save\\%s", files.entries[index].path);
+        if (snprintf(path, sizeof(path), "save\\%s", files.entries[index].path) >= (int)sizeof(path)) {
+            continue;
+        }
         tig_file_remove(path);
     }
     tig_file_list_destroy(&files);
