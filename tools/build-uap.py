@@ -76,7 +76,7 @@ def build(target, destination, cache):
     binary = helper/('uap-helper.exe' if target == 'windows' else 'uap-helper')
     subprocess.run([str(compiler/'go/bin/go'), 'test', './...'], cwd=ROOT/'tools/uap',
                    env=dict(env, GOOS=host_os, GOARCH=host_arch), check=True)
-    subprocess.run([str(compiler/'go/bin/go'), 'build', '-trimpath', '-ldflags=-s -w', '-o', str(binary), '.'], cwd=ROOT/'tools/uap', env=env, check=True)
+    subprocess.run([str(compiler/'go/bin/go'), 'build', '-buildvcs=false', '-trimpath', '-ldflags=-s -w', '-o', str(binary), '.'], cwd=ROOT/'tools/uap', env=env, check=True)
     with tempfile.TemporaryDirectory(dir=cache) as work:
         unpack = Path(work)
         if target == 'windows':
