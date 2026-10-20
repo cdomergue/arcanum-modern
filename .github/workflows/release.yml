@@ -51,6 +51,8 @@ jobs:
         run: |
           python3 tests/test_linux_package.py
           ./build.sh
+          cmake --build build/linux-x64 --target check-name-input
+          build/linux-x64/check-name-input
           python3 tools/package-linux.py --exe build/linux-x64/arcanum-ce --build-dir build/linux-x64
           python3 tests/test_linux_package.py dist/ArcanumModern-linux-x64.zip
       - name: Check extracted runtime
@@ -90,7 +92,7 @@ jobs:
           docker run --rm \
             --mount "type=bind,source=$PWD,target=/work" --workdir /work \
             -e LLVM_MINGW=/opt/llvm-mingw \
-            mstorsjo/llvm-mingw:latest cmake --build build/windows-x64 --target check-utf8-files
+            mstorsjo/llvm-mingw:latest cmake --build build/windows-x64 --target check-utf8-files check-name-input
       - name: Build setup and verify ZIP
         run: |
           sudo apt-get update
@@ -101,7 +103,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-checks
-          path: build/windows-x64/check-utf8-files.exe
+          path: |
+            build/windows-x64/check-utf8-files.exe
+            build/windows-x64/check-name-input.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
@@ -133,6 +137,11 @@ jobs:
         run: |
           ./checks/check-utf8-files.exe "$env:RUNNER_TEMP/Arcanum paths"
           if ($LASTEXITCODE -ne 0) { throw "UTF-8 file test failed: $LASTEXITCODE" }
+      - name: Test character and save names on Windows
+        shell: pwsh
+        run: |
+          ./checks/check-name-input.exe
+          if ($LASTEXITCODE -ne 0) { throw "Name input test failed: $LASTEXITCODE" }
       - name: Check packaged movie decoder on Windows
         shell: pwsh
         run: |
@@ -146,6 +155,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash ./build-macos.sh
+      - name: Test character and save names
+        run: |
+          cmake --build build/macos-arm64 --target check-name-input
+          build/macos-arm64/check-name-input
       - name: Check native map preparation
         run: |
           python3 tools/build-map-exporter.py --source tools/check-map-generation.c --name check-map-generation --exclude-object src/ui/modern_map_generator.c.o

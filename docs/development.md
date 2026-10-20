@@ -488,3 +488,14 @@ including a spellcaster as the first follower, and a `.map-export-sandbox` marke
 The probe uses slot `Slot0094` for its save/load check. It exercises the combat
 bar, numbered menu assignments, character isolation, item references and loading
 saves without companion bindings.
+
+To check character and save-name input against the build's SDL runtime:
+
+```sh
+cmake --build build/macos-arm64 --target check-name-input
+build/macos-arm64/check-name-input
+```
+
+Use the corresponding build directory on Linux or Windows. The check covers
+ASCII, accented names, Windows-1252 punctuation, deletion and the name-length
+limit without requiring game data or a system encoding converter.

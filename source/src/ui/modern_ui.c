@@ -172,13 +172,10 @@ static int codepoint(const char** text)
 }
 
 /* Game strings are Windows-1252; labels and search are UTF-8. */
+#include "modern_encoding.h"
+
 static void from_game(const char* src, char* dst, size_t capacity)
 {
-    static const unsigned short cp1252[32] = {
-        0x20AC,0x81,0x201A,0x192,0x201E,0x2026,0x2020,0x2021,
-        0x2C6,0x2030,0x160,0x2039,0x152,0x8D,0x17D,0x8F,
-        0x90,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,
-        0x2DC,0x2122,0x161,0x203A,0x153,0x9D,0x17E,0x178};
     size_t n = 0;
     if (!src || !capacity) return;
     while (*src && n + 4 < capacity) {
@@ -1347,27 +1344,7 @@ static void menu_name_focus(bool focus)
     if(focus)SDL_StartTextInput(window);else SDL_StopTextInput(window);
 }
 
-static void menu_name_input(const char* utf8,bool backspace)
-{
-    bool saving=mainmenu_ui_window_type_get()==MM_WINDOW_SAVE_GAME;
-    ModernCharacter c;
-    if(!saving && (!modern_mainmenu_character(&c,description_tab) || !c.editable))return;
-    char name[24];SDL_strlcpy(name,saving?modern_mainmenu_save_description():c.name,sizeof(name));
-    if(name_replace)name[0]=0;
-    size_t n=strlen(name);
-    if(backspace) {if(n)name[--n]=0;}
-    else {
-        /* Convert through SDL's iconv backend; the save format stores 23 CP1252 bytes. */
-        char* encoded=SDL_iconv_string("WINDOWS-1252","UTF-8",utf8,strlen(utf8)+1);
-        if(encoded) {
-            for(const unsigned char* p=(const unsigned char*)encoded;*p && n<23;p++)
-                if(*p>=32 && *p!=127)name[n++]=(char)*p;
-            name[n]=0;SDL_free(encoded);
-        }
-    }
-    name_replace=false;
-    if(saving)modern_mainmenu_save_description_set(name);else modern_mainmenu_name(name);
-}
+#include "modern_name_input.inc"
 
 static bool creation_menu_action(int action)
 {

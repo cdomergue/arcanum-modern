@@ -28,7 +28,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +346,29 @@
+@@ -333,7 +346,31 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -51,6 +51,8 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +
 +add_executable(check-utf8-files EXCLUDE_FROM_ALL "../tools/check-utf8-files.c")
 +target_link_libraries(check-utf8-files PRIVATE ${TIG_LIBRARY})
++add_executable(check-name-input EXCLUDE_FROM_ALL "../tools/check-name-input.c")
++target_link_libraries(check-name-input PRIVATE ${TIG_LIBRARY})
 +add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
 +target_include_directories(check-movie PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 +target_link_libraries(check-movie PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
