@@ -1248,7 +1248,7 @@ static void draw_menu(void)
     float w = options ? 1180 : 610, h = options ? 760 : 660;
     float x = (canvas_w-w)/2, y = (canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
-    centered(3, options ? menu_text(12) : "Arcanum", canvas_w/2, y+33, GOLD);
+    centered(3, options ? menu_text(12) : "Arcanum Renaissance", canvas_w/2, y+33, GOLD);
     const char* subtitle=options ? menu_text(12) : pause ? menu_text(4000) :
         type==MM_WINDOW_SINGLE_PLAYER ? menu_text(10) : type==MM_WINDOW_PICK_NEW_OR_PREGEN ? menu_text(50) : "";
     centered(0,subtitle,canvas_w/2,y+80,MUTED);
