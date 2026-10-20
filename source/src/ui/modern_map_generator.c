@@ -32,7 +32,7 @@
 #include "ui/intgame.h"
 
 #define MAPGEN_TILE 1024
-#define MAPGEN_VERSION 1
+#define MAPGEN_VERSION 2
 
 typedef struct MapGenTask {
     char module[260], source[260];

@@ -22,7 +22,12 @@ def copy_archive(source, target):
         shutil.copyfile(source, target)
 
 
-for module in modules:
+groups = [(module,) for module in modules]
+if len(modules) > 1:
+    groups.append(tuple(modules))
+
+for group in groups:
+    names = {module.stem.lower() for module in group}
     with tempfile.TemporaryDirectory(prefix='arcanum-first-launch-') as temporary:
         root = Path(temporary)
         (root/'modules').mkdir()
@@ -30,7 +35,7 @@ for module in modules:
             if source.is_file() and source.suffix.lower() == '.dat':
                 copy_archive(source, root/source.name)
         for source in (game/'modules').iterdir():
-            if source.is_file() and source.stem.lower() == module.stem.lower():
+            if source.is_file() and source.stem.lower() in names:
                 if source.suffix.lower() == '.dat' or source.suffix.lower().startswith('.patch'):
                     copy_archive(source, root/'modules'/source.name)
         if (game/'data').is_dir():
@@ -44,5 +49,6 @@ for module in modules:
             assert result.returncode == 75, log[-4000:]
             assert len(list(cache.rglob('*.png'))) == count * 4, 'Incomplete tile or resume skipped completed work'
             assert 'Cannot open map' not in log and 'Error reading mobile objects' not in log, log[-4000:]
-        assert not (root/'modules'/module.stem/'maps').exists(), 'Generated objects escaped the work directory'
-        print(f'PASS: {module.stem}: first launch without prepared objects and resume', flush=True)
+        for module in group:
+            assert not (root/'modules'/module.stem/'maps').exists(), 'Generated objects escaped the work directory'
+        print(f'PASS: {", ".join(module.stem for module in group)}: first launch without prepared objects and resume', flush=True)

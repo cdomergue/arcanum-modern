@@ -51,9 +51,12 @@ int main(int argc,char** argv)
     SDL_Surface* image=SDL_RenderReadPixels(renderer,NULL);
     if(!image || !SDL_SavePNG(image,argv[3]))return 9;
     SDL_DestroySurface(image);
+    map_bitmap_clear();
     map_cache_available=false;
     draw_map();
-    if(map_texture_hd)return 12;
+    int fallback_tiles=0;
+    for(int i=0;i<map_bitmap_count;i++)if(map_bitmap_tiles[i])fallback_tiles++;
+    if(map_cache_available || !fallback_tiles)return 12;
     char fallback[4096];snprintf(fallback,sizeof(fallback),"%s.original.png",argv[3]);
     image=SDL_RenderReadPixels(renderer,NULL);
     if(!image || !SDL_SavePNG(image,fallback))return 13;

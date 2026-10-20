@@ -55,6 +55,15 @@ If preparation fails, note the error code shown on screen and check
 To compile the mod yourself, see the [build instructions](docs/development.md#build-from-source).
 Back up your saved games before trying an experimental engine.
 
+### Unofficial Arcanum Patch
+
+Renaissance supports the English **UAP 2.0.2**, including Race Mod, Beta Content,
+the additional campaigns and optional data packs. Install the UAP and select its
+options **before installing Renaissance**, then start a new game.
+
+See [UAP installation and options](docs/uap.md) for the original executable's
+optional patches, platform transfers and how the two interfaces interact.
+
 ## Features
 
 - **BG3-inspired tactical combat:** take direct control of eligible companions
@@ -195,7 +204,7 @@ back its notes. Keep both when moving your installation.
 - The world uses the original sprites and terrain artwork. Detailed local maps
   improve map presentation without replacing those assets.
 - The supplied macOS script targets Apple Silicon. Intel macOS, mobile platforms,
-  multiplayer and combinations with other engine patches are not validated.
+  multiplayer and engine patches other than the documented UAP options are not validated.
 - Do not apply the original High Resolution Patch to the modern executable.
 - Some original interface paths remain as fallbacks. F9 switches presentation
   outside tactical combat.

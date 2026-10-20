@@ -437,6 +437,8 @@ python3 tests/test_map_fog.py
 python3 tests/test_map_local_input.py
 python3 tests/test_map_travel.py
 python3 tests/test_combat_feedback.py
+python3 tests/test_uap_compat.py
+python3 tests/test_module_repositories.py
 python3 tests/test_windows_full_package.py
 python3 tests/test_windows_package.py dist/ArcanumModern-windows-x64.zip
 ```
@@ -449,3 +451,24 @@ an isolated game folder containing `tig.dat`, passing an absolute path to a BIK
 video. It checks playback, renderer restoration, skipping and quit propagation
 using SDL's dummy video and audio drivers. The packaged executable also accepts
 `--check-movies` to verify that its Bink decoders load without requiring game data.
+
+For UAP integration checks, use isolated English vanilla and patched game copies.
+On macOS, build the native probe and run it from the repository root:
+
+```sh
+python3 tools/build-map-exporter.py --source tools/check-uap.c --name check-uap \
+  --exclude-object src/ui/mainmenu_ui.c.o
+build/macos-arm64/check-uap /absolute/path/to/isolated-game 11
+```
+
+The copy must contain a `.map-export-sandbox` marker. Pass `8` for an installation
+without Race Mod, or `11` with it. An optional final bitmask checks enabled
+EnginePatcher options: `1` for LevelCap100, `2` for MasterEducator, `4` for
+NoCombatMusic and `8` for NoXPPerHit; combine them by addition.
+The probe checks character selection, portraits, backgrounds, animation
+rotations, rendered cursors and level progression using the installed assets.
+
+`tools/check-map-first-launch.py ENGINE GAME` checks each installed campaign
+separately and all campaigns together, including interrupted preparation and
+resume. For a complete generation check, run `ENGINE --modern-generate-maps GAME`
+on the isolated copy and require exit code zero.

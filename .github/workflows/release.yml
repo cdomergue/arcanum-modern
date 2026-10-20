@@ -33,6 +33,8 @@ jobs:
           python3 tests/test_party_combat.py
           python3 tests/test_party_grouping.py
           python3 tests/test_party_transitions.py
+          python3 tests/test_uap_compat.py
+          python3 tests/test_module_repositories.py
           python3 tests/test_ui_localization.py
           python3 tests/test_autosave.py
           python3 tests/test_map_camera.py

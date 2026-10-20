@@ -29,6 +29,8 @@
 !/source/src/game/modern_shared_turn.inc
 !/source/src/game/modern_autosave.c
 !/source/src/game/modern_autosave.h
+!/source/src/game/modern_compat.c
+!/source/src/game/modern_compat.h
 !/source/src/ui/
 /source/src/ui/*
 !/source/src/ui/modern_ui.c
