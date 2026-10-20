@@ -125,7 +125,7 @@ bool modern_charedit_editable(void);
 typedef struct ModernInventory {
     int mode, scroll, rows;
     int64_t pc, target, owner;
-    bool paperdoll, target_paperdoll, drop, use, gamble;
+    bool paperdoll, target_paperdoll, drop, use, gamble, transfer_all;
     int drop_x, drop_y, use_x, use_y, gamble_x, gamble_y;
     const char* feedback;
 } ModernInventory;

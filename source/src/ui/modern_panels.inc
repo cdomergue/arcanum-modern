@@ -343,8 +343,9 @@ static void draw_inventory(void)
 {
     ModernInventory inv;if(!modern_inventory_state(&inv))return;
     panel_backdrop();inventory_hover=0;
-    float w=fminf(1430,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-820)/2;
-    frame((SDL_FRect){x,y,w,820});
+    float footer=inv.transfer_all?792:748;
+    float w=fminf(1430,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-footer-72)/2;
+    frame((SDL_FRect){x,y,w,footer+72});
     centered(3,actor_name(inv.pc),canvas_w/2,y+22,GOLD);
     bool single=inv.mode==INVEN_UI_MODE_INVENTORY || inv.mode>=INVEN_UI_MODE_NPC_IDENTIFY;
     float left=x+25,right=x+440,cw=360;
@@ -396,13 +397,13 @@ static void draw_inventory(void)
         panel_region(target,targets[i][1],targets[i][2],0,0,2);
     }
     /* Recreate the original scattered-items → grid symbol at native size. */
-    button((SDL_FRect){left,y+748,120,48},731,"",-1,false,true);
+    button((SDL_FRect){left,y+footer,120,48},731,"",-1,false,true);
     const int scattered[6][2]={{0,8},{15,0},{25,19},{3,27},{22,33},{33,6}};
-    for(int i=0;i<6;i++)fill((SDL_FRect){left+10+scattered[i][0],y+754+scattered[i][1],6,6},MUTED);
-    if(!control_symbol((SDL_FRect){left+51,y+756,30,30},">",true,false))
-        text_draw(2,">",left+55,y+759,(SDL_Color){190,69,35,255});
+    for(int i=0;i<6;i++)fill((SDL_FRect){left+10+scattered[i][0],y+footer+6+scattered[i][1],6,6},MUTED);
+    if(!control_symbol((SDL_FRect){left+51,y+footer+8,30,30},">",true,false))
+        text_draw(2,">",left+55,y+footer+11,(SDL_Color){190,69,35,255});
     for(int row=0;row<3;row++)for(int col=0;col<3;col++)
-        fill((SDL_FRect){left+81+col*9,y+759+row*9,7,7},GOLD);
+        fill((SDL_FRect){left+81+col*9,y+footer+11+row*9,7,7},GOLD);
     for(int i=0;i<2;i++) {
         SDL_FRect stat={right+i*185,y+630,175,48};
         char label[256];snprintf(label,sizeof(label),"%s : %d",game_text(modern_intgame_text(i?63:57)),i?item_total_defence(inv.pc):item_total_attack(inv.pc));
@@ -429,11 +430,16 @@ static void draw_inventory(void)
         if(inventory_compare_scroll>inventory_compare_max)inventory_compare_scroll=inventory_compare_max;
     }
     if(inv.mode==INVEN_UI_MODE_BARTER || inv.mode==INVEN_UI_MODE_LOOT)text_compact(tr("Maj + clic : transférer la pile","Shift + click: transfer stack"),left,y+722,790,false,MUTED);
-    if(mainmenu_ui_is_active())menu_button((SDL_FRect){left+140,y+748,220,48},737,menu_text(7002),true);
-    if(inv.mode==INVEN_UI_MODE_LOOT)menu_button((SDL_FRect){left+140,y+748,190,48},732,menu_text(260),true);
-    menu_button((SDL_FRect){x+w-275,y+748,240,48},730,menu_text(260),true);
+    if(inv.transfer_all) {
+        bool ready=!inven_ui_drag_item_obj_get() && combat_input_actor()==inv.pc
+            && (!combat_turn_based_is_active() || combat_input_ready(inv.pc));
+        menu_button((SDL_FRect){left,y+748,cw,32},2407,tr("Tout transférer >","Transfer all >"),ready);
+        menu_button((SDL_FRect){right,y+748,cw,32},2408,tr("< Tout transférer","< Transfer all"),ready);
+    }
+    if(mainmenu_ui_is_active())menu_button((SDL_FRect){left+140,y+footer,220,48},737,menu_text(7002),true);
+    menu_button((SDL_FRect){x+w-275,y+footer,240,48},730,menu_text(260),true);
     if(*message_text && SDL_GetTicks()-message_time<12000)
-        menu_paragraph(message_text,(SDL_FRect){left+290,y+744,w-610,54},0,GOLD);
+        menu_paragraph(message_text,(SDL_FRect){left+290,y+footer-4,w-610,54},0,GOLD);
     int64_t drag=inven_ui_drag_item_obj_get();
     if(drag)draw_art_id(obj_field_int32_get(drag,OBJ_F_ITEM_INV_AID),(SDL_FRect){mouse_x+12,mouse_y+12,72,88},true);
     if(intgame_mode_get()==INTGAME_MODE_QUANTITY) {
@@ -954,6 +960,12 @@ static bool panels_action(int action)
     }
     if(p==8 && action>=969 && action<982){modern_fate_choose(action-970);return true;}
     if(p==3 && memo_action(action))return true;
+    if(p==2 && (action==2407 || action==2408)) {
+        inventory_search_focus(false);
+        modern_inventory_action(action==2407?7:8);
+        inventory_detail_object=0;memset(&inventory_details,0,sizeof(inventory_details));
+        return true;
+    }
     if(p==2 && action>=2400 && action<=2406){
         if(action==2400)inventory_search_focus(!inventory_searching);
         else if(action==2406){inventory_compare=!inventory_compare;inventory_compare_scroll=0;}

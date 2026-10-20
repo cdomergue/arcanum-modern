@@ -2301,7 +2301,25 @@ diff --git a/src/game/gsound.c b/src/game/gsound.c
      }
  
      location_xy(location, &x, &y);
-@@ -1720,7 +1748,7 @@
+@@ -1704,15 +1732,8 @@
+ }
+ 
+ /**
+- * Starts combat music for the area triggered by the given NPC.
+- *
+- * Saves the currently active scheme indices so they can be restored once
+- * combat ends, then fades out any playing ambient/music scheme. Plays a
+- * randomly selected tension stinger followed by the main looping combat
+- * music track.
+- *
+- * Does nothing if combat music is already active or if `obj` is not an NPC.
+- *
++ * Starts combat music for an NPC or the local player, retaining the area schemes.
++ * Repeated calls preserve the active combat track.
+  * 0x41C4D0
+  */
+ void gsound_start_combat_music(int64_t obj)
+@@ -1720,7 +1741,7 @@
      char path[TIG_MAX_PATH];
      int type;
  
@@ -2310,7 +2328,17 @@ diff --git a/src/game/gsound.c b/src/game/gsound.c
          return;
      }
  
-@@ -1862,6 +1890,11 @@
+@@ -1728,7 +1749,8 @@
+         return;
+     }
+ 
+-    if (obj_field_int32_get(obj, OBJ_F_TYPE) != OBJ_TYPE_NPC) {
++    if (obj_field_int32_get(obj, OBJ_F_TYPE) != OBJ_TYPE_NPC
++        && !player_is_local_pc_obj(obj)) {
+         return;
+     }
+ 
+@@ -1862,6 +1884,11 @@
  
      if (!gsound_initialized) {
          return;
@@ -4515,14 +4543,19 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 --- a/src/ui/inven_ui.c
 +++ b/src/ui/inven_ui.c
-@@ -1,4 +1,6 @@
+@@ -1,8 +1,11 @@
  #include "ui/inven_ui.h"
-+
-+#include "ui/modern_ui.h"
  
++#include "ui/modern_ui.h"
++
  #include <stdio.h>
  
-@@ -539,7 +541,9 @@
+ #include "game/ai.h"
++#include "game/combat.h"
+ #include "game/critter.h"
+ #include "game/dialog.h"
+ #include "game/gsound.h"
+@@ -539,7 +542,9 @@
          return false;
      }
  
@@ -4533,7 +4566,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
          return false;
      }
  
-@@ -1187,8 +1191,8 @@
+@@ -1187,8 +1192,8 @@
      tig_art_id_t inv_art_id;
      tig_art_id_t mouse_art_id;
  
@@ -4544,7 +4577,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      }
  
      qword_681450 = inven_ui_pc_obj;
-@@ -1236,8 +1240,8 @@
+@@ -1236,8 +1241,8 @@
      tig_art_id_t mouse_art_id;
      tig_art_id_t inv_art_id;
  
@@ -4555,7 +4588,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      }
  
      mouse_art_id = tig_mouse_cursor_get_art_id();
-@@ -2233,6 +2237,8 @@
+@@ -2233,6 +2238,8 @@
      int64_t pc_obj;
      int mode;
  
@@ -4564,11 +4597,13 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      sub_575770();
  
      follower_obj = qword_6813A8;
-@@ -4595,3 +4601,57 @@
+@@ -4595,3 +4602,61 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }
 +
++
++#include "modern_inventory_transfer.inc"
 +
 +bool modern_inventory_state(ModernInventory* state)
 +{
@@ -4582,7 +4617,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 +        .drop_x=inven_ui_drop_box_frame.x+2,.drop_y=inven_ui_drop_box_frame.y+2,
 +        .use_x=inven_ui_use_box_frame.x+2,.use_y=inven_ui_use_box_frame.y+2,
 +        .gamble_x=inven_ui_gamble_box_frame.x+2,.gamble_y=inven_ui_gamble_box_frame.y+2,
-+        .feedback=byte_68241C};
++        .feedback=byte_68241C,.transfer_all=modern_inventory_bulk_available()};
 +    return true;
 +}
 +int64_t modern_inventory_at(int x,int y) { return inven_ui_created ? sub_575FA0(x,y,NULL) : OBJ_HANDLE_NULL; }
@@ -4616,6 +4651,8 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 +    case 4:inven_ui_message_filter_handle_button_pressed(inven_ui_target_panel==INVEN_UI_PANEL_PAPERDOLL?inven_ui_target_inventory_btn:inven_ui_target_paperdoll_btn);break;
 +    case 5:sub_574FD0(false);break;
 +    case 6:sub_574FD0(true);break;
++    case 7:modern_inventory_transfer_all(true);break;
++    case 8:modern_inventory_transfer_all(false);break;
 +    }
 +}
 +const char* modern_inventory_text(int number)

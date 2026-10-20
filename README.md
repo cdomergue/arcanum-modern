@@ -153,7 +153,10 @@ available.
 Each controlled character has ten personal quick slots, stored with the saved game.
 Hover an item, spell or skill in that character’s menus and press **1–0** to assign
 a slot, or drag it onto the bar.
-**Shift-click** transfers a whole stack. Drag the map to pan it. In the journal,
+**Shift-click** transfers a whole stack. When exchanging items with a companion
+or container, **Transfer all** moves the bag contents in the indicated direction;
+equipped items stay in place and items that cannot be moved remain in their bag.
+Drag the map to pan it. In the journal,
 the **star** marks favorites and the **pin** tracks a quest.
 
 On the local map, distant destinations automatically add intermediate waypoints
