@@ -106,6 +106,11 @@ Names, descriptions and most labels follow the language of your game files.
 Additional interface text has partial French and English support. Western game
 text is decoded as Windows-1252; other encodings need validation.
 
+## Video
+
+Here is a video from a French installation in version 0.3.0: https://www.youtube.com/watch?v=yj_ana898HA&t=5s
+The language will depend on your installation.
+
 ## Screenshots
 
 These screenshots use French game files. In your installation, game text follows
