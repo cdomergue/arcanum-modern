@@ -3717,7 +3717,42 @@ diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
  static int sub_57E460(void);
  static void intgame_hotkey_mouse_load(tig_art_id_t art_id, bool a2);
  static void sub_57ED60(Hotkey* hotkey, int a2);
-@@ -618,6 +621,7 @@
+@@ -82,6 +85,8 @@
+ // 0x6839B0
+ bool hotkey_ui_dragging;
+ 
++#include "modern_hotkeys.inc"
++
+ // 0x57D700
+ bool hotkey_ui_init(GameInitInfo* init_info)
+ {
+@@ -240,6 +245,7 @@
+     tig_button_handle_t button_handle;
+     tig_art_id_t art_id;
+ 
++    companion_hotkey_count = 0;
+     hotkey_ui_dragging = false;
+ 
+     for (index = 0; index < 2; index++) {
+@@ -274,7 +280,7 @@
+         }
+     }
+ 
+-    return true;
++    return companion_hotkeys_save();
+ }
+ 
+ // 0x57DBA0
+@@ -297,7 +303,7 @@
+         }
+     }
+ 
+-    return true;
++    return companion_hotkeys_load();
+ }
+ 
+ // 0x57DC20
+@@ -618,6 +624,7 @@
  // 0x57E460
  int sub_57E460(void)
  {
@@ -3725,7 +3760,7 @@ diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
      TigMouseState mouse_state;
      TigRect rect;
      int index;
-@@ -836,7 +840,8 @@
+@@ -836,7 +843,8 @@
  
      if (stru_683950.item_obj.obj != OBJ_HANDLE_NULL) {
          if (item_parent(stru_683950.item_obj.obj, &parent_obj)
@@ -3735,7 +3770,7 @@ diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
              hotkey_ui_dragging = false;
              sub_575770();
              intgame_refresh_cursor();
-@@ -929,10 +934,10 @@
+@@ -929,10 +937,10 @@
              flags &= ~OIF_NO_DISPLAY;
              obj_field_int32_set(stru_683950.item_obj.obj, OBJ_F_ITEM_FLAGS, flags);
              item_location_set(stru_683950.item_obj.obj, hotkey->slot + 2000);
@@ -3748,13 +3783,31 @@ diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
              break;
          case HOTKEY_SKILL:
              hotkey->data = stru_683950.data;
-@@ -1306,3 +1311,46 @@
+@@ -1174,7 +1182,8 @@
+ {
+     Hotkey* hotkey;
+ 
+-    hotkey = &(stru_6835E0[index]);
++    hotkey = modern_hotkey_get(index);
++    if (!hotkey) return;
+ 
+     if ((hotkey->flags & HOTKEY_DRAGGED) != 0) {
+         return;
+@@ -1185,7 +1194,7 @@
+     }
+ 
+     gsound_play_sfx(0, 1);
+-    intgame_hotkey_activate(hotkey);
++    modern_hotkey_activate(index);
+ }
+ 
+ // 0x57F210
+@@ -1306,3 +1315,48 @@
          }
      }
  }
 +
-+/* Explicit slot assignment for the native-resolution UI; keep the original
-+ * bank storage, item validation and save format instead of a second hotkey bank. */
++/* The hero uses native bank slots; companion bindings reference their inventory. */
 +bool modern_hotkey_assign(int index, int type, int data, int64_t item_obj)
 +{
 +    int64_t actor = combat_input_actor(), owner;
@@ -3768,11 +3821,14 @@ diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
 +            || owner!=actor)return false;
 +        int obj_type=obj_field_int32_get(item_obj,OBJ_F_TYPE);
 +        if(obj_type==OBJ_TYPE_GOLD || obj_type==OBJ_TYPE_AMMO)return false;
++        if(!player_is_local_pc_obj(actor))return companion_hotkey_assign(actor,index,type,data,item_obj);
 +        if(stru_6835E0[index].type==HOTKEY_ITEM && stru_6835E0[index].item_obj.obj==item_obj) {
 +            sub_575770();return true;
 +        }
 +        if(item_check_remove(item_obj)!=ITEM_CANNOT_OK)return false;
 +    } else return false;
++
++    if(!player_is_local_pc_obj(actor))return companion_hotkey_assign(actor,index,type,data,item_obj);
 +
 +    /* Do not drop an existing bank item on the ground if its backpack is full. */
 +    int64_t previous=stru_6835E0[index].type==HOTKEY_ITEM || stru_6835E0[index].type==HOTKEY_ITEM_SPELL
@@ -3795,6 +3851,18 @@ diff --git a/src/ui/hotkey_ui.c b/src/ui/hotkey_ui.c
 +    if(result && type!=HOTKEY_ITEM)sub_4440E0(OBJ_HANDLE_NULL,&stru_6835E0[index].item_obj);
 +    return result;
 +}
+diff --git a/src/ui/hotkey_ui.h b/src/ui/hotkey_ui.h
+--- a/src/ui/hotkey_ui.h
++++ b/src/ui/hotkey_ui.h
+@@ -33,6 +33,8 @@
+ void sub_57F210(int index);
+ void hotkey_ui_notify_item_inserted_or_removed(int64_t item_obj, bool removed);
+ Hotkey* sub_57F240(int index);
++Hotkey* modern_hotkey_get(int index);
++void modern_hotkey_activate(int index);
+ bool sub_57F260(void);
+ void hotkey_ui_notify_spell_removed(int spell);
+ void intgame_hotkeys_recover(void);
 diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 --- a/src/ui/intgame.c
 +++ b/src/ui/intgame.c
@@ -4463,6 +4531,28 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
          return false;
      }
  
+@@ -1187,8 +1191,8 @@
+     tig_art_id_t inv_art_id;
+     tig_art_id_t mouse_art_id;
+ 
+-    if (!inven_ui_created && inven_ui_pc_obj == OBJ_HANDLE_NULL) {
+-        inven_ui_pc_obj = player_get_local_pc_obj();
++    if (!inven_ui_created) {
++        inven_ui_pc_obj = combat_input_actor();
+     }
+ 
+     qword_681450 = inven_ui_pc_obj;
+@@ -1236,8 +1240,8 @@
+     tig_art_id_t mouse_art_id;
+     tig_art_id_t inv_art_id;
+ 
+-    if (!inven_ui_created && inven_ui_pc_obj == OBJ_HANDLE_NULL) {
+-        inven_ui_pc_obj = player_get_local_pc_obj();
++    if (!inven_ui_created) {
++        inven_ui_pc_obj = combat_input_actor();
+     }
+ 
+     mouse_art_id = tig_mouse_cursor_get_art_id();
 @@ -2233,6 +2237,8 @@
      int64_t pc_obj;
      int mode;

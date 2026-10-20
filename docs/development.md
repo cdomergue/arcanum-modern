@@ -437,6 +437,8 @@ python3 tests/test_map_fog.py
 python3 tests/test_map_local_input.py
 python3 tests/test_map_travel.py
 python3 tests/test_combat_feedback.py
+python3 tests/test_hotkey_assignment.py
+python3 tests/test_party_hotkeys.py
 python3 tests/test_uap_compat.py
 python3 tests/test_module_repositories.py
 python3 tests/test_windows_full_package.py
@@ -472,3 +474,17 @@ rotations, rendered cursors and level progression using the installed assets.
 separately and all campaigns together, including interrupted preparation and
 resume. For a complete generation check, run `ENGINE --modern-generate-maps GAME`
 on the isolated copy and require exit code zero.
+
+To check companion quick slots against installed game data on macOS:
+
+```sh
+python3 tools/build-map-exporter.py --source tools/check-party-hotkeys.c \
+  --name check-party-hotkeys --exclude-object src/ui/modern_ui.c.o
+build/macos-arm64/check-party-hotkeys /absolute/path/to/isolated-game Slot0001
+```
+
+Use an isolated French or English campaign with at least three companions,
+including a spellcaster as the first follower, and a `.map-export-sandbox` marker.
+The probe uses slot `Slot0094` for its save/load check. It exercises the combat
+bar, numbered menu assignments, character isolation, item references and loading
+saves without companion bindings.

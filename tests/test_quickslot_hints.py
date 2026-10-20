@@ -15,9 +15,9 @@ code=r'''
 enum {HOTKEY_NONE,HOTKEY_ITEM,HOTKEY_SKILL,HOTKEY_SPELL,HOTKEY_ITEM_SPELL};
 typedef struct {int type,data;struct {int64_t obj;} item_obj;} Hotkey;
 static Hotkey slots[10];
-static Hotkey* sub_57F240(int n){return &slots[n];}
+static Hotkey* modern_hotkey_get(int n){return &slots[n];}
 static bool obj_handle_is_valid(int64_t o){return o==1||o==2;}
-static int64_t player_get_local_pc_obj(void){return 42;}
+static int64_t combat_input_actor(void){return 42;}
 static void object_examine(int64_t o,int64_t pc,char* name){assert(pc==42);strcpy(name,o==1?"Potion identifiée":"Potion inconnue");}
 static const char* spell_name(int n){assert(n>=0&&n<80);return "Soin léger";}
 static const char* sub_57A700(int n){assert(n>=0&&n<4);return "Discrétion";}

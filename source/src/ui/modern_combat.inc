@@ -419,17 +419,13 @@ static void draw_tactical_hud(void)
     int pa=combat_action_points_get();
     int cells=max>30?30:max;
     for(int i=0;i<cells;i++)fill((SDL_FRect){x+165+i*370.0f/cells,y+62,370.0f/cells-3,8},i*max<pa*cells?(preview && i*max>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
-    const int ids[]={1103,6,5,1104};
-    const char* names[]={tactical_text(TC_ATTACK),game_text(modern_intgame_text(1000)),game_text(modern_intgame_text(1001)),game_text(modern_intgame_text(1006))};
-    for(int i=0;i<4;i++)tactical_button((SDL_FRect){x+100+i*112,y+82,106,25},ids[i],names[i],false,ready);
-    if(player_is_local_pc_obj(actor))for(int i=0;i<10;i++){
+    const int ids[]={1103,6,5,1104,1105};
+    const char* names[]={tactical_text(TC_ATTACK),game_text(modern_intgame_text(1000)),game_text(modern_intgame_text(1001)),game_text(modern_intgame_text(1006)),game_text(modern_intgame_text(1005))};
+    for(int i=0;i<5;i++)tactical_button((SDL_FRect){x+100+i*90,y+82,86,25},ids[i],names[i],false,ready);
+    if(owned)for(int i=0;i<10;i++){
         SDL_FRect r={x+550+(i%5)*43,y+13+(i/5)*38,38,34};button(r,300+i,"",-1,false,ready);
-        Hotkey* hk=sub_57F240(i);if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+4,r.y+2,29,26},true);
+        Hotkey* hk=modern_hotkey_get(i);if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+4,r.y+2,29,26},true);
         char digit[3];snprintf(digit,sizeof(digit),"%d",(i+1)%10);text_draw(0,digit,r.x+1,r.y+19,MUTED);
-    }
-    else {
-        button((SDL_FRect){x+550,y+15,210,28},951,game_text(sub_57A700(0)),sub_579F50(0),false,ready);
-        tactical_button((SDL_FRect){x+550,y+50,210,28},1105,game_text(modern_intgame_text(1005)),false,ready);
     }
     tactical_button((SDL_FRect){x+550,y+83,210,24},1106,tactical_text(TC_LOG),tactical_log_open,true);
     tactical_button((SDL_FRect){x+775,y+18,125,56},1100,tactical_text(TC_END),false,ready);

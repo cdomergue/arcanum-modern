@@ -26,6 +26,8 @@ static int64_t owner_id=1;
 static int64_t combat_input_actor(void){return 1;}
 static bool combat_input_ready(int64_t x){(void)x;return ready;}
 static bool tig_net_is_active(void){return network;}
+static bool player_is_local_pc_obj(int64_t actor){return actor==1;}
+static bool companion_hotkey_assign(int64_t actor,int index,int type,int data,int64_t item){(void)actor;(void)index;(void)type;(void)data;(void)item;assert(0);return false;}
 static bool spell_is_known(int64_t x,int n){(void)x;(void)n;return known;}
 static bool obj_handle_is_valid(int64_t x){return x>0;}
 static bool item_parent(int64_t x,int64_t* out){*out=owner_id;return x>0;}

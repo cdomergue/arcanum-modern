@@ -145,7 +145,9 @@ available.
 | Use quick slot | 1–0 |
 | Close panel or open pause menu | Escape |
 
-Hover an item, spell or skill and press **1–0** to assign a quick slot.
+Each controlled character has ten personal quick slots, stored with the saved game.
+Hover an item, spell or skill in that character’s menus and press **1–0** to assign
+a slot, or drag it onto the bar.
 **Shift-click** transfers a whole stack. Drag the map to pan it. In the journal,
 the **star** marks favorites and the **pin** tracks a quest.
 

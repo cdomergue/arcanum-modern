@@ -158,14 +158,19 @@ static void draw_binding_bar(void)
 {
     int p=native_panel();binding_bar_visible=(p==2 || p==5) && intgame_mode_get()!=INTGAME_MODE_QUANTITY;
     if(!binding_bar_visible)return;
-    float x=(canvas_w-610)/2,y=canvas_h-54;
-    fill((SDL_FRect){x-10,y-5,620,53},(SDL_Color){18,13,9,245});
-    for(int i=0;i<10;i++) {
-        SDL_FRect r={x+i*60,y,54,42};binding_slots[i]=r;
-        fill(r,(SDL_Color){40,29,18,255});outline(r,inside(r,mouse_x,mouse_y)?GOLD:MUTED);
-        Hotkey* hk=sub_57F240(i);
-        if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+13,r.y+2,34,34},true);
-        char number[4];snprintf(number,sizeof(number),"%d",(i+1)%10);text_draw(0,number,r.x+3,r.y+22,GOLD);
+    if(p==5 && combat_tactical_enabled() && combat_turn_based_is_active()) {
+        float x=(canvas_w-980)/2,y=canvas_h-126;
+        for(int i=0;i<10;i++)binding_slots[i]=(SDL_FRect){x+550+(i%5)*43,y+13+(i/5)*38,38,34};
+    } else {
+        float x=(canvas_w-610)/2,y=canvas_h-54;
+        fill((SDL_FRect){x-10,y-5,620,53},(SDL_Color){18,13,9,245});
+        for(int i=0;i<10;i++) {
+            SDL_FRect r={x+i*60,y,54,42};binding_slots[i]=r;
+            fill(r,(SDL_Color){40,29,18,255});outline(r,inside(r,mouse_x,mouse_y)?GOLD:MUTED);
+            Hotkey* hk=modern_hotkey_get(i);
+            if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+13,r.y+2,34,34},true);
+            char number[4];snprintf(number,sizeof(number),"%d",(i+1)%10);text_draw(0,number,r.x+3,r.y+22,GOLD);
+        }
     }
     if(binding_pressed && binding_moved) {
         if(binding_drag.type==HOTKEY_ITEM && obj_handle_is_valid(binding_drag.item))

@@ -31,6 +31,8 @@ jobs:
           python3 tests/test_tactical_combat.py
           python3 tests/test_shared_turns.py
           python3 tests/test_party_combat.py
+          python3 tests/test_hotkey_assignment.py
+          python3 tests/test_party_hotkeys.py
           python3 tests/test_party_grouping.py
           python3 tests/test_party_transitions.py
           python3 tests/test_uap_compat.py

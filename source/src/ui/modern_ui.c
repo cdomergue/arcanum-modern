@@ -813,7 +813,7 @@ static void draw_hud(void)
     for(int i=0;i<10;i++) {
         SDL_FRect slot={sx+i*49,y+15,43,44};
         button(slot,300+i,"",-1,false,controls_enabled);
-        Hotkey* hk=sub_57F240(i);
+        Hotkey* hk=modern_hotkey_get(i);
         if(hk && hk->type!=HOTKEY_NONE) draw_art_id(hk->art_id,(SDL_FRect){slot.x+5,slot.y+5,33,31},true);
         char key[8];snprintf(key,sizeof(key),"%d",(i+1)%10);
         text_draw(0,key,slot.x+3,slot.y+28,MUTED);
@@ -1692,14 +1692,14 @@ static void quickslot_hint(int slot,char* hint,size_t capacity)
 {
     hint[0]=0;
     if(slot<0 || slot>=10)return;
-    Hotkey* hk=sub_57F240(slot);
+    Hotkey* hk=modern_hotkey_get(slot);
     if(!hk || hk->type==HOTKEY_NONE)return;
     char name[2048]="";
     if(hk->type==HOTKEY_ITEM || hk->type==HOTKEY_ITEM_SPELL) {
         int64_t item=hk->item_obj.obj;
         if(!item || !obj_handle_is_valid(item))return;
         /* Examine preserves identification rules and the installed translation. */
-        object_examine(item,player_get_local_pc_obj(),name);
+        object_examine(item,combat_input_actor(),name);
     } else if(hk->type==HOTKEY_SPELL && hk->data>=0 && hk->data<SPELL_COUNT)
         SDL_strlcpy(name,spell_name(hk->data),sizeof(name));
     else if(hk->type==HOTKEY_SKILL && hk->data>=0 && hk->data<4)
@@ -1838,8 +1838,7 @@ static void activate(int action)
     case 210:case 211:case 212:case 213:case 214:quest_filter=action-210;spread=0;dirty=true;break;
     default:
         if(action>=300 && action<310) {
-            Hotkey* hk=sub_57F240(action-300);
-            if(hk && hk->type!=HOTKEY_NONE) intgame_hotkey_activate(hk);
+            modern_hotkey_activate(action-300);
         } else modern_intgame_action(action);
     }
 }
