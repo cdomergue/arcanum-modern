@@ -23,7 +23,8 @@ typedef FILE TigFile;
 #define tig_file_fclose fclose
 #define tig_file_fseek fseek
 #define tig_file_fread fread
-static int mirrored;
+static int mirrored, overlay;
+static int modern_uap_ready(void) { return overlay; }
 static int tig_file_exists(const char* name, void* ignored) { (void)ignored; return access(name, R_OK)==0; }
 static void tig_art_mirroring_set(int enabled) { mirrored=enabled; }
 ''' + header + source + r'''
@@ -66,6 +67,10 @@ int main(void) {
  write_at(0x45e0,"\x05",1); modern_compat_load(); check_defaults();
  remove("Arcanum5.dat"); remove("ArcanumXRaces.dat"); remove("ArcanumXAnims1Base.dat");
  modern_compat_load(); check_defaults(); assert(!modern_compat_get()->uap && !modern_compat_get()->races && mirrored);
+ overlay=1; modern_compat_load(); check_defaults();
+ assert(modern_compat_get()->uap && modern_compat_get()->races && !mirrored);
+ assert(!strcmp(modern_compat_race_prefix(8),"DE"));
+ overlay=0; modern_compat_load(); assert(!modern_compat_get()->uap && mirrored);
  puts("PASS: vanilla defaults, race prefixes, animation mode, complete/partial engine patches, version guard and reset");
 }
 '''

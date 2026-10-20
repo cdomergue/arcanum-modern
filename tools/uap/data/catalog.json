@@ -1,0 +1,170 @@
+{
+  "original": {
+    "arcanum4.dat": {
+      "size": 894562,
+      "sha256": "28d0c167024d768bd7a3b2c4aeaf639f197269b32383ac06acb801446cb322c3"
+    },
+    "arcanum2.dat": {
+      "size": 150357738,
+      "sha256": "156ec3b9d89d089db032c84714cbb07a6e68a002ba26db5c4b59f51ba34917ab"
+    },
+    "arcanum3.dat": {
+      "size": 10170607,
+      "sha256": "93c73a06d562389563ea037b0f916800c96f232580e29397b09818cc213af17e"
+    },
+    "arcanum1.dat": {
+      "size": 447820421,
+      "sha256": "1b6d9f352542bf8746d4d060ee19894c893fadc721baec888b5a55d8e732585d"
+    },
+    "modules/arcanum.patch0": {
+      "size": 18940,
+      "sha256": "54e7ebf584f661939cd752227c1c7641ff01222be1921a7ba2dcc24da3c0fde3"
+    },
+    "modules/arcanum.dat": {
+      "size": 395560649,
+      "sha256": "bdb533e18fda4003ec42ffd2aebe1c36bb94d1d287a346e3bb13196254eda2b6"
+    }
+  },
+  "patch": {
+    "arcanum5.dat": {
+      "size": 7786600,
+      "sha256": "65ce42516fa618a8a1c879b9947470d58cda7281bc2ed776eba0f859f0b29089"
+    },
+    "arcanumxraces.dat": {
+      "size": 317502,
+      "sha256": "0eb8d6f2c13360a01a94a3278c66b799035364c11aa028023a79d863f7f0fc6a"
+    },
+    "arcanumxanims2dupes.dat": {
+      "size": 6627096,
+      "sha256": "e2ca54ca9e5dfe46e25e49d81535c7e5dbe7105087d877d12ed7ff5869407447"
+    },
+    "arcanumxanims1base.dat": {
+      "size": 132043613,
+      "sha256": "9ec9d5a63336f468c3b32387d452d7a4633d00818f91482e7a22a58766470827"
+    },
+    "arcanumxambient.dat": {
+      "size": 29139930,
+      "sha256": "058fc79fcbaee6469e3606a552b103f8aff1411cb7aaf8dd33279c33446b386c"
+    },
+    "arcanumxanims3uap.dat": {
+      "size": 379254,
+      "sha256": "5860d619ed82d3b1f5324252172902816565b158b122eb0ae40102fa47143b68"
+    },
+    "modules/arcanum.patch1": {
+      "size": 915223,
+      "sha256": "e6717483200e4ae3d6c80d9630dea6c682b64cee634d239e4cbc5bf644a2728f"
+    },
+    "modules/arcanum.patch9": {
+      "size": 142998774,
+      "sha256": "a94436bf27035d88cc81e32d51c21d1c188f340b4b48a31c2991a1e02a72491d"
+    },
+    "modules/vormantown.patch9": {
+      "size": 16236835,
+      "sha256": "688819a3be3e8849b428175a997233c9858ae3bc5ec588f06c0b37fbe3b00d2a"
+    },
+    "data/sound/music/interlude.mp3": {
+      "size": 3726106,
+      "sha256": "51262f1302649312ea8bcc9179831f3ae05960238b10df49225777a119b063ed"
+    },
+    "data/sound/music/caladon.mp3": {
+      "size": 6302824,
+      "sha256": "fd80eccc8356ffbd497540b3668507b95102945ccc9292bf147494983ca25863"
+    },
+    "data/sound/music/qintara.mp3": {
+      "size": 4574563,
+      "sha256": "05b6e3bf092cd46df993db095826178ac5611e1b0a6fd8a06a52568cf7196b99"
+    },
+    "data/sound/music/towns.mp3": {
+      "size": 4798171,
+      "sha256": "c27b28705a7a3d7a52bf1f163f15086c248a56917db20ed678dedf0dc04a247b"
+    },
+    "data/sound/music/villages.mp3": {
+      "size": 6596440,
+      "sha256": "0c55d9828eec28582059091c1c46823f450f726552a903966bb8f42cd9e72086"
+    },
+    "data/sound/music/kerghan.mp3": {
+      "size": 5809632,
+      "sha256": "bdbbf42d0244ba9556b4441449a6980d5ed9dcb6bf06b1b80c6c8fd164470234"
+    },
+    "data/sound/music/dungeons.mp3": {
+      "size": 7129338,
+      "sha256": "146e73b1bf443f4250da0669b32c2b5efc180d3b6ed806ff30b237d2bf844421"
+    },
+    "data/sound/music/arcanum.mp3": {
+      "size": 6207738,
+      "sha256": "09590f2892b0b04cb6cc27e66636c4e7e6b1b3e3c1915c51913fc7eba051064b"
+    },
+    "data/sound/music/void.mp3": {
+      "size": 5092832,
+      "sha256": "19774f583bfe04c1339bfa797b63918e4e38df11a24895457363337404eadf50"
+    },
+    "data/sound/music/cities.mp3": {
+      "size": 5525420,
+      "sha256": "7c903dfe8c1cb05488e7dcf78209843386b25c408f4a232d2d7ecaf882e616df"
+    },
+    "data/sound/music/wilderness.mp3": {
+      "size": 5206726,
+      "sha256": "71d4a4d7abfaf6e36262e59ce5b5d9c14ff2194f4a2a615bdadf4efad51f665f"
+    },
+    "data/sound/music/tarant_sewers.mp3": {
+      "size": 5279869,
+      "sha256": "d441bfe2c181d206db7e1074ca4e763d0f113d7e9d5fce73aa49e55fd63490d6"
+    },
+    "data/sound/music/dwarvenmusic.mp3": {
+      "size": 4985208,
+      "sha256": "9115b23bf24d04eab8937fcc9e5c417d73fea6fd57bdf6b9bb573d9cc639c133"
+    },
+    "data/sound/music/caladon_catacombs.mp3": {
+      "size": 6960065,
+      "sha256": "0522d7106dd9a4e4cfc0705f6d817b1d52aa491ed5673d175b06a9fbc84014ab"
+    },
+    "data/sound/music/combatmusic.mp3": {
+      "size": 4985208,
+      "sha256": "9115b23bf24d04eab8937fcc9e5c417d73fea6fd57bdf6b9bb573d9cc639c133"
+    },
+    "data/sound/music/combat 6.mp3": {
+      "size": 86099,
+      "sha256": "fbc2adaeaa668f99e68d6f3593fa22ac01af6fb66e399e3698fe28c30ca9bd92"
+    },
+    "data/sound/music/combat 5.mp3": {
+      "size": 70217,
+      "sha256": "66834050a349adc321fc07b74ecaad9c9f58f1321c489e7fc2d174b5b6376443"
+    },
+    "data/sound/music/combat 4.mp3": {
+      "size": 69381,
+      "sha256": "37d87759bfb5fe3d2726a530fceda4bc13afef2a23373296d7212e2f13e804dc"
+    },
+    "data/sound/music/tulla.mp3": {
+      "size": 7585959,
+      "sha256": "815da3442f714179a256b70db046a3b75e72a214795913c408e1995c020272cd"
+    },
+    "data/sound/music/combat 1.mp3": {
+      "size": 52244,
+      "sha256": "3f1dab9321d9ac96c67f3a0cfc37bedaf06c1abe21000a62bab851463ce06c6e"
+    },
+    "data/sound/music/mines.mp3": {
+      "size": 6372832,
+      "sha256": "468ef5a0fa497cecc6b1b5284b7030b0eac93cad7d54cea0cb3f534b08f4a295"
+    },
+    "data/sound/music/vendegoth.mp3": {
+      "size": 7337273,
+      "sha256": "bc8b5c894200ecefaf847ee2e8f82cb5493654ef5786b667cc3e1457210869f0"
+    },
+    "data/sound/music/combat 3.mp3": {
+      "size": 67709,
+      "sha256": "0e1a54eb8dccf2c3c3d093296d4f4cee22ab7310ccd2e921a4fe3e1911198e9d"
+    },
+    "data/sound/music/combat 2.mp3": {
+      "size": 50991,
+      "sha256": "5af5ec414c918ba8e16240008af30c98a71131a7725a2b1b2a9d3685af6340d5"
+    },
+    "data/sound/music/tarant.mp3": {
+      "size": 5030138,
+      "sha256": "47700dbce26925f20b5ddd99b35b9f7c38bda4248ea9e523b13cd4a56285a87c"
+    },
+    "data/sound/music/isle_of_despair.mp3": {
+      "size": 5803363,
+      "sha256": "6cca8c48581a9b31c96c7a1ee5fc118236a622cc497752956611fb1670bd4068"
+    }
+  }
+}

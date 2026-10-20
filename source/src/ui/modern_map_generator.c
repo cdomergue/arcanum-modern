@@ -154,8 +154,8 @@ static bool mapgen_fingerprint(const char* game, Uint64* hash)
     MapGenWalk root = {NULL, 0, false, true};
     if (!SDL_EnumerateDirectory(game, mapgen_walk, &root)) return false;
     *hash = root.hash;
-    const char* folders[] = {"data", "modules"};
-    for (int i = 0; i < 2; i++) {
+    const char* folders[] = {"data", "modules", "modern-ui/uap-fr/active"};
+    for (size_t i = 0; i < SDL_arraysize(folders); i++) {
         char* path = mapgen_join(game, folders[i]);
         MapGenWalk child = {NULL, 0, false, false, true};
         bool ok = !SDL_GetPathInfo(path, NULL) || SDL_EnumerateDirectory(path, mapgen_walk, &child);
@@ -573,8 +573,8 @@ static int mapgen_run(const char* game_root, int tile_limit)
     if (!SDL_CreateDirectory(cache) || !SDL_CreateDirectory(sandbox)) return 11;
     MapGenWalk root = {sandbox, 0, true, true};
     if (!SDL_EnumerateDirectory(game_root, mapgen_walk, &root)) return 12;
-    const char* folders[] = {"data", "modules"};
-    for (int i = 0; i < 2; i++) {
+    const char* folders[] = {"data", "modules", "modern-ui/uap-fr/active"};
+    for (size_t i = 0; i < SDL_arraysize(folders); i++) {
         char* from = mapgen_join(game_root, folders[i]);
         char* to = mapgen_join(sandbox, folders[i]);
         MapGenWalk copy = {to, 0, true, false};

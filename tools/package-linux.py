@@ -63,6 +63,7 @@ def package(exe, build_dir, output):
             glibc += re.findall(r'GLIBC_(\d+(?:\.\d+)+)', versions)
     minimum_glibc = max(glibc, key=lambda v: tuple(map(int, v.split('.'))))
     files.update(movies)
+    files.update(resources.uap_files('linux'))
     for name in resources.ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
     cache = (build_dir/'CMakeCache.txt').read_text()
@@ -93,7 +94,7 @@ def package(exe, build_dir, output):
                 info = zipfile.ZipInfo(name)
                 info.create_system = 3
                 info.compress_type = zipfile.ZIP_DEFLATED
-                executable = name in {'arcanum-modern', 'Play Arcanum Renaissance.sh'}
+                executable = name in {'arcanum-modern', 'Play Arcanum Renaissance.sh', 'ArcanumModern/uap/uap-helper', 'ArcanumModern/uap/7zz'}
                 info.external_attr = (0o100755 if executable else 0o100644) << 16
                 z.writestr(info, data)
         archive.replace(output)

@@ -18,8 +18,10 @@ For macOS or Linux, copy the complete patched game folder from Windows, then
 extract the corresponding Renaissance package into it. Keep the archives,
 module patches, loose data and original `Arcanum.exe` together.
 
-Renaissance reads the installed files. It does not download, install or
-redistribute the UAP, and its packages contain no original game data.
+Renaissance reads the installed English UAP files. For recognized original
+French installations, an [optional automatic installer](uap-fr.md) prepares
+Base + Race Mod with French text and a verified saved-game backup. Release
+packages contain neither UAP data nor original game data.
 
 ## Components
 

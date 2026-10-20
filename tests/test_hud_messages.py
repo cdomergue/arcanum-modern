@@ -5,7 +5,7 @@ import os, subprocess, tempfile
 ui=(Path(__file__).resolve().parents[1]/'source/src/ui/modern_ui.c').read_text()
 wrap=ui[ui.index('static int menu_paragraph_aligned('):ui.index('\nstatic void description_panel(')]
 decode=ui[ui.index('static int codepoint('):ui.index('/* Game strings are Windows-1252;')]
-message=ui[ui.index('static bool hud_message_expanded('):ui.index('static void draw_hud(void)')]
+message=ui[ui.index('static bool hud_message_visible('):ui.index('static void draw_hud(void)')]
 code=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -52,7 +52,10 @@ int main(void){
  for(int i=0;i<8;i++)strcat(long_text,"Description complète : forêt, débris et mystérieuse inscription. ");
  strcpy(message_text,long_text);assert(hud_message_expanded());
  for(int w=1200;w<=1600;w+=400){canvas_w=w;check(long_text);}
- now=12001;assert(!hud_message_expanded());
+ now=3999;assert(hud_message_expanded());
+ now=4000;assert(!hud_message_expanded() && !hud_message_visible());
+ strcpy(message_text,"Short message");assert(hud_message_visible());
+ now=12000;assert(!hud_message_visible());
  puts("PASS: complete accented long messages, wrapping above HUD, short messages and expiration");
 }
 '''

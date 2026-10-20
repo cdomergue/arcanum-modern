@@ -57,6 +57,13 @@ Back up your saved games before trying an experimental engine.
 
 ### Unofficial Arcanum Patch
 
+For recognized original French game files, Renaissance offers an optional
+**automatic UAP Base + Race Mod installation** at startup, with a Yes / No choice.
+It downloads the UAP, prepares French text and verifies a separate backup of your
+saved games before activation. **Existing campaigns may be incompatible.**
+See [French UAP installation and backup restoration](docs/uap-fr.md) for details
+and system requirements.
+
 Renaissance supports the English **UAP 2.0.2**, including Race Mod, Beta Content,
 the additional campaigns and optional data packs. Install the UAP and select its
 options **before installing Renaissance**, then start a new game.

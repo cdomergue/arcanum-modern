@@ -502,3 +502,33 @@ build/macos-arm64/check-name-input
 Use the corresponding build directory on Linux or Windows. The check covers
 ASCII, accented names, Windows-1252 punctuation, deletion and the name-length
 limit without requiring game data or a system encoding converter.
+
+### French UAP preparation
+
+Release packaging builds a standalone Go helper and bundles 7-Zip for Windows,
+macOS and Linux. `tools/build-uap.py` downloads pinned, checksum-verified compiler
+and extractor archives into `build/uap-tools`; players need no development tools.
+The [Go helper requires macOS 13+](https://go.dev/doc/go1.27#darwin), while the engine retains its macOS 11 target.
+
+The localization plan in `tools/uap/data/plan.json.gz` contains resource identifiers,
+checksums, references to installed French text and authored translations. It
+contains no extracted original game text. To regenerate it, supply isolated
+original French and English installations and the extracted UAP 2.0.2 installer:
+
+```sh
+python3 tools/uap/make-plan.py --french /path/to/french --english /path/to/english \
+  --uap /path/to/extracted-uap --output build/uap-review/plan.json
+```
+
+Review the generated `missing.json` and `changed.json` reports, resolve new or
+semantically changed strings, and require zero missing translations before
+compressing the plan with a deterministic gzip timestamp. Reports contain game
+text and must remain outside Git. Dialogue scripts and conditions must remain
+byte-identical to the selected UAP resources. `mes/gamearea.mes` retains UAP map
+coordinates while translating its names and descriptions.
+
+Run `go test ./...` inside `tools/uap`, and use `tools/check-uap-fr.py --game GAME
+--uap EXTRACTED` on a prepared isolated copy to check data integrity and dialogue
+logic. Setting `UAP_TEST_DOWNLOAD` to a temporary directory enables the optional
+real-download Go test. Build and run `check-uap` with 11 races on that copy, and
+repeat the vanilla checks without the overlay.

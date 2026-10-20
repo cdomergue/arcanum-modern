@@ -16,7 +16,8 @@ with zipfile.ZipFile(archive) as z:
     full=metadata.get('includes_game_data',False)
     names=z.namelist();assert len(names)==len(set(names))
     expected={'arcanum-modern.exe','Play Arcanum Renaissance.bat'}|{'modern-ui/'+s for s in p.ASSETS}|set(p.MOVIE_LIBRARIES['windows'])
-    p.validate_pe_dependencies({name:z.read(name) for name in ('arcanum-modern.exe',*p.MOVIE_LIBRARIES['windows'])})
+    expected |= {'ArcanumModern/uap/uap-helper.exe', 'ArcanumModern/uap/7z.exe', 'ArcanumModern/uap/7z.dll'}
+    p.validate_pe_dependencies({name:z.read(name) for name in names if name.lower().endswith(('.exe','.dll'))})
     for name in names:
         assert full or name in expected or name.startswith('ArcanumModern/'),name
         assert not name.startswith('/') and '..' not in Path(name).parts

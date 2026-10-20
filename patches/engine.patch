@@ -9,10 +9,12 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # ------------------------------------------------------------------------------
  # ARCANUM
-@@ -24,6 +25,18 @@
+@@ -24,6 +25,22 @@
  
  # Keep alphabetically sorted.
  set(SRCS
++    "src/game/modern_uap.c"
++    "src/game/modern_uap.h"
 +    "src/game/modern_compat.c"
 +    "src/game/modern_compat.h"
 +    "src/game/modern_autosave.c"
@@ -21,6 +23,8 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +    "src/ui/modern_movie.h"
 +    "src/ui/modern_graphics.c"
 +    "src/ui/modern_graphics.h"
++    "src/ui/modern_uap_startup.c"
++    "src/ui/modern_uap_startup.h"
 +    "src/ui/modern_map_generator.c"
 +    "src/ui/modern_map_generator.h"
 +    "src/ui/modern_ui.c"
@@ -28,7 +32,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +346,31 @@
+@@ -333,7 +350,31 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -90,6 +94,17 @@ diff --git a/first_party/tig/include/tig/compat.h b/first_party/tig/include/tig/
  void compat_resolve_path(char* path);
  void compat_append_path(char* path, size_t size, const char* comp);
  void compat_join_path_ex(char* path, size_t size, ...);
+diff --git a/first_party/tig/include/tig/file.h b/first_party/tig/include/tig/file.h
+--- a/first_party/tig/include/tig/file.h
++++ b/first_party/tig/include/tig/file.h
+@@ -60,6 +60,7 @@
+ int tig_file_fclose(TigFile* stream);
+ int tig_file_fflush(TigFile* stream);
+ TigFile* tig_file_fopen(const char* path, const char* mode);
++TigFile* tig_file_fopen_repository(const char* repository, const char* path);
+ TigFile* tig_file_reopen(const char* path, const char* mode, TigFile* stream);
+ int tig_file_setbuf(TigFile* stream, char* buffer);
+ int tig_file_setvbuf(TigFile* stream, char* buffer, int mode, size_t size);
 diff --git a/first_party/tig/include/tig/message.h b/first_party/tig/include/tig/message.h
 --- a/first_party/tig/include/tig/message.h
 +++ b/first_party/tig/include/tig/message.h
@@ -276,7 +291,35 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                  repo = repo->next;
                  while (repo != NULL) {
                      if ((repo->type & TIG_FILE_DATABASE) != 0
-@@ -1602,7 +1606,7 @@
+@@ -1314,6 +1318,27 @@
+     return stream;
+ }
+ 
++TigFile* tig_file_fopen_repository(const char* repository, const char* path)
++{
++    char native_repository[TIG_MAX_PATH], native_path[TIG_MAX_PATH];
++    if (strlen(repository) >= sizeof(native_repository) || strlen(path) >= sizeof(native_path)) return NULL;
++    strcpy(native_repository, repository);
++    strcpy(native_path, path);
++    compat_windows_path_to_native(native_repository);
++    compat_windows_path_to_native(native_path);
++    for (TigFileRepository* repo = tig_file_repositories_head; repo; repo = repo->next) {
++        if ((repo->type & TIG_FILE_REPOSITORY_DATABASE) == 0
++            || SDL_strcasecmp(repo->path, native_repository)) continue;
++        TigDatabaseFileHandle* handle = tig_database_fopen(repo->database, native_path, "rb");
++        if (!handle) return NULL;
++        TigFile* stream = tig_file_create();
++        stream->flags = TIG_FILE_DATABASE;
++        stream->impl.database_file_stream = handle;
++        return stream;
++    }
++    return NULL;
++}
++
+ // 0x5303D0
+ TigFile* tig_file_reopen_native(const char* path, const char* mode, TigFile* stream)
+ {
+@@ -1602,7 +1627,7 @@
          SDL_snprintf(path, sizeof(path), "%s\\%s", repo->path, filename);
      }
  
@@ -285,7 +328,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
      if (stream == NULL) {
          return false;
      }
-@@ -1737,7 +1741,7 @@
+@@ -1737,7 +1762,7 @@
      stream->flags &= ~(TIG_FILE_DATABASE | TIG_FILE_PLAIN);
  
      if (path[0] == '.' || path[0] == '\\' || path[1] == ':' || path[0] == '/') {
@@ -294,7 +337,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
          if (stream->impl.plain_file_stream == NULL) {
              return 0;
          }
-@@ -1759,7 +1763,7 @@
+@@ -1759,7 +1784,7 @@
                              compat_join_path(mutable_path, sizeof(mutable_path), writeable_repo->path, path);
                              compat_resolve_path(mutable_path);
  
@@ -303,7 +346,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                              if (stream->impl.plain_file_stream != NULL) {
                                  stream->flags |= TIG_FILE_PLAIN;
                                  database_entry->flags &= ~TIG_DATABASE_ENTRY_0x100;
-@@ -1789,7 +1793,7 @@
+@@ -1789,7 +1814,7 @@
                      compat_join_path(mutable_path, sizeof(mutable_path), repo->path, path);
                      compat_resolve_path(mutable_path);
  
@@ -312,7 +355,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                      if (stream->impl.plain_file_stream != NULL) {
                          stream->flags |= TIG_FILE_PLAIN;
                          break;
-@@ -1852,7 +1856,7 @@
+@@ -1852,7 +1877,7 @@
      FILE* stream;
      uint8_t file_owner[1024];
  
@@ -366,6 +409,20 @@ diff --git a/first_party/tig/src/message.c b/first_party/tig/src/message.c
          SDL_ConvertEventToRenderCoordinates(renderer, &event);
  
          switch (event.type) {
+@@ -151,6 +170,13 @@
+             break;
+         }
+     }
++
++    // Startup dialogs can consume window events outside this message loop.
++    SDL_Window* window;
++    if (tig_video_window_get(&window) == TIG_OK) {
++        bool active = SDL_GetMouseFocus() == window;
++        if (active != tig_get_active()) tig_set_active(active);
++    }
+ }
+ 
+ // 0x52B890
 diff --git a/first_party/tig/src/mouse.c b/first_party/tig/src/mouse.c
 --- a/first_party/tig/src/mouse.c
 +++ b/first_party/tig/src/mouse.c
@@ -2010,15 +2067,25 @@ diff --git a/src/game/effect.c b/src/game/effect.c
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -1,4 +1,7 @@
+@@ -1,4 +1,8 @@
 +#include "game/modern_compat.h"
++#include "game/modern_uap.h"
 +#include "game/modern_autosave.h"
  #include "game/gamelib.h"
 +#include "ui/modern_ui.h"
  
  #include <stdio.h>
  
-@@ -324,6 +327,7 @@
+@@ -121,7 +125,7 @@
+ static void gamelib_draw_editor(GameDrawInfo* draw_info);
+ static void gamelib_logo(void);
+ static void gamelib_splash(tig_window_handle_t window_handle);
+-static void gamelib_load_data(void);
++static bool gamelib_load_data(void);
+ static bool gamelib_load_module_data(const char* module_name);
+ static void gamelib_unload_module_data(void);
+ 
+@@ -324,10 +328,11 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -2026,7 +2093,12 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      difficulty_changed();
  
      gamelib_mod_loaded = false;
-@@ -410,6 +414,7 @@
+-    gamelib_load_data();
++    if (!gamelib_load_data()) return false;
+ 
+     if (!init_info->editor) {
+         if (highres_config_get()->logos) {
+@@ -410,6 +415,7 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
@@ -2034,7 +2106,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -456,6 +461,7 @@
+@@ -456,6 +462,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2042,7 +2114,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -755,6 +761,7 @@
+@@ -755,6 +762,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -2050,7 +2122,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -940,6 +947,8 @@
+@@ -940,6 +948,8 @@
      int version;
      GameSaveInfo save_info;
  
@@ -2059,7 +2131,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
  
-@@ -1004,7 +1013,7 @@
+@@ -1004,7 +1014,7 @@
          }
      }
  
@@ -2068,7 +2140,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (index < MODULE_COUNT) {
          tig_file_remove(path);
-@@ -1078,6 +1087,7 @@
+@@ -1078,6 +1088,7 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
@@ -2076,7 +2148,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_load = true;
  
      ui_progressbar_init(MODULE_COUNT + 2);
-@@ -1200,7 +1210,7 @@
+@@ -1200,7 +1211,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -2085,7 +2157,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1404,9 @@
+@@ -1394,13 +1405,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -2102,7 +2174,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1561,7 @@
+@@ -1555,7 +1562,7 @@
          } while (0);
      }
  
@@ -2111,7 +2183,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1758,81 @@
+@@ -1752,11 +1759,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -2194,7 +2266,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1876,7 @@
+@@ -1800,6 +1877,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -2202,14 +2274,41 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1832,6 +1909,7 @@
+@@ -1817,7 +1895,7 @@
+ }
+ 
+ // 0x404A20
+-void gamelib_load_data(void)
++bool gamelib_load_data(void)
+ {
+     TigFileList file_list;
+     unsigned int index;
+@@ -1832,6 +1910,9 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
++    if (!modern_uap_load()) return false;
 +    modern_compat_load();
++    return true;
  }
  
  // 0x404C10
+@@ -1874,6 +1955,7 @@
+     }
+ 
+     path1[end] = '\0';
++    if (!modern_uap_module_load(module_name)) return false;
+ 
+     if (tig_file_is_directory(path1)) {
+         tig_file_repository_add(path1);
+@@ -1906,6 +1988,7 @@
+ void gamelib_unload_module_data(void)
+ {
+     int index;
++    modern_uap_module_unload();
+ 
+     tig_file_repository_remove(gamelib_mod_dir_path);
+ 
 diff --git a/src/game/gamelib.h b/src/game/gamelib.h
 --- a/src/game/gamelib.h
 +++ b/src/game/gamelib.h
@@ -2565,6 +2664,42 @@ diff --git a/src/game/mp_utils.c b/src/game/mp_utils.c
          if (tig_net_is_active() && tig_net_is_host()) {
              Packet100 pkt;
  
+diff --git a/src/game/obj.c b/src/game/obj.c
+--- a/src/game/obj.c
++++ b/src/game/obj.c
+@@ -1367,6 +1367,11 @@
+ // 0x406930
+ bool obj_dif_read(TigFile* stream, int64_t obj)
+ {
++    return obj_dif_read_checked(stream, obj, NULL);
++}
++
++bool obj_dif_read_checked(TigFile* stream, int64_t obj, bool* base_mismatch)
++{
+     Object* object;
+     unsigned int marker;
+     ObjectID oid;
+@@ -1406,7 +1411,8 @@
+ 
+     if (object->oid.type != OID_TYPE_NULL) {
+         if (!objid_is_equal(object->oid, oid)) {
+-            tig_debug_println("Error in obj_dif_read:\n  Object in memory already has an id, and dif would change the id.");
++            if (base_mismatch) *base_mismatch = true;
++            else tig_debug_println("Error in obj_dif_read:\n  Object in memory already has an id, and dif would change the id.");
+             obj_unlock(obj);
+             return false;
+         }
+diff --git a/src/game/obj.h b/src/game/obj.h
+--- a/src/game/obj.h
++++ b/src/game/obj.h
+@@ -396,6 +396,7 @@
+ int obj_is_modified(int64_t obj);
+ bool obj_dif_write(TigFile* stream, int64_t obj);
+ bool obj_dif_read(TigFile* stream, int64_t obj);
++bool obj_dif_read_checked(TigFile* stream, int64_t obj, bool* base_mismatch);
+ void sub_406B80(int64_t obj);
+ int obj_field_int32_get(int64_t obj, int field);
+ void obj_field_int32_set(int64_t obj, int field, int value);
 diff --git a/src/game/object.c b/src/game/object.c
 --- a/src/game/object.c
 +++ b/src/game/object.c
@@ -2756,6 +2891,261 @@ diff --git a/src/game/script.c b/src/game/script.c
      }
      case SAT_CAST_SPELL: {
          int64_t source_obj = script_get_obj(action->op_type[0], action->op_value[0], state);
+diff --git a/src/game/sector.c b/src/game/sector.c
+--- a/src/game/sector.c
++++ b/src/game/sector.c
+@@ -1,4 +1,5 @@
+ #include "game/sector.h"
++#include "game/modern_uap.h"
+ 
+ #include <inttypes.h>
+ #include <stdio.h>
+@@ -1450,7 +1451,22 @@
+ // FIXME: There are many cleanup errors (mosty leaking `dif_stream`).
+ //
+ // 0x4D1A30
++static bool sector_load_game_source(int64_t id, Sector* sector, bool original, bool* base_mismatch);
++
+ bool sector_load_game(int64_t id, Sector* sector)
++{
++    bool base_mismatch = false;
++    if (sector_load_game_source(id, sector, false, &base_mismatch)) return true;
++    sector_cache_evict(sector);
++    if (base_mismatch && modern_uap_ready()) {
++        tig_debug_printf("Sector %llu: preserving the original base for saved object differences.\n", (unsigned long long)id);
++        if (sector_load_game_source(id, sector, true, &base_mismatch)) return true;
++        sector_cache_evict(sector);
++    }
++    return false;
++}
++
++static bool sector_load_game_source(int64_t id, Sector* sector, bool original, bool* base_mismatch)
+ {
+     bool generated = false;
+     DifferenceFileFlags dif_flags = 0;
+@@ -1493,9 +1509,10 @@
+     sector_validate_game("sector pre-load");
+     if (!generated) {
+         li_update();
+-        sec_stream = tig_file_fopen(sec_path, "rb");
++        sec_stream = original ? modern_uap_original_sector(sec_path) : tig_file_fopen(sec_path, "rb");
+         if (sec_stream == NULL) {
+             tig_debug_printf("Error opening sector file %s\n", sec_path);
++            return false;
+         }
+ 
+         strcpy(dif_path, sector_save_path);
+@@ -1692,8 +1709,9 @@
+ 
+         li_update();
+         if ((dif_flags & DIF_HAVE_OBJ_LIST) != 0) {
+-            if (!objlist_load_with_difs(&(sector->objects), sec_stream, dif_stream, v2)) {
+-                tig_debug_printf("Error loading objects with differences from files %s and %s\n", sec_path, dif_path);
++            if (!objlist_load_with_difs(&(sector->objects), sec_stream, dif_stream, v2, base_mismatch)) {
++                if (!*base_mismatch || original || !modern_uap_ready())
++                    tig_debug_printf("Error loading objects with differences from files %s and %s\n", sec_path, dif_path);
+                 tig_file_fclose(sec_stream);
+                 tig_file_fclose(dif_stream);
+                 return false;
+diff --git a/src/game/sector_object_list.c b/src/game/sector_object_list.c
+--- a/src/game/sector_object_list.c
++++ b/src/game/sector_object_list.c
+@@ -186,120 +186,74 @@
+ }
+ 
+ // 0x4F1590
+-bool objlist_load_with_difs(SectorObjectList* list, TigFile* sec_stream, TigFile* dif_stream, int64_t sector_id)
+-{
+-    int pos;
+-    int cnt;
+-    int rc;
+-    int idx;
+-    bool dif;
+-    int extent;
+-    int64_t x;
+-    int64_t y;
+-    int64_t obj;
+-    int64_t loc;
+-    int tile;
+-
+-    pos = tig_file_ftell(sec_stream);
+-    if (pos == -1) {
+-        tig_debug_println("ERROR: Tell failed in objlist_load_with_difs.");
+-        return false;
+-    }
+-
+-    if (tig_file_fseek(sec_stream, -(int)sizeof(pos), 2) != 0) {
+-        return false;
+-    }
+-
+-    rc = (int)tig_file_fread(&cnt, sizeof(cnt), 1, sec_stream);
+-    if (rc != 1) {
+-        tig_debug_printf("ERROR: Can't read initial count in objlist_load_with_difs.  Result: %d  Error: %d  EOF: %d\n",
+-            rc,
+-            tig_file_ferror(sec_stream),
+-            tig_file_feof(sec_stream));
+-        return false;
+-    }
+-
+-    if (tig_file_fseek(sec_stream, pos, 0) != 0) {
+-        tig_debug_println("ERROR: Seek failed in objlist_load_with_difs.");
+-        return false;
+-    }
+-
+-    if (sector_id != -1) {
+-        x = SECTOR_X(sector_id);
+-        y = SECTOR_Y(sector_id);
+-    }
+-
+-    dif = false;
+-    extent = 0;
+-    list->next_temp_id = 0;
+-
+-    for (idx = 0; idx < cnt; idx++) {
+-        if (extent == 0) {
+-            rc = (int)tig_file_fread(&extent, sizeof(extent), 1, dif_stream);
+-            if (rc != 1) {
+-                tig_debug_printf("ERROR: Can't read dif_count in objlist_load_with_difs.\n       Result: %d  Error: %d  EOF: %d\n",
+-                    rc,
+-                    tig_file_ferror(sec_stream),
+-                    tig_file_feof(sec_stream));
++bool objlist_load_with_difs(SectorObjectList* list, TigFile* sec_stream, TigFile* dif_stream, int64_t sector_id, bool* base_mismatch)
++{
++    int pos = tig_file_ftell(sec_stream), count = 0, loaded = 0;
++    if (base_mismatch) *base_mismatch = false;
++    if (pos < 0 || tig_file_fseek(sec_stream, -(int)sizeof(count), SEEK_END)
++        || tig_file_fread(&count, sizeof(count), 1, sec_stream) != 1
++        || count < 0 || count > tig_file_filelength(sec_stream) / 4
++        || tig_file_fseek(sec_stream, pos, SEEK_SET)) return false;
++
++    // Validate every saved object before publishing the sector's contents.
++    int64_t* objects = (int64_t*)CALLOC(count ? count : 1, sizeof(*objects));
++    unsigned int extent = 0;
++    bool changed = false;
++    for (int i = 0; i < count; i++) {
++        if (!extent) {
++            if (tig_file_fread(&extent, sizeof(extent), 1, dif_stream) != 1) {
++                if (base_mismatch && tig_file_feof(dif_stream)) *base_mismatch = true;
++                goto failed;
++            }
++            changed = (extent & 0x80000000u) != 0;
++            extent &= 0x7fffffffu;
++            if (!extent) goto failed;
++            if (extent > (unsigned)(count - i)) {
++                if (base_mismatch) *base_mismatch = true;
++                goto failed;
++            }
++        }
++        int64_t obj;
++        if (!obj_read(sec_stream, &obj)) goto failed;
++        objects[loaded++] = obj;
++        if (sector_id != -1) {
++            int tile = tile_id_from_loc(obj_field_int64_get(obj, OBJ_F_LOCATION));
++            obj_field_int64_set(obj, OBJ_F_LOCATION,
++                location_make(SECTOR_X(sector_id) + TILE_X(tile),
++                    SECTOR_Y(sector_id) + TILE_Y(tile)));
++            sub_406B80(obj);
++        }
++        if (changed && !obj_dif_read_checked(dif_stream, obj, base_mismatch)) goto failed;
++        extent--;
++        obj_field_int32_set(obj, OBJ_F_TEMP_ID, i);
++    }
++    int final_count;
++    if (extent || tig_file_fread(&final_count, sizeof(final_count), 1, sec_stream) != 1
++        || final_count != count) goto failed;
++
++    list->next_temp_id = count;
++    for (int i = 0; i < loaded; i++) {
++        int64_t obj = objects[i];
++        if ((obj_field_int32_get(obj, OBJ_F_FLAGS) & OF_EXTINCT) != 0) {
++            obj_deallocate(obj);
++        } else {
++            if (!objlist_insert_internal(list, obj)) {
++                for (int j = i; j < loaded; j++) obj_deallocate(objects[j]);
++                FREE(objects);
++                sector_object_list_reset(list);
+                 return false;
+             }
+-
+-            dif = (extent & 0x80000000) != 0;
+-            extent &= ~0x80000000;
+-        }
+-
+-        if (!obj_read(sec_stream, &obj)) {
+-            tig_debug_println("ERROR: obj_read failed in objlist_load_with_difs.");
+-            return false;
+-        }
+-
+-        if (sector_id != -1) {
+-            loc = obj_field_int64_get(obj, OBJ_F_LOCATION);
+-            tile = tile_id_from_loc(loc);
+-            obj_field_int64_set(obj, OBJ_F_LOCATION, LOCATION_MAKE(x + (tile & 0x3F), y + ((tile >> 6) & 0x3F)));
+-            sub_406B80(obj);
+-        }
+-
+-        if (dif) {
+-            if (!obj_dif_read(dif_stream, obj)) {
+-                tig_debug_println("ERROR: obj_dif_read failed in objlist_load_with_difs.");
+-                return false;
+-            }
+-        }
+-
+-        extent--;
+-        obj_field_int32_set(obj, OBJ_F_TEMP_ID, list->next_temp_id++);
+-
+-        if ((obj_field_int32_get(obj, OBJ_F_FLAGS) & OF_EXTINCT) == 0) {
+-            if (!objlist_insert_internal(list, obj)) {
+-                tig_debug_println("ERROR: objlist_insert_internal failed in objlist_load_with_difs.");
+-                return false;
+-            }
+-
+             obj_load_postprocess(obj);
+-        } else {
+-            obj_deallocate(obj);
+-        }
+-    }
+-
+-    if (idx != cnt) {
+-        tig_debug_println("ERROR: Count doesn't match in objlist_load_with_difs.");
+-        return false;
+-    }
+-
+-    list->next_temp_id = idx;
+-
+-    rc = (int)tig_file_fread(&cnt, sizeof(cnt), 1, sec_stream);
+-    if (rc != 1) {
+-        tig_debug_printf("ERROR: Can't read final count in objlist_load_with_difs.\n       Result: %d  Error: %d  EOF: %d\n",
+-            rc,
+-            tig_file_ferror(sec_stream),
+-            tig_file_feof(sec_stream));
+-        return false;
+-    }
+-
++        }
++    }
++    FREE(objects);
+     list->modified = 1;
+     return true;
++
++failed:
++    for (int i = 0; i < loaded; i++) obj_deallocate(objects[i]);
++    FREE(objects);
++    return false;
+ }
+ 
+ // 0x4F1960
+diff --git a/src/game/sector_object_list.h b/src/game/sector_object_list.h
+--- a/src/game/sector_object_list.h
++++ b/src/game/sector_object_list.h
+@@ -16,7 +16,7 @@
+ bool objlist_remove(SectorObjectList* list, int64_t obj);
+ bool objlist_move(SectorObjectList* list, int64_t obj, int64_t location, int offset_x, int offset_y);
+ bool objlist_load(SectorObjectList* list, TigFile* stream, int64_t loc);
+-bool objlist_load_with_difs(SectorObjectList* list, TigFile* sec_stream, TigFile* dif_stream, int64_t sector_id);
++bool objlist_load_with_difs(SectorObjectList* list, TigFile* sec_stream, TigFile* dif_stream, int64_t sector_id, bool* base_mismatch);
+ bool objlist_save(SectorObjectList* list, TigFile* stream);
+ bool objlist_is_modified(SectorObjectList* list);
+ bool objlist_save_with_dif(SectorObjectList* list, TigFile* stream);
 diff --git a/src/game/skill.c b/src/game/skill.c
 --- a/src/game/skill.c
 +++ b/src/game/skill.c
@@ -2996,12 +3386,13 @@ diff --git a/src/main.c b/src/main.c
  
  #include "game/ai.h"
  #include "game/anim.h"
-@@ -46,10 +48,13 @@
+@@ -46,10 +48,14 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
 +#include "ui/modern_ui.h"
 +#include "ui/modern_map_generator.h"
++#include "ui/modern_uap_startup.h"
  #include "ui/mainmenu_ui.h"
  #include "ui/textedit_ui.h"
  #include "ui/wmap_rnd.h"
@@ -3010,7 +3401,7 @@ diff --git a/src/main.c b/src/main.c
  
  static void main_loop(void);
  static void handle_mouse_scroll(void);
-@@ -65,6 +70,10 @@
+@@ -65,6 +71,10 @@
  // 0x401000
  int main(int argc, char** argv)
  {
@@ -3021,7 +3412,7 @@ diff --git a/src/main.c b/src/main.c
      TigInitInfo init_info;
      TigVideoScreenshotSettings screenshotter;
      GameInitInfo game_init_info;
-@@ -205,10 +214,19 @@
+@@ -205,11 +215,22 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -3030,7 +3421,7 @@ diff --git a/src/main.c b/src/main.c
  
      if (tig_init(&init_info) != TIG_OK) {
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
-+    }
+     }
 +    modern_movie_init();
 +
 +    /* Apply the saved output mode before the splash is first presented.
@@ -3039,10 +3430,13 @@ diff --git a/src/main.c b/src/main.c
 +    if(tig_video_window_get(&startup_window)==TIG_OK) {
 +        modern_graphics_init(startup_window);
 +        SDL_PumpEvents();
-     }
++    }
++
++    if (!modern_uap_startup()) {tig_exit(); return EXIT_SUCCESS;}
  
      screenshotter.key = SDL_SCANCODE_F12;
-@@ -290,9 +308,25 @@
+     screenshotter.field_4 = 0;
+@@ -290,9 +311,25 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
@@ -3068,7 +3462,7 @@ diff --git a/src/main.c b/src/main.c
  
      if (!mainmenu_ui_handle()) {
          gameuilib_exit();
-@@ -317,6 +351,7 @@
+@@ -317,6 +354,7 @@
  
      main_loop();
  
@@ -3076,7 +3470,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,8 +418,10 @@
+@@ -383,8 +421,10 @@
              output_profile_data = false;
          }
  
@@ -3087,7 +3481,7 @@ diff --git a/src/main.c b/src/main.c
          iso_redraw();
          tig_window_display();
  
-@@ -698,6 +735,7 @@
+@@ -698,6 +738,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -3095,7 +3489,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +781,26 @@
+@@ -743,25 +784,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {

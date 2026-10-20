@@ -29,4 +29,6 @@ for arcanum_movie_library in libavformat.so.62 libavcodec.so.62 libavutil.so.60;
 done
 cp "$arcanum_build/arcanum-ce" "$arcanum_project/game/arcanum-modern.new"
 mv "$arcanum_project/game/arcanum-modern.new" "$arcanum_project/game/arcanum-modern"
+python3 "$arcanum_project/tools/build-uap.py" --target linux --output "$arcanum_build/uap-runtime"
+cp -R "$arcanum_build/uap-runtime/ArcanumModern/." "$arcanum_project/game/ArcanumModern/"
 printf '%s\n' 'Compilation installée. Elle sera utilisée au prochain lancement.'

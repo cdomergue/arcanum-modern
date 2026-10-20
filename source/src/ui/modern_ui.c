@@ -792,9 +792,15 @@ static void gauge(float x,float y,int value,int maximum,bool fatigue)
 
 static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color);
 
+static bool hud_message_visible(void)
+{
+    return *message_text && SDL_GetTicks()-message_time
+        < (text_measure(0,message_text)>475 ? 4000 : 12000);
+}
+
 static bool hud_message_expanded(void)
 {
-    return *message_text && SDL_GetTicks()-message_time<12000
+    return hud_message_visible()
         && text_measure(0,message_text)>475;
 }
 
@@ -845,7 +851,7 @@ static void draw_hud(void)
 
     }
     rule(sx,y+69,480,(SDL_Color){117,87,44,255});
-    if(*message_text && SDL_GetTicks()-message_time<12000 && !hud_message_expanded()) {
+    if(hud_message_visible() && !hud_message_expanded()) {
         text_draw(0,message_text,sx,y+79,GOLD);
     } else {
         char status[256];

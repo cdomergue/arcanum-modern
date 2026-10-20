@@ -67,10 +67,13 @@ def package(app, build_dir, output):
             subprocess.run(['codesign', '--force', '--sign', '-', str(library)], check=True)
         if {p.name for p in frameworks.iterdir()} != set(resources.MOVIE_LIBRARIES['macos']):
             raise ValueError('Unexpected framework in app bundle')
+        movies.update(resources.uap_files('macos'))
         for name, data in movies.items():
             destination = stage/name
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(data)
+            if name in ('ArcanumModern/uap/uap-helper', 'ArcanumModern/uap/7zz'):
+                destination.chmod(0o755)
         info['CFBundleName'] = 'Arcanum Renaissance'
         info['CFBundleDisplayName'] = 'Arcanum Renaissance'
         info['CFBundleIdentifier'] = 'org.arcanummodern.game'

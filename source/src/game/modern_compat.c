@@ -2,6 +2,7 @@
 
 #include <tig/tig.h>
 #include "game/stat.h"
+#include "game/modern_uap.h"
 
 static ModernCompatibility compatibility = { .level_limit = 51 };
 
@@ -17,9 +18,9 @@ static bool bytes_match(TigFile* file, long offset, const unsigned char* expecte
 void modern_compat_load(void)
 {
     compatibility = (ModernCompatibility){ .level_limit = 51 };
-    compatibility.uap = tig_file_exists("Arcanum5.dat", NULL);
-    compatibility.races = tig_file_exists("ArcanumXRaces.dat", NULL);
-    tig_art_mirroring_set(!tig_file_exists("ArcanumXAnims1Base.dat", NULL));
+    compatibility.uap = modern_uap_ready() || tig_file_exists("Arcanum5.dat", NULL);
+    compatibility.races = modern_uap_ready() || tig_file_exists("ArcanumXRaces.dat", NULL);
+    tig_art_mirroring_set(!modern_uap_ready() && !tig_file_exists("ArcanumXAnims1Base.dat", NULL));
     if (!compatibility.uap) return;
 
     TigFile* exe = tig_file_fopen("Arcanum.exe", "rb");

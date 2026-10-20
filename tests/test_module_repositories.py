@@ -24,6 +24,7 @@ static char gamelib_mod_dat_path[64]="modules/Time.dat",byte_5D0EA4[64]="Time";
 static char gamelib_mod_patch_paths[3][64]={"modules/Time.patch0","","modules/Time.patch9"};
 static unsigned char gamelib_mod_guid[16]={1};
 static int calls,removed;
+static void modern_uap_module_unload(void){assert(calls==2 && !removed);}
 static void unload_last(void){assert(!removed);assert(calls++==0);}
 static void unload_first(void){assert(!removed);assert(calls++==1);}
 static struct {void (*mod_unload_func)(void);} gamelib_modules[2]={{unload_first},{unload_last}};

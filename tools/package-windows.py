@@ -2,6 +2,7 @@
 """Package Windows resources, optionally including an installed game's data."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -41,10 +42,20 @@ def movie_files(build_dir, platform):
     return files
 
 
+def uap_files(platform):
+    spec = importlib.util.spec_from_file_location('uap_builder', ROOT/'tools/build-uap.py')
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    with tempfile.TemporaryDirectory(prefix='arcanum-uap-') as directory:
+        return builder.build(platform, Path(directory), ROOT/'build/uap-tools')
+
+
 def validate_pe_dependencies(files):
-    bundled = set(MOVIE_LIBRARIES['windows'])
-    for name in ('arcanum-modern.exe', *bundled):
-        imports = pe_imports(files[name])
+    bundled = {Path(name).name.lower() for name in files if name.lower().endswith('.dll')}
+    for name, data in files.items():
+        if not name.lower().endswith(('.exe', '.dll')):
+            continue
+        imports = pe_imports(data)
         missing = sorted(n for n in imports if n not in SYSTEM_DLLS | bundled
                          and not n.startswith(('api-ms-win-', 'ext-ms-win-')))
         if missing:
@@ -165,6 +176,7 @@ def package(exe, build_dir, output, include_game=None):
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/windows/INSTALL.txt').read_bytes(),
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
     files.update(movie_files(build_dir, 'windows'))
+    files.update(uap_files('windows'))
     validate_pe_dependencies(files)
     for name in ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()

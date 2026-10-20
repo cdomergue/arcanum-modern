@@ -41,12 +41,18 @@ for group in groups:
         if (game/'data').is_dir():
             shutil.copytree(game/'data', root/'data', ignore=lambda path, names: [
                 name for name in names if name.lower() in ('save', 'saves', 'players', 'tigcache', 'maps')])
+        overlay = game/'modern-ui/uap-fr/active'
+        if (overlay/'ready').exists():
+            shutil.copytree(overlay, root/'modern-ui/uap-fr/active', copy_function=lambda src, dst: copy_archive(Path(src), Path(dst)))
         cache = root/'modern-ui/local-maps'
         assert not cache.exists()
         for count in (1, 2):
             result = subprocess.run([str(engine), '--modern-generate-maps', str(root), '1'], timeout=300)
             log = (root/'modern-ui/.map-work/generation.log').read_text(errors='replace')
             assert result.returncode == 75, log[-4000:]
+            if (overlay/'ready').exists():
+                assert 'french-global.dat' in log
+                if 'arcanum' in names: assert 'french-module.dat' in log
             assert len(list(cache.rglob('*.png'))) == count * 4, 'Incomplete tile or resume skipped completed work'
             assert 'Cannot open map' not in log and 'Error reading mobile objects' not in log, log[-4000:]
         for module in group:

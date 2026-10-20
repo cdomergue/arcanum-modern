@@ -29,6 +29,8 @@
 !/source/src/game/modern_shared_turn.inc
 !/source/src/game/modern_autosave.c
 !/source/src/game/modern_autosave.h
+!/source/src/game/modern_uap.c
+!/source/src/game/modern_uap.h
 !/source/src/game/modern_compat.c
 !/source/src/game/modern_compat.h
 !/source/src/ui/
@@ -45,6 +47,8 @@
 !/source/src/ui/modern_map_camera.inc
 !/source/src/ui/modern_map_travel.inc
 !/source/src/ui/modern_map_bitmap.inc
+!/source/src/ui/modern_uap_startup.c
+!/source/src/ui/modern_uap_startup.h
 !/source/src/ui/modern_map_generator.c
 !/source/src/ui/modern_map_generator.h
 !/source/src/ui/modern_map_startup.inc
