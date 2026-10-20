@@ -161,7 +161,7 @@ def package(exe, build_dir, output, include_game=None):
     binary = exe.read_bytes()
     imports = pe_imports(binary)
     files = {'arcanum-modern.exe': binary,
-             'Play Arcanum Modern.bat': (ROOT/'tools/windows/Play Arcanum Modern.bat').read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'),
+             'Play Arcanum Renaissance.bat': (ROOT/'tools/windows/Play Arcanum Renaissance.bat').read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/windows/INSTALL.txt').read_bytes(),
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
     files.update(movie_files(build_dir, 'windows'))

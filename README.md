@@ -22,7 +22,7 @@ settings. You do not need to compile anything or install development tools.
 Close the game before installing or updating, and use a folder you can write to.
 
 A Windows ZIP is also available in [Releases](https://github.com/cdomergue/arcanum-modern/releases/latest) for manual
-installation: extract it into your Arcanum folder, then open **Play Arcanum Modern.bat**.
+installation: extract it into your Arcanum folder, then open **Play Arcanum Renaissance.bat**.
 
 ### macOS
 
@@ -33,9 +33,9 @@ This version requires an Apple Silicon Mac (M1 or newer) with macOS 11 or later.
 ### Linux
 
 Download the Linux x64 ZIP from [Releases](https://github.com/cdomergue/arcanum-modern/releases/latest) and extract it
-into your Arcanum game folder. Run **Play Arcanum Modern.sh** from that folder.
+into your Arcanum game folder. Run **Play Arcanum Renaissance.sh** from that folder.
 If your file manager does not run shell scripts, open a terminal there and enter
-`./"Play Arcanum Modern.sh"`.
+`./"Play Arcanum Renaissance.sh"`.
 
 ### Game files and HD maps
 

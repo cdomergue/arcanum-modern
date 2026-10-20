@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('windows_package', ROOT/'tools/package-windows.py')
 package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
-REQUIRED_FILES = {'arcanum-modern.exe', 'Play Arcanum Modern.bat',
+REQUIRED_FILES = {'arcanum-modern.exe', 'Play Arcanum Renaissance.bat',
                   'ArcanumModern/INSTALL.txt', 'ArcanumModern/README.md',
                   'ArcanumModern/licenses/arcanum-ce.md',
                   'ArcanumModern/licenses/SDL3.txt', 'ArcanumModern/licenses/SDL3_mixer.txt',

@@ -2,10 +2,10 @@ ARCANUM MODERN - LINUX x64
 
 Extract the entire ZIP into your own Arcanum 1.0.7.4 installation, beside
 arcanum1.dat. Keep the modern-ui directory. Use a writable game folder.
-Run ./"Play Arcanum Modern.sh" from a terminal, or launch the script through
+Run ./"Play Arcanum Renaissance.sh" from a terminal, or launch the script through
 your file manager. If the archive tool discarded executable permissions, run:
 
-  chmod +x arcanum-modern "Play Arcanum Modern.sh"
+  chmod +x arcanum-modern "Play Arcanum Renaissance.sh"
 
 The release workflow builds on Ubuntu 22.04 for x86-64 Linux with glibc 2.35
 or newer. Locally generated packages record their minimum glibc version in
@@ -15,7 +15,7 @@ needs X11 or XWayland, graphics drivers (Vulkan by default) and an audio backend
 such as PulseAudio or ALSA. No separate SDL installation is required.
 
 For a windowed session:
-  ./"Play Arcanum Modern.sh" -window -geometry=1280x720
+  ./"Play Arcanum Renaissance.sh" -window -geometry=1280x720
 
 The launcher tries Vulkan first. If it exits with a segmentation fault before
 reaching the main menu, the launcher retries once using X11 software rendering
@@ -24,7 +24,7 @@ modern-launch-vulkan.log and writes the retry to modern-launch.log. Crashes
 at the menu or during gameplay do not trigger an automatic restart.
 
 To use software rendering directly:
-  SDL_RENDER_DRIVER=software ./"Play Arcanum Modern.sh"
+  SDL_RENDER_DRIVER=software ./"Play Arcanum Renaissance.sh"
 
 Selecting a renderer explicitly disables automatic retry. With software selected,
 X11 and disabled framebuffer acceleration are defaults; SDL_VIDEO_DRIVER and

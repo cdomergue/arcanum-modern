@@ -3591,6 +3591,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (pc_obj != OBJ_HANDLE_NULL) {
                      unsigned int spell_flags;
                      unsigned int critter_flags;
+@@ -2757,7 +2783,7 @@
+                         && (critter_flags & (OCF_PARALYZED | OCF_STUNNED)) == 0
+                         && critter_is_active(pc_obj)
+                         && !critter_is_prone(pc_obj)) {
+-                        if (combat_critter_is_combat_mode_active(pc_obj)) {
++                        if (combat_turn_based_is_active() || combat_critter_is_combat_mode_active(pc_obj)) {
+                             if (anim_is_current_goal_type(pc_obj, AG_ANIM_FIDGET, NULL)
+                                 || !sub_423300(pc_obj, 0)) {
+                                 intgame_combat_mode_toggle();
 @@ -2972,6 +2998,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {

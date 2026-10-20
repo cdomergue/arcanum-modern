@@ -47,7 +47,7 @@ def package(exe, build_dir, output):
         raise ValueError('Expected a glibc-linked Linux executable')
     minimum_glibc = max(glibc, key=lambda v: tuple(map(int, v.split('.'))))
     files = {'arcanum-modern': binary,
-             'Play Arcanum Modern.sh': (ROOT/'tools/linux/Play Arcanum Modern.sh').read_bytes(),
+             'Play Arcanum Renaissance.sh': (ROOT/'tools/linux/Play Arcanum Renaissance.sh').read_bytes(),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/linux/INSTALL.txt').read_bytes(),
              'ArcanumModern/README.md': (ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode(),
              'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
@@ -93,7 +93,7 @@ def package(exe, build_dir, output):
                 info = zipfile.ZipInfo(name)
                 info.create_system = 3
                 info.compress_type = zipfile.ZIP_DEFLATED
-                executable = name in {'arcanum-modern', 'Play Arcanum Modern.sh'}
+                executable = name in {'arcanum-modern', 'Play Arcanum Renaissance.sh'}
                 info.external_attr = (0o100755 if executable else 0o100644) << 16
                 z.writestr(info, data)
         archive.replace(output)

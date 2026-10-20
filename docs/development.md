@@ -147,11 +147,11 @@ required. musl-based distributions are not supported by this package.
 Extract the generated ZIP into your writable Arcanum game folder, then run:
 
 ```sh
-./"Play Arcanum Modern.sh"
+./"Play Arcanum Renaissance.sh"
 ```
 
 If your archive tool discards executable permissions, restore them with
-`chmod +x arcanum-modern "Play Arcanum Modern.sh"`. The launcher accepts the same
+`chmod +x arcanum-modern "Play Arcanum Renaissance.sh"`. The launcher accepts the same
 arguments as `play.sh` and writes `modern-launch.log` in the game folder.
 
 ### macOS Apple Silicon
@@ -184,7 +184,7 @@ that can be started manually when Actions is enabled for the repository.
 
 The Windows builds target Windows 10/11, x64. After any of the Windows build
 methods below finishes, extract the generated ZIP into your prepared game folder
-and open **Play Arcanum Modern.bat**. Always extract the archive before launching
+and open **Play Arcanum Renaissance.bat**. Always extract the archive before launching
 the game. The package keeps the original `Arcanum.exe`.
 
 Install:
@@ -301,7 +301,7 @@ Generating and including a complete map collection can add several gigabytes.
 
 Saved games, player files, notes, personal preferences, screenshots, temporary
 caches and macOS applications are excluded. Once generated, extract the complete
-ZIP into a writable folder and open **Play Arcanum Modern.bat**; no separate
+ZIP into a writable folder and open **Play Arcanum Renaissance.bat**; no separate
 game-file copying is needed for that package. Without `--include-game`, packaging
 remains mod-only.
 
@@ -406,7 +406,7 @@ When a release has been published, Windows users can choose the setup to select
 their installed game's folder and create shortcuts, or extract the standard ZIP
 into that folder themselves. macOS users extract its ZIP beside their game
 archives and open `Arcanum Modern.app`. Linux users extract its ZIP beside their
-game archives and run `Play Arcanum Modern.sh`.
+game archives and run `Play Arcanum Renaissance.sh`.
 
 ## Development and contributing
 

@@ -24,6 +24,7 @@ jobs:
           python3 tests/test_tactical_camera.py
           python3 tests/test_keyboard_capture.py
           python3 tests/test_combat_binding.py
+          python3 tests/test_combat_exit.py
           python3 tests/test_map_route.py
           python3 tests/test_camera_keys.py
           python3 tests/test_qol_preferences.py
@@ -54,12 +55,12 @@ jobs:
           unzip -q dist/ArcanumModern-linux-x64.zip -d "$RUNNER_TEMP/linux-package"
           cd "$RUNNER_TEMP/linux-package"
           test -x arcanum-modern
-          test -x "Play Arcanum Modern.sh"
+          test -x "Play Arcanum Renaissance.sh"
           ldd ./arcanum-modern > dependencies.txt
           cat dependencies.txt
           if grep -q 'not found' dependencies.txt; then exit 1; fi
           ./arcanum-modern --check-movies
-          if ./"Play Arcanum Modern.sh" 2> missing-game.txt; then exit 1; fi
+          if ./"Play Arcanum Renaissance.sh" 2> missing-game.txt; then exit 1; fi
           grep -q arcanum1.dat missing-game.txt
       - uses: actions/upload-artifact@v4
         with:

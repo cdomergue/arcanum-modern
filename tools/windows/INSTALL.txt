@@ -2,7 +2,7 @@ ARCANUM MODERN - WINDOWS x64
 
 1. Install your own copy of Arcanum (version 1.0.7.4).
 2. Extract this ZIP into its game folder, next to Arcanum.exe and arcanum1.dat.
-3. Open "Play Arcanum Modern.bat".
+3. Open "Play Arcanum Renaissance.bat".
 
 No compiler, Python, separate SDL installation or administrator rights are needed
 for players. Windows 10/11 x64 is the intended target. Use a writable game folder.

@@ -41,8 +41,8 @@ class LinuxPackageTests(unittest.TestCase):
     def test_launcher_uses_game_folder_and_forwards_arguments(self):
         with tempfile.TemporaryDirectory(prefix='arcanum linux ') as temp:
             game = Path(temp)
-            launcher = game/'Play Arcanum Modern.sh'
-            launcher.write_bytes((ROOT/'tools/linux/Play Arcanum Modern.sh').read_bytes())
+            launcher = game/'Play Arcanum Renaissance.sh'
+            launcher.write_bytes((ROOT/'tools/linux/Play Arcanum Renaissance.sh').read_bytes())
             result = subprocess.run(['sh', str(launcher)], capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('arcanum1.dat', result.stderr)
@@ -65,7 +65,7 @@ class LinuxPackageTests(unittest.TestCase):
             self.p.validate_dependencies('0x1 (RUNPATH) Library runpath: [$ORIGIN:/tmp/libraries]')
 
     def test_launcher_crash_recovery(self):
-        for script in ('tools/linux/Play Arcanum Modern.sh', 'play.sh'):
+        for script in ('tools/linux/Play Arcanum Renaissance.sh', 'play.sh'):
             for mode, renderer, attempts, status in (
                 ('crash', '', 2, 0), ('ready', '', 1, 139),
                 ('error', '', 1, 24), ('ok', '', 1, 0),
@@ -120,7 +120,7 @@ def verify_archive(path):
         metadata = json.loads(z.read('ArcanumModern/manifest.json'))
         assert metadata['target'] == 'linux-x86_64' and metadata['includes_game_data'] is False
         assert tuple(map(int, metadata['minimum_glibc'].split('.'))) <= (2, 35)
-        required = {'arcanum-modern', 'Play Arcanum Modern.sh'} | {'modern-ui/'+s for s in p.resources.ASSETS}
+        required = {'arcanum-modern', 'Play Arcanum Renaissance.sh'} | {'modern-ui/'+s for s in p.resources.ASSETS}
         required |= {'ArcanumModern/lib/'+name for name in p.resources.MOVIE_LIBRARIES['linux']}
         assert required.issubset(names)
         for name in names:
@@ -131,7 +131,7 @@ def verify_archive(path):
         assert set(metadata['sha256']) == set(names) - {'ArcanumModern/manifest.json'}
         for name, digest in metadata['sha256'].items():
             assert hashlib.sha256(z.read(name)).hexdigest() == digest, name
-        for name in ('arcanum-modern', 'Play Arcanum Modern.sh'):
+        for name in ('arcanum-modern', 'Play Arcanum Renaissance.sh'):
             assert (z.getinfo(name).external_attr >> 16) & 0o111 == 0o111, name
     print('PASS: Linux x64 package, glibc baseline, executable permissions, hashes and no game data')
 

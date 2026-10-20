@@ -15,7 +15,7 @@ with zipfile.ZipFile(archive) as z:
     metadata=json.loads(z.read('ArcanumModern/manifest.json'))
     full=metadata.get('includes_game_data',False)
     names=z.namelist();assert len(names)==len(set(names))
-    expected={'arcanum-modern.exe','Play Arcanum Modern.bat'}|{'modern-ui/'+s for s in p.ASSETS}|set(p.MOVIE_LIBRARIES['windows'])
+    expected={'arcanum-modern.exe','Play Arcanum Renaissance.bat'}|{'modern-ui/'+s for s in p.ASSETS}|set(p.MOVIE_LIBRARIES['windows'])
     p.validate_pe_dependencies({name:z.read(name) for name in ('arcanum-modern.exe',*p.MOVIE_LIBRARIES['windows'])})
     for name in names:
         assert full or name in expected or name.startswith('ArcanumModern/'),name
@@ -28,7 +28,7 @@ with zipfile.ZipFile(archive) as z:
     if full:
         assert p.REQUIRED_GAME_FILES.issubset({name.lower() for name in names})
     assert expected.issubset(names)
-    assert z.read('Play Arcanum Modern.bat').count(b'\r\n')>10
+    assert z.read('Play Arcanum Renaissance.bat').count(b'\r\n')>10
     assert sorted(p.pe_imports(z.read('arcanum-modern.exe')))==metadata['imports']
     for name,digest in metadata['sha256'].items():
         actual=hashlib.sha256()
