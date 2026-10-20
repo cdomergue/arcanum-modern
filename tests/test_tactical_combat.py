@@ -46,6 +46,8 @@ typedef struct {int delay;} DateTime;
 static ObjectNode turn={2};static ObjectNode* dword_5FC240=&turn;
 static bool tactical_enabled=true,combat_turn_based_active=true;
 static bool camera_blocked;
+static int64_t selected;
+static int64_t modern_party_selected(void){return selected;}
 static bool modern_combat_input_blocked(void){return camera_blocked;}
 static int combat_action_points=8,combat_required_action_points;
 static int64_t qword_5FC258;
@@ -126,6 +128,8 @@ int main(void){
  combat_tb_timeevent_process(&event);assert(advanced==1&&combat_action_points==0);
  active[2]=true;
  combat_turn_based_active=false;assert(combat_input_actor()==1);
+ selected=2;assert(combat_input_actor()==2&&combat_player_controls(2)&&!combat_player_controls(3));
+ assert(player_get_local_pc_obj()==1);selected=0;assert(!combat_player_controls(2));
  assert(combat_consume_action_points(2,4)&&damage==0);
  puts("PASS: actor ownership, stale/end-turn input, animation wait, fear/control, original PA and fatigue rules");
 }

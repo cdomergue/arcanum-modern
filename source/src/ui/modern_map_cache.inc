@@ -4,7 +4,10 @@ typedef struct MapCacheTile {
     SDL_Texture* texture;
 } MapCacheTile;
 
-static MapCacheTile map_cache_tiles[32];
+enum {MAP_CACHE_BASE_TILES=32, MAP_CACHE_MAX_TILES=2048};
+static MapCacheTile map_cache_tiles[MAP_CACHE_MAX_TILES];
+static int map_cache_level=-1, map_cache_capacity=MAP_CACHE_BASE_TILES;
+static Uint64 map_cache_clock;
 static char map_cache_folder[1024];
 static TownMapInfo map_cache_info;
 static int map_cache_id = -1;
@@ -12,11 +15,11 @@ static bool map_cache_available, map_texture_hd;
 
 static void map_cache_clear(void)
 {
-    for(int i=0;i<32;i++) {
+    for(int i=0;i<MAP_CACHE_MAX_TILES;i++) {
         SDL_DestroyTexture(map_cache_tiles[i].texture);
         map_cache_tiles[i]=(MapCacheTile){0};
     }
-    map_cache_id=-1;
+    map_cache_id=-1;map_cache_level=-1;map_cache_clock=0;
 }
 
 static bool map_cache_prepare(const ModernMap* map)
@@ -43,11 +46,19 @@ static bool map_cache_prepare(const ModernMap* map)
 
 static SDL_Texture* map_cache_tile(int x,int y,int level)
 {
+    if(map_cache_level!=level) {
+        for(int i=0;i<MAP_CACHE_MAX_TILES;i++) {
+            SDL_DestroyTexture(map_cache_tiles[i].texture);
+            map_cache_tiles[i]=(MapCacheTile){0};
+        }
+        map_cache_level=level;
+        map_cache_capacity=MAP_CACHE_BASE_TILES<<(2*level);
+    }
     int slot=0;
-    for(int i=0;i<32;i++) {
+    for(int i=0;i<map_cache_capacity;i++) {
         MapCacheTile* tile=&map_cache_tiles[i];
         if(tile->texture && tile->x==x && tile->y==y && tile->level==level) {
-            tile->used=SDL_GetTicks();return tile->texture;
+            tile->used=++map_cache_clock;return tile->texture;
         }
         if(!tile->texture || tile->used<map_cache_tiles[slot].used)slot=i;
     }
@@ -59,7 +70,7 @@ static SDL_Texture* map_cache_tile(int x,int y,int level)
     if(!texture)return NULL;
     SDL_SetTextureScaleMode(texture,SDL_SCALEMODE_LINEAR);
     SDL_DestroyTexture(map_cache_tiles[slot].texture);
-    map_cache_tiles[slot]=(MapCacheTile){x,y,level,SDL_GetTicks(),texture};
+    map_cache_tiles[slot]=(MapCacheTile){x,y,level,++map_cache_clock,texture};
     return texture;
 }
 

@@ -4,7 +4,7 @@ Unicode true
 !include "x64.nsh"
 !include "WinVer.nsh"
 
-Name "Arcanum Modern"
+Name "Arcanum Renaissance"
 OutFile "ArcanumModern-windows-x64-setup.exe"
 RequestExecutionLevel user
 ManifestDPIAware true
@@ -17,14 +17,14 @@ ShowUninstDetails show
 Var GameIcon
 
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TEXT "Install Arcanum Modern into your existing Arcanum 1.0.7.4 game folder.$\r$\n$\r$\nThe setup includes the engine and interface resources. You must supply your own game installation.$\r$\n$\r$\nClose the game before continuing. Your original executable, saved games and preferences are kept."
+!define MUI_WELCOMEPAGE_TEXT "Install Arcanum Renaissance into your existing Arcanum 1.0.7.4 game folder.$\r$\n$\r$\nThe setup includes the engine and interface resources. You must supply your own game installation.$\r$\n$\r$\nClose the game before continuing. Your original executable, saved games and preferences are kept."
 !insertmacro MUI_PAGE_WELCOME
 !define MUI_DIRECTORYPAGE_TEXT_TOP "Choose your existing Arcanum 1.0.7.4 game folder (the folder containing arcanum1.dat)."
 !define MUI_DIRECTORYPAGE_VERIFYONLEAVE
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckGameDirectory
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
-!define MUI_FINISHPAGE_TEXT "Arcanum Modern is installed. Use the desktop or Start menu shortcut to play."
+!define MUI_FINISHPAGE_TEXT "Arcanum Renaissance is installed. Use the desktop or Start menu shortcut to play."
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
@@ -32,12 +32,12 @@ Var GameIcon
 
 Function .onInit
   ${IfNot} ${RunningX64}
-    MessageBox MB_OK|MB_ICONSTOP "Arcanum Modern requires 64-bit Windows 10 or later." /SD IDOK
+    MessageBox MB_OK|MB_ICONSTOP "Arcanum Renaissance requires 64-bit Windows 10 or later." /SD IDOK
     SetErrorLevel 2
     Quit
   ${EndIf}
   ${IfNot} ${AtLeastWin10}
-    MessageBox MB_OK|MB_ICONSTOP "Arcanum Modern requires Windows 10 or later." /SD IDOK
+    MessageBox MB_OK|MB_ICONSTOP "Arcanum Renaissance requires Windows 10 or later." /SD IDOK
     SetErrorLevel 2
     Quit
   ${EndIf}
@@ -65,7 +65,7 @@ unwritable:
   Abort
 FunctionEnd
 
-Section "Arcanum Modern"
+Section "Arcanum Renaissance"
   Call CheckGameDirectory
   SetOverwrite on
   ClearErrors
@@ -83,7 +83,7 @@ Section "Arcanum Modern"
   CreateShortcut "$SMPROGRAMS\Arcanum Modern\Arcanum Modern.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
   CreateShortcut "$SMPROGRAMS\Arcanum Modern\Uninstall.lnk" "$INSTDIR\Uninstall Arcanum Modern.exe"
   WriteRegStr HKCU "Software\ArcanumModern" "InstallDir" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayName" "Arcanum Modern"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayName" "Arcanum Renaissance"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "UninstallString" '$\"$INSTDIR\Uninstall Arcanum Modern.exe$\"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayIcon" "$GameIcon"
@@ -93,7 +93,7 @@ Section "Arcanum Modern"
   SetErrorLevel 0
   Goto done
 failed:
-  MessageBox MB_OK|MB_ICONSTOP "Installation could not finish. Close Arcanum Modern, check that the game folder is writable, then run setup again." /SD IDOK
+  MessageBox MB_OK|MB_ICONSTOP "Installation could not finish. Close Arcanum Renaissance, check that the game folder is writable, then run setup again." /SD IDOK
   SetErrorLevel 2
   Abort
 done:

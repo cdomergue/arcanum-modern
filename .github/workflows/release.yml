@@ -33,6 +33,7 @@ jobs:
           python3 tests/test_party_grouping.py
           python3 tests/test_autosave.py
           python3 tests/test_map_camera.py
+          python3 tests/test_map_cache_residency.py
           python3 tests/test_map_fog.py
           python3 tests/test_map_local_input.py
           python3 tests/test_map_travel.py
@@ -181,5 +182,5 @@ jobs:
             gh release upload "$RELEASE_TAG" "${files[@]}" SHA256SUMS.txt --clobber
           else
             gh release create "$RELEASE_TAG" "${files[@]}" SHA256SUMS.txt \
-              --verify-tag --draft --title "Arcanum Modern $RELEASE_TAG" --generate-notes
+              --verify-tag --draft --title "Arcanum Renaissance $RELEASE_TAG" --generate-notes
           fi

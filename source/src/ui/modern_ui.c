@@ -1,5 +1,5 @@
 #include "ui/modern_map_generator.h"
-/* Arcanum Modern: native-resolution presentation, independent of world pixels.
+/* Arcanum Renaissance: native-resolution presentation, independent of world pixels.
  * Original artwork is read from the user's DAT files; gameplay remains upstream.
  */
 #include "ui/modern_ui.h"
@@ -804,7 +804,8 @@ static void draw_hud(void)
     for(int i=0;i<5;i++) button((SDL_FRect){tx+13+i*182,20,175,40},actions[i],i==4?fate_label:labels[i],icons[i],false,controls_enabled);
     float w=980,x=(canvas_w-w)/2,y=canvas_h-126;
     frame((SDL_FRect){x,y,w,116});
-    int64_t pc=player_get_local_pc_obj();
+    int64_t pc=combat_input_actor();
+    if(!pc)pc=player_get_local_pc_obj();
     gauge(x+27,y+9,object_hp_current(pc),object_hp_max(pc),false);
     gauge(x+w-65,y+9,critter_fatigue_current(pc),critter_fatigue_max(pc),true);
     float sx=x+102;

@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository contains the Arcanum Modern interface mod. The local `game/`
+This repository contains the Arcanum Renaissance interface mod. The local `game/`
 installation and the upstream engine in `source/` are working copies, not content
 to import wholesale into Git. Never change the parent installation or its saves.
 

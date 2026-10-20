@@ -1,4 +1,4 @@
-# Arcanum Modern
+# Arcanum Renaissance
 
 An experimental, unofficial modernization of **Arcanum: Of Steamworks and
 Magick Obscura**, featuring a redesigned interface and **BG3-inspired tactical
@@ -15,7 +15,7 @@ You need your own copy of the original game:
 
 1. Install your own copy of **Arcanum**, updated to **1.0.7.4**.
 2. Open the downloaded setup and select the folder where Arcanum is installed.
-3. Launch **Arcanum Modern** using the shortcut on your desktop or in the Start menu.
+3. Launch the game using the shortcut on your desktop or in the Start menu.
 
 The setup installs the mod for you and keeps your original game, saves and
 settings. You do not need to compile anything or install development tools.
@@ -148,9 +148,11 @@ wheel or − / + buttons to zoom in or out.
 
 Outside combat, the **`=` / `/`** control on a companion portrait toggles grouping.
 Click a portrait to select and detach that companion, then click the ground to
-move them or a door/container to interact. Click the portrait again, the
-**Player** button, or right-click the world to return to your main character.
-Conversations use the main character. Grouping is saved with the game;
+move them, interact, use their skills, cast their spells or manage their inventory.
+Click the portrait again, the **Player** button, or right-click the world to
+return to your main character.
+Conversations use the selected companion’s characteristics and skills; quest
+progress remains shared with the main character. Grouping is saved with the game;
 area transitions retain the game's normal party travel behavior.
 
 The combat log retains up to 128 recent lines during the session and remains
@@ -207,7 +209,7 @@ build instructions, packaging, tests and contributing.
 
 ## Credits and licenses
 
-Arcanum was created by **Troika Games**. Arcanum Modern is an unofficial project.
+Arcanum was created by **Troika Games**. Arcanum Renaissance is an unofficial project.
 
 The engine is based on **Arcanum Community Edition**, by **Alex Batalov**, under
 its [Sustainable Use License](https://github.com/alexbatalov/arcanum-ce/blob/a7ff41b300ef712f0e7d088183a3d08957110cdd/LICENSE.md).

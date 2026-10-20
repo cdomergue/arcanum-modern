@@ -46,6 +46,9 @@ int64_t modern_party_selected(void)
 
 bool modern_party_select(int64_t obj)
 {
+    if(dialog_ui_is_in_dialog(player_get_local_pc_obj()))return false;
+    if(obj!=party_selected && (intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_ITEM))intgame_mode_set(INTGAME_MODE_MAIN);
+    if(obj!=party_selected)dialog_speaker_set(OBJ_HANDLE_NULL);
     if(obj==OBJ_HANDLE_NULL){party_selected=OBJ_HANDLE_NULL;return true;}
     if(!party_control_member(obj) || !critter_is_active(obj)
         || (obj_field_int32_get(obj,OBJ_F_SPELL_FLAGS)&OSF_MIND_CONTROLLED)

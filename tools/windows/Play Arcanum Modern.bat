@@ -18,7 +18,7 @@ if "%~1"=="" (
   start "" /wait "%~dp0arcanum-modern.exe" %*
 )
 if errorlevel 1 (
-  echo Arcanum Modern stopped with an error. Please report the error and the version you installed.
+  echo Arcanum Renaissance stopped with an error. Please report the error and the version you installed.
   pause
   exit /b 1
 )

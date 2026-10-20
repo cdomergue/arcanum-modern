@@ -71,8 +71,8 @@ def package(app, build_dir, output):
             destination = stage/name
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(data)
-        info['CFBundleName'] = 'Arcanum Modern'
-        info['CFBundleDisplayName'] = 'Arcanum Modern'
+        info['CFBundleName'] = 'Arcanum Renaissance'
+        info['CFBundleDisplayName'] = 'Arcanum Renaissance'
         info['CFBundleIdentifier'] = 'org.arcanummodern.game'
         # SDL_GetBasePath must resolve beside the .app, where the game data lives.
         info['SDL_FILESYSTEM_BASE_DIR_TYPE'] = 'parent'

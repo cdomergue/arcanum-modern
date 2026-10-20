@@ -12,6 +12,14 @@ code=r'''
 #include <stdio.h>
 #include <string.h>
 #define OBJ_HANDLE_NULL 0
+#define INTGAME_MODE_MAIN 0
+#define INTGAME_MODE_SKILL 1
+#define INTGAME_MODE_SPELL 2
+#define INTGAME_MODE_ITEM 3
+static int mode;
+static int intgame_mode_get(void){return mode;}
+static bool intgame_mode_set(int value){mode=value;return true;}
+static void dialog_speaker_set(int64_t value){(void)value;}
 #define OBJ_TYPE_NPC 1
 #define OBJ_F_TYPE 1
 #define OBJ_F_CRITTER_FLAGS 2
@@ -47,6 +55,8 @@ int main(void){
  assert(!modern_party_set_grouped(3,false));
  assert(modern_party_set_grouped(2,false));assert(interruptions==1&&modern_party_detached(2));
  assert(modern_party_select(2)&&modern_party_selected()==2&&interruptions==1);
+ mode=INTGAME_MODE_SKILL;assert(modern_party_select(0)&&mode==INTGAME_MODE_MAIN);
+ assert(modern_party_select(2));
  assert(party_control_save());party_detached_count=0;party_selected=0;
  assert(party_control_load()&&modern_party_detached(2)&&!modern_party_selected());
  assert(modern_party_select(2));combat=true;

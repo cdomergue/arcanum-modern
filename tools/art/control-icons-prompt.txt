@@ -1,7 +1,7 @@
 Asset: game/modern-ui/control-icons.png
 Generation: built-in ImageGen, transparent_background=true.
 
-Production sprite atlas for the Arcanum Modern PC RPG interface.
+Production sprite atlas for the Arcanum Renaissance PC RPG interface.
 One clean transparent PNG sprite sheet: eight isolated UI symbols in exactly
 four columns and two rows, landscape 2:1, equal square cells. Center each symbol
 at matching optical size with ample transparent padding. No grid lines, labels,

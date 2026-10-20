@@ -432,6 +432,7 @@ python3 tests/test_party_combat.py
 python3 tests/test_party_grouping.py
 python3 tests/test_autosave.py
 python3 tests/test_map_camera.py
+python3 tests/test_map_cache_residency.py
 python3 tests/test_map_fog.py
 python3 tests/test_map_local_input.py
 python3 tests/test_map_travel.py

@@ -1,4 +1,4 @@
-Arcanum Modern — build sur Mac Apple Silicon
+Arcanum Renaissance — build sur Mac Apple Silicon
 
 Cette archive inclut le projet, les données locales du jeu et les sauvegardes présentes au moment de sa création. Elle contient des fichiers du jeu qui ne sont pas redistribuables publiquement. Garde cette archive pour ton usage personnel.
 

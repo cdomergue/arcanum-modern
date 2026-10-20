@@ -863,14 +863,15 @@ diff --git a/src/game/anim.h b/src/game/anim.h
 diff --git a/src/game/combat.c b/src/game/combat.c
 --- a/src/game/combat.c
 +++ b/src/game/combat.c
-@@ -1,4 +1,6 @@
+@@ -1,4 +1,7 @@
  #include "game/combat.h"
 +#include "ui/modern_ui.h"
++#include "ui/follower_ui.h"
 +#include "game/modern_autosave.h"
  
  #define _USE_MATH_DEFINES
  #include <math.h>
-@@ -195,6 +197,100 @@
+@@ -195,6 +198,104 @@
  static CombatCallbacks combat_callbacks;
  
  // 0x4B1D50
@@ -915,7 +916,8 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 +{
 +    if (!obj || !obj_handle_is_valid(obj)) return false;
 +    if (player_is_local_pc_obj(obj)) return true;
-+    if (!tactical_enabled || !combat_turn_based_active
++    if (!combat_turn_based_active) return obj == modern_party_selected();
++    if (!tactical_enabled
 +        || obj_field_int32_get(obj, OBJ_F_TYPE) != OBJ_TYPE_NPC
 +        || !player_is_local_pc_obj(critter_pc_leader_get(obj))) return false;
 +    /* Fear and hostile mind control retain their original forced behavior. */
@@ -931,7 +933,10 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 +
 +int64_t combat_input_actor(void)
 +{
-+    if (!combat_turn_based_active) return player_get_local_pc_obj();
++    if (!combat_turn_based_active) {
++        int64_t selected = modern_party_selected();
++        return selected ? selected : player_get_local_pc_obj();
++    }
 +    int64_t actor = combat_turn_based_whos_turn_get();
 +    return combat_player_controls(actor) ? actor : OBJ_HANDLE_NULL;
 +}
@@ -971,7 +976,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
-@@ -215,7 +311,7 @@
+@@ -215,7 +316,7 @@
          }
      }
  
@@ -980,7 +985,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
  
      settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
-@@ -256,7 +352,7 @@
+@@ -256,7 +357,7 @@
      if (tig_file_fwrite(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, stream) != 1) return false;
  
      if (!combat_turn_based_active) {
@@ -989,7 +994,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      }
  
      if (tig_file_fwrite(&combat_action_points, sizeof(combat_action_points), 1, stream) != 1) return false;
-@@ -276,13 +372,13 @@
+@@ -276,13 +377,13 @@
      oid = obj_get_id(qword_5FC248);
      if (tig_file_fwrite(&oid, sizeof(oid), 1, stream) != 1) return false;
  
@@ -1005,7 +1010,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      ObjectID oid;
      int64_t obj;
      ObjectNode* node;
-@@ -292,10 +388,12 @@
+@@ -292,10 +393,12 @@
      if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
      if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
  
@@ -1021,7 +1026,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_callbacks.field_4();
  
      if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
-@@ -307,6 +405,7 @@
+@@ -307,6 +410,7 @@
      }
  
      combat_action_points = saved_action_points;
@@ -1029,7 +1034,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
      qword_5FC238 = obj_pool_perm_lookup(oid);
-@@ -343,7 +442,7 @@
+@@ -343,7 +447,7 @@
  
      combat_callbacks.field_C(combat_action_points);
  
@@ -1038,7 +1043,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B2210
-@@ -422,7 +521,7 @@
+@@ -422,7 +526,7 @@
  // 0x4B2410
  void fast_turn_based_changed(void)
  {
@@ -1047,7 +1052,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B24F0
-@@ -783,12 +882,52 @@
+@@ -783,12 +887,52 @@
      }
  }
  
@@ -1100,7 +1105,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (combat->target_obj != OBJ_HANDLE_NULL
          && obj_field_int32_get(combat->target_obj, OBJ_F_TYPE) == OBJ_TYPE_SCENERY) {
-@@ -924,6 +1063,10 @@
+@@ -924,6 +1068,10 @@
                  return 0;
              }
  
@@ -1111,7 +1116,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              if ((skill_invocation.flags & SKILL_INVOCATION_SUCCESS) != 0) {
                  combat->flags |= CF_HIT;
              }
-@@ -941,7 +1084,10 @@
+@@ -941,7 +1089,10 @@
                      return 0;
                  }
  
@@ -1122,7 +1127,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
                      MesFileEntry mes_file_entry;
  
                      mes_file_entry.num = 11; // "Dodge!"
-@@ -973,6 +1119,8 @@
+@@ -973,6 +1124,8 @@
              combat->flags |= CF_CRITICAL;
          }
      }
@@ -1131,7 +1136,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if ((combat->flags & CF_HIT) == 0
          && (combat->flags & CF_CRITICAL) != 0) {
-@@ -1237,6 +1385,7 @@
+@@ -1237,6 +1390,7 @@
      if (!combat_critter_is_combat_mode_active(obj)) {
          combat_critter_toggle_combat_mode(obj);
      }
@@ -1139,7 +1144,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B3F80
-@@ -1813,6 +1962,7 @@
+@@ -1813,6 +1967,7 @@
              }
          }
  
@@ -1147,7 +1152,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -2857,12 +3007,19 @@
+@@ -2857,12 +3012,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -1167,7 +1172,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3115,7 @@
+@@ -2958,7 +3120,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -1176,7 +1181,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2990,14 +3147,20 @@
+@@ -2990,14 +3152,20 @@
          }
      }
  
@@ -1201,7 +1206,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3188,7 @@
+@@ -3025,6 +3193,7 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
@@ -1209,7 +1214,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3218,9 @@
+@@ -3054,8 +3223,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -1221,7 +1226,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3249,10 @@
+@@ -3084,9 +3254,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -1234,7 +1239,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3160,10 +3326,12 @@
+@@ -3160,10 +3331,12 @@
  {
      ObjectNode* node;
  
@@ -1247,7 +1252,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
          sub_423FE0(NULL);
  
-@@ -3189,6 +3357,7 @@
+@@ -3189,6 +3362,7 @@
  
      dword_5FC250 = 0;
      pc_obj = player_get_local_pc_obj();
@@ -1255,7 +1260,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based_turn++;
      pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
      combat_recalc_perception_range();
-@@ -3205,7 +3374,7 @@
+@@ -3205,7 +3379,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1264,7 +1269,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3243,6 +3412,9 @@
+@@ -3243,6 +3417,9 @@
          return true;
      }
  
@@ -1274,7 +1279,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!critter_is_active(object_node->obj)) {
          sub_427000(object_node->obj);
          return true;
-@@ -3286,6 +3458,7 @@
+@@ -3286,6 +3463,7 @@
  
      dword_5FC250++;
      combat_turn_based_subturn_end();
@@ -1282,7 +1287,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      dword_5FC240 = dword_5FC240->next;
      if (dword_5FC240 == NULL) {
-@@ -3549,6 +3722,8 @@
+@@ -3549,6 +3727,8 @@
          return true;
      }
  
@@ -1291,7 +1296,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3574,6 +3749,7 @@
+@@ -3574,6 +3754,7 @@
          return true;
      }
  
@@ -1299,7 +1304,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_action_points = 0;
      combat_turn_based_next_subturn();
  
-@@ -3741,6 +3917,12 @@
+@@ -3741,6 +3922,12 @@
          return false;
      }
  
@@ -1367,6 +1372,469 @@ diff --git a/src/game/critter.h b/src/game/critter.h
 +bool critter_follower_limit_reached(int64_t leader);
 +
  #endif /* ARCANUM_GAME_CRITTER_H_ */
+diff --git a/src/game/dialog.c b/src/game/dialog.c
+--- a/src/game/dialog.c
++++ b/src/game/dialog.c
+@@ -1,4 +1,5 @@
+ #include "game/dialog.h"
++#include "game/obj_private.h"
+ 
+ #include <stdio.h>
+ 
+@@ -24,6 +25,21 @@
+ #include "game/tc.h"
+ #include "game/timeevent.h"
+ #include "game/ui.h"
++
++static int64_t dialog_speaker;
++
++void dialog_speaker_set(int64_t obj)
++{
++    dialog_speaker = obj;
++}
++
++int64_t dialog_speaker_get(int64_t pc_obj)
++{
++    if (player_is_local_pc_obj(pc_obj) && dialog_speaker
++        && obj_handle_is_valid(dialog_speaker) && critter_is_active(dialog_speaker)
++        && critter_pc_leader_get(dialog_speaker) == pc_obj) return dialog_speaker;
++    return pc_obj;
++}
+ 
+ typedef enum GeneratedDialog {
+     GD_PC2M,
+@@ -484,7 +500,7 @@
+ 
+     if (critter_is_dead(state->npc_obj) || ai_check_kos(state->npc_obj, state->pc_obj) == AI_KOS_NO) {
+         if (player_is_local_pc_obj(state->pc_obj)) {
+-            pc_loc = obj_field_int64_get(state->pc_obj, OBJ_F_LOCATION);
++            pc_loc = obj_field_int64_get(dialog_speaker_get(state->pc_obj), OBJ_F_LOCATION);
+             npc_loc = obj_field_int64_get(state->npc_obj, OBJ_F_LOCATION);
+             location_xy(pc_loc, &tmp, &pc_loc_y);
+             location_xy(npc_loc, &tmp, &npc_loc_y);
+@@ -1317,11 +1333,11 @@
+     int cnt;
+ 
+     key.num = a1->field_17EC;
+-    gender = stat_level_get(a1->pc_obj, STAT_GENDER);
+-    intelligence = stat_level_get(a1->pc_obj, STAT_INTELLIGENCE);
++    gender = stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_GENDER);
++    intelligence = stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_INTELLIGENCE);
+ 
+     if (intelligence > LOW_INTELLIGENCE
+-        && critter_is_dumb(a1->pc_obj)) {
++        && critter_is_dumb(dialog_speaker_get(a1->pc_obj))) {
+         intelligence = 1;
+     }
+ 
+@@ -1407,66 +1423,66 @@
+         switch (cond) {
+         case DIALOG_COND_PS:
+             if (value < 0) {
+-                if (basic_skill_level(a1->pc_obj, BASIC_SKILL_PERSUATION) > -value) {
++                if (basic_skill_level(dialog_speaker_get(a1->pc_obj), BASIC_SKILL_PERSUATION) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (basic_skill_level(a1->pc_obj, BASIC_SKILL_PERSUATION) < value) {
++                if (basic_skill_level(dialog_speaker_get(a1->pc_obj), BASIC_SKILL_PERSUATION) < value) {
+                     return false;
+                 }
+             }
+             break;
+         case DIALOG_COND_CH:
+             if (value < 0) {
+-                if (stat_level_get(a1->pc_obj, STAT_CHARISMA) > -value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_CHARISMA) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (stat_level_get(a1->pc_obj, STAT_CHARISMA) < value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_CHARISMA) < value) {
+                     return false;
+                 }
+             }
+             break;
+         case DIALOG_COND_PE:
+             if (value < 0) {
+-                if (stat_level_get(a1->pc_obj, STAT_PERCEPTION) > -value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_PERCEPTION) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (stat_level_get(a1->pc_obj, STAT_PERCEPTION) < value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_PERCEPTION) < value) {
+                     return false;
+                 }
+             }
+             break;
+         case DIALOG_COND_AL:
+             if (value < 0) {
+-                if (stat_level_get(a1->pc_obj, STAT_ALIGNMENT) > -value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_ALIGNMENT) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (stat_level_get(a1->pc_obj, STAT_ALIGNMENT) < value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_ALIGNMENT) < value) {
+                     return false;
+                 }
+             }
+             break;
+         case DIALOG_COND_MA:
+             if (value < 0) {
+-                if (stat_level_get(a1->pc_obj, STAT_MAGICK_TECH_APTITUDE) > -value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_MAGICK_TECH_APTITUDE) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (stat_level_get(a1->pc_obj, STAT_MAGICK_TECH_APTITUDE) < value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_MAGICK_TECH_APTITUDE) < value) {
+                     return false;
+                 }
+             }
+             break;
+         case DIALOG_COND_TA:
+             if (value < 0) {
+-                if (-stat_level_get(a1->pc_obj, STAT_MAGICK_TECH_APTITUDE) > -value) {
++                if (-stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_MAGICK_TECH_APTITUDE) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (-stat_level_get(a1->pc_obj, STAT_MAGICK_TECH_APTITUDE) < value) {
++                if (-stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_MAGICK_TECH_APTITUDE) < value) {
+                     return false;
+                 }
+             }
+@@ -1547,11 +1563,11 @@
+             break;
+         case DIALOG_COND_HA:
+             if (value < 0) {
+-                if (basic_skill_level(a1->pc_obj, BASIC_SKILL_HAGGLE) > -value) {
++                if (basic_skill_level(dialog_speaker_get(a1->pc_obj), BASIC_SKILL_HAGGLE) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (basic_skill_level(a1->pc_obj, BASIC_SKILL_HAGGLE) < value) {
++                if (basic_skill_level(dialog_speaker_get(a1->pc_obj), BASIC_SKILL_HAGGLE) < value) {
+                     return false;
+                 }
+             }
+@@ -1570,21 +1586,21 @@
+             training = sub_4167C0(pch);
+             if (IS_TECH_SKILL(value)) {
+                 if (training < 0) {
+-                    if (tech_skill_training_get(a1->pc_obj, GET_TECH_SKILL(value)) > -training) {
++                    if (tech_skill_training_get(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value)) > -training) {
+                         return false;
+                     }
+                 } else {
+-                    if (tech_skill_training_get(a1->pc_obj, GET_TECH_SKILL(value)) < training) {
++                    if (tech_skill_training_get(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value)) < training) {
+                         return false;
+                     }
+                 }
+             } else {
+                 if (training < 0) {
+-                    if (basic_skill_training_get(a1->pc_obj, GET_BASIC_SKILL(value)) > -training) {
++                    if (basic_skill_training_get(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value)) > -training) {
+                         return false;
+                     }
+                 } else {
+-                    if (basic_skill_training_get(a1->pc_obj, GET_BASIC_SKILL(value)) < training) {
++                    if (basic_skill_training_get(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value)) < training) {
+                         return false;
+                     }
+                 }
+@@ -1594,21 +1610,21 @@
+             level = sub_4167C0(pch);
+             if (IS_TECH_SKILL(value)) {
+                 if (level < 0) {
+-                    if (tech_skill_level(a1->pc_obj, GET_TECH_SKILL(value)) > -level) {
++                    if (tech_skill_level(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value)) > -level) {
+                         return false;
+                     }
+                 } else {
+-                    if (tech_skill_level(a1->pc_obj, GET_TECH_SKILL(value)) < level) {
++                    if (tech_skill_level(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value)) < level) {
+                         return false;
+                     }
+                 }
+             } else {
+                 if (level < 0) {
+-                    if (basic_skill_level(a1->pc_obj, GET_BASIC_SKILL(value)) > -level) {
++                    if (basic_skill_level(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value)) > -level) {
+                         return false;
+                     }
+                 } else {
+-                    if (basic_skill_level(a1->pc_obj, GET_BASIC_SKILL(value)) < level) {
++                    if (basic_skill_level(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value)) < level) {
+                         return false;
+                     }
+                 }
+@@ -1649,11 +1665,11 @@
+             break;
+         case DIALOG_COND_LE:
+             if (value < 0) {
+-                if (-stat_level_get(a1->pc_obj, STAT_LEVEL) > -value) {
++                if (-stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_LEVEL) > -value) {
+                     return false;
+                 }
+             } else {
+-                if (-stat_level_get(a1->pc_obj, STAT_LEVEL) < value) {
++                if (-stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_LEVEL) < value) {
+                     return false;
+                 }
+             }
+@@ -1713,11 +1729,11 @@
+             break;
+         case DIALOG_COND_RA:
+             if (value > 0) {
+-                if (stat_level_get(a1->pc_obj, STAT_RACE) + 1 != value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_RACE) + 1 != value) {
+                     return false;
+                 }
+             } else {
+-                if (stat_level_get(a1->pc_obj, STAT_RACE) + 1 == -value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_RACE) + 1 == -value) {
+                     return false;
+                 }
+             }
+@@ -1794,11 +1810,11 @@
+             break;
+         case DIALOG_COND_NA:
+             if (value < 0) {
+-                if (stat_level_get(a1->pc_obj, STAT_ALIGNMENT) > value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_ALIGNMENT) > value) {
+                     return false;
+                 }
+             } else {
+-                if (stat_level_get(a1->pc_obj, STAT_ALIGNMENT) < -value) {
++                if (stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_ALIGNMENT) < -value) {
+                     return false;
+                 }
+             }
+@@ -2066,9 +2082,9 @@
+ 
+             training = sub_4167C0(pch);
+             if (IS_TECH_SKILL(value)) {
+-                tech_skill_training_set(a1->pc_obj, GET_TECH_SKILL(value), training);
++                tech_skill_training_set(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value), training);
+             } else {
+-                basic_skill_training_set(a1->pc_obj, GET_BASIC_SKILL(value), training);
++                basic_skill_training_set(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value), training);
+             }
+             break;
+         }
+@@ -2196,11 +2212,11 @@
+ 
+             v50 = sub_4167C0(pch);
+             if (IS_TECH_SKILL(value)) {
+-                level = tech_skill_level(a1->pc_obj, GET_TECH_SKILL(value));
+-                training = tech_skill_training_get(a1->pc_obj, GET_TECH_SKILL(value));
++                level = tech_skill_level(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value));
++                training = tech_skill_training_get(dialog_speaker_get(a1->pc_obj), GET_TECH_SKILL(value));
+             } else {
+-                level = basic_skill_level(a1->pc_obj, GET_BASIC_SKILL(value));
+-                training = basic_skill_training_get(a1->pc_obj, GET_BASIC_SKILL(value));
++                level = basic_skill_level(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value));
++                training = basic_skill_training_get(dialog_speaker_get(a1->pc_obj), GET_BASIC_SKILL(value));
+             }
+ 
+             if (level < training_min_skill_level_required(TRAINING_EXPERT)) {
+@@ -2330,7 +2346,7 @@
+     }
+ 
+     if (obj_type_is_critter(obj_field_int32_get(a1->pc_obj, OBJ_F_TYPE))
+-        && stat_level_get(a1->pc_obj, STAT_GENDER) != GENDER_MALE) {
++        && stat_level_get(dialog_speaker_get(a1->pc_obj), STAT_GENDER) != GENDER_MALE) {
+         sub_416B00(a1->reply, entry.data.female_str, a1);
+     } else {
+         sub_416B00(a1->reply, entry.str, a1);
+@@ -3051,7 +3067,7 @@
+     int cnt;
+     MesFileEntry mes_file_entry;
+ 
+-    if (critter_is_dumb(state->pc_obj)) {
++    if (critter_is_dumb(dialog_speaker_get(state->pc_obj))) {
+         gd = stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE
+             ? GD_DUMB_PC2M
+             : GD_DUMB_PC2F;
+@@ -3077,7 +3093,7 @@
+     int cnt;
+     MesFileEntry mes_file_entry;
+ 
+-    if (critter_is_dumb(state->pc_obj)) {
++    if (critter_is_dumb(dialog_speaker_get(state->pc_obj))) {
+         gd = stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE
+             ? GD_CLS_DUMB_PC2M
+             : GD_CLS_DUMB_PC2F;
+@@ -3118,21 +3134,21 @@
+ 
+     if (critter_is_dumb(state->npc_obj)) {
+         if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_CLS_DUMB_M2M
+                 : GD_CLS_DUMB_M2F;
+         } else {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_CLS_DUMB_F2M
+                 : GD_CLS_DUMB_F2F;
+         }
+     } else {
+         if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_CLS_M2M
+                 : GD_CLS_M2F;
+         } else {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_CLS_F2M
+                 : GD_CLS_F2F;
+         }
+@@ -3164,26 +3180,26 @@
+ 
+     if (critter_is_dumb(state->npc_obj)) {
+         if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_RCE_DUMB_M2M
+                 : GD_RCE_DUMB_M2F;
+         } else {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_RCE_DUMB_F2M
+                 : GD_RCE_DUMB_F2F;
+         }
+     } else {
+         if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_RCE_M2M
+                 : GD_RCE_M2F;
+         } else {
+-            gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++            gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+                 ? GD_RCE_F2M
+                 : GD_RCE_F2F;
+         }
+ 
+-        race = stat_level_get(state->pc_obj, STAT_RACE);
++        race = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_RACE);
+         if (race != stat_level_get(state->npc_obj, STAT_RACE)) {
+             num += 50 * (race + 1);
+         }
+@@ -3211,11 +3227,11 @@
+     }
+ 
+     if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
+-        gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++        gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+             ? GD_NPC_M2M
+             : GD_NPC_M2F;
+     } else {
+-        gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++        gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+             ? GD_NPC_F2M
+             : GD_NPC_F2F;
+     }
+@@ -3263,7 +3279,7 @@
+ 
+     if (state->pc_obj != OBJ_HANDLE_NULL
+         && obj_type_is_critter(obj_field_int32_get(state->pc_obj, OBJ_F_TYPE))
+-        && stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE) {
++        && stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE) {
+         strcpy(buffer, entry.str);
+     } else {
+         strcpy(buffer, entry.data.female_str);
+@@ -3389,7 +3405,7 @@
+     index = state->num_options - 1;
+     if (IS_TECH_SKILL(skill)) {
+         // Check if PC is already trained.
+-        if (tech_skill_training_get(state->pc_obj, GET_TECH_SKILL(skill)) != TRAINING_NONE) {
++        if (tech_skill_training_get(dialog_speaker_get(state->pc_obj), GET_TECH_SKILL(skill)) != TRAINING_NONE) {
+             // "You already have received apprentice training in that skill."
+             sub_418C40(4000, state->field_17F0[index], state->field_1804[index], state);
+             return;
+@@ -3397,30 +3413,30 @@
+ 
+         // Check if PC can be trained - attempt to temporarily grant apprentice
+         // training.
+-        if (tech_skill_training_set(state->pc_obj, GET_TECH_SKILL(skill), TRAINING_APPRENTICE) == TRAINING_NONE) {
++        if (tech_skill_training_set(dialog_speaker_get(state->pc_obj), GET_TECH_SKILL(skill), TRAINING_APPRENTICE) == TRAINING_NONE) {
+             // "You are not skilled enough to be trained as an apprentice."
+             sub_418C40(5000, state->field_17F0[index], state->field_1804[index], state);
+             return;
+         }
+ 
+         // Apprentice training was successfully applied, set it back to none...
+-        tech_skill_training_set(state->pc_obj, GET_TECH_SKILL(skill), TRAINING_NONE);
++        tech_skill_training_set(dialog_speaker_get(state->pc_obj), GET_TECH_SKILL(skill), TRAINING_NONE);
+ 
+         // ...and ask for 100 coins.
+         dialog_ask_money(100, 7, skill, state->field_17F0[index], state->field_1804[index], state);
+     } else {
+         // NOTE: The same flow as above (using basic skill function set).
+-        if (basic_skill_training_get(state->pc_obj, GET_BASIC_SKILL(skill)) != TRAINING_NONE) {
++        if (basic_skill_training_get(dialog_speaker_get(state->pc_obj), GET_BASIC_SKILL(skill)) != TRAINING_NONE) {
+             sub_418C40(4000, state->field_17F0[index], state->field_1804[index], state);
+             return;
+         }
+ 
+-        if (basic_skill_training_set(state->pc_obj, GET_BASIC_SKILL(skill), TRAINING_APPRENTICE) == TRAINING_NONE) {
++        if (basic_skill_training_set(dialog_speaker_get(state->pc_obj), GET_BASIC_SKILL(skill), TRAINING_APPRENTICE) == TRAINING_NONE) {
+             sub_418C40(5000, state->field_17F0[index], state->field_1804[index], state);
+             return;
+         }
+ 
+-        basic_skill_training_set(state->pc_obj, GET_BASIC_SKILL(skill), TRAINING_NONE);
++        basic_skill_training_set(dialog_speaker_get(state->pc_obj), GET_BASIC_SKILL(skill), TRAINING_NONE);
+         dialog_ask_money(100, 7, skill, state->field_17F0[index], state->field_1804[index], state);
+     }
+ }
+@@ -3429,9 +3445,9 @@
+ void dialog_perform_training(int skill, DialogState* state)
+ {
+     if (IS_TECH_SKILL(skill)) {
+-        tech_skill_training_set(state->pc_obj, GET_TECH_SKILL(skill), TRAINING_APPRENTICE);
+-    } else {
+-        basic_skill_training_set(state->pc_obj, GET_BASIC_SKILL(skill), TRAINING_APPRENTICE);
++        tech_skill_training_set(dialog_speaker_get(state->pc_obj), GET_TECH_SKILL(skill), TRAINING_APPRENTICE);
++    } else {
++        basic_skill_training_set(dialog_speaker_get(state->pc_obj), GET_BASIC_SKILL(skill), TRAINING_APPRENTICE);
+     }
+ 
+     // "Your apprentice training is complete."
+@@ -4162,11 +4178,11 @@
+     }
+ 
+     if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
+-        gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++        gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+             ? GD_STO_M2F
+             : GD_STO_M2M;
+     } else {
+-        gd = stat_level_get(state->pc_obj, STAT_GENDER) == GENDER_MALE
++        gd = stat_level_get(dialog_speaker_get(state->pc_obj), STAT_GENDER) == GENDER_MALE
+             ? GD_STO_F2M
+             : GD_STO_F2F;
+     }
+diff --git a/src/game/dialog.h b/src/game/dialog.h
+--- a/src/game/dialog.h
++++ b/src/game/dialog.h
+@@ -26,6 +26,9 @@
+     /* 1840 */ int field_1840;
+     /* 1844 */ unsigned int seed;
+ } DialogState;
++
++void dialog_speaker_set(int64_t obj);
++int64_t dialog_speaker_get(int64_t pc_obj);
+ 
+ bool dialog_init(GameInitInfo* init_info);
+ void dialog_exit(void);
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
@@ -1803,6 +2271,23 @@ diff --git a/src/game/mes.c b/src/game/mes.c
              buffer[pos++] = (char)ch;
          } else {
              too_long = true;
+diff --git a/src/game/mp_utils.c b/src/game/mp_utils.c
+--- a/src/game/mp_utils.c
++++ b/src/game/mp_utils.c
+@@ -1,3 +1,4 @@
++#include "game/combat.h"
+ #include "game/mp_utils.h"
+ 
+ #include "game/a_name.h"
+@@ -211,7 +212,7 @@
+ // 0x4EE310
+ void mp_ui_show_inven_loot(int64_t pc_obj, int64_t target_obj)
+ {
+-    if (!player_is_local_pc_obj(pc_obj)) {
++    if (!combat_player_controls(pc_obj)) {
+         if (tig_net_is_active() && tig_net_is_host()) {
+             Packet100 pkt;
+ 
 diff --git a/src/game/object.c b/src/game/object.c
 --- a/src/game/object.c
 +++ b/src/game/object.c
@@ -1892,6 +2377,27 @@ diff --git a/src/game/script.c b/src/game/script.c
                      matched++;
                  }
              } else {
+@@ -1746,6 +1743,7 @@
+     case SAT_GET_STAT: {
+         int stat = script_get_value(action->op_type[0], action->op_value[0], state);
+         int64_t critter_obj = script_get_obj(action->op_type[1], action->op_value[1], state);
++        if (state->invocation->attachment_point == SAP_DIALOG) critter_obj = dialog_speaker_get(critter_obj);
+         int value = stat_level_get(critter_obj, stat);
+         if (stat == STAT_INTELLIGENCE
+             && value > LOW_INTELLIGENCE
+@@ -1912,10 +1910,12 @@
+     case SAT_GET_SKILL: {
+         int skill = script_get_value(action->op_type[0], action->op_value[0], state);
+         int64_t obj = script_get_obj(action->op_type[1], action->op_value[1], state);
++        if (state->invocation->attachment_point == SAP_DIALOG) obj = dialog_speaker_get(obj);
+         int value = IS_TECH_SKILL(skill)
+             ? tech_skill_level(obj, GET_TECH_SKILL(skill))
+             : basic_skill_level(obj, GET_BASIC_SKILL(skill));
+         script_set_value(action->op_type[2], action->op_value[2], state, value);
++        return NEXT;
+     }
+     case SAT_CAST_SPELL: {
+         int64_t source_obj = script_get_obj(action->op_type[0], action->op_value[0], state);
 diff --git a/src/game/skill.c b/src/game/skill.c
 --- a/src/game/skill.c
 +++ b/src/game/skill.c
@@ -2128,7 +2634,7 @@ diff --git a/src/main.c b/src/main.c
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
 -    init_info.window_name = "Arcanum: Of Steamworks & Magick Obscura - Community Edition";
-+    init_info.window_name = "Arcanum Modern";
++    init_info.window_name = "Arcanum Renaissance";
  
      if (tig_init(&init_info) != TIG_OK) {
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
@@ -2385,7 +2891,110 @@ diff --git a/src/ui/dialog_ui.c b/src/ui/dialog_ui.c
  
  #include <stdio.h>
  
-@@ -517,3 +519,24 @@
+@@ -86,6 +88,7 @@
+ // 0x5673B0
+ void dialog_ui_reset(void)
+ {
++    dialog_speaker_set(OBJ_HANDLE_NULL);
+     int index;
+ 
+     if (dialog_ui_local_pc_dialog_active) {
+@@ -189,11 +192,11 @@
+             }
+         }
+ 
+-        sub_424070(pc_obj, 3, 0, true);
+-        anim_goal_rotate(pc_obj, object_rot(pc_obj, npc_obj));
+-
+-        if (critter_is_concealed(pc_obj)) {
+-            critter_set_concealed(pc_obj, false);
++        sub_424070(dialog_speaker_get(pc_obj), 3, 0, true);
++        anim_goal_rotate(dialog_speaker_get(pc_obj), object_rot(dialog_speaker_get(pc_obj), npc_obj));
++
++        if (critter_is_concealed(dialog_speaker_get(pc_obj))) {
++            critter_set_concealed(dialog_speaker_get(pc_obj), false);
+         }
+ 
+         if (critter_is_concealed(npc_obj)) {
+@@ -260,7 +263,7 @@
+ void dialog_ui_notify_dialog_ended(int64_t obj)
+ {
+     sub_567420(obj)->field_1850 = false;
+-    if (player_is_local_pc_obj(obj)) {
++    if ((player_is_local_pc_obj(obj) || obj == dialog_speaker_get(player_get_local_pc_obj()))) {
+         intgame_dialog_end();
+         dialog_ui_local_pc_dialog_active = false;
+     }
+@@ -270,7 +273,7 @@
+ void dialog_ui_notify_dialog_started(int64_t obj)
+ {
+     sub_567420(obj)->field_1850 = true;
+-    if (player_is_local_pc_obj(obj)) {
++    if ((player_is_local_pc_obj(obj) || obj == dialog_speaker_get(player_get_local_pc_obj()))) {
+         if (intgame_dialog_begin(dialog_ui_message_filter)) {
+             dialog_ui_local_pc_dialog_active = true;
+         }
+@@ -307,7 +310,7 @@
+     case 3:
+         if (is_pc) {
+             intgame_dialog_clear();
+-            inven_ui_open(entry->state.pc_obj, entry->state.npc_obj, INVEN_UI_MODE_BARTER);
++            inven_ui_open(dialog_speaker_get(entry->state.pc_obj), entry->state.npc_obj, INVEN_UI_MODE_BARTER);
+         }
+         break;
+     case 4:
+@@ -340,17 +343,18 @@
+     case 8:
+         if (is_pc) {
+             intgame_dialog_clear();
+-            ui_show_inven_npc_identify(entry->state.pc_obj, entry->state.npc_obj);
++            ui_show_inven_npc_identify(dialog_speaker_get(entry->state.pc_obj), entry->state.npc_obj);
+         }
+         break;
+     case 9:
+         if (is_pc) {
+             intgame_dialog_clear();
+-            inven_ui_open(entry->state.pc_obj, entry->state.npc_obj, INVEN_UI_MODE_NPC_REPAIR);
+-        }
+-        break;
+-    }
+-
++            inven_ui_open(dialog_speaker_get(entry->state.pc_obj), entry->state.npc_obj, INVEN_UI_MODE_NPC_REPAIR);
++        }
++        break;
++    }
++
++    if (!dialog_ui_local_pc_dialog_active) dialog_speaker_set(OBJ_HANDLE_NULL);
+     return true;
+ }
+ 
+@@ -434,7 +438,7 @@
+         && !critter_is_dead(npc_obj)
+         && !sub_423300(npc_obj, NULL)) {
+         sub_424070(npc_obj, 3, 0, 1);
+-        anim_goal_rotate(npc_obj, object_rot(npc_obj, pc_obj));
++        anim_goal_rotate(npc_obj, object_rot(npc_obj, dialog_speaker_get(pc_obj)));
+     }
+ 
+     tb_remove(npc_obj);
+@@ -447,6 +451,7 @@
+ // 0x5686C0
+ void dialog_ui_pc_say(int64_t pc_obj, int64_t npc_obj, int type, int expires_in, const char* str)
+ {
++    pc_obj = dialog_speaker_get(pc_obj);
+     if (npc_obj != OBJ_HANDLE_NULL
+         && !critter_is_dead(pc_obj)
+         && !sub_423300(pc_obj, NULL)) {
+@@ -491,7 +496,7 @@
+     dialog_ui_speech_stop();
+     sub_418A00(speech_id, &v1, &v2);
+ 
+-    gender = stat_level_get(pc_obj, STAT_GENDER) != 0 ? 'm' : 'f';
++    gender = stat_level_get(dialog_speaker_get(pc_obj), STAT_GENDER) != 0 ? 'm' : 'f';
+     snprintf(path, sizeof(path),
+         "sound\\speech\\%.5d\\v%d_%c.mp3",
+         v1,
+@@ -517,3 +522,24 @@
          dialog_ui_speech_handle = TIG_SOUND_HANDLE_INVALID;
      }
  }
@@ -2447,13 +3056,14 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
 diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 --- a/src/ui/follower_ui.c
 +++ b/src/ui/follower_ui.c
-@@ -3,10 +3,13 @@
+@@ -3,10 +3,14 @@
  #include <stdio.h>
  
  #include "game/broadcast.h"
 +#include "game/anim.h"
 +#include "game/combat.h"
  #include "game/critter.h"
++#include "game/dialog.h"
  #include "game/hrp.h"
  #include "game/mes.h"
  #include "game/obj.h"
@@ -2461,7 +3071,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  #include "game/object.h"
  #include "game/player.h"
  #include "game/portrait.h"
-@@ -17,6 +20,8 @@
+@@ -17,6 +21,8 @@
  #include "ui/intgame.h"
  #include "ui/inven_ui.h"
  #include "ui/tb_ui.h"
@@ -2470,7 +3080,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
  /**
   * Commands available in the follower drop-down context menu.
-@@ -153,6 +158,8 @@
+@@ -153,6 +159,8 @@
   */
  #define FOLLOWER_UI_DROP_DOWN_MENU_ART 826
  
@@ -2479,7 +3089,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  static void follower_ui_create(int index);
  static bool follower_ui_message_filter(TigMessage* msg);
  static void follower_ui_drop_down_menu_create(int index);
-@@ -549,6 +556,7 @@
+@@ -549,6 +557,7 @@
   */
  void follower_ui_reset(void)
  {
@@ -2487,7 +3097,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      int index;
  
      follower_ui_visible = true;
-@@ -618,7 +626,7 @@
+@@ -618,7 +627,7 @@
  
      follower_ui_refresh();
  
@@ -2496,7 +3106,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  }
  
  /**
-@@ -631,7 +639,7 @@
+@@ -631,7 +640,7 @@
      if (tig_file_fwrite(&follower_ui_visible, sizeof(follower_ui_visible), 1, stream) != 1) return false;
      if (tig_file_fwrite(&follower_ui_top_index, sizeof(follower_ui_top_index), 1, stream) != 1) return false;
  
@@ -2505,7 +3115,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  }
  
  /**
-@@ -643,9 +651,7 @@
+@@ -643,9 +652,7 @@
  {
      int64_t pc_obj;
      int index;
@@ -2515,7 +3125,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      TargetDescriptor td;
  
      pc_obj = player_get_local_pc_obj();
-@@ -681,40 +687,7 @@
+@@ -681,40 +688,7 @@
                  for (index = 0; index < FOLLOWER_UI_COMMAND_COUNT; index++) {
                      if (msg->data.button.button_handle == follower_ui_drop_menu_item_buttons[index]) {
                          follower_ui_drop_down_menu_destroy();
@@ -2557,7 +3167,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                          return true;
                      }
                  }
-@@ -1139,7 +1112,7 @@
+@@ -1139,7 +1113,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -2566,7 +3176,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
  
          tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
-@@ -1212,7 +1185,7 @@
+@@ -1212,7 +1186,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -2575,7 +3185,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
      }
  
-@@ -1243,7 +1216,7 @@
+@@ -1243,7 +1217,7 @@
  void update_toggle_button_visibility(void)
  {
      if (follower_ui_followers_count > 0) {
@@ -2584,7 +3194,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
      }
-@@ -1271,7 +1244,7 @@
+@@ -1271,7 +1245,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
@@ -2593,7 +3203,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
          // Scroll-down button is active if not already at the bottom.
          if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
-@@ -1280,7 +1253,7 @@
+@@ -1280,7 +1254,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
@@ -2602,7 +3212,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          // Either all portraits fit into existing slots, or the follower UI is
          // hidden.
-@@ -1351,3 +1324,106 @@
+@@ -1351,3 +1325,106 @@
          follower_ui_refresh();
      }
  }
@@ -2841,7 +3451,22 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  #include "ui/dialog_ui.h"
  #include "ui/fate_ui.h"
  #include "ui/follower_ui.h"
-@@ -2022,7 +2025,7 @@
+@@ -2007,7 +2010,7 @@
+             }
+ 
+             if (msg->data.button.button_handle == intgame_secondary_buttons[INTGAME_SECONDARY_BUTTON_SCHEMATICS].button_handle) {
+-                schematic_ui_toggle(player_get_local_pc_obj(), player_get_local_pc_obj());
++                schematic_ui_toggle(combat_input_actor(), combat_input_actor());
+                 return true;
+             }
+ 
+@@ -2017,12 +2020,12 @@
+             }
+ 
+             if (msg->data.button.button_handle == intgame_primary_buttons[INTGAME_PRIMARY_BUTTON_CHAR].button_handle) {
+-                sub_552740(player_get_local_pc_obj(), CHAREDIT_MODE_ACTIVE);
++                sub_552740(combat_input_actor(), player_is_local_pc_obj(combat_input_actor()) ? CHAREDIT_MODE_ACTIVE : CHAREDIT_MODE_PASSIVE);
+                 return true;
              }
  
              if (msg->data.button.button_handle == intgame_primary_buttons[INTGAME_PRIMARY_BUTTON_INVENTORY].button_handle) {
@@ -2850,6 +3475,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  return true;
              }
  
+@@ -2521,7 +2524,7 @@
+                 gsound_play_sfx(0, 1);
+                 return true;
+             case SDLK_C:
+-                sub_552740(player_get_local_pc_obj(), CHAREDIT_MODE_ACTIVE);
++                sub_552740(combat_input_actor(), player_is_local_pc_obj(combat_input_actor()) ? CHAREDIT_MODE_ACTIVE : CHAREDIT_MODE_PASSIVE);
+                 gsound_play_sfx(0, 1);
+                 return true;
+             case SDLK_F:
 @@ -2529,7 +2532,7 @@
                  gsound_play_sfx(0, 1);
                  return true;
@@ -2859,6 +3493,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  gsound_play_sfx(0, 1);
                  return true;
              case SDLK_R:
+@@ -2541,7 +2544,7 @@
+                 gsound_play_sfx(0, 1);
+                 return true;
+             case SDLK_T:
+-                schematic_ui_toggle(player_get_local_pc_obj(), player_get_local_pc_obj());
++                schematic_ui_toggle(combat_input_actor(), combat_input_actor());
+                 gsound_play_sfx(0, 1);
+                 return true;
+             case SDLK_W:
 @@ -2585,6 +2588,7 @@
      TigButtonState state;
      int opposite_btn;
@@ -2867,7 +3510,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_button_state_get(intgame_secondary_buttons[btn].button_handle, &state);
      if (state != TIG_BUTTON_STATE_PRESSED) {
          opposite_btn = btn == INTGAME_SECONDARY_BUTTON_SPELLS
-@@ -2677,12 +2681,32 @@
+@@ -2677,12 +2681,31 @@
      TigMouseState mouse_state;
      TigMessage fake_mouse_move;
  
@@ -2881,7 +3524,6 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    if(modern_ui_enabled() && !combat_turn_based_is_active() && intgame_mode_get()==INTGAME_MODE_MAIN){
 +        if(msg->type==TIG_MESSAGE_MOUSE && msg->data.mouse.event==TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP
 +            && modern_party_selected()){modern_party_select(OBJ_HANDLE_NULL);return;}
-+        if(modern_party_selected())pc_obj=modern_party_selected();
 +    }
 +
 +
@@ -2902,7 +3544,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      }
  
      if (msg->type == TIG_MESSAGE_KEYBOARD
-@@ -2699,6 +2723,8 @@
+@@ -2699,6 +2722,8 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -2911,7 +3553,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && sub_552050(msg->data.mouse.x, msg->data.mouse.y, &td)) {
                      if (td.is_loc) {
-@@ -2728,9 +2754,9 @@
+@@ -2728,9 +2753,9 @@
                              if ((tig_kb_get_modifier(SDL_KMOD_CTRL)
                                      || tig_kb_get_modifier(SDL_KMOD_NUM))
                                  && !settings_get_value(&settings, ALWAYS_RUN_KEY)) {
@@ -2923,7 +3565,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                              }
  
                              if (dword_64C6D8) {
-@@ -2747,6 +2773,7 @@
+@@ -2747,6 +2772,7 @@
                  dword_64C6D8 = false;
                  break;
              case TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP:
@@ -2931,7 +3573,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (pc_obj != OBJ_HANDLE_NULL) {
                      unsigned int spell_flags;
                      unsigned int critter_flags;
-@@ -2972,6 +2999,7 @@
+@@ -2972,6 +2998,7 @@
          case TIG_MESSAGE_MOUSE:
              switch (msg->data.mouse.event) {
              case TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:
@@ -2939,7 +3581,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  if (sub_5517A0(msg)
                      && target_pick_at_screen_xy(msg->data.mouse.x, msg->data.mouse.y, &td, intgame_fullscreen)
                      && td.is_loc
-@@ -3117,7 +3145,7 @@
+@@ -3117,7 +3144,7 @@
      int64_t pc_obj;
      S4F2680 v1;
  
@@ -2948,18 +3590,12 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!combat_turn_based_is_active()
          || combat_turn_based_whos_turn_get() == pc_obj) {
-@@ -3261,16 +3289,25 @@
+@@ -3261,16 +3288,19 @@
      int anim;
      bool v26 = false;
  
 -    pc_obj = player_get_local_pc_obj();
 +    pc_obj = combat_input_actor();
-+    if(modern_ui_enabled() && !combat_turn_based_is_active() && intgame_mode_get()==INTGAME_MODE_MAIN
-+        && modern_party_selected() && !td->is_loc){
-+        int type=obj_field_int32_get(td->obj,OBJ_F_TYPE);
-+        if(type==OBJ_TYPE_PORTAL || type==OBJ_TYPE_CONTAINER || type==OBJ_TYPE_SCENERY)pc_obj=modern_party_selected();
-+        else modern_party_select(OBJ_HANDLE_NULL);
-+    }
 +
      if (pc_obj == OBJ_HANDLE_NULL) {
          return;
@@ -2976,7 +3612,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,7 +3351,7 @@
+@@ -3314,7 +3344,7 @@
              }
          }
  
@@ -2985,7 +3621,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              switch (target_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
-@@ -3396,8 +3433,8 @@
+@@ -3396,8 +3426,8 @@
                      }
  
                      if (!td->is_loc
@@ -2996,7 +3632,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3570,6 +3607,7 @@
+@@ -3570,6 +3600,7 @@
          }
  
          if (!anim_goal_add_ex(&goal_data, &anim_id, flags)) {
@@ -3004,7 +3640,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              return;
          }
  
-@@ -3712,10 +3750,12 @@
+@@ -3712,10 +3743,12 @@
          return;
      }
  
@@ -3018,7 +3654,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3821,7 @@
+@@ -3781,7 +3814,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -3027,7 +3663,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4051,6 +4091,8 @@
+@@ -4051,6 +4084,8 @@
  // 0x5506C0
  void iso_interface_window_set(RotatingWindowType window_type)
  {
@@ -3036,7 +3672,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4088,6 +4130,12 @@
+@@ -4088,6 +4123,12 @@
  // 0x550750
  void intgame_message_window_display_msg(UiMessage* ui_message)
  {
@@ -3049,7 +3685,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4148,7 @@
+@@ -4100,6 +4141,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -3057,7 +3693,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4212,16 @@
+@@ -4163,9 +4205,16 @@
      }
  }
  
@@ -3074,7 +3710,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4258,11 @@
+@@ -4202,6 +4251,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -3086,7 +3722,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4894,14 @@
+@@ -4833,14 +4887,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -3103,7 +3739,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4973,13 @@
+@@ -4912,13 +4966,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -3119,7 +3755,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -5888,6 +5949,8 @@
+@@ -5888,6 +5942,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
  {
@@ -3128,7 +3764,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = func;
      tc_show();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -5899,6 +5962,8 @@
+@@ -5899,6 +5955,8 @@
  // 0x553350
  void intgame_dialog_end(void)
  {
@@ -3137,7 +3773,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6239,6 +6304,15 @@
+@@ -6239,6 +6297,15 @@
  // 0x553BE0
  void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
  {
@@ -3153,7 +3789,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      int type;
  
      if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6356,7 @@
+@@ -6282,6 +6349,7 @@
              }
          }
      }
@@ -3161,7 +3797,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  }
  
  // 0x553D10
-@@ -6573,6 +6648,7 @@
+@@ -6573,6 +6641,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -3169,7 +3805,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6687,16 @@
+@@ -6611,6 +6680,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -3186,7 +3822,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6881,11 @@
+@@ -6795,6 +6874,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -3198,7 +3834,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7703,7 @@
+@@ -7612,6 +7696,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -3206,7 +3842,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7732,7 @@
+@@ -7640,7 +7725,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -3215,7 +3851,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7876,7 @@
+@@ -7784,7 +7869,7 @@
          mes_file_entry.str,
          value);
  
@@ -3224,7 +3860,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8925,198 @@
+@@ -8833,3 +8918,198 @@
  
      follower_ui_show();
  }
@@ -3433,19 +4069,18 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
  
  #include <stdio.h>
  
-@@ -539,7 +541,10 @@
+@@ -539,7 +541,9 @@
          return false;
      }
  
 -    if (obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC) {
 +    if (obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC
-+        && !(mode == INVEN_UI_MODE_INVENTORY && target_obj == OBJ_HANDLE_NULL
-+            && combat_tactical_enabled() && combat_turn_based_is_active()
-+            && combat_input_ready(pc_obj))) {
++        && !(combat_player_controls(pc_obj)
++            && (!combat_turn_based_is_active() || combat_input_ready(pc_obj)))) {
          return false;
      }
  
-@@ -2233,6 +2238,8 @@
+@@ -2233,6 +2237,8 @@
      int64_t pc_obj;
      int mode;
  
@@ -3454,7 +4089,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      sub_575770();
  
      follower_obj = qword_6813A8;
-@@ -4595,3 +4602,57 @@
+@@ -4595,3 +4601,57 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }
@@ -4040,6 +4675,40 @@ diff --git a/src/ui/skill_ui.c b/src/ui/skill_ui.c
      qword_683490 = obj;
      dword_5CB270 = type;
  
+@@ -227,6 +228,8 @@
+ 
+     pc_obj = player_get_local_pc_obj();
+ 
++    if (!qword_683490 || !combat_player_controls(qword_683490)) return;
++
+     if ((pc_obj == qword_683490 || !critter_is_unconscious(pc_obj))
+         && !critter_is_unconscious(qword_683490)) {
+         skill_ui_activate(td, qword_683490, dword_5CB270);
+@@ -246,21 +249,20 @@
+         return;
+     }
+ 
+-    is_pc = player_is_local_pc_obj(obj);
++    is_pc = combat_player_controls(obj);
+     skill = sub_57A6C0(a3, td);
+ 
+     switch (skill) {
+     case SKILL_PICK_POCKET:
+         if (!td->is_loc
+-            && is_pc
+-            && obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PC) {
++            && is_pc) {
+             skill_ui_cancel();
+ 
+             spell_flags = obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS);
+ 
+             if ((obj_field_int32_get(td->obj, OBJ_F_SPELL_FLAGS) & OSF_STONED) == 0) {
+                 if (sub_57A5E0(td->obj)) {
+-                    if (player_is_local_pc_obj(obj)) {
++                    if (is_pc) {
+                         mes_file_entry.num = 525; // "You cannot pickpocket this creature."
+                         mes_get_msg(skill_ui_mes_file, &mes_file_entry);
+                         tf_add(obj, TF_TYPE_WHITE, mes_file_entry.str);
 diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
 --- a/src/ui/sleep_ui.c
 +++ b/src/ui/sleep_ui.c
@@ -4207,20 +4876,50 @@ diff --git a/src/ui/spell_ui.c b/src/ui/spell_ui.c
              if ((*tgt_ptr & TGT_OBJ_NO_SELF) == 0) {
                  spell_ui_apply(&td);
                  dword_683508 = false;
-@@ -290,6 +292,7 @@
+@@ -290,6 +292,8 @@
  // 0x57C110
  void spell_ui_apply(TargetDescriptor* td)
  {
++    if (!qword_683500 || !combat_player_controls(qword_683500)) return;
 +    if (combat_turn_based_is_active() && !combat_input_ready(qword_683500)) return;
      MesFileEntry mes_file_entry;
      UiMessage ui_message;
      MagicTechInvocation mt_invocation;
-@@ -540,3 +543,5 @@
+@@ -540,3 +544,5 @@
          }
      }
  }
 +
 +int modern_spell_selected(void) { return dword_5CB3A0; }
+diff --git a/src/ui/tb_ui.c b/src/ui/tb_ui.c
+--- a/src/ui/tb_ui.c
++++ b/src/ui/tb_ui.c
+@@ -1,3 +1,4 @@
++#include "game/dialog.h"
+ #include "ui/tb_ui.h"
+ 
+ #include <stdio.h>
+@@ -248,6 +249,11 @@
+ void sub_57CC70(int64_t a1, int64_t a2)
+ {
+     int64_t danger_source_obj;
++    bool delegated = a1 != OBJ_HANDLE_NULL && a1 == modern_party_selected();
++    dialog_speaker_set(delegated ? a1 : OBJ_HANDLE_NULL);
++    if (delegated) {
++        a1 = player_get_local_pc_obj();
++    }
+ 
+     if (object_script_execute(a1, a2, OBJ_HANDLE_NULL, SAP_DIALOG, 0) == 1) {
+         if (ai_surrendered(a2, &danger_source_obj) && critter_party_same(danger_source_obj, a1)) {
+@@ -256,6 +262,8 @@
+             sub_5681C0(a1, a2);
+         }
+     }
++    if (delegated && !dialog_ui_is_local_pc_in_dialog()) dialog_speaker_set(OBJ_HANDLE_NULL);
++
+ }
+ 
+ // 0x57CCF0
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c
