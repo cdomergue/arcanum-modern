@@ -35,6 +35,7 @@
 #include "game/item.h"
 #include "game/stat.h"
 #include "game/level.h"
+#include "game/modern_compat.h"
 #include "game/resistance.h"
 #include "game/player.h"
 #include "game/quest.h"
@@ -956,6 +957,52 @@ static void gauge(float x,float y,int value,int maximum,bool fatigue)
     centered(0,number,cx,y+89,GOLD);
 }
 
+static void draw_experience_gauge(int64_t actor,SDL_FRect rect)
+{
+    bool capped=stat_level_get(actor,STAT_LEVEL)>=modern_compat_get()->level_limit;
+    int progress=capped?1000:level_progress_towards_next_level(actor);
+    if(progress<0)progress=0;
+    if(progress>1000)progress=1000;
+    float scale_x=rect.w/384,scale_y=rect.h/14;
+    tig_art_id_t id;
+    ArtTexture* art=NULL;
+    if(tig_art_interface_id_create(184,0,0,0,&id)==TIG_OK)art=art_get(id);
+    if(art && art->texture) {
+        SDL_FRect source={211,37,384,14};
+        SDL_RenderTexture(renderer,art->texture,&source,&rect);
+        const int offsets[]={0,38,76,116,154,192,228,267,305,344};
+        int amount=11*progress/10,segments=amount/100;
+        if(segments>10)segments=10;
+        for(int i=0;i<segments;i++) {
+            if(tig_art_interface_id_create(773+i,0,0,0,&id)!=TIG_OK)continue;
+            art=art_get(id);if(!art || !art->texture)continue;
+            SDL_FRect cell={rect.x+offsets[i]*scale_x,rect.y,art->width*scale_x,art->height*scale_y};
+            SDL_RenderTexture(renderer,art->texture,NULL,&cell);
+        }
+        int fine=progress==1000?100:amount%100;
+        if(fine>0 && tig_art_interface_id_create(772,0,0,0,&id)==TIG_OK) {
+            art=art_get(id);
+            if(art && art->texture) {
+                SDL_FRect source={0,0,art->width*fine/100.f,art->height};
+                SDL_FRect target={rect.x+5*scale_x,rect.y+10*scale_y,source.w*scale_x,source.h*scale_y};
+                SDL_RenderTexture(renderer,art->texture,&source,&target);
+            }
+        }
+    } else {
+        fill(rect,(SDL_Color){24,16,13,255});outline(rect,MUTED);
+        fill((SDL_FRect){rect.x+2,rect.y+2,(rect.w-4)*progress/1000.f,rect.h-4},UI_RED);
+    }
+    if(inside(rect,mouse_x,mouse_y)) {
+        char hint[256];int xp=stat_level_get(actor,STAT_EXPERIENCE_POINTS);
+        if(capped)snprintf(hint,sizeof(hint),"%s : %d (100%%)",game_text(stat_name(STAT_EXPERIENCE_POINTS)),xp);
+        else snprintf(hint,sizeof(hint),"%s : %d / %d (%.1f%%)",game_text(stat_name(STAT_EXPERIENCE_POINTS)),
+            xp,xp+level_experience_points_to_next_level(actor),progress/10.f);
+        float width=fminf(canvas_w-24,text_measure(0,hint)+40);
+        SDL_FRect tip={fminf(canvas_w-width-12,fmaxf(12,rect.x+(rect.w-width)/2)),canvas_h-166,width,30};
+        hud_panel(tip);text_compact(hint,tip.x+12,tip.y+6,width-24,true,GOLD);
+    }
+}
+
 static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color);
 
 static bool hud_message_visible(void)
@@ -1018,21 +1065,21 @@ static void draw_hud(void)
     }
     button((SDL_FRect){x+630,y+81,192,26},4,fate_label,-1,false,controls_enabled);
     float status_x=x+140,status_width=444;
-    rule(status_x,y+69,status_width,(SDL_Color){117,87,44,255});
     if(hud_message_visible() && !hud_message_expanded()) {
-        text_compact(message_text,status_x,y+79,status_width,false,GOLD);
+        text_compact(message_text,status_x,y+84,status_width,false,GOLD);
     } else {
         char status[256];
-        snprintf(status,sizeof(status),tr("Niv. %d   ·   Or : %d   ·   Exp. : %d   ·   %02d:%02d","Lv. %d   ·   Gold: %d   ·   XP: %d   ·   %02d:%02d"),
-            stat_level_get(pc,STAT_LEVEL),item_gold_get(pc),stat_level_get(pc,STAT_EXPERIENCE_POINTS),
+        snprintf(status,sizeof(status),tr("Niv. %d   ·   Or : %d   ·   %02d:%02d","Lv. %d   ·   Gold: %d   ·   %02d:%02d"),
+            stat_level_get(pc,STAT_LEVEL),item_gold_get(pc),
             datetime_current_hour(),datetime_current_minute());
         int64_t weapon=item_wield_get(pc,ITEM_INV_LOC_WEAPON);
         if(weapon!=OBJ_HANDLE_NULL && item_weapon_ammo_type(weapon)!=10000) {
             char ammo[40];snprintf(ammo,sizeof(ammo),tr("   ·   Munitions : %d","   ·   Ammo: %d"),item_ammo_quantity_get(pc,item_weapon_ammo_type(weapon)));
             SDL_strlcat(status,ammo,sizeof(status));
         }
-        text_compact(status,status_x,y+79,status_width,false,MUTED);
+        text_compact(status,status_x,y+84,status_width,false,MUTED);
     }
+    draw_experience_gauge(pc,(SDL_FRect){x+102,y+62,480,17.5f});
     if(hud_message_expanded() && !journal && !native_panel())draw_hud_message();
 }
 
