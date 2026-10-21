@@ -4536,28 +4536,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4088,6 +4124,12 @@
- // 0x550750
- void intgame_message_window_display_msg(UiMessage* ui_message)
- {
-+    if (ui_message->type >= UI_MSG_TYPE_POISON
-+        && ui_message->type <= UI_MSG_TYPE_FEEDBACK) {
-+        modern_ui_message(ui_message->str);
-+        if ((ui_message->type == UI_MSG_TYPE_FEEDBACK || ui_message->type == UI_MSG_TYPE_EXCLAMATION) && combat_turn_based_is_active())
-+            modern_combat_log(combat_input_actor(), ui_message->str);
-+    }
-     sub_552770(ui_message);
-     if (dword_64C6D4 != NULL) {
-         dword_64C6D4(ui_message);
-@@ -4100,6 +4142,7 @@
-     UiMessage ui_message;
- 
-     (void)a1;
-+    modern_ui_message(str);
- 
-     if (dword_64C6D4 != NULL) {
-         ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4163,9 +4206,16 @@
+@@ -4085,9 +4121,21 @@
      }
  }
  
@@ -4567,6 +4546,27 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +static ModernDetails modern_hover_snapshot;
 +static int64_t modern_hover_object;
 +
+ // 0x550750
+ void intgame_message_window_display_msg(UiMessage* ui_message)
+ {
++    if (ui_message->type >= UI_MSG_TYPE_POISON
++        && ui_message->type <= UI_MSG_TYPE_FEEDBACK) {
++        if(!modern_details_capture)modern_ui_message(ui_message->str);
++        if ((ui_message->type == UI_MSG_TYPE_FEEDBACK || ui_message->type == UI_MSG_TYPE_EXCLAMATION) && combat_turn_based_is_active())
++            modern_combat_log(combat_input_actor(), ui_message->str);
++    }
+     sub_552770(ui_message);
+     if (dword_64C6D4 != NULL) {
+         dword_64C6D4(ui_message);
+@@ -4100,6 +4148,7 @@
+     UiMessage ui_message;
+ 
+     (void)a1;
++    if(!modern_details_capture)modern_ui_message(str);
+ 
+     if (dword_64C6D4 != NULL) {
+         ui_message.type = UI_MSG_TYPE_FEEDBACK;
+@@ -4166,6 +4215,7 @@
  // 0x550930
  void intgame_message_window_clear_internal(void)
  {
@@ -4619,6 +4619,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
+@@ -5431,7 +5486,7 @@
+     int prev_idx;
+ 
+     if (ui_message->type >= 6 && ui_message->type <= 12) {
+-        if (tig_timer_elapsed(dword_64C6EC) > 3000
++        if ((modern_details_capture || tig_timer_elapsed(dword_64C6EC) > 3000)
+             && intgame_iso_window_type == ROTWIN_TYPE_MSG) {
+             intgame_message_window_clear_internal();
+             intgame_message_draw(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
 @@ -5888,6 +5943,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
@@ -4637,31 +4646,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6239,6 +6298,15 @@
- // 0x553BE0
- void intgame_examine_object(int64_t pc_obj, int64_t target_obj, char* str)
- {
-+    /* Observe the engine's actual examination, after its script has run. */
-+    bool capture=modern_ui_enabled() && !modern_details_capture && intgame_iso_window_type==ROTWIN_TYPE_MSG;
-+    if(capture) {
-+        memset(&modern_hover_snapshot,0,sizeof(modern_hover_snapshot));
-+        modern_hover_snapshot.icon=modern_hover_snapshot.portrait=-1;
-+        snprintf(modern_hover_snapshot.title,sizeof(modern_hover_snapshot.title),"%s",str);
-+        modern_hover_object=target_obj;
-+        modern_details_capture=&modern_hover_snapshot;modern_details_passthrough=true;
-+    }
-     int type;
- 
-     if (intgame_iso_window_type != ROTWIN_TYPE_CHAT) {
-@@ -6282,6 +6350,7 @@
-             }
-         }
-     }
-+    if(capture){modern_details_capture=NULL;modern_details_passthrough=false;}
- }
- 
- // 0x553D10
-@@ -6378,7 +6447,9 @@
+@@ -6378,7 +6437,9 @@
          }
  
          // Generic race-specific icon.
@@ -4672,7 +4657,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          return false;
      default:
          return false;
-@@ -6573,6 +6644,7 @@
+@@ -6573,6 +6634,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -4680,7 +4665,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6683,16 @@
+@@ -6611,6 +6673,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -4697,7 +4682,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6877,11 @@
+@@ -6795,6 +6867,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -4709,7 +4694,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7699,7 @@
+@@ -7612,6 +7689,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -4717,7 +4702,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7728,7 @@
+@@ -7640,7 +7718,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -4726,7 +4711,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7872,7 @@
+@@ -7784,7 +7862,7 @@
          mes_file_entry.str,
          value);
  
@@ -4735,7 +4720,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8921,198 @@
+@@ -8833,3 +8911,221 @@
  
      follower_ui_show();
  }
@@ -4796,6 +4781,22 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        UI_PRIMARY_BUTTON_LOGBOOK,intgame_map_button};
 +    return slot>=0 && slot<4?intgame_ui_primary_button_icons[ids[slot]]:137;
 +}
++bool modern_examine_begin(int64_t pc,int64_t object)
++{
++    if(!modern_ui_enabled() || modern_details_capture || intgame_iso_window_type!=ROTWIN_TYPE_MSG)return false;
++    memset(&modern_hover_snapshot,0,sizeof(modern_hover_snapshot));
++    modern_hover_snapshot.icon=modern_hover_snapshot.portrait=-1;
++    char name[MAX_STRING];object_examine(object,pc,name);
++    snprintf(modern_hover_snapshot.title,sizeof(modern_hover_snapshot.title),"%s",name);
++    modern_hover_object=object;
++    modern_details_capture=&modern_hover_snapshot;modern_details_passthrough=true;
++    return true;
++}
++void modern_examine_end(void)
++{
++    modern_details_capture=NULL;modern_details_passthrough=false;
++}
++
 +void modern_inventory_details(int64_t pc,int64_t object,int kind,ModernDetails* details)
 +{
 +    memset(details,0,sizeof(*details));details->icon=details->portrait=-1;
@@ -4808,6 +4809,13 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        intgame_examine_item(pc,object,name);
 +    }
 +    modern_details_capture=NULL;
++    if(kind==0 && object==modern_hover_object) {
++        for(int i=0;i<modern_hover_snapshot.count && details->count<20;i++) {
++            const char* line=modern_hover_snapshot.lines[i];bool duplicate=false;
++            for(int j=0;j<details->count;j++)if(!strcmp(line,details->lines[j])){duplicate=true;break;}
++            if(!duplicate)snprintf(details->lines[details->count++],2000,"%s",line);
++        }
++    }
 +}
 +
 +const ModernDetails* modern_hover_details(void)
@@ -5872,12 +5880,14 @@ diff --git a/src/ui/spell_ui.c b/src/ui/spell_ui.c
 diff --git a/src/ui/tb_ui.c b/src/ui/tb_ui.c
 --- a/src/ui/tb_ui.c
 +++ b/src/ui/tb_ui.c
-@@ -1,3 +1,4 @@
+@@ -1,4 +1,6 @@
 +#include "game/dialog.h"
  #include "ui/tb_ui.h"
++#include "ui/modern_ui.h"
  
  #include <stdio.h>
-@@ -248,6 +249,11 @@
+ 
+@@ -248,6 +250,11 @@
  void sub_57CC70(int64_t a1, int64_t a2)
  {
      int64_t danger_source_obj;
@@ -5889,7 +5899,7 @@ diff --git a/src/ui/tb_ui.c b/src/ui/tb_ui.c
  
      if (object_script_execute(a1, a2, OBJ_HANDLE_NULL, SAP_DIALOG, 0) == 1) {
          if (ai_surrendered(a2, &danger_source_obj) && critter_party_same(danger_source_obj, a1)) {
-@@ -256,6 +262,8 @@
+@@ -256,17 +263,21 @@
              sub_5681C0(a1, a2);
          }
      }
@@ -5898,6 +5908,19 @@ diff --git a/src/ui/tb_ui.c b/src/ui/tb_ui.c
  }
  
  // 0x57CCF0
+ void sub_57CCF0(int64_t source_obj, int64_t target_obj)
+ {
+     char buffer[2000];
++    bool capture=modern_examine_begin(source_obj,target_obj);
+ 
+     if (sub_57CD60(source_obj, target_obj, buffer)) {
+         intgame_examine_object(source_obj, target_obj, buffer);
+         sub_557370(source_obj, target_obj);
+     }
++    if(capture)modern_examine_end();
+ }
+ 
+ // 0x57CD60
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c

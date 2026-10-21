@@ -87,6 +87,8 @@ typedef struct ModernDetails {
     char title[2000];
     char lines[20][2000];
 } ModernDetails;
+bool modern_examine_begin(int64_t pc,int64_t object);
+void modern_examine_end(void);
 void modern_inventory_details(int64_t pc,int64_t object,int kind,ModernDetails* details);
 const ModernDetails* modern_hover_details(void);
 void modern_map_pan(int dx,int dy);

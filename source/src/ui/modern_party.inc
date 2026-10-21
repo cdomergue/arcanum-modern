@@ -37,25 +37,28 @@ static void draw_party(void)
         int index=party_page*party_rows()+row;if(index>=party_count)break;
         int64_t obj=party_members[index];if(!obj_handle_is_valid(obj))continue;
         SDL_FRect r=party_rect(row);
-        button(r,1800+index,"",-1,(tactical_active() && obj==tactical_actor) || obj==modern_party_selected(),true);
+        bool selected=(tactical_active() && obj==tactical_actor) || obj==modern_party_selected();
+        button(r,1800+index,"",-1,selected,true);
         if(!tactical_active())button((SDL_FRect){r.x+4,r.y+4,22,22},2600+index,modern_party_detached(obj)?"/":"=",-1,false,intgame_mode_get()==INTGAME_MODE_MAIN);
-        tactical_portrait(obj,(SDL_FRect){r.x+29,r.y+5,36,46});
+        SDL_FRect portrait={r.x+27,r.y+6,40,48};
+        fill(portrait,(SDL_Color){12,9,6,255});outline(portrait,MUTED);
+        tactical_portrait(obj,(SDL_FRect){portrait.x+3,portrait.y+3,portrait.w-6,portrait.h-6});
         char name[1024];object_examine(obj,player_get_local_pc_obj(),name);
-        text_compact(game_text(name),r.x+4,r.y+52,r.w-8,true,GOLD);
+        text_compact(game_text(name),r.x+7,r.y+57,r.w-14,true,menu_control_color(r,selected,true));
         int hp=object_hp_current(obj),max=object_hp_max(obj);
         int ft=critter_fatigue_current(obj),ftmax=critter_fatigue_max(obj);
         SDL_Color health=stat_level_get(obj,STAT_POISON_LEVEL)>=20?(SDL_Color){90,174,75,255}:(SDL_Color){192,54,42,255};
-        fill((SDL_FRect){r.x+6,r.y+74,82,5},(SDL_Color){49,30,25,255});
-        fill((SDL_FRect){r.x+6,r.y+74,82*fmaxf(0,fminf(1,max>0?(float)hp/max:0)),5},health);
-        fill((SDL_FRect){r.x+6,r.y+82,82,4},(SDL_Color){29,30,49,255});
-        fill((SDL_FRect){r.x+6,r.y+82,82*fmaxf(0,fminf(1,ftmax>0?(float)ft/ftmax:0)),4},(SDL_Color){83,113,213,255});
+        fill((SDL_FRect){r.x+6,r.y+73,82,4},(SDL_Color){49,30,25,255});
+        fill((SDL_FRect){r.x+6,r.y+73,82*fmaxf(0,fminf(1,max>0?(float)hp/max:0)),4},health);
+        fill((SDL_FRect){r.x+6,r.y+79,82,3},(SDL_Color){29,30,49,255});
+        fill((SDL_FRect){r.x+6,r.y+79,82*fmaxf(0,fminf(1,ftmax>0?(float)ft/ftmax:0)),3},(SDL_Color){83,113,213,255});
         char values[60];snprintf(values,sizeof(values),"%d / %d",hp,max);
-        text_compact(values,r.x+4,r.y+87,r.w-8,true,GOLD);
+        text_compact(values,r.x+4,r.y+84,r.w-8,true,GOLD);
         if(inside(r,mouse_x,mouse_y) && !party_menu_obj){
             char detail[1200];snprintf(detail,sizeof(detail),"%s  ·  %s : %d / %d  ·  %s : %d / %d%s%s",game_text(name),character_text(106),hp,max,character_text(107),ft,ftmax,tactical_active()?"":"  ·  ",tactical_active()?"":modern_party_detached(obj)?tr("Détaché — cliquer / pour regrouper","Ungrouped — click / to group"):tr("Groupé — cliquer = pour détacher","Grouped — click = to ungroup"));
             float width=fminf(canvas_w-138,text_measure(0,detail)+24);
-            SDL_FRect tip={114,r.y+15,width,31};fill(tip,(SDL_Color){16,12,9,235});outline(tip,GOLD);
-            text_compact(detail,tip.x+12,tip.y+6,tip.w-24,false,GOLD);
+            SDL_FRect tip={114,r.y+15,width,40};hud_panel(tip);
+            text_compact(detail,tip.x+12,tip.y+12,tip.w-24,false,GOLD);
         }
     }
     if(party_count>party_rows()){
@@ -68,7 +71,7 @@ static void draw_party(void)
         button((SDL_FRect){12,88+rows*108+(party_count>party_rows()?28:0),94,28},2730,tr("Personnage","Player"),-1,false,true);
     }
     if(party_menu_obj){
-        SDL_FRect r=party_menu_rect();frame(r);
+        SDL_FRect r=party_menu_rect();hud_panel(r);
         for(int i=0;i<8;i++)tactical_button((SDL_FRect){r.x+8,r.y+8+i*35,r.w-16,31},1940+i,game_text(modern_follower_text(i)),false,modern_follower_command_available(party_menu_obj,i));
     }
 }

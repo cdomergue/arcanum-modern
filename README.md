@@ -127,7 +127,7 @@ support. Click an image to enlarge it.
 
 **BG3-inspired tactical combat:** direct companion control, turn order and action points.
 
-[![Controlling Sogg during his turn](docs/screenshots/tactical-combat.jpg)](docs/screenshots/tactical-combat.jpg)
+[![Controlling Virgil as he attacks a guard, with turn order and remaining action points](docs/screenshots/tactical-combat.jpg)](docs/screenshots/tactical-combat.jpg)
 
 | Exploration | Inventory and equipment |
 | --- | --- |

@@ -107,8 +107,10 @@ static void panel_mouse_queue(int kind,int x,int y,int event)
 typedef struct QuickBinding { int type,data,slot; int64_t item,actor; } QuickBinding;
 static QuickBinding binding_drag,binding_pending;
 static bool binding_pressed,binding_moved,binding_cancel;
+static int binding_action=-1;
 static float binding_x,binding_y;
 static SDL_FRect binding_slots[10];
+static SDL_FRect binding_dock;
 static bool binding_bar_visible;
 
 static QuickBinding binding_hover(void)
@@ -156,19 +158,17 @@ static void binding_tick(void)
 }
 static void draw_binding_bar(void)
 {
-    int p=native_panel();binding_bar_visible=(p==2 || p==5) && intgame_mode_get()!=INTGAME_MODE_QUANTITY;
+    int p=native_panel();binding_bar_visible=(p==2 || p==5) && binding_dock.w>0 && intgame_mode_get()!=INTGAME_MODE_QUANTITY;
     if(!binding_bar_visible)return;
-    if(p==5 && combat_tactical_enabled() && combat_turn_based_is_active()) {
-        float x=(canvas_w-980)/2,y=canvas_h-126;
-        for(int i=0;i<10;i++)binding_slots[i]=(SDL_FRect){x+550+(i%5)*43,y+13+(i/5)*38,38,34};
-    } else {
-        float x=(canvas_w-610)/2,y=canvas_h-54;
-        fill((SDL_FRect){x-10,y-5,620,53},(SDL_Color){18,13,9,245});
+    {
+        float pitch=fminf(60,binding_dock.w/10),x=binding_dock.x+(binding_dock.w-pitch*10)/2,y=binding_dock.y;
         for(int i=0;i<10;i++) {
-            SDL_FRect r={x+i*60,y,54,42};binding_slots[i]=r;
-            fill(r,(SDL_Color){40,29,18,255});outline(r,inside(r,mouse_x,mouse_y)?GOLD:MUTED);
+            SDL_FRect r={x+i*pitch,y,pitch-6,binding_dock.h};binding_slots[i]=r;
+            if(hud_atlas)hud_button_surface(r,false,true,binding_pressed && inside(r,mouse_x,mouse_y));
+            else {fill(r,(SDL_Color){40,29,18,255});outline(r,MUTED);}
             Hotkey* hk=modern_hotkey_get(i);
-            if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+13,r.y+2,34,34},true);
+            float side=fminf(r.w-10,r.h-8);
+            if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+(r.w-side)/2,r.y+4,side,side},true);
             char number[4];snprintf(number,sizeof(number),"%d",(i+1)%10);text_draw(0,number,r.x+3,r.y+22,GOLD);
         }
     }
@@ -182,7 +182,7 @@ static void draw_binding_bar(void)
 static bool binding_event(SDL_Event* event)
 {
     if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST) {
-        binding_cancel=binding_pressed;binding_pressed=binding_moved=false;return false;
+        binding_cancel=binding_pressed;binding_pressed=binding_moved=false;SDL_CaptureMouse(false);return false;
     }
     if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat && intgame_mode_get()!=INTGAME_MODE_QUANTITY) {
         int key=event->key.scancode,slot=-1;
@@ -193,25 +193,35 @@ static bool binding_event(SDL_Event* event)
             return true;
         }
         if(event->key.scancode==SDL_SCANCODE_ESCAPE && binding_pressed) {
-            binding_cancel=true;binding_pressed=binding_moved=false;pressed_action=-1;click_captured=false;return true;
+            binding_cancel=true;binding_pressed=binding_moved=false;pressed_action=-1;click_captured=false;SDL_CaptureMouse(false);return true;
         }
     }
     if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button==SDL_BUTTON_LEFT) {
         binding_drag=binding_hover();binding_pressed=binding_drag.type!=HOTKEY_NONE;binding_moved=false;
         binding_x=mouse_x;binding_y=mouse_y;
+        if(binding_pressed && binding_drag.type!=HOTKEY_ITEM) {
+            binding_action=-1;
+            for(int i=button_count-1;i>=0;i--)if(buttons[i].enabled && inside(buttons[i].rect,mouse_x,mouse_y)){binding_action=buttons[i].action;break;}
+            pressed_action=-1;click_captured=false;SDL_CaptureMouse(true);return true;
+        }
     }
-    if(event->type==SDL_EVENT_MOUSE_MOTION && binding_pressed) {
+    if((event->type==SDL_EVENT_MOUSE_MOTION || event->type==SDL_EVENT_MOUSE_BUTTON_UP) && binding_pressed) {
         float dx=mouse_x-binding_x,dy=mouse_y-binding_y;
         if(dx*dx+dy*dy>=36)binding_moved=true;
     }
     if(event->type==SDL_EVENT_MOUSE_BUTTON_UP && event->button.button==SDL_BUTTON_LEFT && binding_pressed) {
         bool moved=binding_moved;binding_pressed=binding_moved=false;
+        SDL_CaptureMouse(false);
         int slot=binding_slot_at(mouse_x,mouse_y);
         if(moved && slot>=0) {
             binding_drag.slot=slot;binding_pending=binding_drag;
             pressed_action=-1;click_captured=false;return true;
         }
-        if(moved && binding_drag.type!=HOTKEY_ITEM) {pressed_action=-1;click_captured=false;return true;}
+        if(binding_drag.type!=HOTKEY_ITEM) {
+            if(!moved)for(int i=button_count-1;i>=0;i--)
+                if(buttons[i].action==binding_action && buttons[i].enabled && inside(buttons[i].rect,mouse_x,mouse_y)){pending_action=binding_action;break;}
+            pressed_action=-1;click_captured=false;return true;
+        }
     }
     if(binding_slot_at(mouse_x,mouse_y)>=0 && (event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP))return true;
     return false;
@@ -272,7 +282,7 @@ static void inventory_grid(SDL_FRect r,int legacy_x,int legacy_y,int rows,int sc
         SDL_FRect footprint={r.x+cc*cell,r.y+rr*cell,iw*cell,ih*cell};
         if(inside(r,mouse_x,mouse_y) && inside(footprint,mouse_x,mouse_y)) {
             inventory_hover=obj;
-            fill(footprint,(SDL_Color){104,61,21,215});outline(footprint,GOLD);
+            fill(footprint,UI_RED_WASH);outline(footprint,UI_RED_BORDER);
         }
         draw_art_id(obj_field_int32_get(obj,OBJ_F_ITEM_INV_AID),icon,true);
         int quantity_field;
@@ -298,12 +308,12 @@ static void equipment_slots(SDL_FRect r,int side,int mode)
         if(side==1) {xx=target[i][0]+target[i][2]/2;yy=target[i][1]+target[i][3]/2+41;}
         else {xx=coords[i][0]+coords[i][2]/2+(mode==INVEN_UI_MODE_INVENTORY || mode>=INVEN_UI_MODE_NPC_IDENTIFY?0:345);yy=coords[i][1]+coords[i][3]/2+41;}
         SDL_FRect slot={r.x+layout[i][0]*r.w,r.y+layout[i][1]*r.h,layout[i][2]*r.w,layout[i][3]*r.h};
-        fill(slot,(SDL_Color){20,16,12,255});outline(slot,(SDL_Color){130,100,57,255});
+        hud_panel(slot);
         panel_region(slot,xx,yy,0,0,2);
         int64_t obj=modern_inventory_at(xx,yy);
         if(obj && obj!=inven_ui_drag_item_obj_get()) {
             if(inside(slot,mouse_x,mouse_y)) {
-                inventory_hover=obj;fill(slot,(SDL_Color){104,61,21,215});outline(slot,GOLD);
+                inventory_hover=obj;fill(slot,UI_RED_WASH);outline(slot,UI_RED_BORDER);
             }
             slot.x+=8;slot.y+=8;slot.w-=16;slot.h-=16;
             draw_art_id(obj_field_int32_get(obj,OBJ_F_ITEM_INV_AID),slot,true);
@@ -318,7 +328,7 @@ static void inventory_detail_update(int64_t pc,int64_t object,int kind)
 }
 static int inventory_detail_card(SDL_FRect r,ModernDetails* details,int scroll,int action)
 {
-    fill(r,(SDL_Color){19,16,12,245});outline(r,(SDL_Color){130,100,57,255});
+    hud_panel(r);
     if(!details->count)return 0;
     if(details->icon>=0)draw_art(details->icon,(SDL_FRect){r.x+18,r.y+18,76,76},true);
     menu_paragraph(game_text(details->lines[0]),(SDL_FRect){r.x+110,r.y+20,r.w-132,81},0,GOLD);
@@ -346,6 +356,7 @@ static void draw_inventory(void)
     float footer=inv.transfer_all?792:748;
     float w=fminf(1430,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-footer-72)/2;
     frame((SDL_FRect){x,y,w,footer+72});
+    binding_dock=(SDL_FRect){x+400,y+footer,w-690,48};
     centered(3,actor_name(inv.pc),canvas_w/2,y+22,GOLD);
     bool single=inv.mode==INVEN_UI_MODE_INVENTORY || inv.mode>=INVEN_UI_MODE_NPC_IDENTIFY;
     float left=x+25,right=x+440,cw=360;
@@ -384,26 +395,28 @@ static void draw_inventory(void)
         float gap=14,tw=(cw-2*gap)/3;
         SDL_FRect target={left+i*(tw+gap),y+651,tw,tw*292/488};
         if(inventory_actions_texture) {
-            /* User-supplied atlas. Sample only the brass oval and its mounting
-               plate, excluding the outer presentation frames. No extra frame. */
+            /* Sample the brass oval and mounting plate without the atlas presentation frame. */
             float aw,ah;SDL_GetTextureSize(inventory_actions_texture,&aw,&ah);
             const float atlas_x[]={90,782,1474};
             SDL_FRect src={atlas_x[i]*aw/2048,187*ah/683,488*aw/2048,292*ah/683};
             bool hover=inside(target,mouse_x,mouse_y);
             Uint8 shade=hover?255:232;
-            SDL_SetTextureColorMod(inventory_actions_texture,shade,shade,shade);
+            SDL_SetTextureColorMod(inventory_actions_texture,shade,hover?100:shade,hover?80:shade);
             SDL_RenderTexture(renderer,inventory_actions_texture,&src,&target);
+            SDL_SetTextureColorMod(inventory_actions_texture,255,255,255);
         } else draw_art(icons[i],target,true);
         panel_region(target,targets[i][1],targets[i][2],0,0,2);
     }
     /* Recreate the original scattered-items → grid symbol at native size. */
-    button((SDL_FRect){left,y+footer,120,48},731,"",-1,false,true);
+    SDL_FRect arrange={left,y+footer,120,48};
+    button(arrange,731,"",-1,false,true);
+    SDL_Color arrange_color=menu_control_color(arrange,false,true);
     const int scattered[6][2]={{0,8},{15,0},{25,19},{3,27},{22,33},{33,6}};
     for(int i=0;i<6;i++)fill((SDL_FRect){left+10+scattered[i][0],y+footer+6+scattered[i][1],6,6},MUTED);
-    if(!control_symbol((SDL_FRect){left+51,y+footer+8,30,30},">",true,false))
-        text_draw(2,">",left+55,y+footer+11,(SDL_Color){190,69,35,255});
+    if(!control_symbol((SDL_FRect){left+51,y+footer+8,30,30},">",true,inside(arrange,mouse_x,mouse_y)))
+        text_draw(2,">",left+55,y+footer+11,arrange_color);
     for(int row=0;row<3;row++)for(int col=0;col<3;col++)
-        fill((SDL_FRect){left+81+col*9,y+footer+11+row*9,7,7},GOLD);
+        fill((SDL_FRect){left+81+col*9,y+footer+11+row*9,7,7},arrange_color);
     for(int i=0;i<2;i++) {
         SDL_FRect stat={right+i*185,y+630,175,48};
         char label[256];snprintf(label,sizeof(label),"%s : %d",game_text(modern_intgame_text(i?63:57)),i?item_total_defence(inv.pc):item_total_attack(inv.pc));
@@ -439,7 +452,7 @@ static void draw_inventory(void)
     if(mainmenu_ui_is_active())menu_button((SDL_FRect){left+140,y+footer,220,48},737,menu_text(7002),true);
     menu_button((SDL_FRect){x+w-275,y+footer,240,48},730,menu_text(260),true);
     if(*message_text && SDL_GetTicks()-message_time<12000)
-        menu_paragraph(message_text,(SDL_FRect){left+290,y+footer-4,w-610,54},0,GOLD);
+        text_compact(message_text,left,y+688,790,false,GOLD);
     int64_t drag=inven_ui_drag_item_obj_get();
     if(drag)draw_art_id(obj_field_int32_get(drag,OBJ_F_ITEM_INV_AID),(SDL_FRect){mouse_x+12,mouse_y+12,72,88},true);
     if(intgame_mode_get()==INTGAME_MODE_QUANTITY) {
@@ -593,7 +606,7 @@ static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)
         SDL_FRect r={x-12,y-12,24,24};button(r,2200+i,"*",-1,false,true);
         if(inside(r,mouse_x,mouse_y)) {
             float width=fminf(420,text_measure(0,memo->text)+20),xx=fminf(canvas_w-width-10,x);
-            fill((SDL_FRect){xx,y+17,width,32},(SDL_Color){19,14,10,240});
+            hud_panel((SDL_FRect){xx,y+17,width,32});
             text_compact(memo->text,xx+10,y+24,width-20,false,GOLD);
         }
     }
@@ -718,7 +731,7 @@ static SDL_FRect dialogue_reply_view;
 static int dialogue_reply_scroll,dialogue_reply_max;
 static void dialogue_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color)
 {
-    /* A thin text shadow complements the translucent dialogue backing. */
+    /* The shadow keeps glyph edges legible over the wood grain. */
     SDL_FRect shadow=rect;shadow.x+=1.3f;shadow.y+=1.3f;
     menu_paragraph(text,shadow,offset,(SDL_Color){0,0,0,240});
     menu_paragraph(text,rect,offset,color);
@@ -726,9 +739,7 @@ static void dialogue_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Co
 static void dialogue_scroll_button(SDL_FRect rect,int action,const char* label,bool active)
 {
     if(!active)return;
-    if(!control_symbol(rect,label,true,inside(rect,mouse_x,mouse_y)))
-        text_draw(1,label,rect.x+8,rect.y+4,GOLD);
-    if(button_count<MAX_BUTTONS)buttons[button_count++]=(Button){rect,action,true};
+    button(rect,action,label,-1,false,true);
 }
 static void draw_world_hover(void)
 {
@@ -750,7 +761,7 @@ static void draw_world_hover(void)
     float height=20+(title_rows+rows)*27+(detail->bar_count?26:0)+(detail->extra_count?28:0);
     if(height<86)height=86;
     float x=(canvas_w-width)/2,y=canvas_h-136-height;
-    fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,220});outline((SDL_FRect){x,y,width,height},MUTED);
+    hud_panel((SDL_FRect){x,y,width,height});
     if(detail->portrait>=0)draw_portrait(detail->portrait,(SDL_FRect){x+10,y+10,56,65});
     else if(detail->icon>=0)draw_art(detail->icon,(SDL_FRect){x+10,y+10,56,56},true);
     float tx=x+78,ty=y+10;
@@ -805,27 +816,32 @@ static void draw_dialogue(void)
         SDL_strlcpy(dialogue_previous,state->reply,sizeof(dialogue_previous));
         dialogue_scroll=dialogue_reply_scroll=0;dialogue_choice=-1;
     }
-    float width=fminf(1000,canvas_w-100),x=(canvas_w-width)/2;
+    float width=fminf(1000,canvas_w-140),x=(canvas_w-width)/2;
     float choices_height=0;
     for(int i=0;i<state->num_options && i<5;i++)
         choices_height+=menu_paragraph(game_text(state->options[i]),(SDL_FRect){0,0,width-48,0},0,GOLD)*27+12;
     dialogue_view=(SDL_FRect){x,canvas_h-345,width,fminf(195,choices_height)};
-    /* Keep the scenery visible, with consistent contrast on bright terrain. */
-    if(choices_height>0)fill((SDL_FRect){x-14,dialogue_view.y-10,width+28,dialogue_view.h+20},(SDL_Color){12,10,8,160});
+    if(choices_height>0)hud_panel((SDL_FRect){x-18,dialogue_view.y-16,width+76,dialogue_view.h+32});
     int ax=0,ay=0;modern_dialog_anchor(&ax,&ay);
     float rx=ax*canvas_w/hrp_iso_window_width_get()-190;
     float ry=ay*canvas_h/hrp_iso_window_height_get();
     const char* reply=game_text(state->reply);
     int rows=menu_paragraph(reply,(SDL_FRect){0,0,380,0},0,GOLD);
     float reply_height=fminf(243,rows*27);
-    rx=fmaxf(25,fminf(canvas_w-405,rx));ry=fmaxf(85,fminf(dialogue_view.y-reply_height-24,ry));
+    rx=fmaxf(26,fminf(canvas_w-444,rx));ry=fmaxf(160,fminf(dialogue_view.y-reply_height-48,ry));
     dialogue_reply_view=(SDL_FRect){rx,ry,380,reply_height};
     dialogue_reply_max=rows-(int)(reply_height/27);if(dialogue_reply_max<0)dialogue_reply_max=0;
     if(dialogue_reply_scroll>dialogue_reply_max)dialogue_reply_scroll=dialogue_reply_max;
-    fill((SDL_FRect){rx-12,ry-10,404,reply_height+20},(SDL_Color){12,10,8,160});
+    hud_panel((SDL_FRect){rx-16,ry-74,444,reply_height+94});
+    SDL_FRect portrait={rx,ry-60,40,48};
+    fill(portrait,(SDL_Color){12,9,6,255});outline(portrait,MUTED);
+    draw_portrait(portrait_get(state->npc_obj),(SDL_FRect){portrait.x+3,portrait.y+3,34,42});
+    char speaker[1024];object_examine(state->npc_obj,state->pc_obj,speaker);
+    text_compact(game_text(speaker),rx+54,ry-47,346,false,GOLD);
+    rule(rx+54,ry-20,346,MUTED);
     dialogue_paragraph(reply,dialogue_reply_view,dialogue_reply_scroll,(SDL_Color){245,237,216,255});
-    dialogue_scroll_button((SDL_FRect){rx+382,ry,30,30},822,"^",dialogue_reply_scroll>0);
-    dialogue_scroll_button((SDL_FRect){rx+382,ry+reply_height-30,30,30},823,"v",dialogue_reply_scroll<dialogue_reply_max);
+    dialogue_scroll_button((SDL_FRect){rx+389,ry,30,30},822,"^",dialogue_reply_scroll>0);
+    dialogue_scroll_button((SDL_FRect){rx+389,ry+reply_height-30,30,30},823,"v",dialogue_reply_scroll<dialogue_reply_max);
     SDL_Rect clip={(int)dialogue_view.x,(int)dialogue_view.y,(int)dialogue_view.w,(int)dialogue_view.h};SDL_SetRenderClipRect(renderer,&clip);
     float cy=dialogue_view.y-dialogue_scroll;
     for(int i=0;i<state->num_options && i<5;i++) {
@@ -833,7 +849,8 @@ static void draw_dialogue(void)
         int lines=menu_paragraph(option,(SDL_FRect){0,0,width-48,0},0,GOLD);
         float h=lines*27+12;SDL_FRect r={x,cy,width,h};
         bool hovered=inside(r,mouse_x,mouse_y) && inside(dialogue_view,mouse_x,mouse_y);
-        SDL_Color color=hovered?(SDL_Color){255,222,110,255}:(SDL_Color){245,237,216,255};
+        SDL_Color color=hovered?UI_RED:(SDL_Color){245,237,216,255};
+        if(hovered){fill(r,UI_RED_WASH);outline(r,UI_RED_BORDER);}
         char number[8];snprintf(number,sizeof(number),"%d",i+1);
         dialogue_paragraph(number,(SDL_FRect){x,cy+4,28,27},0,color);
         dialogue_paragraph(option,(SDL_FRect){x+40,cy+4,width-48,h-8},0,color);
@@ -844,8 +861,8 @@ static void draw_dialogue(void)
     dialogue_max=(int)fmaxf(0,cy+dialogue_scroll-dialogue_view.y-dialogue_view.h);
     if(dialogue_scroll>dialogue_max)dialogue_scroll=dialogue_max;
     SDL_SetRenderClipRect(renderer,NULL);
-    dialogue_scroll_button((SDL_FRect){x+width+8,dialogue_view.y,32,32},820,"^",dialogue_scroll>0);
-    dialogue_scroll_button((SDL_FRect){x+width+8,dialogue_view.y+160,32,32},821,"v",dialogue_scroll<dialogue_max);
+    dialogue_scroll_button((SDL_FRect){x+width+16,dialogue_view.y,32,32},820,"^",dialogue_scroll>0);
+    dialogue_scroll_button((SDL_FRect){x+width+16,dialogue_view.y+dialogue_view.h-32,32,32},821,"v",dialogue_scroll<dialogue_max);
 }
 
 static void draw_selector(void)
@@ -853,6 +870,7 @@ static void draw_selector(void)
     if(selector==1 && tactical_active()){draw_tactical_spells();return;}
     float w=fminf(1080,canvas_w-60),x=(canvas_w-w)/2,y=(canvas_h-700)/2;
     frame((SDL_FRect){x,y,w,700});
+    binding_dock=(SDL_FRect){x+30,y+625,w-330,48};
     centered(3,character_text(selector==1?134:132),canvas_w/2,y+25,GOLD);
     int64_t pc=combat_input_actor();
     if(selector==1) {
@@ -860,13 +878,14 @@ static void draw_selector(void)
         for(int i=0;i<5;i++) {
             int id=selector_college*5+i;float yy=y+303+i*59;
             button((SDL_FRect){x+25,yy,w-50,53},870+i,"",spell_icon(id),false,spell_is_known(pc,id));
-            text_draw(1,game_text(spell_name(id)),x+87,yy+13,spell_is_known(pc,id)?GOLD:MUTED);
+            text_draw(1,game_text(spell_name(id)),x+87,yy+13,
+                menu_control_color((SDL_FRect){x+25,yy,w-50,53},false,spell_is_known(pc,id)));
         }
     } else {
         for(int i=0;i<4;i++) {
             SDL_FRect r={x+30,y+95+i*110,w-60,90};
             button(r,880+i,"",sub_579F50(i),false,sub_579F50(i)!=-1);
-            text_draw(2,game_text(sub_57A700(i)),r.x+95,r.y+28,GOLD);
+            text_draw(2,game_text(sub_57A700(i)),r.x+95,r.y+28,menu_control_color(r,false,sub_579F50(i)!=-1));
         }
     }
     menu_button((SDL_FRect){x+w-260,y+625,230,50},840,menu_text(54),true);
@@ -890,7 +909,7 @@ static void draw_schematic(void)
     for(int i=0;i<2;i++) {
         SDL_FRect r={x+25+i*(w-50)/2,y+205,(w-70)/2,120};
         button(r,923+i,"",-1,scheme.view==i,true);
-        menu_paragraph(game_text(modern_schematic_text(4+i)),(SDL_FRect){r.x+16,r.y+12,r.w-32,r.h-18},0,GOLD);
+        menu_paragraph(game_text(modern_schematic_text(4+i)),(SDL_FRect){r.x+16,r.y+12,r.w-32,r.h-18},0,menu_control_color(r,scheme.view==i,true));
     }
     char page[32];snprintf(page,sizeof(page),"%d / %d",scheme.count?scheme.page+1:0,scheme.count);
     centered(0,page,x+105,y+695,MUTED);
@@ -922,15 +941,15 @@ static void draw_fate(void)
     for(int i=0;i<count;i++) {
         SDL_FRect r={x+24,y+68+i*40,w-48,36};
         button(r,970+i,"",-1,modern_fate_active(i),true);
-        text_draw(1,game_text(modern_fate_text(i)),r.x+18,r.y+5,GOLD);
+        text_draw(1,game_text(modern_fate_text(i)),r.x+18,r.y+5,menu_control_color(r,modern_fate_active(i),true));
         if(modern_fate_active(i) && !control_symbol((SDL_FRect){r.x+r.w-30,r.y+4,24,24},"+",true,true))
-            text_draw(1,"+",r.x+r.w-25,r.y+5,GOLD);
+            text_draw(1,"+",r.x+r.w-25,r.y+5,UI_RED);
     }
     menu_button((SDL_FRect){x+w-250,y+578,225,46},969,menu_text(260),true);
 }
 static void draw_play_panels(void)
 {
-    panel_region_count=0;
+    panel_region_count=0;binding_dock=(SDL_FRect){0};
     switch(native_panel()) {
     case 1:panel_backdrop();draw_character_sheet();break;
     case 2:draw_inventory();break;

@@ -1,0 +1,6 @@
+Edit this approved Arcanum Renaissance main menu mockup into a production background. Preserve the image EXACTLY: same camera, same 16:9 composition, same frame, same objects, same title ARCANUM and subtitle RENAISSANCE, same lighting, same four button shapes, positions, spacing and ornament. Make ONLY this change: remove all four button labels "Un joueur", "Options", "Crédits", "Quitter" and fill their letters with continuous natural matching dark wood grain. The four wood and bronze button plaques must be EMPTY with absolutely no text, symbols or remnants inside. Keep the top button's warmer/brighter wood and bronze as the reference highlighted state, and keep the other three darker as they are. No other changes or new text. This is for runtime localized text drawn by the game engine. Return 3840 x 2160 pixels if supported, 16:9 widescreen.
+
+Tool: built-in image_gen. Actual output: 1672x941.
+Reference: approved preview derived from installed art/interface/mainmenuback.art.
+Reference extracts and preview are local-only under review/main-menu-concept/.
+Keep localized button text separate from this image at runtime.

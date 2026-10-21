@@ -144,7 +144,7 @@ static void draw_tactical_log(void)
     if(!tactical_active() && tactical_line_count)
         button((SDL_FRect){(canvas_w-980)/2,canvas_h-164,190,30},1106,tactical_text(TC_LOG),-1,tactical_log_open,true);
     if(!tactical_log_open)return;
-    SDL_FRect r=tactical_log_rect();fill(r,(SDL_Color){16,12,9,240});outline(r,GOLD);
+    SDL_FRect r=tactical_log_rect();hud_panel(r);
     text_draw(0,tactical_text(TC_LOG),r.x+12,r.y+10,GOLD);
     button((SDL_FRect){r.x+r.w-120,r.y+5,32,27},1107,"<",-1,false,tactical_log_scroll<tactical_line_count-TACTICAL_LOG_ROWS);
     button((SDL_FRect){r.x+r.w-80,r.y+5,32,27},1108,">",-1,false,tactical_log_scroll>0);
@@ -375,50 +375,55 @@ static void tactical_button(SDL_FRect r,int action,const char* label,bool select
 {
     button(r,action,"",-1,selected,available);
     if(!control_symbol(r,label,available,selected || (available && inside(r,mouse_x,mouse_y))))
-        text_compact(label,r.x+5,r.y+(r.h-fonts[0].size)/2,r.w-10,true,available?GOLD:MUTED);
+        text_compact(label,r.x+5,r.y+(r.h-fonts[0].size)/2,r.w-10,true,menu_control_color(r,selected,available));
 }
 static void draw_tactical_hud(void)
 {
-    float tx=(canvas_w-930)/2;frame((SDL_FRect){tx,10,930,66});
+    float tx=(canvas_w-930)/2;hud_frame((SDL_FRect){tx,10,930,66},false);
     char round[40];snprintf(round,sizeof(round),"%s %d",tactical_text(TC_ROUND),combat_turn_based_turn_get());
-    text_draw(0,round,tx+13,18,GOLD);
-    button((SDL_FRect){tx+12,40,29,25},1101,"<",-1,false,tactical_page>0);
-    button((SDL_FRect){tx+47,40,29,25},1102,">",-1,false,(tactical_page+1)*10<tactical_count);
+    fill((SDL_FRect){tx+29,18,77,22},(SDL_Color){18,12,8,255});
+    outline((SDL_FRect){tx+29,18,77,22},MUTED);
+    text_compact(round,tx+32,19,71,true,(SDL_Color){247,230,194,255});
+    button((SDL_FRect){tx+31,43,31,25},1101,"<",-1,false,tactical_page>0);
+    button((SDL_FRect){tx+71,43,31,25},1102,">",-1,false,(tactical_page+1)*10<tactical_count);
     for(int j=0;j<10;j++){
         int i=tactical_page*10+j;if(i>=tactical_count)break;
         int64_t obj=tactical_order_actor(i);if(!obj)continue;
-        float x=tx+90+j*80;
+        float x=tx+118+j*78;
         SDL_FRect rect={x,16,74,53};bool selected=obj==tactical_actor;
         button(rect,1200+i,"",-1,selected,true);
         if(combat_shared_turn_available(obj))fill((SDL_FRect){x+2,70,70,3},GOLD);
         tactical_portrait(obj,(SDL_FRect){x+4,19,31,40});
         char name[1024];object_examine(obj,player_get_local_pc_obj(),name);
-        text_compact(game_text(name),x+38,20,32,false,selected?GOLD:MUTED);
+        text_compact(game_text(name),x+38,20,32,false,menu_control_color(rect,selected,true));
         int hp=object_hp_max(obj);float fraction=hp>0?(float)object_hp_current(obj)/hp:0;
         fill((SDL_FRect){x+38,49,30*fmaxf(0,fminf(1,fraction)),4},combat_player_controls(obj)?(SDL_Color){107,176,116,255}:(SDL_Color){190,74,57,255});
         if(inside(rect,mouse_x,mouse_y)){
             const char* n=game_text(name);float w=text_measure(1,n)+20;
-            fill((SDL_FRect){x,80,w,30},(SDL_Color){16,12,9,235});text_draw(1,n,x+10,82,GOLD);
+            hud_panel((SDL_FRect){x,80,w,30});text_draw(1,n,x+10,82,GOLD);
         }
     }
-    float x=(canvas_w-980)/2,y=canvas_h-126;frame((SDL_FRect){x,y,980,116});
+    float x=(canvas_w-980)/2,y=canvas_h-126;hud_frame((SDL_FRect){x,y,980,116},true);
     int64_t actor=tactical_actor;if(!actor || !obj_handle_is_valid(actor))return;
     bool ready=combat_input_ready(actor),owned=combat_player_controls(actor);
     gauge(x+27,y+9,object_hp_current(actor),object_hp_max(actor),false);
     gauge(x+915,y+9,critter_fatigue_current(actor),critter_fatigue_max(actor),true);
-    tactical_portrait(actor,(SDL_FRect){x+100,y+12,50,65});
+    SDL_FRect portrait_frame={x+116,y+16,44,59};
+    if(hud_atlas)hud_button_surface(portrait_frame,false,true,false);
+    else {fill(portrait_frame,(SDL_Color){18,12,8,255});outline(portrait_frame,MUTED);}
+    tactical_portrait(actor,(SDL_FRect){x+121,y+21,34,49});
     char name[1024];object_examine(actor,player_get_local_pc_obj(),name);
-    text_compact(game_text(name),x+165,y+10,375,false,GOLD);
+    text_compact(game_text(name),x+172,y+14,365,false,GOLD);
     char points[120];int max=stat_level_get(actor,STAT_SPEED);if(max<5)max=5;
     snprintf(points,sizeof(points),"%s  %d / %d",tactical_text(TC_AP),combat_action_points_get(),max);
-    text_draw(1,points,x+165,y+32,GOLD);
+    text_draw(1,points,x+172,y+34,GOLD);
     bool preview=tactical_has_preview && tactical_preview.actor==actor && !native_panel() && !tactical_region(mouse_x,mouse_y);
     int after=preview?combat_action_points_get()-tactical_preview.cost:combat_action_points_get();
     if(preview){char next[96];snprintf(next,sizeof(next),"%s %s%d %s",tr("Après :","After:"),tactical_preview.count>1?"~":"",after>0?after:0,tactical_text(TC_AP));text_compact(next,x+350,y+35,185,false,tactical_preview.affordable?GOLD:(SDL_Color){236,128,95,255});}
     if(!ready)text_compact(tactical_text(owned?TC_BUSY:TC_WAIT),x+350,y+35,185,false,MUTED);
     int pa=combat_action_points_get();
     int cells=max>30?30:max;
-    for(int i=0;i<cells;i++)fill((SDL_FRect){x+165+i*370.0f/cells,y+62,370.0f/cells-3,8},i*max<pa*cells?(preview && i*max>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
+    for(int i=0;i<cells;i++)fill((SDL_FRect){x+172+i*363.0f/cells,y+64,363.0f/cells-3,8},i*max<pa*cells?(preview && i*max>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
     const int ids[]={1103,6,5,1104,1105};
     const char* names[]={tactical_text(TC_ATTACK),game_text(modern_intgame_text(1000)),game_text(modern_intgame_text(1001)),game_text(modern_intgame_text(1006)),game_text(modern_intgame_text(1005))};
     for(int i=0;i<5;i++)tactical_button((SDL_FRect){x+100+i*90,y+82,86,25},ids[i],names[i],false,ready);
@@ -433,7 +438,7 @@ static void draw_tactical_hud(void)
     if(*message_text && SDL_GetTicks()-message_time<8000){
         float width=fminf(940,text_measure(0,message_text)+32);
         SDL_FRect r={(canvas_w-width)/2,y-39,width,30};
-        fill(r,(SDL_Color){16,12,9,235});outline(r,GOLD);
+        hud_panel(r);
         text_compact(message_text,r.x+12,r.y+6,r.w-24,true,GOLD);
     }
 
@@ -482,9 +487,10 @@ static void draw_tactical_spells(void)
     int visible=count-tactical_spell_page*10;if(visible>10)visible=10;
     int rows=(visible+1)/2;
     tactical_maintained_count=modern_maintained_spells(actor,tactical_maintained_ids,tactical_maintained_spells,32);
-    float width=850,height=185+fmaxf(1,rows)*78+(tactical_maintained_count?85:0);
+    float width=850,height=257+fmaxf(1,rows)*78+(tactical_maintained_count?85:0);
     float x=(canvas_w-width)/2,y=(canvas_h-height)/2;
     frame((SDL_FRect){x,y,width,height});
+    binding_dock=(SDL_FRect){x+115,y+height-125,620,48};
     centered(2,game_text(modern_intgame_text(1000)),canvas_w/2,y+20,GOLD);
     text_compact(actor_name(actor),x+25,y+55,width-50,true,MUTED);
     bool ready=combat_input_ready(actor);
@@ -496,7 +502,7 @@ static void draw_tactical_spells(void)
         SDL_FRect r={x+25+(i%2)*400,y+91+(i/2)*78,390,69};
         button(r,1400+spell,"",-1,false,available);
         draw_art(spell_icon(spell),(SDL_FRect){r.x+8,r.y+10,44,44},true);
-        text_compact(game_text(spell_name(spell)),r.x+62,r.y+10,r.w-72,false,available?GOLD:MUTED);
+        text_compact(game_text(spell_name(spell)),r.x+62,r.y+10,r.w-72,false,menu_control_color(r,false,available));
         char price[100];snprintf(price,sizeof(price),"4 %s  ·  %s %d",tactical_text(TC_AP),game_text(modern_intgame_text(44)),cost);
         if(!available)snprintf(price,sizeof(price),"%s",!ready?tactical_text(TC_BUSY):!ap?tr("PA insuffisants","Insufficient AP"):tr("Fatigue insuffisante","Insufficient fatigue"));
         text_compact(price,r.x+62,r.y+39,r.w-72,false,available?GOLD:(SDL_Color){210,134,103,255});
@@ -510,7 +516,7 @@ static void draw_tactical_spells(void)
             button(r,1500+i,"×",spell_icon(spell),false,ready);
             if(inside(r,mouse_x,mouse_y)){
                 const char* name=game_text(spell_name(spell));float w=text_measure(0,name)+24;
-                fill((SDL_FRect){r.x,yy-32,w,28},(SDL_Color){16,12,9,245});text_draw(0,name,r.x+12,yy-27,GOLD);
+                hud_panel((SDL_FRect){r.x,yy-32,w,28});text_draw(0,name,r.x+12,yy-27,GOLD);
             }
         }
     }

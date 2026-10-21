@@ -13,8 +13,8 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ('Book.ttf', 'Heading.ttf', 'FONT-LICENSE.txt', 'menu-background.png',
-          'death-background.png', 'inventory-actions.png', 'skill-icons.png',
+ASSETS = ('Book.ttf', 'Heading.ttf', 'FONT-LICENSE.txt', 'menu-background.png', 'main-menu.png', 'single-player.png',
+          'death-background.png', 'inventory-actions.png', 'skill-icons.png', 'hud-atlas.png', 'play-panel.png',
           'control-icons.png', 'splash/splash1.png', 'splash/splash2.png', 'splash/splash3.png')
 SYSTEM_DLLS = set('kernel32.dll user32.dll winmm.dll advapi32.dll ole32.dll setupapi.dll shell32.dll '
                  'gdi32.dll oleaut32.dll imm32.dll version.dll ws2_32.dll bcrypt.dll comdlg32.dll '
