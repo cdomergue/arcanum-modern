@@ -150,6 +150,7 @@ available.
 | Rest | R |
 | Stealth / pickpocket | H / P |
 | Toggle combat mode | Shift + Space |
+| Attack a highlighted door, barrel or other scenery | Left-click in combat mode |
 | End turn | E or Space |
 | Move camera | WASD positions, ZQSD on AZERTY, or arrow keys |
 | Zoom world | Mouse wheel over the world |

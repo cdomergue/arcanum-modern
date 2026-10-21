@@ -4454,7 +4454,22 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!combat_turn_based_is_active()
          || combat_turn_based_whos_turn_get() == pc_obj) {
-@@ -3261,16 +3289,19 @@
+@@ -3245,8 +3273,12 @@
+     sub_57CCF0(player_get_local_pc_obj(), qword_64C690);
+ }
+ 
+-// TODO: Lots of jumps, check.
+-//
++static bool intgame_attack_mode(int64_t actor)
++{
++    return combat_critter_is_combat_mode_active(actor)
++        || (combat_turn_based_is_active() && combat_player_controls(actor));
++}
++
+ // 0x54ED30
+ void sub_54ED30(TargetDescriptor* td)
+ {
+@@ -3261,16 +3293,19 @@
      int anim;
      bool v26 = false;
  
@@ -4476,16 +4491,66 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,7 +3345,7 @@
+@@ -3314,56 +3349,13 @@
              }
          }
  
 -        if (combat_critter_is_combat_mode_active(pc_obj)) {
-+        if (combat_critter_is_combat_mode_active(pc_obj) || (combat_turn_based_is_active() && combat_player_controls(pc_obj))) {
++        if (intgame_attack_mode(pc_obj)) {
              switch (target_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
-@@ -3396,8 +3427,8 @@
+-                if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
+-                    if (tig_kb_get_modifier(SDL_KMOD_SHIFT)) {
+-                        anim = AG_ATTEMPT_ATTACK;
+-                    } else {
+-                        anim = AG_ATTACK;
+-                    }
+-                } else {
+-                    if ((spell_flags & OSF_POLYMORPHED) != 0) {
+-                        return;
+-                    }
+-
+-                    anim = AG_USE_OBJECT;
+-                    v26 = true;
+-                }
+-                break;
+             case OBJ_TYPE_CONTAINER:
+-                if ((spell_flags & OSF_POLYMORPHED) != 0) {
+-                    return;
+-                }
+-
+-                if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
+-                    if (tig_kb_get_modifier(SDL_KMOD_SHIFT)) {
+-                        anim = AG_ATTEMPT_ATTACK;
+-                    } else {
+-                        anim = AG_ATTACK;
+-                    }
+-                } else {
+-                    anim = AG_USE_CONTAINER;
+-                    v26 = true;
+-                }
+-                break;
+             case OBJ_TYPE_SCENERY:
+-                if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
+-                    if (tig_kb_get_modifier(SDL_KMOD_SHIFT)) {
+-                        anim = AG_ATTEMPT_ATTACK;
+-                    } else {
+-                        anim = AG_ATTACK;
+-                    }
+-                } else {
+-                    if ((spell_flags & OSF_POLYMORPHED) != 0) {
+-                        return;
+-                    }
+-
+-                    anim = AG_USE_OBJECT;
+-                    v26 = true;
+-                }
++                anim = tig_kb_get_modifier(SDL_KMOD_SHIFT) ? AG_ATTEMPT_ATTACK : AG_ATTACK;
+                 break;
+             case OBJ_TYPE_WEAPON:
+             case OBJ_TYPE_AMMO:
+@@ -3396,8 +3388,8 @@
                      }
  
                      if (!td->is_loc
@@ -4496,7 +4561,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3570,6 +3601,7 @@
+@@ -3570,6 +3562,7 @@
          }
  
          if (!anim_goal_add_ex(&goal_data, &anim_id, flags)) {
@@ -4504,7 +4569,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              return;
          }
  
-@@ -3712,10 +3744,12 @@
+@@ -3712,10 +3705,12 @@
          return;
      }
  
@@ -4518,7 +4583,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3815,7 @@
+@@ -3781,7 +3776,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -4527,7 +4592,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4051,6 +4085,8 @@
+@@ -4051,6 +4046,8 @@
  // 0x5506C0
  void iso_interface_window_set(RotatingWindowType window_type)
  {
@@ -4536,7 +4601,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4085,9 +4121,21 @@
+@@ -4085,9 +4082,21 @@
      }
  }
  
@@ -4558,7 +4623,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4148,7 @@
+@@ -4100,6 +4109,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -4566,7 +4631,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4166,6 +4215,7 @@
+@@ -4166,6 +4176,7 @@
  // 0x550930
  void intgame_message_window_clear_internal(void)
  {
@@ -4574,7 +4639,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4252,11 @@
+@@ -4202,6 +4213,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -4586,7 +4651,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4888,14 @@
+@@ -4833,14 +4849,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -4603,7 +4668,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4967,13 @@
+@@ -4912,13 +4928,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -4619,7 +4684,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -5431,7 +5486,7 @@
+@@ -5431,7 +5447,7 @@
      int prev_idx;
  
      if (ui_message->type >= 6 && ui_message->type <= 12) {
@@ -4628,7 +4693,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              && intgame_iso_window_type == ROTWIN_TYPE_MSG) {
              intgame_message_window_clear_internal();
              intgame_message_draw(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
-@@ -5888,6 +5943,8 @@
+@@ -5888,6 +5904,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
  {
@@ -4637,7 +4702,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = func;
      tc_show();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -5899,6 +5956,8 @@
+@@ -5899,6 +5917,8 @@
  // 0x553350
  void intgame_dialog_end(void)
  {
@@ -4646,7 +4711,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6378,7 +6437,9 @@
+@@ -6378,7 +6398,9 @@
          }
  
          // Generic race-specific icon.
@@ -4657,7 +4722,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          return false;
      default:
          return false;
-@@ -6573,6 +6634,7 @@
+@@ -6573,6 +6595,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -4665,7 +4730,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6673,16 @@
+@@ -6611,6 +6634,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -4682,7 +4747,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6867,11 @@
+@@ -6795,6 +6828,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -4694,7 +4759,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7689,7 @@
+@@ -7612,6 +7650,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -4702,7 +4767,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7718,7 @@
+@@ -7640,7 +7679,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -4711,7 +4776,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7862,7 @@
+@@ -7784,7 +7823,7 @@
          mes_file_entry.str,
          value);
  
@@ -4720,7 +4785,34 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8833,3 +8911,221 @@
+@@ -8311,22 +8350,12 @@
+             switch (target_obj_type) {
+             case OBJ_TYPE_WALL:
+             case OBJ_TYPE_PORTAL:
++            case OBJ_TYPE_CONTAINER:
+             case OBJ_TYPE_SCENERY:
+-                if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
++                if (intgame_attack_mode(source_obj) || tig_kb_get_modifier(SDL_KMOD_ALT)) {
+                     combat_check_attack(source_obj, target_obj);
+-                } else {
+-                    if ((spell_flags & OSF_POLYMORPHED) == 0) {
+-                        combat_check_use_obj(source_obj, target_obj);
+-                    }
+-                }
+-                break;
+-            case OBJ_TYPE_CONTAINER:
+-                if ((spell_flags & OSF_POLYMORPHED) == 0) {
+-                    if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
+-                        combat_check_attack(source_obj, target_obj);
+-                    } else {
+-                        combat_check_use_obj(source_obj, target_obj);
+-                    }
++                } else if ((spell_flags & OSF_POLYMORPHED) == 0) {
++                    combat_check_use_obj(source_obj, target_obj);
+                 }
+                 break;
+             case OBJ_TYPE_WEAPON:
+@@ -8833,3 +8862,230 @@
  
      follower_ui_show();
  }
@@ -4869,6 +4961,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    if (p->target && intgame_mode_get() == INTGAME_MODE_MAIN && !tig_kb_get_modifier(SDL_KMOD_ALT)
 +        && (player_is_local_pc_obj(p->target) || player_is_local_pc_obj(critter_pc_leader_get(p->target)))) return false;
 +    p->location = td.is_loc ? td.loc : obj_field_int64_get(td.obj, OBJ_F_LOCATION);
++    int target_type = p->target ? obj_field_int32_get(p->target, OBJ_F_TYPE) : -1;
 +    int64_t from = obj_field_int64_get(p->actor, OBJ_F_LOCATION);
 +    bool adjacent = false, needs_path = false;
 +    p->step_cost = 2;
@@ -4898,7 +4991,9 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    } else if (intgame_mode_get() == INTGAME_MODE_SKILL || intgame_mode_get() == INTGAME_MODE_ITEM) {
 +        /* Skills and items have specific validation/costs: don't invent a quote. */
 +        return false;
-+    } else if (p->target && obj_type_is_critter(obj_field_int32_get(p->target, OBJ_F_TYPE)) && !critter_is_dead(p->target)) {
++    } else if (p->target && ((obj_type_is_critter(target_type) && !critter_is_dead(p->target))
++        || (intgame_attack_mode(p->actor) && (target_type == OBJ_TYPE_WALL || target_type == OBJ_TYPE_PORTAL
++            || target_type == OBJ_TYPE_CONTAINER || target_type == OBJ_TYPE_SCENERY)))) {
 +        p->kind = 1; p->cost = combat_attack_cost(p->actor);
 +        int64_t weapon = item_wield_get(p->actor, ITEM_INV_LOC_WEAPON);
 +        int range = weapon ? item_weapon_range(weapon, p->actor) : 1;
@@ -4906,19 +5001,25 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        needs_path = range <= 1 && location_dist(from, p->location) > 1;
 +        adjacent = true;
 +        p->in_range = range <= 1 || location_dist(from, p->location) <= range;
-+        SkillInvocation si; skill_invocation_init(&si);
-+        sub_4440E0(p->actor, &si.source); sub_4440E0(p->target, &si.target); sub_4440E0(weapon, &si.item);
-+        si.skill = item_weapon_skill(weapon);
-+        int effectiveness = IS_TECH_SKILL(si.skill) ? tech_skill_effectiveness(p->actor, GET_TECH_SKILL(si.skill), p->target)
-+            : basic_skill_effectiveness(p->actor, GET_BASIC_SKILL(si.skill), p->target);
-+        effectiveness -= skill_invocation_difficulty(&si);
-+        if (weapon && si.skill != SKILL_THROWING) {
-+            int penalty = sub_461620(weapon, p->actor, p->target);
-+            if (penalty > 0) effectiveness -= effectiveness * penalty / 100;
++        if (obj_type_is_critter(target_type)) {
++            SkillInvocation si; skill_invocation_init(&si);
++            sub_4440E0(p->actor, &si.source); sub_4440E0(p->target, &si.target); sub_4440E0(weapon, &si.item);
++            si.skill = item_weapon_skill(weapon);
++            int effectiveness = IS_TECH_SKILL(si.skill) ? tech_skill_effectiveness(p->actor, GET_TECH_SKILL(si.skill), p->target)
++                : basic_skill_effectiveness(p->actor, GET_BASIC_SKILL(si.skill), p->target);
++            effectiveness -= skill_invocation_difficulty(&si);
++            if (weapon && si.skill != SKILL_THROWING) {
++                int penalty = sub_461620(weapon, p->actor, p->target);
++                if (penalty > 0) effectiveness -= effectiveness * penalty / 100;
++            }
++            p->blocked = (si.flags & SKILL_INVOCATION_BLOCKED_SHOT) != 0;
++            /* The current-position hit chance is only meaningful once in range. */
++            if (!needs_path) p->chance = effectiveness < 0 || !p->in_range || p->blocked ? 0 : effectiveness;
++        } else if (range > 1) {
++            int64_t blocking_obj;
++            sub_4ADE00(p->actor, p->location, &blocking_obj);
++            p->blocked = blocking_obj != OBJ_HANDLE_NULL && blocking_obj != p->target;
 +        }
-+        p->blocked = (si.flags & SKILL_INVOCATION_BLOCKED_SHOT) != 0;
-+        /* The current-position hit chance is only meaningful once in range. */
-+        if (!needs_path) p->chance = effectiveness < 0 || !p->in_range || p->blocked ? 0 : effectiveness;
 +        p->reachable = p->in_range && !p->blocked;
 +    } else {
 +        if (p->target) return false;
