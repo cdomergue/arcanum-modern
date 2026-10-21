@@ -40,6 +40,9 @@ typedef struct {int* stream;} GameLoadInfo;
 static int gsound_pending_scheme_restore,gsound_post_song_scheme_idxs[2];
 static int gsound_combat_music_active,gsound_pre_combat_scheme_idxs[2];
 static int gsound_combat_music_handle,position,loops,schemes,stops;
+typedef struct {bool no_combat_music;} ModernCompat;
+static ModernCompat compat;
+static const ModernCompat* modern_compat_get(void){return &compat;}
 static void gsound_stop_all(int fade){assert(fade==0);stops++;}
 static int tig_file_fread(void* dst,size_t size,size_t n,int* stream){
     assert(size==sizeof(int)&&n==1);memcpy(dst,&stream[position++],size);return 1;

@@ -33,6 +33,7 @@ static SDL_FRect box;
 static uint64_t SDL_GetTicks(void){return now;}
 static void fill(SDL_FRect r,SDL_Color c){(void)c;box=r;}
 static void outline(SDL_FRect r,SDL_Color c){(void)r;(void)c;}
+static void hud_panel(SDL_FRect r){fill(r,MUTED);outline(r,MUTED);}
 ''' + decode + wrap + message + r'''
 
 static void compact(const char* src,char* dst){while(*src){if(*src!=' '&&*src!='\n')*dst++=*src;src++;}*dst=0;}

@@ -10,8 +10,10 @@ panels = (root / 'modern_panels.inc').read_text()
 engine = (root / 'wmap_ui.c').read_text()
 hud = (root / 'intgame.c').read_text()
 gesture = panels[panels.index('static bool map_drag_event('):panels.index('static bool panels_event(')]
-pan = engine[engine.index('void modern_map_pan('):]
-icons = hud[hud.index('int modern_intgame_icon('):hud.index('void modern_inventory_details(')]
+pan_start = engine.index('void modern_map_pan(')
+pan = engine[pan_start:engine.index('\n}', pan_start) + 2]
+icons_start = hud.index('int modern_intgame_icon(')
+icons = hud[icons_start:hud.index('\n}', icons_start) + 2]
 harness = r'''
 #include <assert.h>
 #include <stdbool.h>
