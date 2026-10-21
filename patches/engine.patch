@@ -5680,7 +5680,18 @@ diff --git a/src/ui/options_ui.c b/src/ui/options_ui.c
  }
  
  /**
-@@ -691,3 +692,16 @@
+@@ -487,7 +488,9 @@
+  */
+ void options_ui_awlays_run_get(int* value_ptr, bool* enabled_ptr)
+ {
+-    *value_ptr = get_always_run(player_get_local_pc_obj());
++    *value_ptr = tig_net_is_active()
++        ? get_always_run(player_get_local_pc_obj())
++        : settings_get_value(&settings, ALWAYS_RUN_KEY);
+     *enabled_ptr = true;
+ }
+ 
+@@ -691,3 +694,16 @@
  {
      settings_set_value(&settings, MUSIC_VOLUME_KEY, value);
  }
