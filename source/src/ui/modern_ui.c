@@ -963,34 +963,28 @@ static void draw_experience_gauge(int64_t actor,SDL_FRect rect)
     int progress=capped?1000:level_progress_towards_next_level(actor);
     if(progress<0)progress=0;
     if(progress>1000)progress=1000;
-    float scale_x=rect.w/384,scale_y=rect.h/14;
-    tig_art_id_t id;
-    ArtTexture* art=NULL;
-    if(tig_art_interface_id_create(184,0,0,0,&id)==TIG_OK)art=art_get(id);
-    if(art && art->texture) {
-        SDL_FRect source={211,37,384,14};
-        SDL_RenderTexture(renderer,art->texture,&source,&rect);
-        const int offsets[]={0,38,76,116,154,192,228,267,305,344};
-        int amount=11*progress/10,segments=amount/100;
-        if(segments>10)segments=10;
-        for(int i=0;i<segments;i++) {
-            if(tig_art_interface_id_create(773+i,0,0,0,&id)!=TIG_OK)continue;
-            art=art_get(id);if(!art || !art->texture)continue;
-            SDL_FRect cell={rect.x+offsets[i]*scale_x,rect.y,art->width*scale_x,art->height*scale_y};
-            SDL_RenderTexture(renderer,art->texture,NULL,&cell);
-        }
-        int fine=progress==1000?100:amount%100;
-        if(fine>0 && tig_art_interface_id_create(772,0,0,0,&id)==TIG_OK) {
-            art=art_get(id);
-            if(art && art->texture) {
-                SDL_FRect source={0,0,art->width*fine/100.f,art->height};
-                SDL_FRect target={rect.x+5*scale_x,rect.y+10*scale_y,source.w*scale_x,source.h*scale_y};
-                SDL_RenderTexture(renderer,art->texture,&source,&target);
-            }
-        }
+    if(hud_atlas) {
+        float sx=hud_atlas_width/1536,sy=hud_atlas_height/1024;
+        texture_frame(hud_atlas,(SDL_FRect){385*sx,790*sy,465*sx,138*sy},rect,22*sx,22*sy,3);
     } else {
-        fill(rect,(SDL_Color){24,16,13,255});outline(rect,MUTED);
-        fill((SDL_FRect){rect.x+2,rect.y+2,(rect.w-4)*progress/1000.f,rect.h-4},UI_RED);
+        fill(rect,(SDL_Color){65,46,25,255});outline(rect,MUTED);
+    }
+    SDL_FRect track={rect.x+5,rect.y+4,rect.w-10,rect.h-8};
+    fill(track,(SDL_Color){19,12,10,255});
+    float cell_width=track.w/10;
+    for(int i=0;i<10;i++) {
+        float amount=fmaxf(0,fminf(1,progress/100.f-i));
+        SDL_FRect cell={track.x+i*cell_width+1,track.y,cell_width-2,track.h};
+        fill(cell,(SDL_Color){42,23,19,255});
+        if(amount>0) {
+            cell.w*=amount;
+            for(int row=0;row<6;row++) {
+                float sheen=sinf((row+.5f)/6*3.14159f);
+                SDL_Color color={(Uint8)(75+115*sheen),(Uint8)(12+24*sheen),(Uint8)(17+25*sheen),255};
+                fill((SDL_FRect){cell.x,cell.y+row*cell.h/6,cell.w,cell.h/6},color);
+            }
+            rule(cell.x,cell.y,cell.w,(SDL_Color){206,91,78,255});
+        }
     }
     if(inside(rect,mouse_x,mouse_y)) {
         char hint[256];int xp=stat_level_get(actor,STAT_EXPERIENCE_POINTS);
@@ -1079,7 +1073,7 @@ static void draw_hud(void)
         }
         text_compact(status,status_x,y+84,status_width,false,MUTED);
     }
-    draw_experience_gauge(pc,(SDL_FRect){x+102,y+62,480,17.5f});
+    draw_experience_gauge(pc,(SDL_FRect){x+118,y+65,452,15});
     if(hud_message_expanded() && !journal && !native_panel())draw_hud_message();
 }
 
