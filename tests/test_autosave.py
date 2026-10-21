@@ -74,14 +74,15 @@ int main(void){
   modern_autosave_before_map_change();assert(file_count==old_count);for(int i=0;i<old_count;i++)assert(find_file(snapshot[i])>=0);assert_complete();
  }
  fail_save=fail_rename=0;
+ {int count=write_count;modern_autosave_after_combat();modern_autosave_before_combat();assert(write_count==count+1);assert_complete();now+=1000;modern_autosave_tick();assert(write_count==count+1);}
  bool* guards[]={&reset_state,&load_state,&save_state,&menu,&worldmap,&dialog,&teleport,&combat,&dead,&unconscious,&armed};
- for(unsigned i=0;i<sizeof(guards)/sizeof(guards[0]);i++){int count=write_count;*guards[i]=true;modern_autosave_before_map_change();assert(write_count==count);*guards[i]=false;}
+ for(unsigned i=0;i<sizeof(guards)/sizeof(guards[0]);i++){int count=write_count;*guards[i]=true;modern_autosave_before_map_change();modern_autosave_before_combat();assert(write_count==count);*guards[i]=false;}
  int count=write_count;pc=0;modern_autosave_before_map_change();pc=1;mode=1;modern_autosave_before_map_change();mode=0;assert(write_count==count);
  modern_autosave_after_combat();modern_autosave_tick();assert(write_count==count);now+=1000;menu=true;modern_autosave_tick();assert(write_count==count);menu=false;modern_autosave_tick();assert(write_count==count+1);modern_autosave_tick();assert(write_count==count+1);
  modern_autosave_after_combat();modern_autosave_reset();now+=1000;modern_autosave_tick();assert(write_count==count+1);
  load_state=true;modern_autosave_after_combat();load_state=false;now+=1000;modern_autosave_tick();assert(write_count==count+1);
  file_count=0;gamelib_save("SlotAZZY","Tail");gamelib_save("SlotAZZZ","Tail");modern_autosave_before_map_change();modern_autosave_before_map_change();assert(autosaves()==3);assert(find_file("save\\SlotAZZYTail.gsi")<0);assert(find_file("save\\SlotAZZZTail.gsi")>=0);assert_complete();
- puts("PASS: persistent rotation, wrap, manual preservation, save/rename failures, safe-state guards, deferred combat and load/reset cancellation");
+ puts("PASS: persistent rotation, wrap, manual preservation, save/rename failures, safe-state guards, immediate pre-combat save, deferred combat and load/reset cancellation");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='arcanum-autosave-') as folder:

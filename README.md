@@ -93,8 +93,8 @@ optional patches, platform transfers and how the two interfaces interact.
   transfer shortcuts and editable quick slots with hover descriptions.
 - **Companion grouping:** detach companions to position them independently, then
   regroup them from their portraits. They remain members of your party.
-- **Rotating autosaves:** keep the three latest automatic saves after combat and
-  before eligible area transitions, separately from manual saves.
+- **Rotating autosaves:** keep the three latest automatic saves before and after
+  combat and before eligible area transitions, separately from manual saves.
 - **Journal and exploration:** quest filters, search, favorites, quest tracking
   and personal map notes.
 - **Automatically prepared HD local maps:** maps rendered from the installed game data,

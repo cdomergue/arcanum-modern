@@ -13,6 +13,7 @@
 #include "game/obj.h"
 #include "game/player.h"
 #include "ui/gameuilib.h"
+#include "ui/follower_ui.h"
 #include "ui/intgame.h"
 #include "ui/mainmenu_ui.h"
 #include "ui/modern_ui.h"
@@ -105,6 +106,12 @@ int main(int argc, char** argv)
     assert(modern_autosave_is_slot(previous));
     combat_critter_activate_combat_mode(pc);
     assert(combat_turn_based_is_active());
+    assert(strcmp(gamelib_last_save_name(), previous) != 0);
+    char before_combat[9];
+    memcpy(before_combat, gamelib_last_save_name(), 8);
+    before_combat[8] = '\0';
+    strcpy(previous, gamelib_last_save_name());
+    combat_critter_activate_combat_mode(pc);
     modern_autosave_before_map_change();
     assert(strcmp(gamelib_last_save_name(), previous) == 0);
     combat_critter_deactivate_combat_mode(pc);
@@ -123,6 +130,29 @@ int main(int argc, char** argv)
     sub_5412D0();
     assert(player_get_local_pc_obj() != OBJ_HANDLE_NULL);
     assert(manual_fingerprint() == manual);
-    printf("PASS: 3 complete autosaves; pre-zone save, combat guard, deferred combat-end hook, latest %s loaded; Slot0003 unchanged (%016llx)\n", latest, manual);
+    assert(gamelib_load(before_combat));
+    sub_5412D0();
+    assert(!combat_turn_based_is_active());
+    assert(!combat_critter_is_combat_mode_active(player_get_local_pc_obj()));
+    assert(manual_fingerprint() == manual);
+    object_flags_unset(player_get_local_pc_obj(), OF_OFF);
+    int64_t companions[8];
+    assert(modern_followers_get(companions, 8) > 0);
+    SDL_Delay(1100);
+    strcpy(previous, gamelib_last_save_name());
+    combat_critter_activate_combat_mode(companions[0]);
+    assert(combat_turn_based_is_active());
+    assert(strcmp(gamelib_last_save_name(), previous) != 0);
+    memcpy(before_combat, gamelib_last_save_name(), 8);
+    before_combat[8] = '\0';
+    strcpy(previous, gamelib_last_save_name());
+    combat_critter_activate_combat_mode(companions[0]);
+    assert(strcmp(gamelib_last_save_name(), previous) == 0);
+    assert(gamelib_load(before_combat));
+    sub_5412D0();
+    assert(!combat_turn_based_is_active());
+    assert(!combat_critter_is_combat_mode_active(player_get_local_pc_obj()));
+    assert(manual_fingerprint() == manual);
+    printf("PASS: player and companion pre-combat saves reload before initiative; 3 complete autosaves; pre-zone save, combat guard, deferred combat-end hook, latest %s loaded; Slot0003 unchanged (%016llx)\n", latest, manual);
     return 0;
 }

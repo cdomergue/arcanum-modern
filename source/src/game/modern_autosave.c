@@ -187,6 +187,14 @@ void modern_autosave_after_combat(void)
     tig_timer_now(&autosave_requested_at);
 }
 
+void modern_autosave_before_combat(void)
+{
+    if (autosave_safe()) {
+        autosave_pending = false;
+        autosave_write();
+    }
+}
+
 void modern_autosave_before_map_change(void)
 {
     if (autosave_safe()) {
