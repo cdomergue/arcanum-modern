@@ -115,15 +115,13 @@ text is decoded as Windows-1252; other encodings need validation.
 
 ## Video
 
-Here is a video from a French installation in version 0.3.0: https://www.youtube.com/watch?v=yj_ana898HA&t=5s
-The language will depend on your installation.
+Here is a video in version 1.0.0: [https://www.youtube.com/watch?v=yj_ana898HA&t=5s](https://www.youtube.com/watch?v=v1U5BpJ3y8U)
 
 ## Screenshots
 
 These screenshots use French game files. In your installation, game text follows
 the language of your own copy of Arcanum; the mod does not require the French
-version. Additional interface text currently has partial French and English
-support. Click an image to enlarge it.
+version. Click an image to enlarge it.
 
 **BG3-inspired tactical combat:** direct companion control, turn order and action points.
 
