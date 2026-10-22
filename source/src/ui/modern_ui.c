@@ -21,6 +21,7 @@
 #include "game/snd.h"
 #include "ui/iso.h"
 #include "game/dialog.h"
+#include "game/description.h"
 #include "game/hrp.h"
 #include "ui/charedit_ui.h"
 #include "ui/inven_ui.h"
@@ -1171,6 +1172,8 @@ static const char* game_text(const char* source)
     result[0]=0;from_game(source,result,8192);
     return result;
 }
+
+#include "modern_aid.inc"
 
 static const char* menu_text(int number)
 {

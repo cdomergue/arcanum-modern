@@ -1,0 +1,5285 @@
+{
+  "upstream": "https://github.com/SCARaw/Arcanum-Item-Description-Project",
+  "revision": "faec604cce385d8cef8e32ed99147b144dd47564",
+  "base_item_revision": "7d85f39",
+  "base_module_revision": "d1bf246",
+  "entries": [
+    {
+      "id": 6029,
+      "en": "@i43@:1-4 @i44@:1-2 @i28@ (free/occupied off hand):3/3",
+      "fr": "@i43@:1-4 @i44@:1-2 @i28@ (main libre/occupée):3/3"
+    },
+    {
+      "id": 6030,
+      "en": "@i43@:1-8 @i44@:1-4 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-8 @i44@:1-4 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6031,
+      "en": "@i43@:1-12 @i44@:1-9 @i28@ (free/occupied off hand):8/10 [Chop]",
+      "fr": "@i43@:1-12 @i44@:1-9 @i28@ (main libre/occupée):8/10 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6032,
+      "en": "@i43@:1-4 @i44@:1-8 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-4 @i44@:1-8 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 6033,
+      "en": "@i43@:2-9 @i44@:2-5 @i46@:10 @i28@ (free/occupied off hand):5/7 TC:20",
+      "fr": "@i43@:2-9 @i44@:2-5 @i46@:10 @i28@ (main libre/occupée):5/7 Complexité technologique:20"
+    },
+    {
+      "id": 6034,
+      "en": "@i43@:4-16 @i44@:3-11 @i28@ (free/occupied off hand):14/18",
+      "fr": "@i43@:4-16 @i44@:3-11 @i28@ (main libre/occupée):14/18"
+    },
+    {
+      "id": 6035,
+      "en": "@i43@:1-10 @i44@:2-5 @i46@:15 @i28@:10",
+      "fr": "@i43@:1-10 @i44@:2-5 @i46@:15 @i28@:10"
+    },
+    {
+      "id": 6036,
+      "en": "@i43@:1-10 @i44@:1-10 @i46@:5 @i28@:11 TC:30",
+      "fr": "@i43@:1-10 @i44@:1-10 @i46@:5 @i28@:11 Complexité technologique:30"
+    },
+    {
+      "id": 6037,
+      "en": "@i43@:1-4 @i44@:2-9 @i28@:5 [Crafting]",
+      "fr": "@i43@:1-4 @i44@:2-9 @i28@:5 [Fabrication]"
+    },
+    {
+      "id": 6038,
+      "en": "@i43@:1-8 @i44@:1-4 @i47@:10-35 @i28@ (free/occupied off hand):6/8 TC:30",
+      "fr": "@i43@:1-8 @i44@:1-4 @i47@:10-35 @i28@ (main libre/occupée):6/8 Complexité technologique:30"
+    },
+    {
+      "id": 6039,
+      "en": "@i43@:20-50 @i44@:1-15 @i46@:15 @i28@:12 TC:80 [Crafting]",
+      "fr": "@i43@:20-50 @i44@:1-15 @i46@:15 @i28@:12 Complexité technologique:80 [Fabrication]"
+    },
+    {
+      "id": 6040,
+      "en": "@i43@:1-4 @i49@:10-40 @i46@:15 Requires Charge TC:55[Crafting] @i28@:8",
+      "fr": "@i43@:1-4 @i49@:10-40 @i46@:15 Nécessite une charge Complexité technologique:55[Fabrication] @i28@:8"
+    },
+    {
+      "id": 6041,
+      "en": "@i43@:1-4 @i48@:15-30 @i46@:3 @i28@:15 TC:80",
+      "fr": "@i43@:1-4 @i48@:15-30 @i46@:3 @i28@:15 Complexité technologique:80"
+    },
+    {
+      "id": 6042,
+      "en": "@i43@:1-8(+3) @i44@:1-4 @i28@ (free/occupied off hand):5/7 MC:10",
+      "fr": "@i43@:1-8(+3) @i44@:1-4 @i28@ (main libre/occupée):5/7 Complexité magique:10"
+    },
+    {
+      "id": 6044,
+      "en": "@i43@:3-12 @i44@:3-9 @i45@:+5 @i46@:15 @i28@ (free/occupied off hand):5/7 TC:35 [Crafting]",
+      "fr": "@i43@:3-12 @i44@:3-9 @i45@:+5 @i46@:15 @i28@ (main libre/occupée):5/7 Complexité technologique:35 [Fabrication]"
+    },
+    {
+      "id": 6045,
+      "en": "@i43@:5-12 @i44@:1-8 @i46@:15 @i28@:8 TC:50 [Crafting]",
+      "fr": "@i43@:5-12 @i44@:1-8 @i46@:15 @i28@:8 Complexité technologique:50 [Fabrication]"
+    },
+    {
+      "id": 6046,
+      "en": "@i43@:2-14 @i44@:1-10 @i46@:15 @i28@:8 TC:25 [Crafting]",
+      "fr": "@i43@:2-14 @i44@:1-10 @i46@:15 @i28@:8 Complexité technologique:25 [Fabrication]"
+    },
+    {
+      "id": 6047,
+      "en": "@i43@:1-2 @i28@ (free/occupied off hand):3/3 TC:1 [Crafting: @t5@]",
+      "fr": "@i43@:1-2 @i28@ (main libre/occupée):3/3 Complexité technologique:1 [Fabrication: @t5@]"
+    },
+    {
+      "id": 6048,
+      "en": "@i43@:3-12 @i44@:3-9 @i28@ (free/occupied off hand):6/8 TC:5 [Crafting]",
+      "fr": "@i43@:3-12 @i44@:3-9 @i28@ (main libre/occupée):6/8 Complexité technologique:5 [Fabrication]"
+    },
+    {
+      "id": 6049,
+      "en": "@i43@:1-4 @i44@:1-8 @i48@:1-20 @i49@:5-5 @i46@:10 @i28@ (free/occupied off hand):5/7 TC:60",
+      "fr": "@i43@:1-4 @i44@:1-8 @i48@:1-20 @i49@:5-5 @i46@:10 @i28@ (main libre/occupée):5/7 Complexité technologique:60"
+    },
+    {
+      "id": 6050,
+      "en": "@i43@:1-2 @i28@ (free/occupied off hand):3/3",
+      "fr": "@i43@:1-2 @i28@ (main libre/occupée):3/3"
+    },
+    {
+      "id": 6051,
+      "en": "@i43@:2-6 @i44@:1-3 @i28@ (free/occupied off hand):3/3 [Crafting]",
+      "fr": "@i43@:2-6 @i44@:1-3 @i28@ (main libre/occupée):3/3 [Fabrication]"
+    },
+    {
+      "id": 6052,
+      "en": "@i43@:1-4 @i43@:1-2 @i46@:15 @i28@ (free/occupied off hand):3/3",
+      "fr": "@i43@:1-4 @i43@:1-2 @i46@:15 @i28@ (main libre/occupée):3/3"
+    },
+    {
+      "id": 6053,
+      "en": "@i43@:2-12 @i44@:1-6 @i28@ (free/occupied off hand):3/3 TC:33",
+      "fr": "@i43@:2-12 @i44@:1-6 @i28@ (main libre/occupée):3/3 Complexité technologique:33"
+    },
+    {
+      "id": 6054,
+      "en": "@i43@:1-4 @i44@:1-2 Mana:10 @i28@ (free/occupied off hand):2/2 MC:10",
+      "fr": "@i43@:1-4 @i44@:1-2 Mana:10 @i28@ (main libre/occupée):2/2 Complexité magique:10"
+    },
+    {
+      "id": 6055,
+      "en": "@i43@:1-4 @i44@:1-2 @i8@:(+4) @i28@ (free/occupied off hand):3/3 MC:10",
+      "fr": "@i43@:1-4 @i44@:1-2 @i8@:(+4) @i28@ (main libre/occupée):3/3 Complexité magique:10"
+    },
+    {
+      "id": 6056,
+      "en": "@i43@:1-4 @i44@:1-2 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-4 @i44@:1-2 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6057,
+      "en": "@i43@:2-9 @i44@:2-5 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:2-9 @i44@:2-5 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6058,
+      "en": "@i43@:2-9 @i44@:2-5 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:2-9 @i44@:2-5 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6059,
+      "en": "@i43@:1-8 @i44@:1-4 @i28@ (free/occupied off hand):3/5",
+      "fr": "@i43@:1-8 @i44@:1-4 @i28@ (main libre/occupée):3/5"
+    },
+    {
+      "id": 6060,
+      "en": "@i43@:1-6 @i44@:1-3 @i28@ (free/occupied off hand):3/5",
+      "fr": "@i43@:1-6 @i44@:1-3 @i28@ (main libre/occupée):3/5"
+    },
+    {
+      "id": 6061,
+      "en": "@i43@:2-10 @i44@:1-5 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:2-10 @i44@:1-5 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6062,
+      "en": "@i43@:3-12 @i44@:1-3 @i28@ (free/occupied off hand):4/6",
+      "fr": "@i43@:3-12 @i44@:1-3 @i28@ (main libre/occupée):4/6"
+    },
+    {
+      "id": 6063,
+      "en": "@i43@:2-9 @i44@:3-9 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:2-9 @i44@:3-9 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6064,
+      "en": "@i43@:1-8 @i44@:1-4 @i50@:(+30) @i28@ (free/occupied off hand):5/7 MC:15",
+      "fr": "@i43@:1-8 @i44@:1-4 @i50@:(+30) @i28@ (main libre/occupée):5/7 Complexité magique:15"
+    },
+    {
+      "id": 6065,
+      "en": "@i43@:1-8(+4) @i44@:1-4 @p53@ @i28@ (free/occupied off hand):6/8 MC:40",
+      "fr": "@i43@:1-8(+4) @i44@:1-4 @p53@ @i28@ (main libre/occupée):6/8 Complexité magique:40"
+    },
+    {
+      "id": 6066,
+      "en": "@i43@:1-8 @i44@:1-4 @i28@ (free/occupied off hand):8/10 [Chop]",
+      "fr": "@i43@:1-8 @i44@:1-4 @i28@ (main libre/occupée):8/10 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6067,
+      "en": "@i43@:3-14 @i44@:2-10 @i28@ (free/occupied off hand):8/10 [Chop]",
+      "fr": "@i43@:3-14 @i44@:2-10 @i28@ (main libre/occupée):8/10 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6068,
+      "en": "@i43@:5-18 @i44@:3-11 @i28@ (free/occupied off hand):8/10 TC:40 [Chop]",
+      "fr": "@i43@:5-18 @i44@:3-11 @i28@ (main libre/occupée):8/10 Complexité technologique:40 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6069,
+      "en": "@i43@:1-16 @i44@:3-11 @i28@ (free/occupied off hand):4/6 TC:20 [Crafting][Chop]",
+      "fr": "@i43@:1-16 @i44@:3-11 @i28@ (main libre/occupée):4/6 Complexité technologique:20 [Fabrication][Coupe le bois sans usure]"
+    },
+    {
+      "id": 6070,
+      "en": "@i43@:1-12(+10 Undead) @i44@:1-9 @i28@ (free/occupied off hand):8/10 [Offering][Chop] MC:20",
+      "fr": "@i43@:1-12(+10 contre les morts-vivants) @i44@:1-9 @i28@ (main libre/occupée):8/10 [Offrande][Coupe le bois sans usure] Complexité magique:20"
+    },
+    {
+      "id": 6071,
+      "en": "@i43@:1-12 @i44@:1-9 @s0@:(+1) @s2@:(+1) @i28@ (free/occupied off hand):8/10 MC:15 [Chop]",
+      "fr": "@i43@:1-12 @i44@:1-9 @s0@:(+1) @s2@:(+1) @i28@ (main libre/occupée):8/10 Complexité magique:15 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6072,
+      "en": "@i43@:1-3 @i44@:1-4 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-3 @i44@:1-4 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 6073,
+      "en": "@i43@:2-5 @i44@:2-9 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:2-5 @i44@:2-9 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6074,
+      "en": "@i43@:1-5 @i44@:1-8 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-5 @i44@:1-8 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 6075,
+      "en": "@i43@:1-4 @i44@:1-4 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-4 @i44@:1-4 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 6076,
+      "en": "@i43@:1-7 @i44@:1-10 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-7 @i44@:1-10 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6077,
+      "en": "@i43@:3-9 @i44@:3-12 @i28@ (free/occupied off hand):6/8 TC:10",
+      "fr": "@i43@:3-9 @i44@:3-12 @i28@ (main libre/occupée):6/8 Complexité technologique:10"
+    },
+    {
+      "id": 6078,
+      "en": "@i43@:1-8 @i44@:1-10 Crit Rate:(+10) @i28@ (free/occupied off hand):8/10 MC:10",
+      "fr": "@i43@:1-8 @i44@:1-10 Critique:(+10) @i28@ (main libre/occupée):8/10 Complexité magique:10"
+    },
+    {
+      "id": 6079,
+      "en": "@i43@:1-8 @i44@:1-10 @i48@:5-10 @i28@ (free/occupied off hand):8/10 MC:20",
+      "fr": "@i43@:1-8 @i44@:1-10 @i48@:5-10 @i28@ (main libre/occupée):8/10 Complexité magique:20"
+    },
+    {
+      "id": 6080,
+      "en": "@i43@:1-5 @i44@:1-2 @i45@:-10 @i46@:8 @i28@ (free/occupied off hand):5/7 TC:20",
+      "fr": "@i43@:1-5 @i44@:1-2 @i45@:-10 @i46@:8 @i28@ (main libre/occupée):5/7 Complexité technologique:20"
+    },
+    {
+      "id": 6081,
+      "en": "@i43@:1-6 @i44@:1-3 @i45@:-5 @i46@:8 @i28@ (free/occupied off hand):3/5 TC:5",
+      "fr": "@i43@:1-6 @i44@:1-3 @i45@:-5 @i46@:8 @i28@ (main libre/occupée):3/5 Complexité technologique:5"
+    },
+    {
+      "id": 6082,
+      "en": "@i43@:1-5 @i45@:-10 @i46@:5 @i28@ (free/occupied off hand):3/5 TC:5",
+      "fr": "@i43@:1-5 @i45@:-10 @i46@:5 @i28@ (main libre/occupée):3/5 Complexité technologique:5"
+    },
+    {
+      "id": 6083,
+      "en": "@i43@:3-12 @i44@:3-9 @i46@:12 @i28@ (free/occupied off hand):5/7 TC:20",
+      "fr": "@i43@:3-12 @i44@:3-9 @i46@:12 @i28@ (main libre/occupée):5/7 Complexité technologique:20"
+    },
+    {
+      "id": 6084,
+      "en": "@i43@:2-9 @i44@:2-5 @i46@:8 @i28@ (free/occupied off hand):5/7 TC:30",
+      "fr": "@i43@:2-9 @i44@:2-5 @i46@:8 @i28@ (main libre/occupée):5/7 Complexité technologique:30"
+    },
+    {
+      "id": 6085,
+      "en": "@i43@:5-12 @i44@:2-5 @i46@:15 @i28@ (free/occupied off hand):5/7 TC:40 [Crafting]",
+      "fr": "@i43@:5-12 @i44@:2-5 @i46@:15 @i28@ (main libre/occupée):5/7 Complexité technologique:40 [Fabrication]"
+    },
+    {
+      "id": 6086,
+      "en": "@i43@:2-9 @i44@:2-5 @i46@:10 @i28@ (free/occupied off hand):5/7 TC:40 [Crafting]",
+      "fr": "@i43@:2-9 @i44@:2-5 @i46@:10 @i28@ (main libre/occupée):5/7 Complexité technologique:40 [Fabrication]"
+    },
+    {
+      "id": 6087,
+      "en": "@i43@:5-25 @i44@:1-5 @i46@:10 @i28@ (free/occupied off hand):6/8 TC:60",
+      "fr": "@i43@:5-25 @i44@:1-5 @i46@:10 @i28@ (main libre/occupée):6/8 Complexité technologique:60"
+    },
+    {
+      "id": 6088,
+      "en": "@i43@:10-30 @i44@:2-6 @i46@:20 @i28@ (free/occupied off hand):6/8 TC:40 [Crafting]",
+      "fr": "@i43@:10-30 @i44@:2-6 @i46@:20 @i28@ (main libre/occupée):6/8 Complexité technologique:40 [Fabrication]"
+    },
+    {
+      "id": 6089,
+      "en": "@i43@:6-18 @i44@:4-12 @i28@ (free/occupied off hand):14/18",
+      "fr": "@i43@:6-18 @i44@:4-12 @i28@ (main libre/occupée):14/18"
+    },
+    {
+      "id": 6090,
+      "en": "@i43@:1-14 @i44@:1-8 @i28@ (free/occupied off hand):14/18",
+      "fr": "@i43@:1-14 @i44@:1-8 @i28@ (main libre/occupée):14/18"
+    },
+    {
+      "id": 6091,
+      "en": "@i43@:2-18 @i44@:2-10 @i28@ (free/occupied off hand):14/18",
+      "fr": "@i43@:2-18 @i44@:2-10 @i28@ (main libre/occupée):14/18"
+    },
+    {
+      "id": 6092,
+      "en": "@i43@:1-20 @i44@:1-10 @i28@ (free/occupied off hand):14/18",
+      "fr": "@i43@:1-20 @i44@:1-10 @i28@ (main libre/occupée):14/18"
+    },
+    {
+      "id": 6093,
+      "en": "@i43@:8-20 @i44@:6-12 @i28@ (free/occupied off hand):16/20",
+      "fr": "@i43@:8-20 @i44@:6-12 @i28@ (main libre/occupée):16/20"
+    },
+    {
+      "id": 6094,
+      "en": "@i43@:4-16 @i44@:3-11 @i28@ (free/occupied off hand):8/12 @i4@:(-80) MC:40",
+      "fr": "@i43@:4-16 @i44@:3-11 @i28@ (main libre/occupée):8/12 @i4@:(-80) Complexité magique:40"
+    },
+    {
+      "id": 6095,
+      "en": "@i43@:4-16 @i44@:3-11 @i47@:1-20 @i28@ (free/occupied off hand):14/18 MC:40",
+      "fr": "@i43@:4-16 @i44@:3-11 @i47@:1-20 @i28@ (main libre/occupée):14/18 Complexité magique:40"
+    },
+    {
+      "id": 6096,
+      "en": "@i43@:5-18 @i44@:3-9 @i46@:15 @i28@:8 TC:20 [Crafting]",
+      "fr": "@i43@:5-18 @i44@:3-9 @i46@:15 @i28@:8 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 6097,
+      "en": "@i43@:1-8 @i44@:1-3 @i46@:10 @i28@:5",
+      "fr": "@i43@:1-8 @i44@:1-3 @i46@:10 @i28@:5"
+    },
+    {
+      "id": 6098,
+      "en": "@i43@:1-12 @i44@:3-9 @i46@:25 @i28@:12 [Crafting]",
+      "fr": "@i43@:1-12 @i44@:3-9 @i46@:25 @i28@:12 [Fabrication]"
+    },
+    {
+      "id": 6099,
+      "en": "@i43@:1-10(+1-10 vs Animals) @i44@:2-5 @i46@:15 @i28@:8 MC:15",
+      "fr": "@i43@:1-10(+1-10 contre les animaux) @i44@:2-5 @i46@:15 @i28@:8 Complexité magique:15"
+    },
+    {
+      "id": 6100,
+      "en": "@i43@:1-12 @i44@:3-9 (5% Chance of Fear) @i46@:20 @i28@:10 MC:20",
+      "fr": "@i43@:1-12 @i44@:3-9 (5% de chances de provoquer la peur) @i46@:20 @i28@:10 Complexité magique:20"
+    },
+    {
+      "id": 6101,
+      "en": "@i43@:1-15 @i44@:1-3 @i46@:15 @i28@:8 TC:60",
+      "fr": "@i43@:1-15 @i44@:1-3 @i46@:15 @i28@:8 Complexité technologique:60"
+    },
+    {
+      "id": 6102,
+      "en": "@i43@:1-15 @i44@:1-3 @i46@:15 @i28@:8 TC:55",
+      "fr": "@i43@:1-15 @i44@:1-3 @i46@:15 @i28@:8 Complexité technologique:55"
+    },
+    {
+      "id": 6103,
+      "en": "@i43@:1-15 @i44@:1-3 @i46@:15 @i28@:8 TC:60",
+      "fr": "@i43@:1-15 @i44@:1-3 @i46@:15 @i28@:8 Complexité technologique:60"
+    },
+    {
+      "id": 6104,
+      "en": "@i43@:1-30 @i44@:1-5 @i46@:15 @i28@:10 TC:100",
+      "fr": "@i43@:1-30 @i44@:1-5 @i46@:15 @i28@:10 Complexité technologique:100"
+    },
+    {
+      "id": 6105,
+      "en": "@i43@:10-30 @i44@:1-15 @i45@:20 @i46@:25 @i28@:8 TC:70 [Crafting]",
+      "fr": "@i43@:10-30 @i44@:1-15 @i45@:20 @i46@:25 @i28@:8 Complexité technologique:70 [Fabrication]"
+    },
+    {
+      "id": 6106,
+      "en": "@i43@:4-14 @i44@:3-9 @i46@:20 @i28@:8 TC:52 [Crafting]",
+      "fr": "@i43@:4-14 @i44@:3-9 @i46@:20 @i28@:8 Complexité technologique:52 [Fabrication]"
+    },
+    {
+      "id": 6107,
+      "en": "@i43@:10-40 @i44@:1-10 @i46@:15 @i28@:12 TC:100",
+      "fr": "@i43@:10-40 @i44@:1-10 @i46@:15 @i28@:12 Complexité technologique:100"
+    },
+    {
+      "id": 6108,
+      "en": "@i43@:2-10 @i44@:1-5 @i46@:15 @i28@:9 TC:30",
+      "fr": "@i43@:2-10 @i44@:1-5 @i46@:15 @i28@:9 Complexité technologique:30"
+    },
+    {
+      "id": 6109,
+      "en": "@i43@:1-10 @i44@:1-3 @i45@:-5 @i46@:15 @i28@:8 TC:30",
+      "fr": "@i43@:1-10 @i44@:1-3 @i45@:-5 @i46@:15 @i28@:8 Complexité technologique:30"
+    },
+    {
+      "id": 6110,
+      "en": "@i43@:1-6 @i44@:1-3 @i49@:1-10 Requires Charges TC:90 [Crafting] @i28@:5",
+      "fr": "@i43@:1-6 @i44@:1-3 @i49@:1-10 Nécessite des charges Complexité technologique:90 [Fabrication] @i28@:5"
+    },
+    {
+      "id": 6111,
+      "en": "@i43@:1-8 @i44@:3-12 @i28@:5",
+      "fr": "@i43@:1-8 @i44@:3-12 @i28@:5"
+    },
+    {
+      "id": 6112,
+      "en": "@i43@:1-8 @i44@:3-12 @p62@ @i28@:5 MC:20",
+      "fr": "@i43@:1-8 @i44@:3-12 @p62@ @i28@:5 Complexité magique:20"
+    },
+    {
+      "id": 6113,
+      "en": "@i43@:1-8 @i44@:3-12 @p62@, @p50@, @p54@ @i28@:5 MC:60",
+      "fr": "@i43@:1-8 @i44@:3-12 @p62@, @p50@, @p54@ @i28@:5 Complexité magique:60"
+    },
+    {
+      "id": 6114,
+      "en": "@i43@:1-8 @i44@:3-12 Mana:50 @p65@, @p42@ @i28@:5 MC:60",
+      "fr": "@i43@:1-8 @i44@:3-12 Mana:50 @p65@, @p42@ @i28@:5 Complexité magique:60"
+    },
+    {
+      "id": 6115,
+      "en": "@i43@:2-9 @i44@:2-5 @i46@:9 Silent @i28@ (free/occupied off hand):5/7 TC:30",
+      "fr": "@i43@:2-9 @i44@:2-5 @i46@:9 Silencieux @i28@ (main libre/occupée):5/7 Complexité technologique:30"
+    },
+    {
+      "id": 6116,
+      "en": "@i43@:2-6 @i44@:1-4 @i45@:+5 @i46@:15 @i28@ (free/occupied off hand):5/7 TC:20",
+      "fr": "@i43@:2-6 @i44@:1-4 @i45@:+5 @i46@:15 @i28@ (main libre/occupée):5/7 Complexité technologique:20"
+    },
+    {
+      "id": 6117,
+      "en": "@i43@:1-2 @i44@:1-3 @i28@ (free/occupied off hand):10/12 [Crafting]",
+      "fr": "@i43@:1-2 @i44@:1-3 @i28@ (main libre/occupée):10/12 [Fabrication]"
+    },
+    {
+      "id": 6118,
+      "en": "@i43@:5-35 @i44@:1-10 @i46@:12 @i28@ (free/occupied off hand):5/7 TC:85 [Crafting]",
+      "fr": "@i43@:5-35 @i44@:1-10 @i46@:12 @i28@ (main libre/occupée):5/7 Complexité technologique:85 [Fabrication]"
+    },
+    {
+      "id": 6119,
+      "en": "@i43@:1-15 @i44@:1-10 @i46@:15 @i28@:8 TC:70 [Crafting]",
+      "fr": "@i43@:1-15 @i44@:1-10 @i46@:15 @i28@:8 Complexité technologique:70 [Fabrication]"
+    },
+    {
+      "id": 6120,
+      "en": "@i43@:1-8(+12) @i44@:1-4 Crit Effect:(+50) Crit Fail:(+20) @i28@ (free/occupied off hand):4/6 MC:75",
+      "fr": "@i43@:1-8(+12) @i44@:1-4 Effet critique:(+50) Échec critique:(+20) @i28@ (main libre/occupée):4/6 Complexité magique:75"
+    },
+    {
+      "id": 6121,
+      "en": "@i43@:2-6 @i44@:1-3 @i28@ (free/occupied off hand):3/3 TC:15",
+      "fr": "@i43@:2-6 @i44@:1-3 @i28@ (main libre/occupée):3/3 Complexité technologique:15"
+    },
+    {
+      "id": 6122,
+      "en": "@i43@:1-4(+3) @i44@:1-2 @i28@ (free/occupied off hand):3/3 MC:25",
+      "fr": "@i43@:1-4(+3) @i44@:1-2 @i28@ (main libre/occupée):3/3 Complexité magique:25"
+    },
+    {
+      "id": 6123,
+      "en": "@i43@:1-4(+6) @i44@:1-2(+1) Mana:5 @i28@ (free/occupied off hand):3/3 MC:50",
+      "fr": "@i43@:1-4(+6) @i44@:1-2(+1) Mana:5 @i28@ (main libre/occupée):3/3 Complexité magique:50"
+    },
+    {
+      "id": 6124,
+      "en": "@i43@:1-4(+9) @i44@:1-2(+2) Mana:10 @i28@ (free/occupied off hand):3/3 MC:75",
+      "fr": "@i43@:1-4(+9) @i44@:1-2(+2) Mana:10 @i28@ (main libre/occupée):3/3 Complexité magique:75"
+    },
+    {
+      "id": 6125,
+      "en": "@i43@:1-6(+12) @i44@:1-2(+4) Mana:20 @i28@ (free/occupied off hand):3/3 MC:100",
+      "fr": "@i43@:1-6(+12) @i44@:1-2(+4) Mana:20 @i28@ (main libre/occupée):3/3 Complexité magique:100"
+    },
+    {
+      "id": 6126,
+      "en": "@i43@:3-12 @i44@:3-9 @i49@:1-20 @i28@ (free/occupied off hand):6/8 TC:45",
+      "fr": "@i43@:3-12 @i44@:3-9 @i49@:1-20 @i28@ (main libre/occupée):6/8 Complexité technologique:45"
+    },
+    {
+      "id": 6127,
+      "en": "@i43@:1-8(+4) @i44@:1-4 @i28@ (free/occupied off hand):6/8 MC:25",
+      "fr": "@i43@:1-8(+4) @i44@:1-4 @i28@ (main libre/occupée):6/8 Complexité magique:25"
+    },
+    {
+      "id": 6128,
+      "en": "@i43@:1-8(+8) @i44@:1-4(+2) Mana:4 @i28@ (free/occupied off hand):7/9 MC:50",
+      "fr": "@i43@:1-8(+8) @i44@:1-4(+2) Mana:4 @i28@ (main libre/occupée):7/9 Complexité magique:50"
+    },
+    {
+      "id": 6129,
+      "en": "@i43@:1-8(+12) @i44@:1-4(+4) Mana:8 @i28@ (free/occupied off hand):8/10 MC:75",
+      "fr": "@i43@:1-8(+12) @i44@:1-4(+4) Mana:8 @i28@ (main libre/occupée):8/10 Complexité magique:75"
+    },
+    {
+      "id": 6130,
+      "en": "@i43@:1-8(+16) @i44@:1-4(+8) Mana:16 @i28@ (free/occupied off hand):9/11 MC:100",
+      "fr": "@i43@:1-8(+16) @i44@:1-4(+8) Mana:16 @i28@ (main libre/occupée):9/11 Complexité magique:100"
+    },
+    {
+      "id": 6131,
+      "en": "@i43@:1-12 @i44@:1-9 @i47@:20-40 @i28@ (free/occupied off hand):8/10 TC:25 [Chop]",
+      "fr": "@i43@:1-12 @i44@:1-9 @i47@:20-40 @i28@ (main libre/occupée):8/10 Complexité technologique:25 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6132,
+      "en": "@i43@:1-2 @i44@:1-9 @i49@:20-30 @i28@ (free/occupied off hand):8/10 TC:60 [Chop]",
+      "fr": "@i43@:1-2 @i44@:1-9 @i49@:20-30 @i28@ (main libre/occupée):8/10 Complexité technologique:60 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6133,
+      "en": "@i43@:1-12 @i44@:1-9 @i48@:30-50 @i28@ (free/occupied off hand):8/10 TC:75 [Chop]",
+      "fr": "@i43@:1-12 @i44@:1-9 @i48@:30-50 @i28@ (main libre/occupée):8/10 Complexité technologique:75 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6134,
+      "en": "@i43@:1-12(+5) @i44@:1-9(+1) @i28@ (free/occupied off hand):9/11 MC:25 [Chop]",
+      "fr": "@i43@:1-12(+5) @i44@:1-9(+1) @i28@ (main libre/occupée):9/11 Complexité magique:25 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 6135,
+      "en": "@i43@:1-12(+10) @i44@:1-9(+3) Mana:4 @i28@ (free/occupied off hand):10/12[Chop] MC:50",
+      "fr": "@i43@:1-12(+10) @i44@:1-9(+3) Mana:4 @i28@ (main libre/occupée):10/12[Coupe le bois sans usure] Complexité magique:50"
+    },
+    {
+      "id": 6136,
+      "en": "@i43@:1-13(+15) @i44@:1-9(+6) CR:(+3) Mana:8 @i28@ (free/occupied off hand):11/13[Chop] MC:75",
+      "fr": "@i43@:1-13(+15) @i44@:1-9(+6) Critique:(+3) Mana:8 @i28@ (main libre/occupée):11/13[Coupe le bois sans usure] Complexité magique:75"
+    },
+    {
+      "id": 6137,
+      "en": "@i43@:3-14(+20) @i44@:2-10(+9) CR:(+5) Mana:16 @i28@ (free/occupied off hand):11/13 MC:100",
+      "fr": "@i43@:3-14(+20) @i44@:2-10(+9) Critique:(+5) Mana:16 @i28@ (main libre/occupée):11/13 Complexité magique:100"
+    },
+    {
+      "id": 6138,
+      "en": "@i43@:1-5(+4) @i44@:1-9(+2) CR:(+1) Mana:8 @i28@ (free/occupied off hand):8/10 MC:25",
+      "fr": "@i43@:1-5(+4) @i44@:1-9(+2) Critique:(+1) Mana:8 @i28@ (main libre/occupée):8/10 Complexité magique:25"
+    },
+    {
+      "id": 6139,
+      "en": "@i43@:2-5(+8) @i44@:2-9(+4) CR:(+2) Mana:16 @i28@ (free/occupied off hand):9/11 MC:50",
+      "fr": "@i43@:2-5(+8) @i44@:2-9(+4) Critique:(+2) Mana:16 @i28@ (main libre/occupée):9/11 Complexité magique:50"
+    },
+    {
+      "id": 6140,
+      "en": "@i43@:1-9(+12) @i44@:1-12(+8) CR:(+3) Mana:24 @i28@ (free/occupied off hand):10/12 MC:75",
+      "fr": "@i43@:1-9(+12) @i44@:1-12(+8) Critique:(+3) Mana:24 @i28@ (main libre/occupée):10/12 Complexité magique:75"
+    },
+    {
+      "id": 6141,
+      "en": "@i43@:3-9(+16) @i44@:3-12(+12) CR:(+4) Mana:32 @i28@ (free/occupied off hand):10/12 MC:100",
+      "fr": "@i43@:3-9(+16) @i44@:3-12(+12) Critique:(+4) Mana:32 @i28@ (main libre/occupée):10/12 Complexité magique:100"
+    },
+    {
+      "id": 6142,
+      "en": "@i43@:4-16(+4) @i44@:3-11(+4) CR:(+2) Mana:8 @i28@ (free/occupied off hand):14/18 MC:25",
+      "fr": "@i43@:4-16(+4) @i44@:3-11(+4) Critique:(+2) Mana:8 @i28@ (main libre/occupée):14/18 Complexité magique:25"
+    },
+    {
+      "id": 6143,
+      "en": "@i43@:4-16(+8) @i44@:3-11(+8) CR:(+4) Mana:12 @i28@ (free/occupied off hand):15/19 MC:50",
+      "fr": "@i43@:4-16(+8) @i44@:3-11(+8) Critique:(+4) Mana:12 @i28@ (main libre/occupée):15/19 Complexité magique:50"
+    },
+    {
+      "id": 6144,
+      "en": "@i43@:4-16(+12) @i44@:3-11(+12) CR:(+6) Mana:16 @i28@ (free/occupied off hand):16/20 MC:75",
+      "fr": "@i43@:4-16(+12) @i44@:3-11(+12) Critique:(+6) Mana:16 @i28@ (main libre/occupée):16/20 Complexité magique:75"
+    },
+    {
+      "id": 6145,
+      "en": "@i43@:4-16(+16) @i44@:3-11(+16) CR:(+8) Mana:20 @i28@ (free/occupied off hand):16/20 MC:100",
+      "fr": "@i43@:4-16(+16) @i44@:3-11(+16) Critique:(+8) Mana:20 @i28@ (main libre/occupée):16/20 Complexité magique:100"
+    },
+    {
+      "id": 6146,
+      "en": "@i43@:1-10 @i44@:2-5 @i48@:5-20 @i46@:20 @i28@:10 TC:85",
+      "fr": "@i43@:1-10 @i44@:2-5 @i48@:5-20 @i46@:20 @i28@:10 Complexité technologique:85"
+    },
+    {
+      "id": 6147,
+      "en": "@i43@:1-10 @i44@:2-5 @i47@:10-30 @i46@:20 @i28@:10 TC:55",
+      "fr": "@i43@:1-10 @i44@:2-5 @i47@:10-30 @i46@:20 @i28@:10 Complexité technologique:55"
+    },
+    {
+      "id": 6148,
+      "en": "@i43@:1-10(+2) @i44@:2-5 @i46@:20 @i28@:11 MC:25",
+      "fr": "@i43@:1-10(+2) @i44@:2-5 @i46@:20 @i28@:11 Complexité magique:25"
+    },
+    {
+      "id": 6149,
+      "en": "@i43@:1-10(+4) @i44@:2-5 @i46@:20 @i28@:11 MC:50",
+      "fr": "@i43@:1-10(+4) @i44@:2-5 @i46@:20 @i28@:11 Complexité magique:50"
+    },
+    {
+      "id": 6150,
+      "en": "@i43@:1-10(+6) @i44@:2-5 @i46@:20 @i28@:11 MC:75",
+      "fr": "@i43@:1-10(+6) @i44@:2-5 @i46@:20 @i28@:11 Complexité magique:75"
+    },
+    {
+      "id": 6151,
+      "en": "@i43@:1-10(+8) @i44@:2-5 @i46@:20 @i28@:11 MC:100",
+      "fr": "@i43@:1-10(+8) @i44@:2-5 @i46@:20 @i28@:11 Complexité magique:100"
+    },
+    {
+      "id": 6152,
+      "en": "@i43@:10-30 @i44@:5-20 @i46@:15 Bypasses @i51@ @i28@:11 TC:30",
+      "fr": "@i43@:10-30 @i44@:5-20 @i46@:15 Ignore @i51@ @i28@:11 Complexité technologique:30"
+    },
+    {
+      "id": 6153,
+      "en": "@i43@:1-15 @i44@:1-3 Acid damage to items:10 @i46@:15 TC:48 @i28@:8",
+      "fr": "@i43@:1-15 @i44@:1-3 Dégâts d’acide aux objets:10 @i46@:15 Complexité technologique:48 @i28@:8"
+    },
+    {
+      "id": 6154,
+      "en": "@i43@:1-4 @i49@:10-80 @i46@:15 Requires Charges @i28@:11 TC:100",
+      "fr": "@i43@:1-4 @i49@:10-80 @i46@:15 Nécessite des charges @i28@:11 Complexité technologique:100"
+    },
+    {
+      "id": 6155,
+      "en": "@i43@:6-14 @i48@:2-20 @i44@:5-10 AoE @i46@:15 @i28@:12 TC:100",
+      "fr": "@i43@:6-14 @i48@:2-20 @i44@:5-10 Zone d’effet @i46@:15 @i28@:12 Complexité technologique:100"
+    },
+    {
+      "id": 6156,
+      "en": "@i43@:1-15 @i44@:1-3 @i49@:10-10 @i46@:15 @i28@:8 TC:48 [Crafting]",
+      "fr": "@i43@:1-15 @i44@:1-3 @i49@:10-10 @i46@:15 @i28@:8 Complexité technologique:48 [Fabrication]"
+    },
+    {
+      "id": 6157,
+      "en": "@i43@:30-60 @i44@:5-15 @i46@:15 @i28@:15 TC:75",
+      "fr": "@i43@:30-60 @i44@:5-15 @i46@:15 @i28@:15 Complexité technologique:75"
+    },
+    {
+      "id": 6158,
+      "en": "@i43@:1-15 @i44@:1-3 @i48@:1-20 @i46@:15 @i28@:8 TC:95",
+      "fr": "@i43@:1-15 @i44@:1-3 @i48@:1-20 @i46@:15 @i28@:8 Complexité technologique:95"
+    },
+    {
+      "id": 6159,
+      "en": "@i43@:1-15 @i44@:10+CurrentFT @i46@:15 TC:100 @i28@:8",
+      "fr": "@i43@:1-15 @i44@:10+fatigue actuelle @i46@:15 Complexité technologique:100 @i28@:8"
+    },
+    {
+      "id": 6160,
+      "en": "@i43@:1-8 @i44@:3-12(+6) Mana:20 @i28@:5 MC:25",
+      "fr": "@i43@:1-8 @i44@:3-12(+6) Mana:20 @i28@:5 Complexité magique:25"
+    },
+    {
+      "id": 6161,
+      "en": "@i43@:1-8 @i44@:3-12(+12) Mana:40 @i28@:5 MC:50",
+      "fr": "@i43@:1-8 @i44@:3-12(+12) Mana:40 @i28@:5 Complexité magique:50"
+    },
+    {
+      "id": 6162,
+      "en": "@i43@:1-8 @i44@:3-12(+18) Mana:60 @i28@:5 MC:75",
+      "fr": "@i43@:1-8 @i44@:3-12(+18) Mana:60 @i28@:5 Complexité magique:75"
+    },
+    {
+      "id": 6163,
+      "en": "@i43@:1-8 @i44@:3-12(+24) Mana:80 @i28@:5 MC:100",
+      "fr": "@i43@:1-8 @i44@:3-12(+24) Mana:80 @i28@:5 Complexité magique:100"
+    },
+    {
+      "id": 6164,
+      "en": "@i43@:1-6 @i46@:20 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-6 @i46@:20 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6165,
+      "en": "@i43@:1-8 @i44@:1-2 @i46@:20 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-8 @i44@:1-2 @i46@:20 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6166,
+      "en": "@i43@:1-10 @i44@:1-3 @i46@:20 @i28@ (free/occupied off hand):6/8 TC:5",
+      "fr": "@i43@:1-10 @i44@:1-3 @i46@:20 @i28@ (main libre/occupée):6/8 Complexité technologique:5"
+    },
+    {
+      "id": 6167,
+      "en": "@i43@:1-10 @i44@:1-3 @i46@:20 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-10 @i44@:1-3 @i46@:20 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6168,
+      "en": "@i43@:1-10(+5) @i44@:1-3 @i46@:20 @i28@ (free/occupied off hand):6/8 MC:40",
+      "fr": "@i43@:1-10(+5) @i44@:1-3 @i46@:20 @i28@ (main libre/occupée):6/8 Complexité magique:40"
+    },
+    {
+      "id": 6169,
+      "en": "@i43@:1-10(+7) @i44@:1-3 @i46@:20 @i28@ (free/occupied off hand):6/8 MC:50",
+      "fr": "@i43@:1-10(+7) @i44@:1-3 @i46@:20 @i28@ (main libre/occupée):6/8 Complexité magique:50"
+    },
+    {
+      "id": 6170,
+      "en": "@i43@:1-10(+20) @i44@:1-3 @i46@:20 CR:(+50) @i28@ (free/occupied off hand):6/8 MC:75",
+      "fr": "@i43@:1-10(+20) @i44@:1-3 @i46@:20 Critique:(+50) @i28@ (main libre/occupée):6/8 Complexité magique:75"
+    },
+    {
+      "id": 6171,
+      "en": "@i43@:20-40 @i46@:8 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:20-40 @i46@:8 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 6172,
+      "en": "@i43@:10-25 @i44@:6-15 @i28@ (free/occupied off hand):14/18",
+      "fr": "@i43@:10-25 @i44@:6-15 @i28@ (main libre/occupée):14/18"
+    },
+    {
+      "id": 6173,
+      "en": "@i43@:20-40 @i44@:1-10 @i49@:10-10 @i46@:15 @i28@ (free/occupied off hand):5/7 TC:85",
+      "fr": "@i43@:20-40 @i44@:1-10 @i49@:10-10 @i46@:15 @i28@ (main libre/occupée):5/7 Complexité technologique:85"
+    },
+    {
+      "id": 6174,
+      "en": "@i43@:5-25 @i44@:1-7 @i46@:15 @i28@:8 TC:70 [Crafting]",
+      "fr": "@i43@:5-25 @i44@:1-7 @i46@:15 @i28@:8 Complexité technologique:70 [Fabrication]"
+    },
+    {
+      "id": 6175,
+      "en": "@i43@:1-1 @i44@:1-3 @i28@ (free/occupied off hand):6/8 [Crafting]",
+      "fr": "@i43@:1-1 @i44@:1-3 @i28@ (main libre/occupée):6/8 [Fabrication]"
+    },
+    {
+      "id": 6176,
+      "en": "@i43@:3-6 @i28@ (free/occupied off hand):2/2 Bypasses @i51@",
+      "fr": "@i43@:3-6 @i28@ (main libre/occupée):2/2 Ignore @i51@"
+    },
+    {
+      "id": 6177,
+      "en": "@i43@:1-3 @i28@ (free/occupied off hand):3/3 [Offering]",
+      "fr": "@i43@:1-3 @i28@ (main libre/occupée):3/3 [Offrande]"
+    },
+    {
+      "id": 6178,
+      "en": "@i43@:2-6 @i28@ (free/occupied off hand):3/3",
+      "fr": "@i43@:2-6 @i28@ (main libre/occupée):3/3"
+    },
+    {
+      "id": 7040,
+      "en": "[Crafting: @t1@] @d7040@",
+      "fr": "[Fabrication: @t1@] @d7040@"
+    },
+    {
+      "id": 7041,
+      "en": "[Crafting: @t3@] @d7041@",
+      "fr": "[Fabrication: @t3@] @d7041@"
+    },
+    {
+      "id": 8044,
+      "en": "@i50@:12 @i51@:23 @i53@:5 @i54@:-10 @i56@:-25 TC:5",
+      "fr": "@i50@:12 @i51@:23 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:5"
+    },
+    {
+      "id": 8045,
+      "en": "@i50@:30 @i51@:20 @i53@:20 @i56@:-90 @s0@:(+3) MA:-Res TC:30",
+      "fr": "@i50@:30 @i51@:20 @i53@:20 @i56@:-90 @s0@:(+3) Résistances réduites selon l’aptitude magique Complexité technologique:30"
+    },
+    {
+      "id": 8046,
+      "en": "@i50@:3 @i51@:2 @i53@:-15 @i55@:10",
+      "fr": "@i50@:3 @i51@:2 @i53@:-15 @i55@:10"
+    },
+    {
+      "id": 8047,
+      "en": "@i50@:15(5) @i51@:20(10) @i53@:15(5) @i54@:10(5) @i52@:5 @i55@:(20) @i56@:-80 MC:20",
+      "fr": "@i50@:15(5) @i51@:20(10) @i53@:15(5) @i54@:10(5) @i52@:5 @i55@:(20) @i56@:-80 Complexité magique:20"
+    },
+    {
+      "id": 8048,
+      "en": "@i50@:19(+31) @i51@:5 @i53@:(+5) @i56@:-20 @i1@:-10 MC:60",
+      "fr": "@i50@:19(+31) @i51@:5 @i53@:(+5) @i56@:-20 @i1@:-10 Complexité magique:60"
+    },
+    {
+      "id": 8051,
+      "en": "@i50@:2 @i51@:5 @s5@:-1",
+      "fr": "@i50@:2 @i51@:5 @s5@:-1"
+    },
+    {
+      "id": 8052,
+      "en": "@i51@:5 @i43@:+3 TC:5",
+      "fr": "@i51@:5 @i43@:+3 Complexité technologique:5"
+    },
+    {
+      "id": 8054,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8055,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8056,
+      "en": "@i51@:2 @i43@:+1 Sturdy pair of Gloves [Crafting]",
+      "fr": "@i51@:2 @i43@:+1 Paire de gants solides [Fabrication]"
+    },
+    {
+      "id": 8057,
+      "en": "@s1@:(+2) TC:25",
+      "fr": "@s1@:(+2) Complexité technologique:25"
+    },
+    {
+      "id": 8060,
+      "en": "@i50@:12 @i51@:21 @i53@:5 @i54@:-10 @i56@:-25 TC:5",
+      "fr": "@i50@:12 @i51@:21 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:5"
+    },
+    {
+      "id": 8061,
+      "en": "@i50@:30 @i51@:15 @i53@:20 @i56@:-90 @s0@:(+3) MA:-Res TC:30",
+      "fr": "@i50@:30 @i51@:15 @i53@:20 @i56@:-90 @s0@:(+3) Résistances réduites selon l’aptitude magique Complexité technologique:30"
+    },
+    {
+      "id": 8062,
+      "en": "@i50@:3 @i51@:2 @i53@:-15 @i55@:10",
+      "fr": "@i50@:3 @i51@:2 @i53@:-15 @i55@:10"
+    },
+    {
+      "id": 8063,
+      "en": "@i50@:15(5) @i51@:15(10) @i53@:15(5) @i54@:10(5) @i52@:5 @i55@:(20) @i56@:-80 MC:20",
+      "fr": "@i50@:15(5) @i51@:15(10) @i53@:15(5) @i54@:10(5) @i52@:5 @i55@:(20) @i56@:-80 Complexité magique:20"
+    },
+    {
+      "id": 8064,
+      "en": "@i50@:19(+31) @i51@:5 @i53@:(+5) @i56@:-20 @i1@:-10 MC:60",
+      "fr": "@i50@:19(+31) @i51@:5 @i53@:(+5) @i56@:-20 @i1@:-10 Complexité magique:60"
+    },
+    {
+      "id": 8068,
+      "en": "@i50@:15(5) @i51@:25(10) @i53@:15(5) @i54@:10(5) @i52@:5 @i55@:(20) @i56@:-80 MC:20",
+      "fr": "@i50@:15(5) @i51@:25(10) @i53@:15(5) @i54@:10(5) @i52@:5 @i55@:(20) @i56@:-80 Complexité magique:20"
+    },
+    {
+      "id": 8071,
+      "en": "@i50@:9 @i51@:16 @i53@:5 @k6@:@k5@:@k7@+1/20",
+      "fr": "@i50@:9 @i51@:16 @i53@:5 @k6@:@k5@:@k7@+1/20"
+    },
+    {
+      "id": 8072,
+      "en": "@i50@:12(+2) @i51@:23(+2) @i53@:5(+20) @i54@:-10(+20) @i52@:(+5) @i55@:(+20) @i56@:-25 MC:40",
+      "fr": "@i50@:12(+2) @i51@:23(+2) @i53@:5(+20) @i54@:-10(+20) @i52@:(+5) @i55@:(+20) @i56@:-25 Complexité magique:40"
+    },
+    {
+      "id": 8073,
+      "en": "@i50@:25 @i51@:45 @i53@:20 @i54@:-10 @i52@:20 MA:-Res @s0@:(+3)-@i56@ TC:30",
+      "fr": "@i50@:25 @i51@:45 @i53@:20 @i54@:-10 @i52@:20 Résistances réduites selon l’aptitude magique @s0@:(+3)-@i56@ Complexité technologique:30"
+    },
+    {
+      "id": 8074,
+      "en": "@i50@:5 @i51@:7 @i53@:3 @k6@:(+2/20) MC:40",
+      "fr": "@i50@:5 @i51@:7 @i53@:3 @k6@:(+2/20) Complexité magique:40"
+    },
+    {
+      "id": 8075,
+      "en": "@i50@:15 @i51@:36 @i53@:10 @i54@:-20 @i56@:-80 TC:10 [Crafting]",
+      "fr": "@i50@:15 @i51@:36 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:10 [Fabrication]"
+    },
+    {
+      "id": 8076,
+      "en": "@i50@:11 @i51@:16 @i53@:@i54@:@i52@:(+40) @i55@:(+70) @i1@:-15 @i56@:-25 MC:60",
+      "fr": "@i50@:11 @i51@:16 @i53@:@i54@:@i52@:(+40) @i55@:(+70) @i1@:-15 @i56@:-25 Complexité magique:60"
+    },
+    {
+      "id": 8077,
+      "en": "@i50@:2 @i51@:1 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i1@:+20"
+    },
+    {
+      "id": 8079,
+      "en": "@i50@:9 @i51@:14 @i53@:5 @i56@:5 @k6@:@k5@:@k7@+1/20",
+      "fr": "@i50@:9 @i51@:14 @i53@:5 @i56@:5 @k6@:@k5@:@k7@+1/20"
+    },
+    {
+      "id": 8080,
+      "en": "@i50@:12(+2) @i51@:21(+2) @i53@:5(+20) @i54@:-10(+20) @i52@:(+5) @i55@:(+20) @i56@:-25 MC:40",
+      "fr": "@i50@:12(+2) @i51@:21(+2) @i53@:5(+20) @i54@:-10(+20) @i52@:(+5) @i55@:(+20) @i56@:-25 Complexité magique:40"
+    },
+    {
+      "id": 8081,
+      "en": "@i50@:25 @i51@:38 @i53@:20 @i54@:-10 @i52@:20 MA:-Res @s0@:(+3)-@i56@ TC:30",
+      "fr": "@i50@:25 @i51@:38 @i53@:20 @i54@:-10 @i52@:20 Résistances réduites selon l’aptitude magique @s0@:(+3)-@i56@ Complexité technologique:30"
+    },
+    {
+      "id": 8082,
+      "en": "@i50@:5 @i51@:7 @i53@:3 @k6@:(+2/20) MC:40",
+      "fr": "@i50@:5 @i51@:7 @i53@:3 @k6@:(+2/20) Complexité magique:40"
+    },
+    {
+      "id": 8083,
+      "en": "@i50@:14 @i51@:30 @i53@:8 @i54@:-20 @i56@:-80 TC:10 [Crafting]",
+      "fr": "@i50@:14 @i51@:30 @i53@:8 @i54@:-20 @i56@:-80 Complexité technologique:10 [Fabrication]"
+    },
+    {
+      "id": 8084,
+      "en": "@i50@:11 @i51@:16 @i53@:@i54@:@i52@:(+40) @i55@:(+70) @i1@:-15 @i56@:-25 MC:60",
+      "fr": "@i50@:11 @i51@:16 @i53@:@i54@:@i52@:(+40) @i55@:(+70) @i1@:-15 @i56@:-25 Complexité magique:60"
+    },
+    {
+      "id": 8085,
+      "en": "@i50@:2 @i51@:1 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i1@:+20"
+    },
+    {
+      "id": 8087,
+      "en": "@i50@:9 @i51@:18 @i53@:5 @i56@-5 @k6@:@k5@:@k7@+1/20",
+      "fr": "@i50@:9 @i51@:18 @i53@:5 @i56@-5 @k6@:@k5@:@k7@+1/20"
+    },
+    {
+      "id": 8088,
+      "en": "@i50@:15 @i51@:38 @i53@:10 @i54@:-20 @i56@:-80 TC:10 [Crafting]",
+      "fr": "@i50@:15 @i51@:38 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:10 [Fabrication]"
+    },
+    {
+      "id": 8089,
+      "en": "@i50@:2 @i51@:1 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i1@:+20"
+    },
+    {
+      "id": 8091,
+      "en": "@i50@:9 @i51@:16 @i53@:5 @i56@:-10 [Crafting]",
+      "fr": "@i50@:9 @i51@:16 @i53@:5 @i56@:-10 [Fabrication]"
+    },
+    {
+      "id": 8092,
+      "en": "@i50@:12 @i51@:23 @i53@:5 @i54@:-10 @i56@:-10 TC:5",
+      "fr": "@i50@:12 @i51@:23 @i53@:5 @i54@:-10 @i56@:-10 Complexité technologique:5"
+    },
+    {
+      "id": 8093,
+      "en": "@i50@:20 @i51@:30 @i53@:10 @i54@:-20 @i56@:-80 TC:60",
+      "fr": "@i50@:20 @i51@:30 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:60"
+    },
+    {
+      "id": 8095,
+      "en": "@i50@:15 @i51@:36 @i53@:30 @i54@:-10 @i56@:-80 TC:10",
+      "fr": "@i50@:15 @i51@:36 @i53@:30 @i54@:-10 @i56@:-80 Complexité technologique:10"
+    },
+    {
+      "id": 8096,
+      "en": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5",
+      "fr": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5"
+    },
+    {
+      "id": 8099,
+      "en": "@i50@:9 @i51@:14 @i53@:5 @i56@:-10 [Crafting]",
+      "fr": "@i50@:9 @i51@:14 @i53@:5 @i56@:-10 [Fabrication]"
+    },
+    {
+      "id": 8100,
+      "en": "@i50@:12 @i51@:20 @i53@:5 @i54@:-10 @i56@:-10 TC:5",
+      "fr": "@i50@:12 @i51@:20 @i53@:5 @i54@:-10 @i56@:-10 Complexité technologique:5"
+    },
+    {
+      "id": 8101,
+      "en": "@i50@:20 @i51@:25 @i53@:10 @i54@:-20 @i56@:-80 TC:60",
+      "fr": "@i50@:20 @i51@:25 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:60"
+    },
+    {
+      "id": 8103,
+      "en": "@i50@:15 @i51@:32 @i53@:30 @i54@:-10 @i56@:-80 TC:10",
+      "fr": "@i50@:15 @i51@:32 @i53@:30 @i54@:-10 @i56@:-80 Complexité technologique:10"
+    },
+    {
+      "id": 8104,
+      "en": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5",
+      "fr": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5"
+    },
+    {
+      "id": 8107,
+      "en": "@i50@:9 @i51@:17 @i53@:5 @i56@:-10 [Crafting]",
+      "fr": "@i50@:9 @i51@:17 @i53@:5 @i56@:-10 [Fabrication]"
+    },
+    {
+      "id": 8108,
+      "en": "@i50@:15 @i51@:38 @i53@:30 @i54@:-10 @i56@:-80 TC:10",
+      "fr": "@i50@:15 @i51@:38 @i53@:30 @i54@:-10 @i56@:-80 Complexité technologique:10"
+    },
+    {
+      "id": 8112,
+      "en": "@i50@:12 @i51@:23 @i53@:5 @i54@:-10 @i56@:-25 TC:5",
+      "fr": "@i50@:12 @i51@:23 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:5"
+    },
+    {
+      "id": 8113,
+      "en": "@i50@:15 @i51@:37 @i53@:10 @i54@:-20 @i56@:-80 TC:60",
+      "fr": "@i50@:15 @i51@:37 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:60"
+    },
+    {
+      "id": 8114,
+      "en": "@i50@:5(+6) @i51@:7(+12) @i53@:3(+8) @i55@:(+10) MC:80",
+      "fr": "@i50@:5(+6) @i51@:7(+12) @i53@:3(+8) @i55@:(+10) Complexité magique:80"
+    },
+    {
+      "id": 8115,
+      "en": "@i50@:20 @i51@:40 @i53@:30 @i56@:-35 TC:20 [Crafting]",
+      "fr": "@i50@:20 @i51@:40 @i53@:30 @i56@:-35 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 8116,
+      "en": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5",
+      "fr": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5"
+    },
+    {
+      "id": 8120,
+      "en": "@i50@:12 @i51@:21 @i53@:5 @i54@:-10 @i56@:-25 TC:5",
+      "fr": "@i50@:12 @i51@:21 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:5"
+    },
+    {
+      "id": 8121,
+      "en": "@i50@:15 @i51@:33 @i53@:10 @i54@:-20 @i56@:-80 TC:60",
+      "fr": "@i50@:15 @i51@:33 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:60"
+    },
+    {
+      "id": 8122,
+      "en": "@i50@:5(+6) @i51@:7(+12) @i53@:3(+8) @i55@:(+10) MC:80",
+      "fr": "@i50@:5(+6) @i51@:7(+12) @i53@:3(+8) @i55@:(+10) Complexité magique:80"
+    },
+    {
+      "id": 8123,
+      "en": "@i50@:20 @i51@:35 @i53@:30 @i56@:-35 TC:20 [Crafting]",
+      "fr": "@i50@:20 @i51@:35 @i53@:30 @i56@:-35 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 8124,
+      "en": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5",
+      "fr": "@i50@:11 @i51@:20 @i56@:-25 @i1@:-5"
+    },
+    {
+      "id": 8128,
+      "en": "@i50@:20 @i51@:45 @i53@:30 @i56@:-35 TC:20 [Crafting]",
+      "fr": "@i50@:20 @i51@:45 @i53@:30 @i56@:-35 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 8130,
+      "en": "@i50@:13 @i51@:24 @i53@:5 @i54@:-10 @i56@:-25 TC:20 [Crafting]",
+      "fr": "@i50@:13 @i51@:24 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 8131,
+      "en": "@i50@:13 @i51@:23 @i53@:5 @i54@:-10 @i56@:-25 TC:20 [Crafting]",
+      "fr": "@i50@:13 @i51@:23 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 8132,
+      "en": "[Crafting]",
+      "fr": "[Fabrication]"
+    },
+    {
+      "id": 8136,
+      "en": "@i50@:2 @i51@:1 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i1@:+20"
+    },
+    {
+      "id": 8137,
+      "en": "@i50@:2 @i51@:1 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i1@:+20"
+    },
+    {
+      "id": 8138,
+      "en": "@i50@:2 @i51@:1 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i1@:+20"
+    },
+    {
+      "id": 8145,
+      "en": "@i50@:4 @i51@:5 @i53@:3 @i52@:(+80) MC:30",
+      "fr": "@i50@:4 @i51@:5 @i53@:3 @i52@:(+80) Complexité magique:30"
+    },
+    {
+      "id": 8146,
+      "en": "@i50@:4 @i51@:5 @i53@:3 @i52@:(+80) MC:30",
+      "fr": "@i50@:4 @i51@:5 @i53@:3 @i52@:(+80) Complexité magique:30"
+    },
+    {
+      "id": 8147,
+      "en": "@i50@:4 @i51@:5 @i53@:3 @i52@:(+80) MC:30",
+      "fr": "@i50@:4 @i51@:5 @i53@:3 @i52@:(+80) Complexité magique:30"
+    },
+    {
+      "id": 8148,
+      "en": "@i50@:8 @i51@:14 @i53@:5 Every 5 sec. uses 1 Charge to Heal 4HP. TC:80",
+      "fr": "@i50@:8 @i51@:14 @i53@:5 Consomme 1 charge toutes les 5 s pour rendre 4 points de vie. Complexité technologique:80"
+    },
+    {
+      "id": 8149,
+      "en": "@i50@:8 @i51@:14 @i53@:5 Every 5 sec. uses 1 Charge to Heal 4HP. TC:80",
+      "fr": "@i50@:8 @i51@:14 @i53@:5 Consomme 1 charge toutes les 5 s pour rendre 4 points de vie. Complexité technologique:80"
+    },
+    {
+      "id": 8150,
+      "en": "@i50@:8 @i51@:14 @i53@:5 Every 5 sec. uses 1 Charge to Heal 4HP. TC:80",
+      "fr": "@i50@:8 @i51@:14 @i53@:5 Consomme 1 charge toutes les 5 s pour rendre 4 points de vie. Complexité technologique:80"
+    },
+    {
+      "id": 8151,
+      "en": "@i50@:9 @i51@:16(+10) @i53@:5(+60) @i56@:-10 MC:60",
+      "fr": "@i50@:9 @i51@:16(+10) @i53@:5(+60) @i56@:-10 Complexité magique:60"
+    },
+    {
+      "id": 8152,
+      "en": "@i50@:9 @i51@:10(+10) @i53@:5(+60) @i56@:-10 MC:60",
+      "fr": "@i50@:9 @i51@:10(+10) @i53@:5(+60) @i56@:-10 Complexité magique:60"
+    },
+    {
+      "id": 8153,
+      "en": "@i50@:9 @i51@:20(+10) @i53@:5(+60) @i56@:-10 MC:60",
+      "fr": "@i50@:9 @i51@:20(+10) @i53@:5(+60) @i56@:-10 Complexité magique:60"
+    },
+    {
+      "id": 8154,
+      "en": "@i50@:8 @i51@:14 @i53@:5 @i56@:-10(15) @k4@:@k6@:(+2/20) MC:50",
+      "fr": "@i50@:8 @i51@:14 @i53@:5 @i56@:-10(15) @k4@:@k6@:(+2/20) Complexité magique:50"
+    },
+    {
+      "id": 8155,
+      "en": "@i50@:13 @i51@:25 @i53@:5 @i54@:-5 @i56@:-25 TC:5",
+      "fr": "@i50@:13 @i51@:25 @i53@:5 @i54@:-5 @i56@:-25 Complexité technologique:5"
+    },
+    {
+      "id": 8156,
+      "en": "@i50@:14 @i51@:27 @i53@:10 @i54@:-20 @i56@:-25 TC:10",
+      "fr": "@i50@:14 @i51@:27 @i53@:10 @i54@:-20 @i56@:-25 Complexité technologique:10"
+    },
+    {
+      "id": 8157,
+      "en": "@i50@:14 @i51@:23 @i54@:(+10) @i56@:-25(+10) MC:10",
+      "fr": "@i50@:14 @i51@:23 @i54@:(+10) @i56@:-25(+10) Complexité magique:10"
+    },
+    {
+      "id": 8158,
+      "en": "@i50@:12(+2) @i51@:23 @i53@:5 @i54@:-10(+10) @i56@:-20 MC:10",
+      "fr": "@i50@:12(+2) @i51@:23 @i53@:5 @i54@:-10(+10) @i56@:-20 Complexité magique:10"
+    },
+    {
+      "id": 8159,
+      "en": "[Quest] Eye is seen in the middle.",
+      "fr": "[Quête] Un œil figure au centre."
+    },
+    {
+      "id": 8160,
+      "en": "@s3@:(+2) MC:40",
+      "fr": "@s3@:(+2) Complexité magique:40"
+    },
+    {
+      "id": 8161,
+      "en": "@i65@:(+40) MC:80",
+      "fr": "@i65@:(+40) Complexité magique:80"
+    },
+    {
+      "id": 8162,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8164,
+      "en": "@i50@:(+10) @i51@:(+10) MC:40",
+      "fr": "@i50@:(+10) @i51@:(+10) Complexité magique:40"
+    },
+    {
+      "id": 8165,
+      "en": "Crit Rate:(+5), @k8@:(+1/20) MC:40",
+      "fr": "Critique:(+5), @k8@:(+1/20) Complexité magique:40"
+    },
+    {
+      "id": 8166,
+      "en": "@i51@:10 @i56@:-10 TC:5",
+      "fr": "@i51@:10 @i56@:-10 Complexité technologique:5"
+    },
+    {
+      "id": 8173,
+      "en": "@i51@:5 @i56@:(+25) MC:40",
+      "fr": "@i51@:5 @i56@:(+25) Complexité magique:40"
+    },
+    {
+      "id": 8174,
+      "en": "@i50@:5 @i51@:6 @i56@:-10 @s11@:(+5) MC:60",
+      "fr": "@i50@:5 @i51@:6 @i56@:-10 @s11@:(+5) Complexité magique:60"
+    },
+    {
+      "id": 8175,
+      "en": "@i50@:3 @i51@:5 @i43@:+7 TC:15",
+      "fr": "@i50@:3 @i51@:5 @i43@:+7 Complexité technologique:15"
+    },
+    {
+      "id": 8176,
+      "en": "@i50@:5 @i51@:7 @i43@:+15 TC:20",
+      "fr": "@i50@:5 @i51@:7 @i43@:+15 Complexité technologique:20"
+    },
+    {
+      "id": 8177,
+      "en": "@i50@:6 @i51@:8 @i43@:+10 TC:10",
+      "fr": "@i50@:6 @i51@:8 @i43@:+10 Complexité technologique:10"
+    },
+    {
+      "id": 8178,
+      "en": "@i50@:4 @i51@:6 @i43@:+2 TC:5",
+      "fr": "@i50@:4 @i51@:6 @i43@:+2 Complexité technologique:5"
+    },
+    {
+      "id": 8179,
+      "en": "@i51@:5 @k5@:(+1/20) MC:40",
+      "fr": "@i51@:5 @k5@:(+1/20) Complexité magique:40"
+    },
+    {
+      "id": 8180,
+      "en": "@i51@:5 @s1@:(+2) MC:20",
+      "fr": "@i51@:5 @s1@:(+2) Complexité magique:20"
+    },
+    {
+      "id": 8181,
+      "en": "@i50@:6 @i51@:9 @s5@:-1",
+      "fr": "@i50@:6 @i51@:9 @s5@:-1"
+    },
+    {
+      "id": 8182,
+      "en": "@i50@:10 @i51@:12 @s5@:-1",
+      "fr": "@i50@:10 @i51@:12 @s5@:-1"
+    },
+    {
+      "id": 8183,
+      "en": "@s5@:(+2) TC:85 [Crafting]",
+      "fr": "@s5@:(+2) Complexité technologique:85 [Fabrication]"
+    },
+    {
+      "id": 8184,
+      "en": "@s5@ <8 +1 else -1 [Crafting]",
+      "fr": "@s5@ : +1 si inférieure à 8, sinon -1. [Fabrication]"
+    },
+    {
+      "id": 8185,
+      "en": "[Crafting] Cylindric Hat for upper class.",
+      "fr": "[Fabrication] Chapeau cylindrique de la bonne société."
+    },
+    {
+      "id": 8186,
+      "en": "@i50@:3 @i51@:7 TC:10 [Crafting]",
+      "fr": "@i50@:3 @i51@:7 Complexité technologique:10 [Fabrication]"
+    },
+    {
+      "id": 8187,
+      "en": "Its magnetic inversion bubble protects for @i51@:20 TC:50",
+      "fr": "Sa bulle d'inversion magnétique protège : @i51@:20 Complexité technologique:50"
+    },
+    {
+      "id": 8188,
+      "en": "@i50@:3 @i51@:7 @s5@:-1 Lowers light penalty MA scaled, MC:40",
+      "fr": "@i50@:3 @i51@:7 @s5@:-1 Réduit la pénalité d’obscurité selon l’aptitude magique, Complexité magique:40"
+    },
+    {
+      "id": 8189,
+      "en": "@i50@:3(+15) @i51@:7 @s5@:-1 MC:20",
+      "fr": "@i50@:3(+15) @i51@:7 @s5@:-1 Complexité magique:20"
+    },
+    {
+      "id": 8192,
+      "en": "@i50@:30 [Crafting]",
+      "fr": "@i50@:30 [Fabrication]"
+    },
+    {
+      "id": 8194,
+      "en": "@i50@:10, Detects Traps TA scaled, Requires Charges TC:40",
+      "fr": "@i50@:10, Détecte les pièges selon l’aptitude technologique, Nécessite des charges Complexité technologique:40"
+    },
+    {
+      "id": 8195,
+      "en": "@i50@:30 (When hit @i49@:3-5 to @k2@ attackers) MC:60",
+      "fr": "@i50@:30 (En cas de coup reçu : @i49@:3-5 aux attaquants au corps à corps) Complexité magique:60"
+    },
+    {
+      "id": 8196,
+      "en": "@i50@:Evil @s19@/2 MC:40",
+      "fr": "@i50@:Alignement maléfique/2 Complexité magique:40"
+    },
+    {
+      "id": 8197,
+      "en": "@i50@:17 @i51@:40 @i53@:15 @i54@:-20 @i56@:-80 TC:15",
+      "fr": "@i50@:17 @i51@:40 @i53@:15 @i54@:-20 @i56@:-80 Complexité technologique:15"
+    },
+    {
+      "id": 8198,
+      "en": "@i50@:20(5) @i51@:15(7) @i53@:10(10) @i54@:-20 @s12@:(+%40) @i56@:-80 MC:40",
+      "fr": "@i50@:20(5) @i51@:15(7) @i53@:10(10) @i54@:-20 @s12@:(+%40) @i56@:-80 Complexité magique:40"
+    },
+    {
+      "id": 8199,
+      "en": "@i50@:3 @i51@:7 @s5@:-1 TC:20 [Crafting]",
+      "fr": "@i50@:3 @i51@:7 @s5@:-1 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 8200,
+      "en": "@i50@:2 @i51@:1 @i56@:-10 @i1@:+20",
+      "fr": "@i50@:2 @i51@:1 @i56@:-10 @i1@:+20"
+    },
+    {
+      "id": 8204,
+      "en": "@i50@:6 @i51@:9 @s5@:-1 @s22@:(+20) @s19@:(-20) MC:40",
+      "fr": "@i50@:6 @i51@:9 @s5@:-1 @s22@:(+20) @s19@:(-20) Complexité magique:40"
+    },
+    {
+      "id": 8206,
+      "en": "@s13@:(x2), @s14@:(-5) MC:40",
+      "fr": "@s13@:(x2), @s14@:(-5) Complexité magique:40"
+    },
+    {
+      "id": 8207,
+      "en": "[Quest] @s5@:-1",
+      "fr": "[Quête] @s5@:-1"
+    },
+    {
+      "id": 8208,
+      "en": "@i50@:9(+5) @i51@:16 @i53@:5 AR:(+5) @i56@:-10 MC:25",
+      "fr": "@i50@:9(+5) @i51@:16 @i53@:5 Toutes résistances:(+5) @i56@:-10 Complexité magique:25"
+    },
+    {
+      "id": 8209,
+      "en": "@i50@:9(+5) @i51@:14 @i53@:5 AR:(+5) @i56@:-10 MC:25",
+      "fr": "@i50@:9(+5) @i51@:14 @i53@:5 Toutes résistances:(+5) @i56@:-10 Complexité magique:25"
+    },
+    {
+      "id": 8210,
+      "en": "@i50@:9(+5) @i51@:18 @i53@:5 AR:(+5) @i56@:-10 MC:25",
+      "fr": "@i50@:9(+5) @i51@:18 @i53@:5 Toutes résistances:(+5) @i56@:-10 Complexité magique:25"
+    },
+    {
+      "id": 8211,
+      "en": "@i50@:9(+10) @i51@:16 @i53@:5 AR:(+10) @i56@:-10(+2) MC:50",
+      "fr": "@i50@:9(+10) @i51@:16 @i53@:5 Toutes résistances:(+10) @i56@:-10(+2) Complexité magique:50"
+    },
+    {
+      "id": 8212,
+      "en": "@i50@:9(+10) @i51@:14 @i53@:5 AR:(+10) @i56@:-10(+2) MC:50",
+      "fr": "@i50@:9(+10) @i51@:14 @i53@:5 Toutes résistances:(+10) @i56@:-10(+2) Complexité magique:50"
+    },
+    {
+      "id": 8213,
+      "en": "@i50@:9(+10) @i51@:18 @i53@:5 AR:(+10) @i56@:-10(+2) MC:50",
+      "fr": "@i50@:9(+10) @i51@:18 @i53@:5 Toutes résistances:(+10) @i56@:-10(+2) Complexité magique:50"
+    },
+    {
+      "id": 8214,
+      "en": "@i50@:9(+15) @i51@:16 @i53@:5 AR:(+15) @i56@:-10(+4) MC:75",
+      "fr": "@i50@:9(+15) @i51@:16 @i53@:5 Toutes résistances:(+15) @i56@:-10(+4) Complexité magique:75"
+    },
+    {
+      "id": 8215,
+      "en": "@i50@:9(+15) @i51@:14 @i53@:5 AR:(+15) @i56@:-10(+4) MC:75",
+      "fr": "@i50@:9(+15) @i51@:14 @i53@:5 Toutes résistances:(+15) @i56@:-10(+4) Complexité magique:75"
+    },
+    {
+      "id": 8216,
+      "en": "@i50@:9(+15) @i51@:18 @i53@:5 AR:(+15) @i56@:-10(+4) MC:75",
+      "fr": "@i50@:9(+15) @i51@:18 @i53@:5 Toutes résistances:(+15) @i56@:-10(+4) Complexité magique:75"
+    },
+    {
+      "id": 8217,
+      "en": "@i50@:9(+20) @i51@:16 @i53@:5 AR:(+20) @i56@:-10(+6) MC:100",
+      "fr": "@i50@:9(+20) @i51@:16 @i53@:5 Toutes résistances:(+20) @i56@:-10(+6) Complexité magique:100"
+    },
+    {
+      "id": 8218,
+      "en": "@i50@:9(+20) @i51@:14 @i53@:5 AR:(+20) @i56@:-10(+6) MC:100",
+      "fr": "@i50@:9(+20) @i51@:14 @i53@:5 Toutes résistances:(+20) @i56@:-10(+6) Complexité magique:100"
+    },
+    {
+      "id": 8219,
+      "en": "@i50@:9(+20) @i51@:18 @i53@:5 AR:(+20) @i56@:-10(+6) MC:100",
+      "fr": "@i50@:9(+20) @i51@:18 @i53@:5 Toutes résistances:(+20) @i56@:-10(+6) Complexité magique:100"
+    },
+    {
+      "id": 8220,
+      "en": "@i50@:14 @i51@:23 @i53@:5 @i54@:(+10) @i56@:-20(+10) MC:20",
+      "fr": "@i50@:14 @i51@:23 @i53@:5 @i54@:(+10) @i56@:-20(+10) Complexité magique:20"
+    },
+    {
+      "id": 8221,
+      "en": "@i50@:12(+5) @i51@:23 @i53@:5 @i54@:-10 AR:(+5) @i56@:-25 MC:25",
+      "fr": "@i50@:12(+5) @i51@:23 @i53@:5 @i54@:-10 Toutes résistances:(+5) @i56@:-25 Complexité magique:25"
+    },
+    {
+      "id": 8222,
+      "en": "@i50@:12(+5) @i51@:10 @i53@:5 @i54@:-10 AR:(+5) @i56@:-25 MC:25",
+      "fr": "@i50@:12(+5) @i51@:10 @i53@:5 @i54@:-10 Toutes résistances:(+5) @i56@:-25 Complexité magique:25"
+    },
+    {
+      "id": 8223,
+      "en": "@i50@:12(+10) @i51@:23 @i53@:5 @i54@:-10 AR:(+10) @i56@:-25(+5) MC:50",
+      "fr": "@i50@:12(+10) @i51@:23 @i53@:5 @i54@:-10 Toutes résistances:(+10) @i56@:-25(+5) Complexité magique:50"
+    },
+    {
+      "id": 8224,
+      "en": "@i50@:12(+10) @i51@:10 @i53@:5 @i54@:-10 AR:(+10) @i56@:-25(+5) MC:50",
+      "fr": "@i50@:12(+10) @i51@:10 @i53@:5 @i54@:-10 Toutes résistances:(+10) @i56@:-25(+5) Complexité magique:50"
+    },
+    {
+      "id": 8225,
+      "en": "@i50@:12(+15) @i51@:23 @i53@:5 @i54@:-10 AR:(+15) @i56@:-25(+10) MC:75",
+      "fr": "@i50@:12(+15) @i51@:23 @i53@:5 @i54@:-10 Toutes résistances:(+15) @i56@:-25(+10) Complexité magique:75"
+    },
+    {
+      "id": 8226,
+      "en": "@i50@:12(+15) @i51@:10 @i53@:5 @i54@:-10 AR:(+15) @i56@:-25(+10) MC:75",
+      "fr": "@i50@:12(+15) @i51@:10 @i53@:5 @i54@:-10 Toutes résistances:(+15) @i56@:-25(+10) Complexité magique:75"
+    },
+    {
+      "id": 8227,
+      "en": "@i50@:12(+20) @i51@:23 @i53@:5 @i54@:-10 AR:(+20) @i56@:-25(+15) MC:100",
+      "fr": "@i50@:12(+20) @i51@:23 @i53@:5 @i54@:-10 Toutes résistances:(+20) @i56@:-25(+15) Complexité magique:100"
+    },
+    {
+      "id": 8228,
+      "en": "@i50@:12(+20) @i51@:21 @i53@:5 @i54@:-10 AR:(+20) @i56@:-25(+15) MC:100",
+      "fr": "@i50@:12(+20) @i51@:21 @i53@:5 @i54@:-10 Toutes résistances:(+20) @i56@:-25(+15) Complexité magique:100"
+    },
+    {
+      "id": 8229,
+      "en": "@i50@:18 @i51@:45 @i53@:10 @i54@:65 @i56@:-80 MA:-Res TC:100",
+      "fr": "@i50@:18 @i51@:45 @i53@:10 @i54@:65 @i56@:-80 Résistances réduites selon l’aptitude magique Complexité technologique:100"
+    },
+    {
+      "id": 8230,
+      "en": "@i50@:18 @i51@:40 @i53@:10 @i54@:65 @i56@:-80 MA:-Res TC:100",
+      "fr": "@i50@:18 @i51@:40 @i53@:10 @i54@:65 @i56@:-80 Résistances réduites selon l’aptitude magique Complexité technologique:100"
+    },
+    {
+      "id": 8231,
+      "en": "@i50@:18 @i51@:47 @i53@:10 @i54@:65 @i56@:-80 MA:-Res TC:100",
+      "fr": "@i50@:18 @i51@:47 @i53@:10 @i54@:65 @i56@:-80 Résistances réduites selon l’aptitude magique Complexité technologique:100"
+    },
+    {
+      "id": 8232,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+10) OtherRes:(+10) MC:25",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+10) Autres résistances:(+10) Complexité magique:25"
+    },
+    {
+      "id": 8233,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+10) OtherRes:(+10) MC:25",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+10) Autres résistances:(+10) Complexité magique:25"
+    },
+    {
+      "id": 8234,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+20) OtherRes:(+20) MC:50",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+20) Autres résistances:(+20) Complexité magique:50"
+    },
+    {
+      "id": 8235,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+20) OtherRes:(+20) MC:50",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+20) Autres résistances:(+20) Complexité magique:50"
+    },
+    {
+      "id": 8236,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+35) OtherRes:(+35) MC:75",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+35) Autres résistances:(+35) Complexité magique:75"
+    },
+    {
+      "id": 8237,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+35) OtherRes:(+35) MC:75",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+35) Autres résistances:(+35) Complexité magique:75"
+    },
+    {
+      "id": 8238,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+50) OtherRes:(+50) MC:100",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+50) Autres résistances:(+50) Complexité magique:100"
+    },
+    {
+      "id": 8239,
+      "en": "@i50@:3 @i51@:3 @i53@:2(+50) OtherRes:(+50) MC:100",
+      "fr": "@i50@:3 @i51@:3 @i53@:2(+50) Autres résistances:(+50) Complexité magique:100"
+    },
+    {
+      "id": 8240,
+      "en": "@i50@:3(+5) @i51@:3(+5) @i53@:2(+5) @i54@:@i52@:(+5) MC:25",
+      "fr": "@i50@:3(+5) @i51@:3(+5) @i53@:2(+5) @i54@:@i52@:(+5) Complexité magique:25"
+    },
+    {
+      "id": 8241,
+      "en": "@i50@:3(+5) @i51@:3(+5) @i53@:2(+5) @i54@:@i52@:(+5) MC:25",
+      "fr": "@i50@:3(+5) @i51@:3(+5) @i53@:2(+5) @i54@:@i52@:(+5) Complexité magique:25"
+    },
+    {
+      "id": 8242,
+      "en": "@i50@:3(+10) @i51@:3(+10) @i53@:2(+10) @i54@:@i52@:(+10) MC:50",
+      "fr": "@i50@:3(+10) @i51@:3(+10) @i53@:2(+10) @i54@:@i52@:(+10) Complexité magique:50"
+    },
+    {
+      "id": 8243,
+      "en": "@i50@:3(+10) @i51@:3(+10) @i53@:2(+10) @i54@:@i52@:(+10) MC:50",
+      "fr": "@i50@:3(+10) @i51@:3(+10) @i53@:2(+10) @i54@:@i52@:(+10) Complexité magique:50"
+    },
+    {
+      "id": 8244,
+      "en": "@i50@:3(+15) @i51@:3(+15) @i53@:2(+15) @i54@:@i52@:(+15) @i56@:(+5) MC:75",
+      "fr": "@i50@:3(+15) @i51@:3(+15) @i53@:2(+15) @i54@:@i52@:(+15) @i56@:(+5) Complexité magique:75"
+    },
+    {
+      "id": 8245,
+      "en": "@i50@:3(+15) @i51@:3(+15) @i53@:2(+15) @i54@:@i52@:(+15) @i56@:(+5) MC:75",
+      "fr": "@i50@:3(+15) @i51@:3(+15) @i53@:2(+15) @i54@:@i52@:(+15) @i56@:(+5) Complexité magique:75"
+    },
+    {
+      "id": 8246,
+      "en": "@i50@:3(+20) @i51@:3(+20) @i53@:2(+20) @i54@:@i52@:(+20) @i56@:(5) MC:100",
+      "fr": "@i50@:3(+20) @i51@:3(+20) @i53@:2(+20) @i54@:@i52@:(+20) @i56@:(5) Complexité magique:100"
+    },
+    {
+      "id": 8247,
+      "en": "@i50@:3(+20) @i51@:3(+20) @i53@:2(+20) @i54@:@i52@:(+20) @i56@:(5) MC:100",
+      "fr": "@i50@:3(+20) @i51@:3(+20) @i53@:2(+20) @i54@:@i52@:(+20) @i56@:(5) Complexité magique:100"
+    },
+    {
+      "id": 8250,
+      "en": "@i50@:15(+4) @i51@:36 @i53@:10 @i54@:-20 AR:(+4) @i56@:-80 MC:25",
+      "fr": "@i50@:15(+4) @i51@:36 @i53@:10 @i54@:-20 Toutes résistances:(+4) @i56@:-80 Complexité magique:25"
+    },
+    {
+      "id": 8251,
+      "en": "@i50@:15(+4) @i51@:32 @i53@:10 @i54@:-20 AR:(+4) @i56@:-80 MC:25",
+      "fr": "@i50@:15(+4) @i51@:32 @i53@:10 @i54@:-20 Toutes résistances:(+4) @i56@:-80 Complexité magique:25"
+    },
+    {
+      "id": 8252,
+      "en": "@i50@:15(+6) @i51@:36 @i53@:10 @i54@:-20 AR:(+6) @i56@:-80(+5) MC:50",
+      "fr": "@i50@:15(+6) @i51@:36 @i53@:10 @i54@:-20 Toutes résistances:(+6) @i56@:-80(+5) Complexité magique:50"
+    },
+    {
+      "id": 8253,
+      "en": "@i50@:15(+6) @i51@:32 @i53@:10 @i54@:-20 AR:(+6) @i56@:-80(+5) MC:50",
+      "fr": "@i50@:15(+6) @i51@:32 @i53@:10 @i54@:-20 Toutes résistances:(+6) @i56@:-80(+5) Complexité magique:50"
+    },
+    {
+      "id": 8254,
+      "en": "@i50@:15(+8) @i51@:36 @i53@:10 @i54@:-20 AR:(+8) @i56@:-80(+10) MC:75",
+      "fr": "@i50@:15(+8) @i51@:36 @i53@:10 @i54@:-20 Toutes résistances:(+8) @i56@:-80(+10) Complexité magique:75"
+    },
+    {
+      "id": 8255,
+      "en": "@i50@:15(+8) @i51@:32 @i53@:10 @i54@:-20 AR:(+8) @i56@:-80(+10) MC:75",
+      "fr": "@i50@:15(+8) @i51@:32 @i53@:10 @i54@:-20 Toutes résistances:(+8) @i56@:-80(+10) Complexité magique:75"
+    },
+    {
+      "id": 8256,
+      "en": "@i50@:15(+10) @i51@:36 @i53@:10 @i54@:-20 AR:(+10) @i56@:-80(+15) MC:100",
+      "fr": "@i50@:15(+10) @i51@:36 @i53@:10 @i54@:-20 Toutes résistances:(+10) @i56@:-80(+15) Complexité magique:100"
+    },
+    {
+      "id": 8257,
+      "en": "@i50@:15(+10) @i51@:32 @i53@:10 @i54@:-20 AR:(+10) @i56@:-80(+15) MC:100",
+      "fr": "@i50@:15(+10) @i51@:32 @i53@:10 @i54@:-20 Toutes résistances:(+10) @i56@:-80(+15) Complexité magique:100"
+    },
+    {
+      "id": 8258,
+      "en": "@i50@:30 @i65@:(+30) TC:60",
+      "fr": "@i50@:30 @i65@:(+30) Complexité technologique:60"
+    },
+    {
+      "id": 8259,
+      "en": "@i50@:10(+4) @i53@:2(+4) MC:25",
+      "fr": "@i50@:10(+4) @i53@:2(+4) Complexité magique:25"
+    },
+    {
+      "id": 8260,
+      "en": "@i50@:10(+8) @i53@:2(+8) MC:50",
+      "fr": "@i50@:10(+8) @i53@:2(+8) Complexité magique:50"
+    },
+    {
+      "id": 8261,
+      "en": "@i50@:10(+12) @i53@:2(+12) MC:75",
+      "fr": "@i50@:10(+12) @i53@:2(+12) Complexité magique:75"
+    },
+    {
+      "id": 8262,
+      "en": "@i50@:10(+16) @i53@:2(+16) MC:100",
+      "fr": "@i50@:10(+16) @i53@:2(+16) Complexité magique:100"
+    },
+    {
+      "id": 8263,
+      "en": "@i50@:15 Lowers light penalty TA scaled, TC:15",
+      "fr": "@i50@:15 Réduit la pénalité d’obscurité selon l’aptitude technologique, Complexité technologique:15"
+    },
+    {
+      "id": 8264,
+      "en": "@i50@:10(+4) @i51@:12(+2) @s5@:-1 MC:25",
+      "fr": "@i50@:10(+4) @i51@:12(+2) @s5@:-1 Complexité magique:25"
+    },
+    {
+      "id": 8265,
+      "en": "@i50@:10(+6) @i51@:12(+4) @s5@:-1 MC:50",
+      "fr": "@i50@:10(+6) @i51@:12(+4) @s5@:-1 Complexité magique:50"
+    },
+    {
+      "id": 8266,
+      "en": "@i50@:10(+8) @i51@:12(+6) @s5@:-1 MC:75",
+      "fr": "@i50@:10(+8) @i51@:12(+6) @s5@:-1 Complexité magique:75"
+    },
+    {
+      "id": 8267,
+      "en": "@i50@:10(+10) @i51@:12(+8) @s5@:-1 MC:100",
+      "fr": "@i50@:10(+10) @i51@:12(+8) @s5@:-1 Complexité magique:100"
+    },
+    {
+      "id": 8268,
+      "en": "@i50@:(+2) @i51@:5(+2) MC:25",
+      "fr": "@i50@:(+2) @i51@:5(+2) Complexité magique:25"
+    },
+    {
+      "id": 8269,
+      "en": "@i50@:(+3) @i51@:5(+3) MC:50",
+      "fr": "@i50@:(+3) @i51@:5(+3) Complexité magique:50"
+    },
+    {
+      "id": 8270,
+      "en": "@i50@:(+4) @i51@:5(+4) MC:75",
+      "fr": "@i50@:(+4) @i51@:5(+4) Complexité magique:75"
+    },
+    {
+      "id": 8271,
+      "en": "@i50@:(+5) @i51@:5(+5) MC:100",
+      "fr": "@i50@:(+5) @i51@:5(+5) Complexité magique:100"
+    },
+    {
+      "id": 8272,
+      "en": "@i53@:(+5) @i54@:(+5) @i52@:(+5) @i55@:(+5) MC:25",
+      "fr": "@i53@:(+5) @i54@:(+5) @i52@:(+5) @i55@:(+5) Complexité magique:25"
+    },
+    {
+      "id": 8273,
+      "en": "@i53@:(+10) @i54@:(+10) @i52@:(+10) @i55@:(+10) MC:50",
+      "fr": "@i53@:(+10) @i54@:(+10) @i52@:(+10) @i55@:(+10) Complexité magique:50"
+    },
+    {
+      "id": 8274,
+      "en": "@i53@:(+15) @i54@:(+15) @i52@:(+15) @i55@:(+15) MC:75",
+      "fr": "@i53@:(+15) @i54@:(+15) @i52@:(+15) @i55@:(+15) Complexité magique:75"
+    },
+    {
+      "id": 8275,
+      "en": "@i53@:(+20) @i54@:(+20) @i52@:(+20) @i55@:(+20) MC:100",
+      "fr": "@i53@:(+20) @i54@:(+20) @i52@:(+20) @i55@:(+20) Complexité magique:100"
+    },
+    {
+      "id": 8276,
+      "en": "@i50@:4 @i43@:+2 [Crafting]",
+      "fr": "@i50@:4 @i43@:+2 [Fabrication]"
+    },
+    {
+      "id": 8277,
+      "en": "@i50@:15 @i43@:+15 TC:10",
+      "fr": "@i50@:15 @i43@:+15 Complexité technologique:10"
+    },
+    {
+      "id": 8278,
+      "en": "Helps traveling in the Void.",
+      "fr": "Facilite les déplacements dans le Néant."
+    },
+    {
+      "id": 8279,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8280,
+      "en": "[Valuable][Offering]",
+      "fr": "[Valeur][Offrande]"
+    },
+    {
+      "id": 8281,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8282,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8283,
+      "en": "[Junk] Looks decorative from afar.",
+      "fr": "[Rebut] Semble décoratif de loin."
+    },
+    {
+      "id": 8284,
+      "en": "[Junk]",
+      "fr": "[Rebut]"
+    },
+    {
+      "id": 8285,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8286,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8287,
+      "en": "[Valuable][Offering]",
+      "fr": "[Valeur][Offrande]"
+    },
+    {
+      "id": 8288,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8289,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 8290,
+      "en": "@i50@:6 @i51@:9 @s5@:(+3) TC:60",
+      "fr": "@i50@:6 @i51@:9 @s5@:(+3) Complexité technologique:60"
+    },
+    {
+      "id": 8291,
+      "en": "@i50@:25 @i51@:53 @i53@:20 @i54@:-10 @i52@:20 MA:-Res @s0@:(+3)-@i56@ TC:30",
+      "fr": "@i50@:25 @i51@:53 @i53@:20 @i54@:-10 @i52@:20 Résistances réduites selon l’aptitude magique @s0@:(+3)-@i56@ Complexité technologique:30"
+    },
+    {
+      "id": 8292,
+      "en": "@i50@:13 @i51@:25 @i53@:5 @i54@:-10 @i56@:-25 TC:20 [Crafting]",
+      "fr": "@i50@:13 @i51@:25 @i53@:5 @i54@:-10 @i56@:-25 Complexité technologique:20 [Fabrication]"
+    },
+    {
+      "id": 10057,
+      "en": "[Food] It has no effect.",
+      "fr": "[Nourriture] Aucun effet."
+    },
+    {
+      "id": 10058,
+      "en": "[Food] It has no effect.",
+      "fr": "[Nourriture] Aucun effet."
+    },
+    {
+      "id": 10059,
+      "en": "Heals 20pts of health [Crafting]",
+      "fr": "Rend 20 points de vie. [Fabrication]"
+    },
+    {
+      "id": 10060,
+      "en": "Restores 20pts of fatigue [Crafting]",
+      "fr": "Rend 20 points de fatigue. [Fabrication]"
+    },
+    {
+      "id": 10061,
+      "en": "[Crafting: @t0@] Used for anxiety in folk medicine.",
+      "fr": "[Fabrication: @t0@] Remède traditionnel contre l'anxiété."
+    },
+    {
+      "id": 10062,
+      "en": "[Crafting: @t0@] Folk cure for backpain.",
+      "fr": "[Fabrication: @t0@] Remède traditionnel contre le mal de dos."
+    },
+    {
+      "id": 10063,
+      "en": "[Crafting: @t0@] Recommended on cold and fevers.",
+      "fr": "[Fabrication: @t0@] Recommandé contre les rhumes et les fièvres."
+    },
+    {
+      "id": 10064,
+      "en": "[Crafting: @t0@] For recreation and resuscitation.",
+      "fr": "[Fabrication: @t0@] Usage récréatif et réanimation."
+    },
+    {
+      "id": 10065,
+      "en": "+70 Poison Level to the target [Crafting]",
+      "fr": "Ajoute 70 niveaux de poison à la cible. [Fabrication]"
+    },
+    {
+      "id": 10066,
+      "en": "[Crafting: @t1@] Leyden jar.",
+      "fr": "[Fabrication: @t1@] Bouteille de Leyde."
+    },
+    {
+      "id": 10067,
+      "en": "[Crafting: @t1@] @s1@:-1 @s2@:-1 for 27min.",
+      "fr": "[Fabrication: @t1@] @s1@:-1 @s2@:-1 pendant 27 min."
+    },
+    {
+      "id": 10068,
+      "en": "[Crafting: @t1@] +20 Poison Level to the target.",
+      "fr": "[Fabrication: @t1@] Ajoute 20 niveaux de poison à la cible."
+    },
+    {
+      "id": 10069,
+      "en": "@k11@:+2/20 for 27 min.[Crafting]",
+      "fr": "@k11@:+2/20 pendant 27 min. [Fabrication]"
+    },
+    {
+      "id": 10070,
+      "en": "@s0@:+2 for 27 min. [Crafting]",
+      "fr": "@s0@:+2 pendant 27 min. [Fabrication]"
+    },
+    {
+      "id": 10071,
+      "en": "[Crafting: @t7@] Used on skin, prevents infection.",
+      "fr": "[Fabrication: @t7@] Application cutanée ; prévient les infections."
+    },
+    {
+      "id": 10072,
+      "en": "[Crafting: @t7@]",
+      "fr": "[Fabrication: @t7@]"
+    },
+    {
+      "id": 10073,
+      "en": "[Junk] Good and cheap fertilizer.",
+      "fr": "[Rebut] Engrais efficace et bon marché."
+    },
+    {
+      "id": 10074,
+      "en": "Heals up to 20pts of Health, MA scaled.",
+      "fr": "Rend jusqu'à 20 points de vie, selon l'aptitude magique."
+    },
+    {
+      "id": 10075,
+      "en": "+290 Poison Level to the target [Crafting]",
+      "fr": "Ajoute 290 niveaux de poison à la cible. [Fabrication]"
+    },
+    {
+      "id": 10076,
+      "en": "Heals all HP, poison, injuries, scars. +160 @i44@ [Crafting]",
+      "fr": "Restaure toute la vie, élimine poison, blessures et cicatrices. Rend 160 points de fatigue. [Fabrication]"
+    },
+    {
+      "id": 10077,
+      "en": "Reduces 80 poison levels.",
+      "fr": "Réduit le niveau de poison de 80."
+    },
+    {
+      "id": 10078,
+      "en": "Halves fatigue consumption for 180 sec. [Crafting]",
+      "fr": "Divise par deux la consommation de fatigue pendant 180 s. [Fabrication]"
+    },
+    {
+      "id": 10079,
+      "en": "1pt heal every 4 sec. for 100 sec. [Crafting]",
+      "fr": "Rend 1 point de vie toutes les 4 s pendant 100 s. [Fabrication]"
+    },
+    {
+      "id": 10080,
+      "en": "[Crafting: @t0@] Rue, its smell scares away cats.",
+      "fr": "[Fabrication: @t0@] Rue : son odeur fait fuir les chats."
+    },
+    {
+      "id": 10081,
+      "en": "[Crafting: @t0@] Natural painkillers.",
+      "fr": "[Fabrication: @t0@] Antidouleur naturel."
+    },
+    {
+      "id": 10082,
+      "en": "[Crafting: @t0@] Cure for all (made up) diseases.",
+      "fr": "[Fabrication: @t0@] Remède à toutes les maladies... imaginaires."
+    },
+    {
+      "id": 10083,
+      "en": "[Crafting: @t0@] +10 Poison Level to the target.",
+      "fr": "[Fabrication: @t0@] Ajoute 10 niveaux de poison à la cible."
+    },
+    {
+      "id": 10084,
+      "en": "Restores 60 Health and 60 Fatigue [Crafting]",
+      "fr": "Rend 60 points de vie et 60 points de fatigue. [Fabrication]"
+    },
+    {
+      "id": 10085,
+      "en": "Explodes for 10-100 acid damage to items [Crafting]",
+      "fr": "Explose et inflige 10-100 dégâts d'acide aux objets. [Fabrication]"
+    },
+    {
+      "id": 10086,
+      "en": "Spawns a random enemy '@p53@' animal on target.",
+      "fr": "Fait apparaître près de la cible un animal ennemi aléatoire issu du sort @p53@."
+    },
+    {
+      "id": 10087,
+      "en": "Prevents wild animals from attacking for 338 sec.",
+      "fr": "Empêche les animaux sauvages d'attaquer pendant 338 s."
+    },
+    {
+      "id": 10088,
+      "en": "[Crafting: @t1@] Used for alcohol.",
+      "fr": "[Fabrication: @t1@] Sert à produire de l'alcool."
+    },
+    {
+      "id": 10089,
+      "en": "[Crafting: @t1@] Medical substance.",
+      "fr": "[Fabrication: @t1@] Substance médicinale."
+    },
+    {
+      "id": 10090,
+      "en": "Makes living targets flee [Crafting]",
+      "fr": "Fait fuir les cibles vivantes. [Fabrication]"
+    },
+    {
+      "id": 10091,
+      "en": "[Crafting: @t1@] These are not poisonous.",
+      "fr": "[Fabrication: @t1@] Non toxique."
+    },
+    {
+      "id": 10092,
+      "en": "[Crafting: @t1@] Diet supplements.",
+      "fr": "[Fabrication: @t1@] Complément alimentaire."
+    },
+    {
+      "id": 10093,
+      "en": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 for 360s [Crafting]",
+      "fr": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 pendant 360 s. [Fabrication]"
+    },
+    {
+      "id": 10094,
+      "en": "[Crafting: @t1@] Smells of jessamine.",
+      "fr": "[Fabrication: @t1@] Sent le jasmin."
+    },
+    {
+      "id": 10095,
+      "en": "[Junk] Smells like lavender and spirit.",
+      "fr": "[Rebut] Sent la lavande et l'alcool."
+    },
+    {
+      "id": 10096,
+      "en": "[Junk] Healing herb used for asthma and neuralgia.",
+      "fr": "[Rebut] Plante médicinale utilisée contre l'asthme et les névralgies."
+    },
+    {
+      "id": 10097,
+      "en": "+2 to All Stats for 27 min.",
+      "fr": "Toutes les caractéristiques : +2 pendant 27 min."
+    },
+    {
+      "id": 10098,
+      "en": "+2 to Mental Stats for 27 min.[Crafting]",
+      "fr": "Caractéristiques mentales : +2 pendant 27 min. [Fabrication]"
+    },
+    {
+      "id": 10099,
+      "en": "@s1@:+2 for 27 min.",
+      "fr": "@s1@:+2 pendant 27 min."
+    },
+    {
+      "id": 10100,
+      "en": "+2 to Physical Stats for 27 min. [Crafting]",
+      "fr": "Caractéristiques physiques : +2 pendant 27 min. [Fabrication]"
+    },
+    {
+      "id": 10101,
+      "en": "[Crafting: @t7@]",
+      "fr": "[Fabrication: @t7@]"
+    },
+    {
+      "id": 10102,
+      "en": "[Crafting: @t7@]",
+      "fr": "[Fabrication: @t7@]"
+    },
+    {
+      "id": 10103,
+      "en": "@s5@:+2 for 27 min.",
+      "fr": "@s5@:+2 pendant 27 min."
+    },
+    {
+      "id": 10104,
+      "en": "[Junk]",
+      "fr": "[Rebut]"
+    },
+    {
+      "id": 10105,
+      "en": "[Crafting: @t7@] Salt for harsh diseases.",
+      "fr": "[Fabrication: @t7@] Sel utilisé contre les maladies graves."
+    },
+    {
+      "id": 10107,
+      "en": "[Crafting: @t7@] Mustard plasters.",
+      "fr": "[Fabrication: @t7@] Cataplasmes de moutarde."
+    },
+    {
+      "id": 10108,
+      "en": "[Crafting: @t7@] Popular amongst ladies.",
+      "fr": "[Fabrication: @t7@] Très apprécié des dames."
+    },
+    {
+      "id": 10109,
+      "en": "[Crafting: @t7@] Inflammation aid.",
+      "fr": "[Fabrication: @t7@] Soulage les inflammations."
+    },
+    {
+      "id": 10110,
+      "en": "[Crafting: @t3@] Staple of every house.",
+      "fr": "[Fabrication: @t3@] Produit courant dans tous les foyers."
+    },
+    {
+      "id": 10111,
+      "en": "Turns target into a mindless slave for 60 sec.",
+      "fr": "Asservit la cible et la prive de sa volonté pendant 60 s."
+    },
+    {
+      "id": 10112,
+      "en": "Permanent:+1 to Mental, -1 to Physical Stats.",
+      "fr": "Effet permanent : caractéristiques mentales +1, physiques -1."
+    },
+    {
+      "id": 10113,
+      "en": "Permanent:+1 to Physical, -1 to Mental Stats.",
+      "fr": "Effet permanent : caractéristiques physiques +1, mentales -1."
+    },
+    {
+      "id": 10114,
+      "en": "+25 max. Health, +25 max. Fatigue for 60 sec.",
+      "fr": "Vie maximale +25, fatigue maximale +25 pendant 60 s."
+    },
+    {
+      "id": 10115,
+      "en": "Raises the target from the dead.",
+      "fr": "Ramène la cible à la vie."
+    },
+    {
+      "id": 10116,
+      "en": "Restores 100 Health and 100 Fatigue.",
+      "fr": "Rend 100 points de vie et 100 points de fatigue."
+    },
+    {
+      "id": 10117,
+      "en": "Halves the target's @s6@ for 60 sec.",
+      "fr": "Divise par deux la volonté de la cible pendant 60 s."
+    },
+    {
+      "id": 10118,
+      "en": "Creates undead follower from targeted corpse for 6 min.",
+      "fr": "Anime le cadavre ciblé en compagnon mort-vivant pendant 6 min."
+    },
+    {
+      "id": 10119,
+      "en": "@i64@:+30 for 120 sec. [Crafting]",
+      "fr": "@i64@:+30 pendant 120 s. [Fabrication]"
+    },
+    {
+      "id": 10120,
+      "en": "Deals @i44@:10+CurrentFT to the target [Crafting]",
+      "fr": "Inflige à la cible 10 points de dégâts de fatigue plus sa fatigue actuelle. [Fabrication]"
+    },
+    {
+      "id": 10121,
+      "en": "Paralyzes the target for 6 sec.",
+      "fr": "Paralyse la cible pendant 6 s."
+    },
+    {
+      "id": 10122,
+      "en": "[Crafting: @t2@][Food]",
+      "fr": "[Fabrication: @t2@][Nourriture]"
+    },
+    {
+      "id": 10123,
+      "en": "[Crafting: @t2@][Food]",
+      "fr": "[Fabrication: @t2@][Nourriture]"
+    },
+    {
+      "id": 10124,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 10125,
+      "en": "[Offering] Works as a strong aphrodisiac.",
+      "fr": "[Offrande] Puissant aphrodisiaque."
+    },
+    {
+      "id": 10126,
+      "en": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 for 360s [Gift]",
+      "fr": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 pendant 360 s. [Cadeau]"
+    },
+    {
+      "id": 10127,
+      "en": "[Gift]",
+      "fr": "[Cadeau]"
+    },
+    {
+      "id": 10128,
+      "en": "[Gift] Magickal essence in water.",
+      "fr": "[Cadeau] Essence magique diluée dans l'eau."
+    },
+    {
+      "id": 10129,
+      "en": "[Gift] Staple of quality on your table.",
+      "fr": "[Cadeau] Un gage de qualité sur votre table."
+    },
+    {
+      "id": 10130,
+      "en": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 for 360s [Gift]",
+      "fr": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 pendant 360 s. [Cadeau]"
+    },
+    {
+      "id": 10131,
+      "en": "[Gift] Yum.",
+      "fr": "[Cadeau] Délicieux."
+    },
+    {
+      "id": 10132,
+      "en": "+2 to Mental Stats for 27 min.",
+      "fr": "Caractéristiques mentales : +2 pendant 27 min."
+    },
+    {
+      "id": 10133,
+      "en": "Legendary Potion gives +1 to All Stats Permanently.",
+      "fr": "Potion légendaire : toutes les caractéristiques +1 de façon permanente."
+    },
+    {
+      "id": 10134,
+      "en": "Heals up to 80pts of Health, MA scaled.",
+      "fr": "Rend jusqu'à 80 points de vie, selon l'aptitude magique."
+    },
+    {
+      "id": 10135,
+      "en": "Restores up to 30pts of Fatigue, MA scaled.",
+      "fr": "Rend jusqu'à 30 points de fatigue, selon l'aptitude magique."
+    },
+    {
+      "id": 10136,
+      "en": "Restores up to 70pts of Fatigue, MA scaled.",
+      "fr": "Rend jusqu'à 70 points de fatigue, selon l'aptitude magique."
+    },
+    {
+      "id": 10137,
+      "en": "Heals up to 120pts of Poison, MA scaled.",
+      "fr": "Élimine jusqu'à 120 niveaux de poison, selon l'aptitude magique."
+    },
+    {
+      "id": 10138,
+      "en": "Heals up to 120pts of Health, Poison, Fatigue, MA scaled.",
+      "fr": "Rend jusqu'à 120 points de vie et de fatigue et élimine jusqu'à 120 niveaux de poison, selon l'aptitude magique."
+    },
+    {
+      "id": 10139,
+      "en": "Halves fatigue consumption for 60 sec.",
+      "fr": "Divise par deux la consommation de fatigue pendant 60 s."
+    },
+    {
+      "id": 10140,
+      "en": "Boosts @s4@ by 10 points for 60 sec.",
+      "fr": "@s4@:+10 pendant 60 s."
+    },
+    {
+      "id": 10141,
+      "en": "@s11@:+20 for 60 sec.",
+      "fr": "@s11@:+20 pendant 60 s."
+    },
+    {
+      "id": 10142,
+      "en": "@i64@:+20 for 60 sec.",
+      "fr": "@i64@:+20 pendant 60 s."
+    },
+    {
+      "id": 10143,
+      "en": "@i68@:+80 for 60 sec.",
+      "fr": "@i68@:+80 pendant 60 s."
+    },
+    {
+      "id": 11063,
+      "en": "Allows you to teleport to known locations.",
+      "fr": "Permet de se téléporter vers les lieux connus."
+    },
+    {
+      "id": 11069,
+      "en": "Increases the target's constitution by 4.",
+      "fr": "@s2@ de la cible : +4."
+    },
+    {
+      "id": 11071,
+      "en": "Raises a magickal wind that pushes your opponents away.",
+      "fr": "Crée un vent magique qui repousse les adversaires."
+    },
+    {
+      "id": 11074,
+      "en": "Increases the target's strength by 4.",
+      "fr": "@s0@ de la cible : +4."
+    },
+    {
+      "id": 11076,
+      "en": "Creates an impassable magickal stone wall.",
+      "fr": "Crée un mur de pierre magique infranchissable."
+    },
+    {
+      "id": 11079,
+      "en": "Increases the target's dexterity by 4.",
+      "fr": "@s1@ de la cible : +4."
+    },
+    {
+      "id": 11084,
+      "en": "Increases the target's beauty by 4.",
+      "fr": "@s3@ de la cible : +4."
+    },
+    {
+      "id": 11089,
+      "en": "Creates a magickal shield on target.",
+      "fr": "Crée un bouclier magique autour de la cible."
+    },
+    {
+      "id": 11090,
+      "en": "Shocks every opponent around the caster.",
+      "fr": "Électrocute tous les adversaires autour du lanceur."
+    },
+    {
+      "id": 11091,
+      "en": "Creates an impassable magickal wall of force.",
+      "fr": "Crée un mur de force magique infranchissable."
+    },
+    {
+      "id": 11092,
+      "en": "Casts a bolt of raw lightning on target.",
+      "fr": "Frappe la cible d'un éclair."
+    },
+    {
+      "id": 11093,
+      "en": "Disintegrates targeted objects, opponents and their items.",
+      "fr": "Désintègre les objets et adversaires ciblés, ainsi que leur équipement."
+    },
+    {
+      "id": 11094,
+      "en": "Increases the reaction of others to you by 30.",
+      "fr": "Augmente de 30 la réaction des autres à votre égard."
+    },
+    {
+      "id": 11096,
+      "en": "Halves the target's willpower.",
+      "fr": "Divise par deux la volonté de la cible."
+    },
+    {
+      "id": 11099,
+      "en": "Sets the target's minimum magick resistance to 50.",
+      "fr": "Porte la résistance magique minimale de la cible à 50."
+    },
+    {
+      "id": 11101,
+      "en": "Prevents magick from operating on the target.",
+      "fr": "Empêche la magie d'agir sur la cible."
+    },
+    {
+      "id": 11102,
+      "en": "Prohibits the target from casting magickal spells.",
+      "fr": "Empêche la cible de lancer des sorts."
+    },
+    {
+      "id": 11104,
+      "en": "Increases the damage of unarmed attacks by 2.",
+      "fr": "Augmente de 2 les dégâts des attaques à mains nues."
+    },
+    {
+      "id": 11105,
+      "en": "Decreases strength and damage resistance of the target.",
+      "fr": "Réduit la force et la résistance aux dégâts de la cible."
+    },
+    {
+      "id": 11106,
+      "en": "Shrinks the target, can access tight caves.",
+      "fr": "Réduit la taille de la cible ; permet d'entrer dans les grottes étroites."
+    },
+    {
+      "id": 11107,
+      "en": "Turns the target into an invulnerable stone.",
+      "fr": "Transforme la cible en pierre invulnérable."
+    },
+    {
+      "id": 11108,
+      "en": "Transforms the target into a sheep.",
+      "fr": "Transforme la cible en mouton."
+    },
+    {
+      "id": 11109,
+      "en": "Pacifies every animal in the vicinity.",
+      "fr": "Apaise tous les animaux des environs."
+    },
+    {
+      "id": 11111,
+      "en": "Mind controls the targeted animal.",
+      "fr": "Prend le contrôle de l'animal ciblé."
+    },
+    {
+      "id": 11112,
+      "en": "Summons an animal follower, scales with MA.",
+      "fr": "Invoque un compagnon animal dont la puissance dépend de l'aptitude magique."
+    },
+    {
+      "id": 11114,
+      "en": "Causes physical damage to the target.",
+      "fr": "Inflige des dégâts physiques à la cible."
+    },
+    {
+      "id": 11119,
+      "en": "Heals the target's health a bit.",
+      "fr": "Rend un peu de vie à la cible."
+    },
+    {
+      "id": 11121,
+      "en": "Heals the target's health, injuries and scars.",
+      "fr": "Soigne la cible, ses blessures et ses cicatrices."
+    },
+    {
+      "id": 11122,
+      "en": "Makes the target invisible to undead unless provoked.",
+      "fr": "Rend la cible invisible aux morts-vivants, sauf si elle les provoque."
+    },
+    {
+      "id": 11124,
+      "en": "Casts a light that lowers light penalty around the target.",
+      "fr": "Crée une lumière qui réduit la pénalité d'obscurité autour de la cible."
+    },
+    {
+      "id": 11129,
+      "en": "Summons a swarm of insects that slows the target.",
+      "fr": "Invoque un essaim d'insectes qui ralentit la cible."
+    },
+    {
+      "id": 11133,
+      "en": "Summons a permanent familiar that scales with MA.",
+      "fr": "Invoque un familier permanent dont la puissance dépend de l'aptitude magique."
+    },
+    {
+      "id": 11135,
+      "en": "Slows down time for your enemies, making them slower.",
+      "fr": "Ralentit le temps pour vos ennemis, réduisant leur vitesse."
+    },
+    {
+      "id": 11136,
+      "en": "Doubles the target creature's base speed.",
+      "fr": "Double la vitesse de base de la créature ciblée."
+    },
+    {
+      "id": 11137,
+      "en": "Renders the target paralyzed.",
+      "fr": "Paralyse la cible."
+    },
+    {
+      "id": 11141,
+      "en": "Teleports you to the surface entrance of the current area.",
+      "fr": "Vous téléporte à l'entrée de la zone actuelle, à la surface."
+    },
+    {
+      "id": 13061,
+      "en": "Store all your keys together",
+      "fr": "Permet de ranger toutes vos clés ensemble."
+    },
+    {
+      "id": 14064,
+      "en": "Tarantian, press from Unified Kingdom, Amy loves it.",
+      "fr": "Journal de Tarant, issu du Royaume unifié. Amy l'apprécie."
+    },
+    {
+      "id": 14067,
+      "en": "Use to learn new Crafting Recipe",
+      "fr": "À utiliser pour apprendre un nouveau schéma de fabrication."
+    },
+    {
+      "id": 14106,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 15066,
+      "en": "Can be repaired and reused if not destroyed [Crafting]",
+      "fr": "Réparable et réutilisable tant qu'il n'est pas détruit. [Fabrication]"
+    },
+    {
+      "id": 15068,
+      "en": "There is a rabbit inside.",
+      "fr": "Un lapin se trouve à l'intérieur."
+    },
+    {
+      "id": 15069,
+      "en": "[Crafting: @t1@] Metal is a good conductor.",
+      "fr": "[Fabrication: @t1@] Ce métal est un bon conducteur."
+    },
+    {
+      "id": 15070,
+      "en": "Lowers light penalty TA scaled [Crafting]",
+      "fr": "Réduit la pénalité d'obscurité selon l'aptitude technologique. [Fabrication]"
+    },
+    {
+      "id": 15071,
+      "en": "[Crafting: @t2@] A thin piece of metal wire.",
+      "fr": "[Fabrication: @t2@] Fin morceau de fil métallique."
+    },
+    {
+      "id": 15072,
+      "en": "Lowers light penalty [Crafting]",
+      "fr": "Réduit la pénalité d'obscurité. [Fabrication]"
+    },
+    {
+      "id": 15073,
+      "en": "[Crafting: @t2@] Holds energy charge.",
+      "fr": "[Fabrication: @t2@] Stocke une charge d'énergie."
+    },
+    {
+      "id": 15075,
+      "en": "[Junk] Maybe a blacksmith will pay you for this.",
+      "fr": "[Rebut] Un forgeron vous en donnera peut-être quelques pièces."
+    },
+    {
+      "id": 15076,
+      "en": "[Crafting: @t3@] Soft reactive metal.",
+      "fr": "[Fabrication: @t3@] Métal mou et réactif."
+    },
+    {
+      "id": 15077,
+      "en": "[Junk] Leftovers from Factory work.",
+      "fr": "[Rebut] Déchets industriels."
+    },
+    {
+      "id": 15078,
+      "en": "[Crafting: @t4@] High quality handgun part.",
+      "fr": "[Fabrication: @t4@] Pièce de pistolet de grande qualité."
+    },
+    {
+      "id": 15079,
+      "en": "[Crafting: @t4@] Cylinder designed to hold bullets.",
+      "fr": "[Fabrication: @t4@] Cylindre conçu pour contenir des balles."
+    },
+    {
+      "id": 15080,
+      "en": "Deals @i43@:15-25 when stepped on.",
+      "fr": "Inflige @i43@:15-25 lorsqu'on marche dessus."
+    },
+    {
+      "id": 15081,
+      "en": "Bonus to picklock skill +10%",
+      "fr": "@i71@ : +10%."
+    },
+    {
+      "id": 15082,
+      "en": "[Crafting: @t5@] Bigger spring, greater force.",
+      "fr": "[Fabrication: @t5@] Plus le ressort est grand, plus la force est importante."
+    },
+    {
+      "id": 15083,
+      "en": "[Crafting: @t5@] Popular in industrial quality devices",
+      "fr": "[Fabrication: @t5@] Courant dans les appareils industriels de qualité."
+    },
+    {
+      "id": 15084,
+      "en": "Bonus to picklock skill +5% [Crafting]",
+      "fr": "@i71@ : +5%. [Fabrication]"
+    },
+    {
+      "id": 15085,
+      "en": "[Crafting: @t6@] Shiny high quality ore.",
+      "fr": "[Fabrication: @t6@] Minerai brillant de grande qualité."
+    },
+    {
+      "id": 15086,
+      "en": "[Crafting: @t6@] Raw material requires processing.",
+      "fr": "[Fabrication: @t6@] Matière brute à transformer."
+    },
+    {
+      "id": 15087,
+      "en": "[Crafting: @t6@] Quality metal popular among smiths.",
+      "fr": "[Fabrication: @t6@] Métal de qualité apprécié des forgerons."
+    },
+    {
+      "id": 15088,
+      "en": "[Crafting: @t6@] Well made hilt, comfortable to hold.",
+      "fr": "[Fabrication: @t6@] Poignée bien faite et agréable en main."
+    },
+    {
+      "id": 15089,
+      "en": "[Crafting: @t7@] Heat expand Mercury in Glass tube.",
+      "fr": "[Fabrication: @t7@] La chaleur dilate le mercure dans un tube de verre."
+    },
+    {
+      "id": 15090,
+      "en": "[Crafting: @t5@]",
+      "fr": "[Fabrication: @t5@]"
+    },
+    {
+      "id": 15091,
+      "en": "[Crafting: @t5@] Large Cogs for heaviest machines.",
+      "fr": "[Fabrication: @t5@] Grands rouages pour machines lourdes."
+    },
+    {
+      "id": 15092,
+      "en": "Poison leaks across this robotic spider's legs.",
+      "fr": "Du poison s'écoule le long des pattes de cette araignée mécanique."
+    },
+    {
+      "id": 15093,
+      "en": "[Crafting: @t4@] Does it still work?",
+      "fr": "[Fabrication: @t4@] Fonctionne-t-il encore ?"
+    },
+    {
+      "id": 15094,
+      "en": "It's Mithril, what did you expect?",
+      "fr": "C'est du mithril. À quoi vous attendiez-vous ?"
+    },
+    {
+      "id": 15095,
+      "en": "[Junk] Drinking wine from the glass makes you upper class.",
+      "fr": "[Rebut] Boire du vin dans un verre vous donne des airs de bourgeois."
+    },
+    {
+      "id": 15100,
+      "en": "Deals @i43@:5-10 and immobilises for 10 sec. when stepped on.",
+      "fr": "Inflige @i43@:5-10 et immobilise pendant 10 s lorsqu'on marche dessus."
+    },
+    {
+      "id": 15101,
+      "en": "[Crafting: @t5@] Big opened ring with a lock.",
+      "fr": "[Fabrication: @t5@] Grand anneau ouvrant muni d'une serrure."
+    },
+    {
+      "id": 15102,
+      "en": "Use it to safely trigger traps on doors or containers.",
+      "fr": "Permet de déclencher à distance les pièges des portes et des contenants."
+    },
+    {
+      "id": 15103,
+      "en": "[Crafting: @t5@] Parts from a good watch.",
+      "fr": "[Fabrication: @t5@] Pièces d'une montre de qualité."
+    },
+    {
+      "id": 15104,
+      "en": "[Junk]",
+      "fr": "[Rebut]"
+    },
+    {
+      "id": 15105,
+      "en": "[Junk] Device plays music when opened.",
+      "fr": "[Rebut] Joue de la musique lorsqu'on l'ouvre."
+    },
+    {
+      "id": 15106,
+      "en": "[Junk] Useless without a table, just take the lamp.",
+      "fr": "[Rebut] Inutile sans table ; prenez plutôt la lampe."
+    },
+    {
+      "id": 15107,
+      "en": "[Junk] Heavily worn gears with teared cogs. Unusable.",
+      "fr": "[Rebut] Engrenages très usés aux dents arrachées. Inutilisables."
+    },
+    {
+      "id": 15108,
+      "en": "[Crafting: @t2@] Conducts electrcity across installation.",
+      "fr": "[Fabrication: @t2@] Conduit l'électricité dans une installation."
+    },
+    {
+      "id": 15109,
+      "en": "[Crafting: @t2@] Accumulates big charges of energy.",
+      "fr": "[Fabrication: @t2@] Accumule de fortes charges d'énergie."
+    },
+    {
+      "id": 15110,
+      "en": "[Crafting: @t2@] High-frequency electro-transmiter.",
+      "fr": "[Fabrication: @t2@] Transmetteur électrique à haute fréquence."
+    },
+    {
+      "id": 15111,
+      "en": "[Crafting: @t3@] Gunpowder, can cause explosions.",
+      "fr": "[Fabrication: @t3@] Poudre à canon ; risque d'explosion."
+    },
+    {
+      "id": 15112,
+      "en": "3x3 fire curtain for 10 sec., damages everyone [Crafting]",
+      "fr": "Rideau de feu de 3×3 pendant 10 s ; blesse tout le monde. [Fabrication]"
+    },
+    {
+      "id": 15114,
+      "en": "[Crafting: @t4@] Complex self-loading gun system.",
+      "fr": "[Fabrication: @t4@] Mécanisme de rechargement automatique complexe."
+    },
+    {
+      "id": 15115,
+      "en": "[Crafting: @t5@] Set of matching gears.",
+      "fr": "[Fabrication: @t5@] Ensemble de rouages assortis."
+    },
+    {
+      "id": 15116,
+      "en": "Moves randomly and draws enemy attention [Crafting]",
+      "fr": "Se déplace au hasard et attire l'attention des ennemis. [Fabrication]"
+    },
+    {
+      "id": 15117,
+      "en": "[Valuable] Wellmade watch, essential for upper class.",
+      "fr": "[Valeur] Montre de qualité, indispensable à la bonne société."
+    },
+    {
+      "id": 15118,
+      "en": "[Crafting: @t4@] Common part of hydraulic installations.",
+      "fr": "[Fabrication: @t4@] Pièce courante des installations hydrauliques."
+    },
+    {
+      "id": 15119,
+      "en": "[Crafting: @t6@] Leftovers from tailoring.",
+      "fr": "[Fabrication: @t6@] Chutes de couture."
+    },
+    {
+      "id": 15120,
+      "en": "[Junk] Completely useless and inventors don't want it.",
+      "fr": "[Rebut] Inutile, même pour les inventeurs."
+    },
+    {
+      "id": 15121,
+      "en": "[Crafting: @t4@] For navigation and reconnaissance.",
+      "fr": "[Fabrication: @t4@] Sert à la navigation et à la reconnaissance."
+    },
+    {
+      "id": 15122,
+      "en": "[Crafting: @t6@] Looks like metal, but it's not iron.",
+      "fr": "[Fabrication: @t6@] Ressemble à du métal, mais ce n'est pas du fer."
+    },
+    {
+      "id": 15123,
+      "en": "[Crafting: @t6@] Steel/copper wire on a spool.",
+      "fr": "[Fabrication: @t6@] Bobine de fil d'acier ou de cuivre."
+    },
+    {
+      "id": 15124,
+      "en": "[Junk] This Axe handle is completely broken.",
+      "fr": "[Rebut] Ce manche de hache est complètement brisé."
+    },
+    {
+      "id": 15125,
+      "en": "[Crafting: @t6@] Big thin metal plate, easy to form.",
+      "fr": "[Fabrication: @t6@] Grande plaque de métal mince, facile à façonner."
+    },
+    {
+      "id": 15126,
+      "en": "You can use it to dig up Treasures.",
+      "fr": "Permet de déterrer des trésors."
+    },
+    {
+      "id": 15128,
+      "en": "[Valuable] Unfaceted Sapphire Gem.",
+      "fr": "[Valeur] Saphir brut."
+    },
+    {
+      "id": 15129,
+      "en": "[Valuable] Unfaceted Emerald Gem.",
+      "fr": "[Valeur] Émeraude brute."
+    },
+    {
+      "id": 15130,
+      "en": "[Valuable] Unfaceted Diamond Gem.",
+      "fr": "[Valeur] Diamant brut."
+    },
+    {
+      "id": 15131,
+      "en": "[Offering][Valuable] Unfaceted Ruby Gem.",
+      "fr": "[Offrande][Valeur] Rubis brut."
+    },
+    {
+      "id": 15132,
+      "en": "@i43@:5-30 @i48@:5-30 Knockback [Crafting]",
+      "fr": "@i43@:5-30 @i48@:5-30 Repousse la cible [Fabrication]"
+    },
+    {
+      "id": 15133,
+      "en": "Who needs followers when you can craft one?",
+      "fr": "Pourquoi recruter un compagnon quand on peut en fabriquer un ?"
+    },
+    {
+      "id": 15134,
+      "en": "@i43@:100-200 @i48@:5-20 Fuse 11 sec. [Crafting]",
+      "fr": "@i43@:100-200 @i48@:5-20 Mèche : 11 s. [Fabrication]"
+    },
+    {
+      "id": 15135,
+      "en": "[Crafting: @t1@] Compound used in Cameras.",
+      "fr": "[Fabrication: @t1@] Composé utilisé en photographie."
+    },
+    {
+      "id": 15136,
+      "en": "[Crafting: @t1@] Ideal for cleaning.",
+      "fr": "[Fabrication: @t1@] Idéal pour le nettoyage."
+    },
+    {
+      "id": 15137,
+      "en": "[Crafting: @t2@] Conduct power from batteries.",
+      "fr": "[Fabrication: @t2@] Transporte l'énergie des batteries."
+    },
+    {
+      "id": 15138,
+      "en": "[Crafting: @t3@] Salt used to preserve the meat.",
+      "fr": "[Fabrication: @t3@] Sel utilisé pour conserver la viande."
+    },
+    {
+      "id": 15139,
+      "en": "[Crafting: @t3@] Dangerous substance.",
+      "fr": "[Fabrication: @t3@] Substance dangereuse."
+    },
+    {
+      "id": 15140,
+      "en": "[Crafting: @t2@] Use to convert electricity into heat.",
+      "fr": "[Fabrication: @t2@] Transforme l'électricité en chaleur."
+    },
+    {
+      "id": 15141,
+      "en": "[Crafting: @t3@] Empty can, washed in the rain.",
+      "fr": "[Fabrication: @t3@] Boîte vide rincée par la pluie."
+    },
+    {
+      "id": 15142,
+      "en": "[Crafting: @t4@] Big exhaust pipe from steam engine.",
+      "fr": "[Fabrication: @t4@] Gros tuyau d'échappement de machine à vapeur."
+    },
+    {
+      "id": 15143,
+      "en": "[Crafting: @t5@] Set of metal plates forming a box.",
+      "fr": "[Fabrication: @t5@] Plaques métalliques assemblées en boîte."
+    },
+    {
+      "id": 15144,
+      "en": "[Crafting: @t3@] Wood scorched to the coal.",
+      "fr": "[Fabrication: @t3@] Bois réduit en charbon."
+    },
+    {
+      "id": 15145,
+      "en": "[Crafting: @t3@] Industry standard fertilizer.",
+      "fr": "[Fabrication: @t3@] Engrais industriel courant."
+    },
+    {
+      "id": 15146,
+      "en": "[Crafting: @t3@] Used to produce cosmetics.",
+      "fr": "[Fabrication: @t3@] Sert à fabriquer des cosmétiques."
+    },
+    {
+      "id": 15147,
+      "en": "[Crafting: @t3@] Personal hygiene could not hurt.",
+      "fr": "[Fabrication: @t3@] Un peu d'hygiène ne fait pas de mal."
+    },
+    {
+      "id": 15148,
+      "en": "[Crafting: @t4@] Looks like it burst broken on shot.",
+      "fr": "[Fabrication: @t4@] Semble avoir éclaté lors d'un tir."
+    },
+    {
+      "id": 15149,
+      "en": "[Crafting: @t5@] Magnetic needle that points north.",
+      "fr": "[Fabrication: @t5@] Aiguille aimantée indiquant le nord."
+    },
+    {
+      "id": 15150,
+      "en": "Causes blindness for 10sec. @i45@:-30 for affected enemies.",
+      "fr": "Aveugle pendant 10 s. @i45@:-30 pour les ennemis touchés."
+    },
+    {
+      "id": 15151,
+      "en": "3x3 smoke veil for 10 sec. stops ranged attacks [Crafting]",
+      "fr": "Écran de fumée de 3×3 pendant 10 s ; bloque les attaques à distance. [Fabrication]"
+    },
+    {
+      "id": 15152,
+      "en": "Stuns living targets for 1-5 sec. [Crafting]",
+      "fr": "Étourdit les cibles vivantes pendant 1-5 s. [Fabrication]"
+    },
+    {
+      "id": 15153,
+      "en": "3x3 fire curtain for 10 sec., damages everyone [Crafting]",
+      "fr": "Rideau de feu de 3×3 pendant 10 s ; blesse tout le monde. [Fabrication]"
+    },
+    {
+      "id": 15154,
+      "en": "[Crafting: @t4@] Revolver stripped down to parts.",
+      "fr": "[Fabrication: @t4@] Revolver démonté."
+    },
+    {
+      "id": 15155,
+      "en": "[Crafting: @t6@] Sturdy plate of a steel alloy.",
+      "fr": "[Fabrication: @t6@] Plaque solide en alliage d'acier."
+    },
+    {
+      "id": 15159,
+      "en": "Casts any random spell:30% chance you will be the target",
+      "fr": "Lance un sort aléatoire ; 30% de chances de vous prendre pour cible."
+    },
+    {
+      "id": 15160,
+      "en": "[Crafting: Quest][Valuable]",
+      "fr": "[Fabrication: Quête][Valeur]"
+    },
+    {
+      "id": 15161,
+      "en": "Deals @i44@:10+CurrentFT to the targets",
+      "fr": "Inflige aux cibles 10 points de dégâts de fatigue plus leur fatigue actuelle."
+    },
+    {
+      "id": 15162,
+      "en": "Makes living targets flee",
+      "fr": "Fait fuir les cibles vivantes."
+    },
+    {
+      "id": 15163,
+      "en": "@i43@:1-5 @i49@:5-30 can of lightning",
+      "fr": "@i43@:1-5 @i49@:5-30 éclair en boîte"
+    },
+    {
+      "id": 15164,
+      "en": "@i43@:25-50 @i44@:10-20 Knockback",
+      "fr": "@i43@:25-50 @i44@:10-20 Repousse la cible"
+    },
+    {
+      "id": 15165,
+      "en": "Paralyzes targets for 6 sec.",
+      "fr": "Paralyse les cibles pendant 6 s."
+    },
+    {
+      "id": 15166,
+      "en": "Creates 3x3 poison curtain @i47@:15-25 per sec. lasts 30 sec.",
+      "fr": "Rideau de poison de 3×3 : @i47@:15-25 par seconde pendant 30 s."
+    },
+    {
+      "id": 15167,
+      "en": "[Crafting: @t5@] Arrangement of ropes and pulleys.",
+      "fr": "[Fabrication: @t5@] Ensemble de cordes et de poulies."
+    },
+    {
+      "id": 15169,
+      "en": "This grasshopper follows and heals you.",
+      "fr": "Cette sauterelle vous suit et vous soigne."
+    },
+    {
+      "id": 15170,
+      "en": "Follows you and sheds light around itself.",
+      "fr": "Vous suit en éclairant les environs."
+    },
+    {
+      "id": 15171,
+      "en": "@i43@:5-30 @i48@:5-30 It has a nasty surprise when destroyed.",
+      "fr": "@i43@:5-30 @i48@:5-30 Réserve une mauvaise surprise à sa destruction."
+    },
+    {
+      "id": 15173,
+      "en": "@i43@:100-200 @i48@:5-20 Explodes after 10 sec. [Untraceable]",
+      "fr": "@i43@:100-200 @i48@:5-20 Explose après 10 s. [Intraçable]"
+    },
+    {
+      "id": 15174,
+      "en": "@i43@:100-200 @i48@:5-20 Throw & use detonator[Untraceable]",
+      "fr": "@i43@:100-200 @i48@:5-20 Lancer puis utiliser le détonateur [Intraçable]"
+    },
+    {
+      "id": 15175,
+      "en": "Detonates all planted plastiques.",
+      "fr": "Fait exploser toutes les charges de plastique posées."
+    },
+    {
+      "id": 15177,
+      "en": "[Crafting: @t5@] Small, well as small as they go.",
+      "fr": "[Fabrication: @t5@] Petit... pour un objet de ce genre."
+    },
+    {
+      "id": 15178,
+      "en": "Allows use of the picklocks skill.",
+      "fr": "Permet d'utiliser la compétence @k14@."
+    },
+    {
+      "id": 15179,
+      "en": "Uses your Heal skill to restore health and cure injuries.",
+      "fr": "Utilise votre compétence @k10@ pour rendre de la vie et soigner les blessures."
+    },
+    {
+      "id": 15180,
+      "en": "[Quest] Toone family members are valid recipients.",
+      "fr": "[Quête] Destiné à un membre de la famille Toone."
+    },
+    {
+      "id": 15181,
+      "en": "[Offering] Carved wooden statue.",
+      "fr": "[Offrande] Statuette de bois sculptée."
+    },
+    {
+      "id": 15182,
+      "en": "[Offering][Crafting: Quest]",
+      "fr": "[Offrande][Fabrication: Quête]"
+    },
+    {
+      "id": 15183,
+      "en": "[Offering][Valuable] Silver Coin.",
+      "fr": "[Offrande][Valeur] Pièce d'argent."
+    },
+    {
+      "id": 15184,
+      "en": "[Offering] Cooled lump of magma.",
+      "fr": "[Offrande] Bloc de magma refroidi."
+    },
+    {
+      "id": 15185,
+      "en": "[Offering] Symbol of peace.",
+      "fr": "[Offrande] Symbole de paix."
+    },
+    {
+      "id": 15186,
+      "en": "[Offering][Valuable] Rock with mineral formation inside.",
+      "fr": "[Offrande][Valeur] Roche contenant une formation minérale."
+    },
+    {
+      "id": 15187,
+      "en": "[Offering][Valuable] Rare diamond, glossy and tar.",
+      "fr": "[Offrande][Valeur] Diamant rare, brillant et noir comme le goudron."
+    },
+    {
+      "id": 15196,
+      "en": "[Crafting: @t6@] Its harder than steel!",
+      "fr": "[Fabrication: @t6@] Plus dur que l'acier !"
+    },
+    {
+      "id": 15197,
+      "en": "[Crafting: @t1@] Made in Vendigroth?",
+      "fr": "[Fabrication: @t1@] Fabriqué à Vendigroth ?"
+    },
+    {
+      "id": 15198,
+      "en": "Demons consider this meat tasty.",
+      "fr": "Les démons apprécient cette viande."
+    },
+    {
+      "id": 15199,
+      "en": "WOAH, you got the real one?",
+      "fr": "Vous avez donc trouvé la véritable peau !"
+    },
+    {
+      "id": 15200,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 15201,
+      "en": "[Offering][Valuable]",
+      "fr": "[Offrande][Valeur]"
+    },
+    {
+      "id": 15202,
+      "en": "[Valuable]",
+      "fr": "[Valeur]"
+    },
+    {
+      "id": 15203,
+      "en": "[Valuable] Looks magnificient.",
+      "fr": "[Valeur] Magnifique."
+    },
+    {
+      "id": 15204,
+      "en": "[Valuable][Offering] It looks so cool.",
+      "fr": "[Valeur][Offrande] Superbe."
+    },
+    {
+      "id": 15205,
+      "en": "[Valuable] It looks so cool.",
+      "fr": "[Valeur] Superbe."
+    },
+    {
+      "id": 15207,
+      "en": "[Crafting: @t3@] Distilled crude oil used in lamps.",
+      "fr": "[Fabrication: @t3@] Dérivé de pétrole utilisé dans les lampes."
+    },
+    {
+      "id": 15208,
+      "en": "[Crafting] Piece of cloth, too dirty for bandage.",
+      "fr": "[Fabrication] Morceau d'étoffe trop sale pour servir de bandage."
+    },
+    {
+      "id": 15209,
+      "en": "@i43@:3-15 @i48@:3-15 Knockback",
+      "fr": "@i43@:3-15 @i48@:3-15 Repousse la cible"
+    },
+    {
+      "id": 15210,
+      "en": "[Junk]",
+      "fr": "[Rebut]"
+    },
+    {
+      "id": 15211,
+      "en": "[Quest] Essence formed from corpse of a Volar's Wisp.",
+      "fr": "[Quête] Essence issue du cadavre d'un feu follet de Volar."
+    },
+    {
+      "id": 15212,
+      "en": "Healing Robot Spider, it's awesome.",
+      "fr": "Une araignée mécanique qui soigne. Impressionnant !"
+    },
+    {
+      "id": 15213,
+      "en": "Train your party members up to your level.",
+      "fr": "Entraîne les membres du groupe jusqu'à votre niveau."
+    },
+    {
+      "id": 30014,
+      "en": "+70 Poison Level to the target [Quest]",
+      "fr": "Ajoute 70 niveaux de poison à la cible. [Quête]"
+    },
+    {
+      "id": 30016,
+      "en": "[Quest] Found on a body on shipwreck",
+      "fr": "[Quête] Trouvé sur un cadavre dans une épave."
+    },
+    {
+      "id": 30017,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30021,
+      "en": "[Quest] Ring of the old lady in Dernholm.",
+      "fr": "[Quête] Anneau de la vieille dame de Dernholm."
+    },
+    {
+      "id": 30022,
+      "en": "@i43@:15-25 @i44@:5-15 @i28@ (free/occupied off hand):14/18 MC:25",
+      "fr": "@i43@:15-25 @i44@:5-15 @i28@ (main libre/occupée):14/18 Complexité magique:25"
+    },
+    {
+      "id": 30030,
+      "en": "@i65@:+40 [Quest]",
+      "fr": "@i65@:+40 [Quête]"
+    },
+    {
+      "id": 30033,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30034,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30047,
+      "en": "[Quest] Old book.",
+      "fr": "[Quête] Vieux livre."
+    },
+    {
+      "id": 30050,
+      "en": "@i43@:4-18 @i44@:3-12 dwarf/elf/align[@i43@:1-42 @i44@:1-24]@i28@ (free/occupied off hand):10/12",
+      "fr": "@i43@:4-18 @i44@:3-12 Selon race naine/elfique et alignement : [@i43@:1-42 @i44@:1-24]@i28@ (main libre/occupée):10/12"
+    },
+    {
+      "id": 30056,
+      "en": "Shovel of a gravekeeper from Caladon.",
+      "fr": "Pelle d'un fossoyeur de Caladon."
+    },
+    {
+      "id": 30058,
+      "en": "Contains Renford's research on the Dark Elves.",
+      "fr": "Contient les recherches de Renford sur les elfes noirs."
+    },
+    {
+      "id": 30072,
+      "en": "[Quest] Elven skull should be a bit different.",
+      "fr": "[Quête] Un crâne elfique devrait être un peu différent."
+    },
+    {
+      "id": 30075,
+      "en": "@i43@:2-9 @i44@:2-5 @i28@ (free/occupied off hand):6/8 [Quest]",
+      "fr": "@i43@:2-9 @i44@:2-5 @i28@ (main libre/occupée):6/8 [Quête]"
+    },
+    {
+      "id": 30080,
+      "en": "Dug ancient burial ground and file cabinets for this.",
+      "fr": "Il a fallu fouiller un ancien tombeau et des archives pour le trouver."
+    },
+    {
+      "id": 30085,
+      "en": "[Quest] Eye is seen in the middle.",
+      "fr": "[Quête] Un œil figure au centre."
+    },
+    {
+      "id": 30088,
+      "en": "[Quest] This will protect you from Giant's rage.",
+      "fr": "[Quête] Vous protégera de la fureur du géant."
+    },
+    {
+      "id": 30089,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30104,
+      "en": "Crit Rate:+2 @i52@:+20 @s6@:+1 @k2@:+2/20",
+      "fr": "Critique:+2 @i52@:+20 @s6@:+1 @k2@:+2/20"
+    },
+    {
+      "id": 30115,
+      "en": "[Quest] Photographic camera is wonder of technology.",
+      "fr": "[Quête] L'appareil photographique, merveille de la technologie."
+    },
+    {
+      "id": 30116,
+      "en": "[Quest] Old boot from the silver mine, singular.",
+      "fr": "[Quête] Une vieille botte dépareillée trouvée dans la mine d'argent."
+    },
+    {
+      "id": 30190,
+      "en": "@i43@:1-4 @i44@:2-9 @i45@:(+25) @i8@:(+25) CR:(+20) @i28@:5 MC:26",
+      "fr": "@i43@:1-4 @i44@:2-9 @i45@:(+25) @i8@:(+25) Critique:(+20) @i28@:5 Complexité magique:26"
+    },
+    {
+      "id": 30199,
+      "en": "[Quest] Ale you are supposed to get to Pollock Clan.",
+      "fr": "[Quête] Bière à livrer au clan Pollock."
+    },
+    {
+      "id": 30200,
+      "en": "[Quest] Malloy has been waiting for this delivery.",
+      "fr": "[Quête] Malloy attend cette livraison."
+    },
+    {
+      "id": 30233,
+      "en": "@s1@:-3 @s3@:+2 @s7@:+1 when carried [Quest]",
+      "fr": "@s1@:-3 @s3@:+2 @s7@:+1 tant que l'objet est porté. [Quête]"
+    },
+    {
+      "id": 30262,
+      "en": "[Quest] Now you can help the elven hunter escape.",
+      "fr": "[Quête] Vous pouvez maintenant aider le chasseur elfe à s'échapper."
+    },
+    {
+      "id": 30265,
+      "en": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 for 360s [Quest]",
+      "fr": "@s0@+1 @s2@+1 @s1@-1 @s5@-1 @s7@-2 @s4@-3 pendant 360 s. [Quête]"
+    },
+    {
+      "id": 30285,
+      "en": "[Quest] Stolen painting from Tarant.",
+      "fr": "[Quête] Tableau volé à Tarant."
+    },
+    {
+      "id": 30365,
+      "en": "[Quest] Miniaturized steam engine.",
+      "fr": "[Quête] Machine à vapeur miniature."
+    },
+    {
+      "id": 30366,
+      "en": "Makes living targets flee [Quest]",
+      "fr": "Fait fuir les cibles vivantes. [Quête]"
+    },
+    {
+      "id": 30367,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30368,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30369,
+      "en": "@s4@:-1 and +70 Poison Level to the target [Quest]",
+      "fr": "@s4@:-1 et ajoute 70 niveaux de poison à la cible. [Quête]"
+    },
+    {
+      "id": 30370,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30371,
+      "en": "[Quest] Small sack of rubies.",
+      "fr": "[Quête] Petit sac de rubis."
+    },
+    {
+      "id": 30372,
+      "en": "@k8@:+2/20, @k9@:+1/20 [Quest]",
+      "fr": "@k8@:+2/20, @k9@:+1/20 [Quête]"
+    },
+    {
+      "id": 30374,
+      "en": "[Quest] This might cause an affair.",
+      "fr": "[Quête] De quoi provoquer un scandale."
+    },
+    {
+      "id": 30375,
+      "en": "@i43@:6-13 @i44@:1-4 @i28@ (free/occupied off hand):6/8 [Quest]",
+      "fr": "@i43@:6-13 @i44@:1-4 @i28@ (main libre/occupée):6/8 [Quête]"
+    },
+    {
+      "id": 30377,
+      "en": "@s2@:+2 [Quest]",
+      "fr": "@s2@:+2 [Quête]"
+    },
+    {
+      "id": 30378,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30379,
+      "en": "@s3@:+2 @s7@:+1 [Quest]",
+      "fr": "@s3@:+2 @s7@:+1 [Quête]"
+    },
+    {
+      "id": 30460,
+      "en": "[Quest] This is just an empty book for you.",
+      "fr": "[Quête] Pour vous, ce livre est vide."
+    },
+    {
+      "id": 30461,
+      "en": "@s3@:(+2) MC:40 [Quest]",
+      "fr": "@s3@:(+2) Complexité magique:40 [Quête]"
+    },
+    {
+      "id": 30462,
+      "en": "Clue to find Liam.",
+      "fr": "Indice pour retrouver Liam."
+    },
+    {
+      "id": 30464,
+      "en": "[Quest] Functional photographic camera.",
+      "fr": "[Quête] Appareil photographique en état de marche."
+    },
+    {
+      "id": 30466,
+      "en": "@i43@:1-8 @i44@:3-12 @s1@:@s5@:(+2) @p4@, @p9@, @p6@ @i28@:5 MC:100",
+      "fr": "@i43@:1-8 @i44@:3-12 @s1@:@s5@:(+2) @p4@, @p9@, @p6@ @i28@:5 Complexité magique:100"
+    },
+    {
+      "id": 30469,
+      "en": "[Quest][Valuable] Ruby described in the book.",
+      "fr": "[Quête][Valeur] Rubis décrit dans le livre."
+    },
+    {
+      "id": 30470,
+      "en": "@k6@:+2/20",
+      "fr": "@k6@:+2/20"
+    },
+    {
+      "id": 30471,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30472,
+      "en": "[Quest] Usable only by master locksmith.",
+      "fr": "[Quête] Seul un maître du crochetage peut l'utiliser."
+    },
+    {
+      "id": 30473,
+      "en": "@k6@:+2/20",
+      "fr": "@k6@:+2/20"
+    },
+    {
+      "id": 30474,
+      "en": "@i65@:(+40) @s2@:(+4) MC:80",
+      "fr": "@i65@:(+40) @s2@:(+4) Complexité magique:80"
+    },
+    {
+      "id": 30481,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30487,
+      "en": "@i65@:+40 [Quest]",
+      "fr": "@i65@:+40 [Quête]"
+    },
+    {
+      "id": 30488,
+      "en": "[Quest] Madam Lil have her ways around upper class society.",
+      "fr": "[Quête] Madame Lil connaît les usages de la haute société."
+    },
+    {
+      "id": 30489,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30500,
+      "en": "[Quest] Appears to be a regular potion.",
+      "fr": "[Quête] Ressemble à une potion ordinaire."
+    },
+    {
+      "id": 30513,
+      "en": "[Quest] Thieves underground wanna get their hands on it.",
+      "fr": "[Quête] La pègre des voleurs cherche à mettre la main dessus."
+    },
+    {
+      "id": 30522,
+      "en": "Wherever is Roseborough, I should ask locals about it.",
+      "fr": "Pour trouver Rosebourg, mieux vaut interroger les habitants."
+    },
+    {
+      "id": 30567,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30568,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30569,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30570,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30571,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30572,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30573,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30574,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30575,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30576,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30577,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30578,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30579,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30580,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30581,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30582,
+      "en": "[Quest] MC:50",
+      "fr": "[Quête] Complexité magique:50"
+    },
+    {
+      "id": 30614,
+      "en": "@k6@:(+2/20) @i56@:(+20) MC:10",
+      "fr": "@k6@:(+2/20) @i56@:(+20) Complexité magique:10"
+    },
+    {
+      "id": 30615,
+      "en": "@i43@:1-10(+1-10 vs animals) @i44@:2-5 @i45@:(+10) @i46@:15 @i28@:8 MC:15",
+      "fr": "@i43@:1-10(+1-10 contre les animaux) @i44@:2-5 @i45@:(+10) @i46@:15 @i28@:8 Complexité magique:15"
+    },
+    {
+      "id": 30630,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30636,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30647,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30648,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30673,
+      "en": "[Quest] Just a clockwatch.",
+      "fr": "[Quête] Une simple montre."
+    },
+    {
+      "id": 30679,
+      "en": "@i43@:1-8 @i44@:3-12 @s0@:@s2@:(+1) @s12@:(+50%) @p62@ @i28@:5 MC:40",
+      "fr": "@i43@:1-8 @i44@:3-12 @s0@:@s2@:(+1) @s12@:(+50%) @p62@ @i28@:5 Complexité magique:40"
+    },
+    {
+      "id": 30680,
+      "en": "@i50@:14 @i51@:25 @i53@:5 @i54@:-5 @i56@:-25 @s0@:@s2@:@s1@:@s3@:(+1) MC:50",
+      "fr": "@i50@:14 @i51@:25 @i53@:5 @i54@:-5 @i56@:-25 @s0@:@s2@:@s1@:@s3@:(+1) Complexité magique:50"
+    },
+    {
+      "id": 30681,
+      "en": "@s3@:(+2) MC:20 [Quest]",
+      "fr": "@s3@:(+2) Complexité magique:20 [Quête]"
+    },
+    {
+      "id": 30682,
+      "en": "@s5@:+2 @s1@:+2",
+      "fr": "@s5@:+2 @s1@:+2"
+    },
+    {
+      "id": 30719,
+      "en": "@i43@:1-4 @i44@:1-2 Crit Fail:(+20) @i8@:(+4) @i28@ (free/occupied off hand):3/3 MC:10",
+      "fr": "@i43@:1-4 @i44@:1-2 Échec critique:(+20) @i8@:(+4) @i28@ (main libre/occupée):3/3 Complexité magique:10"
+    },
+    {
+      "id": 30720,
+      "en": "@i43@:2-9 @i44@:2-5 @i8@:(-6) @i28@ (free/occupied off hand):6/8 MC:10",
+      "fr": "@i43@:2-9 @i44@:2-5 @i8@:(-6) @i28@ (main libre/occupée):6/8 Complexité magique:10"
+    },
+    {
+      "id": 30722,
+      "en": "@i43@:1-4 @i44@:1-2 Crit Fail:(+20) @i28@ (free/occupied off hand):3/3 MC:20",
+      "fr": "@i43@:1-4 @i44@:1-2 Échec critique:(+20) @i28@ (main libre/occupée):3/3 Complexité magique:20"
+    },
+    {
+      "id": 30734,
+      "en": "@i43@:1-6 @i44@:1-2 @k4@(+8/20) Self-@i43@:@i47@:(1-10) @i28@ (free/occupied off hand):3/3 MC:50",
+      "fr": "@i43@:1-6 @i44@:1-2 @k4@(+8/20) Sur soi-@i43@:@i47@:(1-10) @i28@ (main libre/occupée):3/3 Complexité magique:50"
+    },
+    {
+      "id": 30735,
+      "en": "@i43@:1-4(+2) @i44@:1-2 @s12@(-95%) maxFT(-50%) MC:40 @i28@ (free/occupied off hand):3/3",
+      "fr": "@i43@:1-4(+2) @i44@:1-2 @s12@(-95%) Fatigue maximale(-50%) Complexité magique:40 @i28@ (main libre/occupée):3/3"
+    },
+    {
+      "id": 30739,
+      "en": "@i43@:5-20(+10) -Align @i1@:(-20) @p55@/@p33@/@p59@ @i44@:8-16 @i47@:10-15(+10) @i28@ (free/occupied off hand):12/14, On Wear @s19@:(-75), ROH:-20 @s19@, MC:100",
+      "fr": "@i43@:5-20(+10) -@s19@ @i1@:(-20) @p55@/@p33@/@p59@ @i44@:8-16 @i47@:10-15(+10) @i28@ (main libre/occupée):12/14, Une fois équipé : @s19@:(-75), Effet aléatoire à l’impact:-20 @s19@, Complexité magique:100"
+    },
+    {
+      "id": 30740,
+      "en": "@i43@:5-15(+15) @i44@:1-8(+8) ROH-@i48@:20-30 on self or enemy @i28@ (free/occupied off hand):9/11 MC:75",
+      "fr": "@i43@:5-15(+15) @i44@:1-8(+8) Effet aléatoire à l’impact-@i48@:20-30 sur soi ou un ennemi @i28@ (main libre/occupée):9/11 Complexité magique:75"
+    },
+    {
+      "id": 30741,
+      "en": "@i43@:1-5(+10) @s1@:(-4) Self-@i44@:5-10, ROH-@p48@ @i44@:1-2(+10) @i28@ (free/occupied off hand):11/13 MC:80",
+      "fr": "@i43@:1-5(+10) @s1@:(-4) Sur soi-@i44@:5-10, Effet aléatoire à l’impact-@p48@ @i44@:1-2(+10) @i28@ (main libre/occupée):11/13 Complexité magique:80"
+    },
+    {
+      "id": 30745,
+      "en": "@i43@:5-15 @i44@:1-9 @i54@:(-100%) Random @p33@ ROM:BoL only targets allies @i28@ (free/occupied off hand):8/10 MC:75 [Chop]",
+      "fr": "@i43@:5-15 @i44@:1-9 @i54@:(-100%) Aléatoire : @p33@ En cas d’échec : @p33@ sur les alliés uniquement @i28@ (main libre/occupée):8/10 Complexité magique:75 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 30746,
+      "en": "@i43@:1-12(+35) @i44@:1-10(+29) @i8@:(-3) ROH-@p77@ enemy @i28@ (free/occupied off hand):8/10 MC:70 [Chop]",
+      "fr": "@i43@:1-12(+35) @i44@:1-10(+29) @i8@:(-3) Effet aléatoire à l’impact-@p77@ sur l’ennemi @i28@ (main libre/occupée):8/10 Complexité magique:70 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 30748,
+      "en": "@i43@:6-15 @i44@:1-3 ROH-@p11@ @i28@ (free/occupied off hand):8/10 MC:40 [Chop]",
+      "fr": "@i43@:6-15 @i44@:1-3 Effet aléatoire à l’impact-@p11@ @i28@ (main libre/occupée):8/10 Complexité magique:40 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 30750,
+      "en": "@i43@:1-8(+15) Aids enemy:ROH-Heal 45-65FT & @p62@ @i44@:1-5(+10) @i28@ (free/occupied off hand):8/10 MC:75",
+      "fr": "@i43@:1-8(+15) Aide l’ennemi:Effet aléatoire à l’impact-Rend 45-65 points de fatigue & @p62@ @i44@:1-5(+10) @i28@ (main libre/occupée):8/10 Complexité magique:75"
+    },
+    {
+      "id": 30751,
+      "en": "@i43@:1-8 @i44@:1-10(+15) @i46@:20 ROH-@p78@ on self or enemy @i28@ (free/occupied off hand):9/11 MC:80",
+      "fr": "@i43@:1-8 @i44@:1-10(+15) @i46@:20 Effet aléatoire à l’impact-@p78@ sur soi ou un ennemi @i28@ (main libre/occupée):9/11 Complexité magique:80"
+    },
+    {
+      "id": 30753,
+      "en": "@i43@:1-8 ROH-@p36@, @p37@ or Spawn 3 Hostile Zombies @i44@:1-10 @i28@ (free/occupied off hand):10/12 Mana:16 CR(+2) MC:50",
+      "fr": "@i43@:1-8 Effet aléatoire à l’impact-@p36@, @p37@ ou Invoque 3 zombies hostiles @i44@:1-10 @i28@ (main libre/occupée):10/12 Mana:16 Critique(+2) Complexité magique:50"
+    },
+    {
+      "id": 30755,
+      "en": "@i43@:5-15(15) @s11@:(+4) ROH-@i43@:@i44@:(10-55) self or enemy double @i43@: on self. @i44@:1-5 @i8@(+5) @i28@ (free/occupied off hand):14/18 MC:90",
+      "fr": "@i43@:5-15(15) @s11@:(+4) Effet aléatoire à l’impact-@i43@:@i44@:(10-55) sur soi ou un ennemi @i43@: doublés sur soi. @i44@:1-5 @i8@(+5) @i28@ (main libre/occupée):14/18 Complexité magique:90"
+    },
+    {
+      "id": 30757,
+      "en": "@i43@:5-10(+20) @i44@:3-11 ROH-@p27@ @i28@ (free/occupied off hand):15/19 MC:80",
+      "fr": "@i43@:5-10(+20) @i44@:3-11 Effet aléatoire à l’impact-@p27@ @i28@ (main libre/occupée):15/19 Complexité magique:80"
+    },
+    {
+      "id": 30759,
+      "en": "@i43@:5-10(+10)ROH-@p55@ self and enemy,ROM-SelfHarmx2 @i44@:2-5 @i28@:11 MC:75",
+      "fr": "@i43@:5-10(+10)Effet aléatoire à l’impact-@p55@ soi et l’ennemi,En cas d’échec : @p55@ sur soi, deux fois @i44@:2-5 @i28@:11 Complexité magique:75"
+    },
+    {
+      "id": 30761,
+      "en": "@i43@:1-5 @i44@:1-3 @s2@:@s6@:(-6) @i46@:15 ROH-@i44@:10-30 @i28@:10 MC:50",
+      "fr": "@i43@:1-5 @i44@:1-3 @s2@:@s6@:(-6) @i46@:15 Effet aléatoire à l’impact-@i44@:10-30 @i28@:10 Complexité magique:50"
+    },
+    {
+      "id": 30763,
+      "en": "@i43@:@i44@:1-3(+8) @s1@:(-4) @s11@:(-4) @i45@:30(+30) very heavy @i28@:16(-6) CR:(+10) W:(-1000) MaxCarry(-2000) MC:20",
+      "fr": "@i43@:@i44@:1-3(+8) @s1@:(-4) @s11@:(-4) @i45@:30(+30) très lourd @i28@:16(-6) Critique:(+10) Poids:(-1000) Charge maximale(-2000) Complexité magique:20"
+    },
+    {
+      "id": 30764,
+      "en": "@i43@:1-15(+10) @i44@:2-9(+10) ROH-Self-@s1@:@s0@:@s2@:(+3/-4) @i28@:5 MC:75",
+      "fr": "@i43@:1-15(+10) @i44@:2-9(+10) Effet aléatoire à l’impact-Sur soi-@s1@:@s0@:@s2@:(+3/-4) @i28@:5 Complexité magique:75"
+    },
+    {
+      "id": 30767,
+      "en": "@i43@:@i44@:1-3(+6) Random @p30@ @i28@:5 MC:80",
+      "fr": "@i43@:@i44@:1-3(+6) Aléatoire : @p30@ @i28@:5 Complexité magique:80"
+    },
+    {
+      "id": 30768,
+      "en": "@i51@:(-50%) @i55@:(+20%) MC:80",
+      "fr": "@i51@:(-50%) @i55@:(+20%) Complexité magique:80"
+    },
+    {
+      "id": 30769,
+      "en": "@i50@:9 @i51@:16 @i53@:5 @i51@:(+20%) @i52@:(-100%) DOT:@i44@,@i47@ @i56@:-10 MC:10 cannot be resisted",
+      "fr": "@i50@:9 @i51@:16 @i53@:5 @i51@:(+20%) @i52@:(-100%) Dégâts périodiques:@i44@,@i47@ @i56@:-10 Complexité magique:10 aucune résistance possible"
+    },
+    {
+      "id": 30774,
+      "en": "[Quest] Strongbox of Tavern owner.",
+      "fr": "[Quête] Coffret du tavernier."
+    },
+    {
+      "id": 30776,
+      "en": "@i50@:3 @i51@:5 @i43@:+7 if Dwarf:[@s1@:+2 @s0@:+1 @s2@:+1] TC:15",
+      "fr": "@i50@:3 @i51@:5 @i43@:+7 Si nain :[@s1@:+2 @s0@:+1 @s2@:+1] Complexité technologique:15"
+    },
+    {
+      "id": 30777,
+      "en": "[Quest] There is no author or any name mentioned.",
+      "fr": "[Quête] Aucun auteur ni nom n'est mentionné."
+    },
+    {
+      "id": 30782,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30783,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30784,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30785,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30786,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30796,
+      "en": "@i50@:12 @i51@:23 @i53@:5 @i51@:(+20%) @i52@:(-100%) DOT:@i44@,@i47@ @i54@:-10 @i56@:-25 MC:60 cannot be resisted",
+      "fr": "@i50@:12 @i51@:23 @i53@:5 @i51@:(+20%) @i52@:(-100%) Dégâts périodiques:@i44@,@i47@ @i54@:-10 @i56@:-25 Complexité magique:60 aucune résistance possible"
+    },
+    {
+      "id": 30801,
+      "en": "@i51@:5 @i43@:+3 AR:(+100%) @i52@(-200%) DOT:@i44@,@i47@ MC:30 ROCH:Self-@i47@:1-10",
+      "fr": "@i51@:5 @i43@:+3 Toutes résistances:(+100%) @i52@(-200%) Dégâts périodiques:@i44@,@i47@ Complexité magique:30 Effet aléatoire sur coup critique:Sur soi-@i47@:1-10"
+    },
+    {
+      "id": 30803,
+      "en": "@i50@:15 @i51@:36 @i53@:30 @i51@(+%20) DOT:@i44@ crit:Self-FTdmg @i54@:-10 @i56@:-80 MC:50",
+      "fr": "@i50@:15 @i51@:36 @i53@:30 @i51@(+%20) Dégâts périodiques:@i44@ Sur coup critique : dégâts de fatigue sur soi @i54@:-10 @i56@:-80 Complexité magique:50"
+    },
+    {
+      "id": 30806,
+      "en": "@i50@:11 @i51@:20 AR:(+20%) @s0@:@s1@:@s5@:(-3) @k1@:(-3/20) @i56@:-25 MC:25",
+      "fr": "@i50@:11 @i51@:20 Toutes résistances:(+20%) @s0@:@s1@:@s5@:(-3) @k1@:(-3/20) @i56@:-25 Complexité magique:25"
+    },
+    {
+      "id": 30807,
+      "en": "@i50@:11(+20) @i51@:16 AR:(+30) @i51@(+20%)@i52@:@i55@(-100%) @i56@:-25 MC:100",
+      "fr": "@i50@:11(+20) @i51@:16 Toutes résistances:(+30) @i51@(+20%)@i52@:@i55@(-100%) @i56@:-25 Complexité magique:100"
+    },
+    {
+      "id": 30815,
+      "en": "@i50@:30 AR(+20%) @s0@:@s1@:@s6@(-3) MaxFT(-95%) MC:20",
+      "fr": "@i50@:30 Toutes résistances(+20%) @s0@:@s1@:@s6@(-3) Fatigue maximale(-95%) Complexité magique:20"
+    },
+    {
+      "id": 30817,
+      "en": "@i51@:@i55@:(-50%) @s5@:(+4) @k0@:(+2/20) maxHP:@i44@(-20%) @i50@:10 @i51@:5 MC:50",
+      "fr": "@i51@:@i55@:(-50%) @s5@:(+4) @k0@:(+2/20) Vie maximale:@i44@(-20%) @i50@:10 @i51@:5 Complexité magique:50"
+    },
+    {
+      "id": 30818,
+      "en": "@i50@:15 @i51@:5 @s5@:-1 @i51@:(+20%) Crit:@p51@ Visual Effect MC:80",
+      "fr": "@i50@:15 @i51@:5 @s5@:-1 @i51@:(+20%) Critique:@p51@ effet visuel Complexité magique:80"
+    },
+    {
+      "id": 30823,
+      "en": "@i50@:3 @i51@:2 (@i52@:-100%, OtherRes:+20%) DOT:@i44@,@i47@ @i53@:-15 @i55@:(10) MC:50",
+      "fr": "@i50@:3 @i51@:2 (@i52@:-100%, Autres résistances:+20%) Dégâts périodiques:@i44@,@i47@ @i53@:-15 @i55@:(10) Complexité magique:50"
+    },
+    {
+      "id": 30830,
+      "en": "@i51@:3 @s1@:(+2) DOT:@i44@ MC:40",
+      "fr": "@i51@:3 @s1@:(+2) Dégâts périodiques:@i44@ Complexité magique:40"
+    },
+    {
+      "id": 30831,
+      "en": "(@i55@:+20%, OtherRes:-50%) @s4@:(+1) MC:80",
+      "fr": "(@i55@:+20%, Autres résistances:-50%) @s4@:(+1) Complexité magique:80"
+    },
+    {
+      "id": 30832,
+      "en": "Invisibility on wear, @s12@:(-100%) DOT:HP,@i44@ MC:75",
+      "fr": "Invisible une fois équipé, @s12@:(-100%) Dégâts périodiques:Vie,@i44@ Complexité magique:75"
+    },
+    {
+      "id": 30836,
+      "en": "@i50@:9 @i51@:14 @i53@:5 @i51@:(-50%) @i55@(+20%) @i56@:-10 MC:25",
+      "fr": "@i50@:9 @i51@:14 @i53@:5 @i51@:(-50%) @i55@(+20%) @i56@:-10 Complexité magique:25"
+    },
+    {
+      "id": 30837,
+      "en": "(Casts @p22@ every 5 sec on everyone in area) MC:100",
+      "fr": "(@p22@ toutes les 5 s sur toute la zone) Complexité magique:100"
+    },
+    {
+      "id": 30853,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:+15 CR:+10 @i28@ (free/occupied off hand):3/3 [Quest]",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:+15 Critique:+10 @i28@ (main libre/occupée):3/3 [Quête]"
+    },
+    {
+      "id": 30864,
+      "en": "@i65@:+40 [Quest]",
+      "fr": "@i65@:+40 [Quête]"
+    },
+    {
+      "id": 30873,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30874,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30875,
+      "en": "[Valuable] Locket with picture of a woman inside.",
+      "fr": "[Valeur] Médaillon contenant le portrait d'une femme."
+    },
+    {
+      "id": 30877,
+      "en": "@i43@:1-10 @i44@:2-5 @i45@:(+30) @i46@:15(+50) CR:(+50) @i28@:10 MC:80",
+      "fr": "@i43@:1-10 @i44@:2-5 @i45@:(+30) @i46@:15(+50) Critique:(+50) @i28@:10 Complexité magique:80"
+    },
+    {
+      "id": 30880,
+      "en": "Helps traveling in the Void.",
+      "fr": "Facilite les déplacements dans le Néant."
+    },
+    {
+      "id": 30881,
+      "en": "[Quest] This stone is covered in ancient dwarven runes.",
+      "fr": "[Quête] Cette pierre porte d'anciennes runes naines."
+    },
+    {
+      "id": 30894,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30895,
+      "en": "@i50@:2 @i51@:5 @s5@:-1 [Quest]",
+      "fr": "@i50@:2 @i51@:5 @s5@:-1 [Quête]"
+    },
+    {
+      "id": 30896,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30897,
+      "en": "@i51@:5 @i43@:+3 [Quest]",
+      "fr": "@i51@:5 @i43@:+3 [Quête]"
+    },
+    {
+      "id": 30898,
+      "en": "@i51@:5 [Quest]",
+      "fr": "@i51@:5 [Quête]"
+    },
+    {
+      "id": 30899,
+      "en": "@i43@:1-4 @i44@:1-2 @i28@ (free/occupied off hand):3/3 [Quest]",
+      "fr": "@i43@:1-4 @i44@:1-2 @i28@ (main libre/occupée):3/3 [Quête]"
+    },
+    {
+      "id": 30900,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30901,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30913,
+      "en": "@i43@:10-25(10) @i45@:10(21) CR:(30) @i8@:(20) @i28@ (free/occupied off hand):5/7(+5) @i44@:1-4 MC:40",
+      "fr": "@i43@:10-25(10) @i45@:10(21) Critique:(30) @i8@:(20) @i28@ (main libre/occupée):5/7(+5) @i44@:1-4 Complexité magique:40"
+    },
+    {
+      "id": 30916,
+      "en": "[Quest] Dwarven family heirlom is just a toy.",
+      "fr": "[Quête] Cet héritage familial nain est un simple jouet."
+    },
+    {
+      "id": 30918,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30924,
+      "en": "@i43@:35-50 @i44@:10-20 @i45@:+20 @i28@ (free/occupied off hand):14/18 [Quest]",
+      "fr": "@i43@:35-50 @i44@:10-20 @i45@:+20 @i28@ (main libre/occupée):14/18 [Quête]"
+    },
+    {
+      "id": 30934,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30936,
+      "en": "@i50@:(+10) @i52@:(+20) MC:20",
+      "fr": "@i50@:(+10) @i52@:(+20) Complexité magique:20"
+    },
+    {
+      "id": 30957,
+      "en": "[Quest] Yuck.",
+      "fr": "[Quête] Répugnant."
+    },
+    {
+      "id": 30963,
+      "en": "[Quest] Important to someone who lost too much.",
+      "fr": "[Quête] Précieux pour quelqu'un qui a déjà trop perdu."
+    },
+    {
+      "id": 30964,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 30967,
+      "en": "@s0@:(+1) @s2@:(+1) @s12@:(+50%)",
+      "fr": "@s0@:(+1) @s2@:(+1) @s12@:(+50%)"
+    },
+    {
+      "id": 31061,
+      "en": "[Quest] There is something odd about these skulls.",
+      "fr": "[Quête] Ces crânes ont quelque chose d'étrange."
+    },
+    {
+      "id": 31070,
+      "en": "Found on the crashsite on the name Preston Radiffe.",
+      "fr": "Trouvé sur le lieu de l'accident, au nom de @d30105@."
+    },
+    {
+      "id": 31071,
+      "en": "[Quest] Legendary undead pirate hoarded this gold.",
+      "fr": "[Quête] Or amassé par un légendaire pirate mort-vivant."
+    },
+    {
+      "id": 31099,
+      "en": "@i43@:1-10(+1-10 vs Animals) @i44@:2-5 @i45@:+10 @i46@:15 @i28@:8 MC:15",
+      "fr": "@i43@:1-10(+1-10 contre les animaux) @i44@:2-5 @i45@:+10 @i46@:15 @i28@:8 Complexité magique:15"
+    },
+    {
+      "id": 31134,
+      "en": "@s7@:(+3) @s3@:(+3) @k11@:(+3/20) @k9@:(+3/20) MC:60",
+      "fr": "@s7@:(+3) @s3@:(+3) @k11@:(+3/20) @k9@:(+3/20) Complexité magique:60"
+    },
+    {
+      "id": 31135,
+      "en": "@i50@:7 @i51@:20 (@i52@:-100%, OtherRes:+20%) DOT:@i44@,@i47@ @i53@:2 @i54@:-20 @i56@:-90 MC:50 cannot be resisted",
+      "fr": "@i50@:7 @i51@:20 (@i52@:-100%, Autres résistances:+20%) Dégâts périodiques:@i44@,@i47@ @i53@:2 @i54@:-20 @i56@:-90 Complexité magique:50 aucune résistance possible"
+    },
+    {
+      "id": 31136,
+      "en": "[Quest] Daring quest design...",
+      "fr": "[Quête] Une quête pour le moins audacieuse..."
+    },
+    {
+      "id": 31137,
+      "en": "Invisibility on use for 80 sec.",
+      "fr": "Rend invisible pendant 80 s à l'utilisation."
+    },
+    {
+      "id": 31144,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 31153,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 31156,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 31161,
+      "en": "@i43@:2-6 @i44@:1-3 @i28@ (free/occupied off hand):3/3 [Quest]",
+      "fr": "@i43@:2-6 @i44@:1-3 @i28@ (main libre/occupée):3/3 [Quête]"
+    },
+    {
+      "id": 31166,
+      "en": "Spawns a mighty halfling for aid if you won ancient game.",
+      "fr": "Invoque un puissant halfelin allié si vous avez gagné au jeu ancien."
+    },
+    {
+      "id": 31174,
+      "en": "@i50@:45 @i51@:50 @i52@:30 @i53@:30 MA:-Res @i56@:-20 TC:30",
+      "fr": "@i50@:45 @i51@:50 @i52@:30 @i53@:30 Résistances réduites selon l’aptitude magique @i56@:-20 Complexité technologique:30"
+    },
+    {
+      "id": 31175,
+      "en": "@i43@:15-35 @i44@:1-8 @i48@:1-5 @i45@:+5 @i28@ (free/occupied off hand):8/10 TC:80",
+      "fr": "@i43@:15-35 @i44@:1-8 @i48@:1-5 @i45@:+5 @i28@ (main libre/occupée):8/10 Complexité technologique:80"
+    },
+    {
+      "id": 31178,
+      "en": "@i50@:5(+6) @i51@:7(+12) @i53@:(+50) @i55@:(+10) MC:80",
+      "fr": "@i50@:5(+6) @i51@:7(+12) @i53@:(+50) @i55@:(+10) Complexité magique:80"
+    },
+    {
+      "id": 31185,
+      "en": "@i43@:1-7 @i44@:1-10 @i45@:+10 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-7 @i44@:1-10 @i45@:+10 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 31186,
+      "en": "@i65@:(+10) @p35@ MC:20",
+      "fr": "@i65@:(+10) @p35@ Complexité magique:20"
+    },
+    {
+      "id": 31187,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:(+15) @i46@:(+1) CR:(+10) @i28@ (free/occupied off hand):3/3 MC:20",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:(+15) @i46@:(+1) Critique:(+10) @i28@ (main libre/occupée):3/3 Complexité magique:20"
+    },
+    {
+      "id": 31188,
+      "en": "@i43@:3-12 @i44@:3-9 @i45@:+15 @i46@:20 @i28@ (free/occupied off hand):5/7 TC:40",
+      "fr": "@i43@:3-12 @i44@:3-9 @i45@:+15 @i46@:20 @i28@ (main libre/occupée):5/7 Complexité technologique:40"
+    },
+    {
+      "id": 31189,
+      "en": "@i43@:1-8 @i53@:1-4 @i45@:+15 @i28@ (free/occupied off hand):5/7",
+      "fr": "@i43@:1-8 @i53@:1-4 @i45@:+15 @i28@ (main libre/occupée):5/7"
+    },
+    {
+      "id": 31190,
+      "en": "@i50@:2 @i51@:15 @s5@:-1",
+      "fr": "@i50@:2 @i51@:15 @s5@:-1"
+    },
+    {
+      "id": 31191,
+      "en": "@i50@:5(+6) @i51@:7(+12) @i53@:(+38) @i55@:(+10) MC:80",
+      "fr": "@i50@:5(+6) @i51@:7(+12) @i53@:(+38) @i55@:(+10) Complexité magique:80"
+    },
+    {
+      "id": 31192,
+      "en": "@i43@:1-10 @i44@:2-5 @i45@:(+15) CR:(+10) @i8@:(+2)@p14@ @i28@:10 MC:45",
+      "fr": "@i43@:1-10 @i44@:2-5 @i45@:(+15) Critique:(+10) @i8@:(+2)@p14@ @i28@:10 Complexité magique:45"
+    },
+    {
+      "id": 31193,
+      "en": "@i43@:1-10 @i44@:1-5 @i45@:CR:(+10) @p22@ @i28@ (free/occupied off hand):5/7 MC:20",
+      "fr": "@i43@:1-10 @i44@:1-5 @i45@:Critique:(+10) @p22@ @i28@ (main libre/occupée):5/7 Complexité magique:20"
+    },
+    {
+      "id": 31194,
+      "en": "@i65@:+10  MC:40",
+      "fr": "@i65@:+10  Complexité magique:40"
+    },
+    {
+      "id": 31195,
+      "en": "@i43@:2-10 @i44@:1-5 @i45@:+10 @i46@:20 @i28@:9 TC:35",
+      "fr": "@i43@:2-10 @i44@:1-5 @i45@:+10 @i46@:20 @i28@:9 Complexité technologique:35"
+    },
+    {
+      "id": 31196,
+      "en": "@i43@:1-4 @i44@:2-9 @i45@:(+10) @i46@(+1) @p9@ @i28@:5 MC:40",
+      "fr": "@i43@:1-4 @i44@:2-9 @i45@:(+10) @i46@(+1) @p9@ @i28@:5 Complexité magique:40"
+    },
+    {
+      "id": 31197,
+      "en": "@i43@:1-8 @i44@:1-2 @i45@:+10 @i46@:20 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-8 @i44@:1-2 @i45@:+10 @i46@:20 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 31198,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:(+10) @p33@ @i28@ (free/occupied off hand):3/3 MC:25",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:(+10) @p33@ @i28@ (main libre/occupée):3/3 Complexité magique:25"
+    },
+    {
+      "id": 31199,
+      "en": "@i43@:1-10 @i44@:2-5 @i45@:(+20) CR:(+15) @i46@:15 @i28@:10 MC:20",
+      "fr": "@i43@:1-10 @i44@:2-5 @i45@:(+20) Critique:(+15) @i46@:15 @i28@:10 Complexité magique:20"
+    },
+    {
+      "id": 31200,
+      "en": "@i50@:2 @i51@:1 @i53@:(+30) @i56@:+10 @i1@:+20 MC:20",
+      "fr": "@i50@:2 @i51@:1 @i53@:(+30) @i56@:+10 @i1@:+20 Complexité magique:20"
+    },
+    {
+      "id": 31201,
+      "en": "@i50@:5(+6) @i51@:7(+12) @i53@:3(+20) @i55@:(+10) @i56@:(+20) MC:80",
+      "fr": "@i50@:5(+6) @i51@:7(+12) @i53@:3(+20) @i55@:(+10) @i56@:(+20) Complexité magique:80"
+    },
+    {
+      "id": 31202,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:(+15) @i8@:(+2) @i28@ (free/occupied off hand):3/3 MC:10",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:(+15) @i8@:(+2) @i28@ (main libre/occupée):3/3 Complexité magique:10"
+    },
+    {
+      "id": 31203,
+      "en": "@i43@:3-14 @i44@:2-10 @i45@:+15 @i28@ (free/occupied off hand):7/9 [Chop]",
+      "fr": "@i43@:3-14 @i44@:2-10 @i45@:+15 @i28@ (main libre/occupée):7/9 [Coupe le bois sans usure]"
+    },
+    {
+      "id": 31204,
+      "en": "@i50@:2 @i51@:1 @i53@:10 @i55@:10 TC:10",
+      "fr": "@i50@:2 @i51@:1 @i53@:10 @i55@:10 Complexité technologique:10"
+    },
+    {
+      "id": 31205,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:+15 @i28@ (free/occupied off hand):2/2",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:+15 @i28@ (main libre/occupée):2/2"
+    },
+    {
+      "id": 31206,
+      "en": "@i50@:30 @i51@:10 TC:10",
+      "fr": "@i50@:30 @i51@:10 Complexité technologique:10"
+    },
+    {
+      "id": 31207,
+      "en": "@i43@:1-7 @i44@:1-10 @i45@:+20 @i28@ (free/occupied off hand):7/9 TC:10",
+      "fr": "@i43@:1-7 @i44@:1-10 @i45@:+20 @i28@ (main libre/occupée):7/9 Complexité technologique:10"
+    },
+    {
+      "id": 31208,
+      "en": "@i43@:1-4 @i44@:2-9 @i45@:10 @i46@:2 @p9@ @i28@:5 MC:30",
+      "fr": "@i43@:1-4 @i44@:2-9 @i45@:10 @i46@:2 @p9@ @i28@:5 Complexité magique:30"
+    },
+    {
+      "id": 31209,
+      "en": "@i50@:2 @i51@:10 @i56@:+10 @s5@:-1",
+      "fr": "@i50@:2 @i51@:10 @i56@:+10 @s5@:-1"
+    },
+    {
+      "id": 31210,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@(+20) CR:(+10) @i28@ (free/occupied off hand):3/3",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@(+20) Critique:(+10) @i28@ (main libre/occupée):3/3"
+    },
+    {
+      "id": 31211,
+      "en": "@i43@:1-8 @i44@:1-3 @i45@:+10 @i46@:10 @p62@, @p64@ MC:75",
+      "fr": "@i43@:1-8 @i44@:1-3 @i45@:+10 @i46@:10 @p62@, @p64@ Complexité magique:75"
+    },
+    {
+      "id": 31212,
+      "en": "@i50@:30(+10) @i51@:10 @p33@ MC:40",
+      "fr": "@i50@:30(+10) @i51@:10 @p33@ Complexité magique:40"
+    },
+    {
+      "id": 40000,
+      "en": "@s5@ <8 +1 else -1 [Quest]",
+      "fr": "@s5@ : +1 si inférieure à 8, sinon -1. [Quête]"
+    },
+    {
+      "id": 40001,
+      "en": "@i43@:1-8 @i44@:1-4 @i45@:(+5) @i8@:(+2) @i28@ (free/occupied off hand):2/4",
+      "fr": "@i43@:1-8 @i44@:1-4 @i45@:(+5) @i8@:(+2) @i28@ (main libre/occupée):2/4"
+    },
+    {
+      "id": 40002,
+      "en": "@i43@:2-9 @i44@:2-5 @i45@:+3 @i28@ (free/occupied off hand):5/7",
+      "fr": "@i43@:2-9 @i44@:2-5 @i45@:+3 @i28@ (main libre/occupée):5/7"
+    },
+    {
+      "id": 40003,
+      "en": "@i43@:1-12 @i44@:1-9 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-12 @i44@:1-9 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 40004,
+      "en": "@i43@:2-9 @i44@:2-5 @i45@:+3 @i28@ (free/occupied off hand):5/7",
+      "fr": "@i43@:2-9 @i44@:2-5 @i45@:+3 @i28@ (main libre/occupée):5/7"
+    },
+    {
+      "id": 40005,
+      "en": "@i43@:1-7 @i44@:1-10 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-7 @i44@:1-10 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 40006,
+      "en": "@i43@:1-5 @i44@:1-2 @i45@:-10 @i46@:8 @i28@ (free/occupied off hand):5/7 TC:20",
+      "fr": "@i43@:1-5 @i44@:1-2 @i45@:-10 @i46@:8 @i28@ (main libre/occupée):5/7 Complexité technologique:20"
+    },
+    {
+      "id": 40007,
+      "en": "@i43@:1-10(+1-10 vs Animals) @i44@:2-5 @i46@:15 @i28@:8 MC:15",
+      "fr": "@i43@:1-10(+1-10 contre les animaux) @i44@:2-5 @i46@:15 @i28@:8 Complexité magique:15"
+    },
+    {
+      "id": 40010,
+      "en": "@i43@:2-10 @i44@:1-10 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:2-10 @i44@:1-10 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 40011,
+      "en": "@i43@:10-15 @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:10-15 @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 40012,
+      "en": "@i43@:1-20 @i28@ (free/occupied off hand):8/10",
+      "fr": "@i43@:1-20 @i28@ (main libre/occupée):8/10"
+    },
+    {
+      "id": 40013,
+      "en": "@i43@:5-35 @i44@:1-10 @i46@:12 @i28@ (free/occupied off hand):5/7 TC:85 [Crafting]",
+      "fr": "@i43@:5-35 @i44@:1-10 @i46@:12 @i28@ (main libre/occupée):5/7 Complexité technologique:85 [Fabrication]"
+    },
+    {
+      "id": 40014,
+      "en": "@i43@:1-8(+4) @i44@:1-4 @p53@ @i28@ (free/occupied off hand):6/8 MC:40",
+      "fr": "@i43@:1-8(+4) @i44@:1-4 @p53@ @i28@ (main libre/occupée):6/8 Complexité magique:40"
+    },
+    {
+      "id": 40015,
+      "en": "@i43@:10-30 @i44@:1-15 @i45@:20 @i46@:25 @i28@:8 TC:70 [Crafting]",
+      "fr": "@i43@:10-30 @i44@:1-15 @i45@:20 @i46@:25 @i28@:8 Complexité technologique:70 [Fabrication]"
+    },
+    {
+      "id": 40016,
+      "en": "@i43@:1-4 @i44@:1-2 Mana:10 @i28@ (free/occupied off hand):2/2 MC:10",
+      "fr": "@i43@:1-4 @i44@:1-2 Mana:10 @i28@ (main libre/occupée):2/2 Complexité magique:10"
+    },
+    {
+      "id": 40018,
+      "en": "@i43@:1-10(+20) @i44@:1-3 @i46@:20 CR:(+50) @i28@ (free/occupied off hand):6/8",
+      "fr": "@i43@:1-10(+20) @i44@:1-3 @i46@:20 Critique:(+50) @i28@ (main libre/occupée):6/8"
+    },
+    {
+      "id": 40019,
+      "en": "@i43@:1-4 @i44@:1-2 @i28@ (free/occupied off hand):3/3 [Quest]",
+      "fr": "@i43@:1-4 @i44@:1-2 @i28@ (main libre/occupée):3/3 [Quête]"
+    },
+    {
+      "id": 40020,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:+10 @i28@ (free/occupied off hand):2/2",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:+10 @i28@ (main libre/occupée):2/2"
+    },
+    {
+      "id": 40021,
+      "en": "@i43@:1-4 @i44@:1-2 @i45@:+15 @i28@ (free/occupied off hand):2/2",
+      "fr": "@i43@:1-4 @i44@:1-2 @i45@:+15 @i28@ (main libre/occupée):2/2"
+    },
+    {
+      "id": 40022,
+      "en": "Its magnetic inversion bubble protects for @i51@:20 TC:50",
+      "fr": "Sa bulle d'inversion magnétique protège : @i51@:20 Complexité technologique:50"
+    },
+    {
+      "id": 40023,
+      "en": "@i50@:4 @i51@:17 @i53@:5 @i56@:-10",
+      "fr": "@i50@:4 @i51@:17 @i53@:5 @i56@:-10"
+    },
+    {
+      "id": 40024,
+      "en": "@i50@:4 @i51@:17 @i53@:5 @i56@:-10",
+      "fr": "@i50@:4 @i51@:17 @i53@:5 @i56@:-10"
+    },
+    {
+      "id": 40025,
+      "en": "@i50@:16 @i51@:23 @i54@:(+10) @i56@:-40(+10) MC:10",
+      "fr": "@i50@:16 @i51@:23 @i54@:(+10) @i56@:-40(+10) Complexité magique:10"
+    },
+    {
+      "id": 40026,
+      "en": "@i53@:(+10) @i54@:(+10) @i52@:(+10) @i55@:(+10) @p44@ MC:50",
+      "fr": "@i53@:(+10) @i54@:(+10) @i52@:(+10) @i55@:(+10) @p44@ Complexité magique:50"
+    },
+    {
+      "id": 40027,
+      "en": "[Quest] Essence formed from corpse of a Volar's Wisp.",
+      "fr": "[Quête] Essence issue du cadavre d'un feu follet de Volar."
+    },
+    {
+      "id": 40028,
+      "en": "[Junk] Thieves must have grabbed whatever lied around.",
+      "fr": "[Rebut] Les voleurs ont dû ramasser tout ce qui traînait."
+    },
+    {
+      "id": 40029,
+      "en": "[Junk] Thieves must have grabbed whatever lied around.",
+      "fr": "[Rebut] Les voleurs ont dû ramasser tout ce qui traînait."
+    },
+    {
+      "id": 40030,
+      "en": "[Quest] Looks like a replica of elven statues.",
+      "fr": "[Quête] Ressemble à une réplique de statues elfiques."
+    },
+    {
+      "id": 40031,
+      "en": "[Quest] You see a distorted reflection of your face.",
+      "fr": "[Quête] Vous y voyez le reflet déformé de votre visage."
+    },
+    {
+      "id": 40032,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40033,
+      "en": "[Crafting: @t4@] Does it still work?",
+      "fr": "[Fabrication: @t4@] Fonctionne-t-il encore ?"
+    },
+    {
+      "id": 40034,
+      "en": "[Quest] Small trap to catch the giant.",
+      "fr": "[Quête] Petit piège pour capturer le géant."
+    },
+    {
+      "id": 40035,
+      "en": "[Quest][Valuable] Goldbars are heavier than coins.",
+      "fr": "[Quête][Valeur] Les lingots sont plus lourds que les pièces."
+    },
+    {
+      "id": 40036,
+      "en": "[Quest] Essence formed from corpse of a Volar's Wisp.",
+      "fr": "[Quête] Essence issue du cadavre d'un feu follet de Volar."
+    },
+    {
+      "id": 40037,
+      "en": "[Crafting: @t4@] Does it still work?",
+      "fr": "[Fabrication: @t4@] Fonctionne-t-il encore ?"
+    },
+    {
+      "id": 40038,
+      "en": "[Quest] Essence formed from corpse of a Volar's Wisp.",
+      "fr": "[Quête] Essence issue du cadavre d'un feu follet de Volar."
+    },
+    {
+      "id": 40039,
+      "en": "[Quest] Essence formed from corpse of a Volar's Wisp.",
+      "fr": "[Quête] Essence issue du cadavre d'un feu follet de Volar."
+    },
+    {
+      "id": 40040,
+      "en": "[Quest] Essence formed from corpse of a Volar's Wisp.",
+      "fr": "[Quête] Essence issue du cadavre d'un feu follet de Volar."
+    },
+    {
+      "id": 40041,
+      "en": "[Quest] This part will undo all the damage.",
+      "fr": "[Quête] Cette pièce permettra de réparer les dégâts."
+    },
+    {
+      "id": 40042,
+      "en": "[Quest] Perfect for Halcyon's new altar.",
+      "fr": "[Quête] Parfait pour le nouvel autel d'Halcyon."
+    },
+    {
+      "id": 40043,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40044,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40045,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40046,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40047,
+      "en": "[Quest] That's the heaviest rock.",
+      "fr": "[Quête] Une pierre d'un poids exceptionnel."
+    },
+    {
+      "id": 40048,
+      "en": "[Quest] Lady with too much money found a hobby.",
+      "fr": "[Quête] Le passe-temps d'une dame fortunée."
+    },
+    {
+      "id": 40049,
+      "en": "[Quest] Matthew Jameson's lost ring.",
+      "fr": "[Quête] Anneau perdu de Matthew Jameson."
+    },
+    {
+      "id": 40050,
+      "en": "@i50@:20 @i51@:30 @i53@:10 @i54@:-20 @i56@:-80 TC:60 [Quest]",
+      "fr": "@i50@:20 @i51@:30 @i53@:10 @i54@:-20 @i56@:-80 Complexité technologique:60 [Quête]"
+    },
+    {
+      "id": 40051,
+      "en": "[Quest] Note from Maximillian.",
+      "fr": "[Quête] Note de Maximilien."
+    },
+    {
+      "id": 40052,
+      "en": "[Quest] Newspaper editorial on Arland-Tarant difficulties",
+      "fr": "[Quête] Éditorial sur les tensions entre Arlande et Tarant."
+    },
+    {
+      "id": 40053,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40054,
+      "en": "[Quest] @s5@:-1",
+      "fr": "[Quête] @s5@:-1"
+    },
+    {
+      "id": 40055,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40056,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40057,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    },
+    {
+      "id": 40058,
+      "en": "[Quest]",
+      "fr": "[Quête]"
+    }
+  ],
+  "variants": [
+    {
+      "guid": "G_0046A4B8_0F35_11D4_8F1D_00E02920220C",
+      "description": 4015,
+      "effect": 40042
+    },
+    {
+      "guid": "G_00696D0B_3B08_4608_9C45_4E659C656F54",
+      "description": 30075,
+      "effect": 30075
+    },
+    {
+      "guid": "G_00A4184F_5FF4_11D4_8F1D_00A0CC6511C6",
+      "description": 30367,
+      "effect": 30367
+    },
+    {
+      "guid": "G_03A962EA_BFC6_4B50_802A_2AC8E0A75D1C",
+      "description": 30488,
+      "effect": 30488
+    },
+    {
+      "guid": "G_06712DBB_4E09_4175_81F2_E1947E0A4E4F",
+      "description": 30570,
+      "effect": 30570
+    },
+    {
+      "guid": "G_06A8DD04_1323_11D4_8F1D_00E02920220C",
+      "description": 30285,
+      "effect": 30285
+    },
+    {
+      "guid": "G_0809AD4D_A7E7_47CA_8B31_9F8AD667686B",
+      "description": 30874,
+      "effect": 30874
+    },
+    {
+      "guid": "G_08EC7BF7_5628_4FD2_B28F_4C51E7015061",
+      "description": 30913,
+      "effect": 30913
+    },
+    {
+      "guid": "G_0A36FC0D_6CE9_40AC_8BAF_51C3D49BBD25",
+      "description": 31207,
+      "effect": 31207
+    },
+    {
+      "guid": "G_0AD6FFE8_6B4B_4665_8291_DA44C463D49F",
+      "description": 30877,
+      "effect": 30877
+    },
+    {
+      "guid": "G_0DFC52BB_ED73_4BB4_8907_EDBF48013A50",
+      "description": 31191,
+      "effect": 31191
+    },
+    {
+      "guid": "G_0EF0CCBC_BE37_4083_838C_BAAF44A4C22F",
+      "description": 30957,
+      "effect": 30957
+    },
+    {
+      "guid": "G_1004053C_371D_4562_B0C0_679F4F869BC2",
+      "description": 30630,
+      "effect": 30630
+    },
+    {
+      "guid": "G_115BD4A1_2C96_4D2F_BC75_65C44F259E9A",
+      "description": 31137,
+      "effect": 31137
+    },
+    {
+      "guid": "G_11EE15DB_F600_4B11_A33F_1E77C9AAE4C5",
+      "description": 31144,
+      "effect": 31144
+    },
+    {
+      "guid": "G_12716212_CB0D_4C8C_A320_85897180C15C",
+      "description": 30576,
+      "effect": 30576
+    },
+    {
+      "guid": "G_13014870_2CDE_11D4_8F1D_00E02920220C",
+      "description": 30199,
+      "effect": 30199
+    },
+    {
+      "guid": "G_13014880_2CDE_11D4_8F1D_00E02920220C",
+      "description": 30200,
+      "effect": 30200
+    },
+    {
+      "guid": "G_130863F4_E425_4D3E_A32F_CEC8E3148BFB",
+      "description": 30016,
+      "effect": 30016
+    },
+    {
+      "guid": "G_14297418_D0A4_4A98_91DD_E927C3F8268F",
+      "description": 8184,
+      "effect": 40000
+    },
+    {
+      "guid": "G_146500FC_286B_41D5_99B3_CF2442C76740",
+      "description": 26000,
+      "effect": 40057
+    },
+    {
+      "guid": "G_14D83A8F_D434_4110_91AE_FA8E4EA38BC0",
+      "description": 31201,
+      "effect": 31201
+    },
+    {
+      "guid": "G_14EDD2FF_222D_4D61_A240_7F51AC663C91",
+      "description": 30648,
+      "effect": 30648
+    },
+    {
+      "guid": "G_165EE492_5FF9_11D4_8F1D_00A0CC6511C6",
+      "description": 30369,
+      "effect": 30369
+    },
+    {
+      "guid": "G_165EE493_5FF9_11D4_8F1D_00A0CC6511C6",
+      "description": 30370,
+      "effect": 30370
+    },
+    {
+      "guid": "G_165EE49C_5FF9_11D4_8F1D_00A0CC6511C6",
+      "description": 30374,
+      "effect": 30374
+    },
+    {
+      "guid": "G_165EE49F_5FF9_11D4_8F1D_00A0CC6511C6",
+      "description": 30375,
+      "effect": 30375
+    },
+    {
+      "guid": "G_165EE4A1_5FF9_11D4_8F1D_00A0CC6511C6",
+      "description": 15121,
+      "effect": 40058
+    },
+    {
+      "guid": "G_1D067544_9071_46DA_B310_6ECC6CCB76B4",
+      "description": 15211,
+      "effect": 40027
+    },
+    {
+      "guid": "G_1D9C3D0C_C30A_46AB_856D_99D5C915FB57",
+      "description": 6118,
+      "effect": 40013
+    },
+    {
+      "guid": "G_1FF40106_D2E0_4589_9136_3CBCE422DC45",
+      "description": 31187,
+      "effect": 31187
+    },
+    {
+      "guid": "G_2147FFDA_1F6D_4AB2_93B6_BFE84A60969D",
+      "description": 30774,
+      "effect": 30774
+    },
+    {
+      "guid": "G_23FE542D_0AF0_4388_8B83_3B7CBCC7826F",
+      "description": 31186,
+      "effect": 31186
+    },
+    {
+      "guid": "G_248DF0F6_AB2B_497C_A25B_3981863E7F78",
+      "description": 30022,
+      "effect": 30022
+    },
+    {
+      "guid": "G_266EDE92_7791_4388_A039_17B4DA5A56C3",
+      "description": 30900,
+      "effect": 30900
+    },
+    {
+      "guid": "G_2A39FE3A_5830_4169_B06F_629A43510B9B",
+      "description": 30875,
+      "effect": 30875
+    },
+    {
+      "guid": "G_2C09C179_9C5E_47BD_BD23_A8812B6F5FB0",
+      "description": 8207,
+      "effect": 40054
+    },
+    {
+      "guid": "G_2C31DD20_E514_4D73_BF8F_69470BC292F9",
+      "description": 30673,
+      "effect": 30673
+    },
+    {
+      "guid": "G_2E7571FB_4128_4A86_A770_88019EA24111",
+      "description": 30574,
+      "effect": 30574
+    },
+    {
+      "guid": "G_30958AFF_8610_4D59_AC54_53885DB5C36F",
+      "description": 30934,
+      "effect": 30934
+    },
+    {
+      "guid": "G_30D8275C_B830_11D4_ABF4_00010246CD90",
+      "description": 6170,
+      "effect": 40018
+    },
+    {
+      "guid": "G_30E6557F_7210_4AAE_AFFE_D9686D653F82",
+      "description": 30577,
+      "effect": 30577
+    },
+    {
+      "guid": "G_319B5D9B_BB41_4815_8849_D40829219872",
+      "description": 31153,
+      "effect": 31153
+    },
+    {
+      "guid": "G_3282A167_181A_4C9E_A713_E180770C6F5A",
+      "description": 30881,
+      "effect": 30881
+    },
+    {
+      "guid": "G_34D244E5_5786_469B_9376_30DA28AC0A82",
+      "description": 30569,
+      "effect": 30569
+    },
+    {
+      "guid": "G_34EF1E5C_AC6D_4599_9F5B_86E23667DF9F",
+      "description": 6065,
+      "effect": 40014
+    },
+    {
+      "guid": "G_3537E23C_C81F_4F68_8FBE_5AF8147CCDE8",
+      "description": 30513,
+      "effect": 30513
+    },
+    {
+      "guid": "G_35D15974_07AC_46F7_851E_67FBDA9DE2FA",
+      "description": 30964,
+      "effect": 30964
+    },
+    {
+      "guid": "G_37CE6D7B_A2B9_4930_AFB6_DF7CDED7083C",
+      "description": 31156,
+      "effect": 31156
+    },
+    {
+      "guid": "G_380E5D4D_589F_41B5_A00F_F2988EF7EEDB",
+      "description": 30853,
+      "effect": 40019
+    },
+    {
+      "guid": "G_390A6A3E_703C_4B5F_8E75_C549710DBA7E",
+      "description": 30365,
+      "effect": 30365
+    },
+    {
+      "guid": "G_3988EC98_7A23_4E36_8F06_0672372941E4",
+      "description": 30901,
+      "effect": 30901
+    },
+    {
+      "guid": "G_3B9981C7_B756_4B72_B446_093C9F9B4134",
+      "description": 30668,
+      "effect": 40005
+    },
+    {
+      "guid": "G_3DE88D4C_17CC_4B1C_8DA1_A798DE089C06",
+      "description": 30864,
+      "effect": 30864
+    },
+    {
+      "guid": "G_3E773201_E2F8_40B2_A5E8_740C74D7F2EE",
+      "description": 30472,
+      "effect": 30472
+    },
+    {
+      "guid": "G_4055EDBF_CC51_45D8_B29A_745659B8FB0D",
+      "description": 30898,
+      "effect": 30898
+    },
+    {
+      "guid": "G_40C5BC7B_0D92_4F18_A7EF_65D238F2E581",
+      "description": 30579,
+      "effect": 30579
+    },
+    {
+      "guid": "G_4143B115_18B1_4439_BC75_90B93589B047",
+      "description": 6105,
+      "effect": 40015
+    },
+    {
+      "guid": "G_421BCDF9_218A_4C21_A593_D98EF2CB5E4C",
+      "description": 30578,
+      "effect": 30578
+    },
+    {
+      "guid": "G_434D84C2_5779_11D4_8F1D_00A0CC6511C6",
+      "description": 30030,
+      "effect": 30030
+    },
+    {
+      "guid": "G_44C83EA5_1DF4_4276_A31C_B0FD356E8431",
+      "description": 8157,
+      "effect": 40025
+    },
+    {
+      "guid": "G_4779576A_092C_432D_8FB2_BEC9D8048102",
+      "description": 30581,
+      "effect": 30581
+    },
+    {
+      "guid": "G_4937C2F2_2A38_445B_9D45_1F23BB265087",
+      "description": 30783,
+      "effect": 30783
+    },
+    {
+      "guid": "G_4A6B5BF9_4409_49B6_99CC_9035D6DF9E58",
+      "description": 31061,
+      "effect": 31061
+    },
+    {
+      "guid": "G_4A96BFA0_1328_11D4_8F1D_00E02920220C",
+      "description": 4015,
+      "effect": 40048
+    },
+    {
+      "guid": "G_4D3C8BEE_3633_4AA1_8CDC_8B8E7E7FF5D9",
+      "description": 30469,
+      "effect": 30469
+    },
+    {
+      "guid": "G_4D57037E_8C9B_4DB3_8DD3_40C6A371F6A6",
+      "description": 15105,
+      "effect": 40028
+    },
+    {
+      "guid": "G_4F2B970C_22D7_40A8_B803_339469D4B8B6",
+      "description": 31210,
+      "effect": 31210
+    },
+    {
+      "guid": "G_50B71C75_51F4_46F8_9F62_EE5D5A9B9B91",
+      "description": 30785,
+      "effect": 30785
+    },
+    {
+      "guid": "G_50E313A4_1E21_11D4_8F1D_00E02920220C",
+      "description": 14063,
+      "effect": 40051
+    },
+    {
+      "guid": "G_517D0575_15CA_4843_B553_F891058CB3FD",
+      "description": 15106,
+      "effect": 40029
+    },
+    {
+      "guid": "G_51BC25D3_93DD_42FE_BCEB_7A04771A5852",
+      "description": 4015,
+      "effect": 40043
+    },
+    {
+      "guid": "G_53614572_54A5_4B2E_9FB0_E4CF1675F35F",
+      "description": 14064,
+      "effect": 40052
+    },
+    {
+      "guid": "G_5549361B_3613_4FD7_AB46_EF5C9058B6D4",
+      "description": 31178,
+      "effect": 31178
+    },
+    {
+      "guid": "G_56A2FA8D_B531_4C63_A767_DFA529C0CFC4",
+      "description": 30963,
+      "effect": 30963
+    },
+    {
+      "guid": "G_57AF9360_E0FD_4324_AC45_FF65E1B52457",
+      "description": 30461,
+      "effect": 30461
+    },
+    {
+      "guid": "G_580F5503_1366_40AE_BAB4_64160DF844DC",
+      "description": 31071,
+      "effect": 31071
+    },
+    {
+      "guid": "G_5A01438F_B8D8_4055_AEE1_9CDAAE9EDADB",
+      "description": 15098,
+      "effect": 40030
+    },
+    {
+      "guid": "G_5A69E143_1EDF_4835_BED0_B935D1ED455A",
+      "description": 15127,
+      "effect": 40031
+    },
+    {
+      "guid": "G_5F4C01B1_FACE_11D3_8F1D_00E02920220C",
+      "description": 30116,
+      "effect": 30116
+    },
+    {
+      "guid": "G_5F4C01B2_FACE_11D3_8F1D_00E02920220C",
+      "description": 15065,
+      "effect": 40041
+    },
+    {
+      "guid": "G_632EBE18_A177_4259_ACC9_079DF5F427A6",
+      "description": 15099,
+      "effect": 40056
+    },
+    {
+      "guid": "G_638FF4EE_5F2E_11D4_8F1D_00A0CC6511C6",
+      "description": 30365,
+      "effect": 30365
+    },
+    {
+      "guid": "G_643163C3_FD5C_4B85_A601_D232D8FC9DE9",
+      "description": 31202,
+      "effect": 31202
+    },
+    {
+      "guid": "G_65B7D271_4601_4146_85FA_68761E089202",
+      "description": 30262,
+      "effect": 30262
+    },
+    {
+      "guid": "G_691401C9_E989_4F8A_986D_25DE3E228600",
+      "description": 30899,
+      "effect": 30899
+    },
+    {
+      "guid": "G_692A4400_D834_4D36_87E7_52E2DD01D0C1",
+      "description": 31189,
+      "effect": 31189
+    },
+    {
+      "guid": "G_6B6F22E4_21D4_4B59_9E8B_42B8401F19AE",
+      "description": 30924,
+      "effect": 30924
+    },
+    {
+      "guid": "G_6C9DDB4D_905C_407E_B227_CD08CAAB258E",
+      "description": 30262,
+      "effect": 30262
+    },
+    {
+      "guid": "G_6DAA3A6C_3B8D_49C5_898E_3B9B0B102E47",
+      "description": 4015,
+      "effect": 40044
+    },
+    {
+      "guid": "G_6DEA98A2_CF1E_43BA_B9D7_324AD0947A34",
+      "description": 15096,
+      "effect": 40032
+    },
+    {
+      "guid": "G_6E164B3D_15EB_4A91_AF0F_A0EF86063F86",
+      "description": 31211,
+      "effect": 31211
+    },
+    {
+      "guid": "G_6FCCB405_587F_4C76_BF5B_F1C12E5C76E6",
+      "description": 30720,
+      "effect": 30720
+    },
+    {
+      "guid": "G_70FA9AA1_BFA0_4642_B1FA_89511C6B64D1",
+      "description": 14062,
+      "effect": 40053
+    },
+    {
+      "guid": "G_72D05AE0_153E_11D4_8F1D_00E02920220C",
+      "description": 8054,
+      "effect": 40049
+    },
+    {
+      "guid": "G_72D05AE1_153E_11D4_8F1D_00E02920220C",
+      "description": 31070,
+      "effect": 31070
+    },
+    {
+      "guid": "G_736CB29D_F37F_4924_83BC_4F81D06F9C87",
+      "description": 30918,
+      "effect": 30918
+    },
+    {
+      "guid": "G_77735134_42C4_4985_937A_E4E6067167DE",
+      "description": 30262,
+      "effect": 30262
+    },
+    {
+      "guid": "G_77DF4104_12FE_11D4_8F1D_00E02920220C",
+      "description": 6042,
+      "effect": 40001
+    },
+    {
+      "guid": "G_77DF4105_12FE_11D4_8F1D_00E02920220C",
+      "description": 6033,
+      "effect": 40002
+    },
+    {
+      "guid": "G_77DF4106_12FE_11D4_8F1D_00E02920220C",
+      "description": 6031,
+      "effect": 40003
+    },
+    {
+      "guid": "G_7A5C2124_03DC_47EF_87E6_92FA58C5429B",
+      "description": 30582,
+      "effect": 30582
+    },
+    {
+      "guid": "G_7CF2ECA9_35B2_4CB6_A9BC_43D3B521FA04",
+      "description": 6080,
+      "effect": 40006
+    },
+    {
+      "guid": "G_7F3B953D_B1DC_4F2C_BFDE_1C966C26810C",
+      "description": 31203,
+      "effect": 31203
+    },
+    {
+      "guid": "G_7F7D4FF6_0455_4040_9DC1_D7D4C74F008B",
+      "description": 30500,
+      "effect": 30500
+    },
+    {
+      "guid": "G_8060EED3_9886_4923_94CB_9F43DBDD1125",
+      "description": 31195,
+      "effect": 31195
+    },
+    {
+      "guid": "G_8314843E_041A_4AEA_88FA_8EC2CD80221E",
+      "description": 31192,
+      "effect": 31192
+    },
+    {
+      "guid": "G_85D72555_B5C6_4E8A_9C24_7F169E2FC9F3",
+      "description": 15093,
+      "effect": 40033
+    },
+    {
+      "guid": "G_85EF4638_DEF7_4D30_AC88_CAC5E328D9B2",
+      "description": 15067,
+      "effect": 40034
+    },
+    {
+      "guid": "G_87ACE252_3B1A_4268_8C2E_5247C9571D11",
+      "description": 31161,
+      "effect": 31161
+    },
+    {
+      "guid": "G_8831298D_863C_4CC6_8908_53638446CE0F",
+      "description": 31190,
+      "effect": 31190
+    },
+    {
+      "guid": "G_89CFD462_E88C_4CB7_90B3_23CCF20A3B12",
+      "description": 30265,
+      "effect": 30265
+    },
+    {
+      "guid": "G_8BC45C88_130B_4044_B025_B80F274542DC",
+      "description": 30784,
+      "effect": 30784
+    },
+    {
+      "guid": "G_8BD9A19E_5D17_4060_B089_62E4383208F6",
+      "description": 30580,
+      "effect": 30580
+    },
+    {
+      "guid": "G_8C2D68ED_617C_4A7A_BF7D_F6F8E8EC1D43",
+      "description": 30897,
+      "effect": 30897
+    },
+    {
+      "guid": "G_8D602917_B2DB_4A2D_9D61_0A7760008D2C",
+      "description": 31193,
+      "effect": 31193
+    },
+    {
+      "guid": "G_8F360D90_662E_11D4_8F1D_00A0CC6511C6",
+      "description": 30371,
+      "effect": 30371
+    },
+    {
+      "guid": "G_8F81152B_5697_4B00_9859_AD5D15FE792C",
+      "description": 30679,
+      "effect": 30679
+    },
+    {
+      "guid": "G_9259BD77_E7CF_4FE2_BE1E_F11C87329BDC",
+      "description": 30575,
+      "effect": 30575
+    },
+    {
+      "guid": "G_92D51834_B62D_47DB_A59E_7C7DED80B57B",
+      "description": 4015,
+      "effect": 40045
+    },
+    {
+      "guid": "G_93007CC6_A864_4650_B141_D88C8A65336F",
+      "description": 15099,
+      "effect": 40035
+    },
+    {
+      "guid": "G_93563E80_521B_42D5_8CB8_0934A6570CEF",
+      "description": 6099,
+      "effect": 40007
+    },
+    {
+      "guid": "G_95D77DF6_1BC8_48E3_828C_9D624D38BC5A",
+      "description": 30894,
+      "effect": 30894
+    },
+    {
+      "guid": "G_97FA33C5_0093_452D_9D87_0EDF9474E288",
+      "description": 30936,
+      "effect": 30936
+    },
+    {
+      "guid": "G_9823577E_723D_4320_863C_F3D7E18BC673",
+      "description": 30572,
+      "effect": 30572
+    },
+    {
+      "guid": "G_98653ABF_4455_4A62_91AA_5DD33D95CC9B",
+      "description": 31199,
+      "effect": 31199
+    },
+    {
+      "guid": "G_989965FD_F9ED_4DB3_B90C_E3C1B3FCF80C",
+      "description": 31188,
+      "effect": 31188
+    },
+    {
+      "guid": "G_991FAB4F_F658_4659_B8AD_D6566628EDC0",
+      "description": 31099,
+      "effect": 31099
+    },
+    {
+      "guid": "G_99609A59_A4FD_436E_9E2D_098881D44391",
+      "description": 8055,
+      "effect": 40055
+    },
+    {
+      "guid": "G_9973A72F_4CCB_4442_852D_D63A9F35BD31",
+      "description": 30072,
+      "effect": 30072
+    },
+    {
+      "guid": "G_99E57864_B081_411F_B3FC_69AC40AB078F",
+      "description": 8187,
+      "effect": 40022
+    },
+    {
+      "guid": "G_9A6FE46A_D396_41A8_8C1D_C50B80D1A156",
+      "description": 6074,
+      "effect": 40010
+    },
+    {
+      "guid": "G_9A8EDD7A_0A81_11D4_8F1D_00E02920220C",
+      "description": 6030,
+      "effect": 40011
+    },
+    {
+      "guid": "G_9A8EDD7B_0A81_11D4_8F1D_00E02920220C",
+      "description": 6031,
+      "effect": 40012
+    },
+    {
+      "guid": "G_9FEB41E8_283D_425A_AA22_22E09EAD0F43",
+      "description": 15211,
+      "effect": 40036
+    },
+    {
+      "guid": "G_A4CE79E3_F40C_4ADF_98DB_6932E65914C7",
+      "description": 30873,
+      "effect": 30873
+    },
+    {
+      "guid": "G_A5C5132A_B0C1_4E1E_B6FA_C82B7195C80C",
+      "description": 30265,
+      "effect": 30265
+    },
+    {
+      "guid": "G_A60820C2_1155_46D8_9BB5_4462933F5AE2",
+      "description": 8093,
+      "effect": 40050
+    },
+    {
+      "guid": "G_A6F5BB70_B085_40F1_A7C8_F1771134411B",
+      "description": 8273,
+      "effect": 40026
+    },
+    {
+      "guid": "G_A74BDF89_EE04_4FBE_B11A_D438A8D1443B",
+      "description": 30776,
+      "effect": 30776
+    },
+    {
+      "guid": "G_A9B0F7E5_CFCE_4EE2_B2C4_8404470C1D32",
+      "description": 30568,
+      "effect": 30568
+    },
+    {
+      "guid": "G_ABA0DFB9_408E_4108_B7C7_594CBFC3482A",
+      "description": 31194,
+      "effect": 31194
+    },
+    {
+      "guid": "G_AF260BC2_6283_4D0E_BA35_57E4FD39F286",
+      "description": 31136,
+      "effect": 31136
+    },
+    {
+      "guid": "G_AF946F16_899E_44BB_A839_4D3B46B5FFB1",
+      "description": 30021,
+      "effect": 30021
+    },
+    {
+      "guid": "G_B0F89D26_7E8B_4D04_90D9_FD4BE8D3C0FB",
+      "description": 4015,
+      "effect": 40046
+    },
+    {
+      "guid": "G_B549B887_5B51_4DEA_94DD_E693F263FF66",
+      "description": 15093,
+      "effect": 40037
+    },
+    {
+      "guid": "G_B58DBDC2_070D_453D_A9E3_FA0705BD7F65",
+      "description": 31166,
+      "effect": 31166
+    },
+    {
+      "guid": "G_B5B1ADC7_57F3_4ADD_9402_4359F14E29C9",
+      "description": 31197,
+      "effect": 31197
+    },
+    {
+      "guid": "G_B652FAE9_18C3_4C54_A128_57C90DDD7390",
+      "description": 30088,
+      "effect": 30088
+    },
+    {
+      "guid": "G_B8A2C236_7A12_4366_BACA_5595A930E8BF",
+      "description": 30460,
+      "effect": 30460
+    },
+    {
+      "guid": "G_BBF83990_F4CB_4F2F_905C_DF7AB34A06B7",
+      "description": 31200,
+      "effect": 31200
+    },
+    {
+      "guid": "G_BF9F3E32_0BC0_4ADC_89BD_CFF226CC88F1",
+      "description": 30916,
+      "effect": 30916
+    },
+    {
+      "guid": "G_BFAC9A80_E0FF_4221_84CF_BFD6F7CAAB51",
+      "description": 8055,
+      "effect": 40055
+    },
+    {
+      "guid": "G_C3347DB1_57A7_4F63_95AF_61457B8B613E",
+      "description": 31185,
+      "effect": 31185
+    },
+    {
+      "guid": "G_C40F1CB7_78BF_4C8A_A476_8B0F3050FCF8",
+      "description": 30567,
+      "effect": 30567
+    },
+    {
+      "guid": "G_C43B6007_DB5D_4327_8276_51EE692C2B2F",
+      "description": 6033,
+      "effect": 40004
+    },
+    {
+      "guid": "G_C496575B_F742_413A_80BA_F437777CCC62",
+      "description": 31210,
+      "effect": 40020
+    },
+    {
+      "guid": "G_C6238D05_DD29_473F_8EEE_53291239FEBF",
+      "description": 31212,
+      "effect": 31212
+    },
+    {
+      "guid": "G_C83053B7_908A_4B38_809D_2F331779864D",
+      "description": 30786,
+      "effect": 30786
+    },
+    {
+      "guid": "G_C97258F3_E2D3_48EC_8859_00FC09A7C8F4",
+      "description": 30782,
+      "effect": 30782
+    },
+    {
+      "guid": "G_C9B947EF_56CB_41BF_B8E7_A0BF1A6EACF3",
+      "description": 15211,
+      "effect": 40038
+    },
+    {
+      "guid": "G_CB3AB844_342F_4E63_8F06_0228E1C0F016",
+      "description": 15211,
+      "effect": 40039
+    },
+    {
+      "guid": "G_CBCECF86_A7E3_4780_BB48_651D4ADD8765",
+      "description": 30573,
+      "effect": 30573
+    },
+    {
+      "guid": "G_CC6ABA4F_6000_11D4_8F1D_00A0CC6511C6",
+      "description": 30379,
+      "effect": 30379
+    },
+    {
+      "guid": "G_CD27472C_7F86_4D7B_867A_7A28AA878842",
+      "description": 30784,
+      "effect": 30784
+    },
+    {
+      "guid": "G_CD94438F_F437_49F1_9200_66CBAC092696",
+      "description": 31210,
+      "effect": 40021
+    },
+    {
+      "guid": "G_CE0F6A2D_D50E_4ECC_B7EF_85D58CC7862D",
+      "description": 31175,
+      "effect": 31175
+    },
+    {
+      "guid": "G_CE814B98_7129_4502_A60D_05A36FCD41D6",
+      "description": 6054,
+      "effect": 40016
+    },
+    {
+      "guid": "G_CEC7CB12_E6F0_4CBA_A15A_03C72AE47FFB",
+      "description": 30777,
+      "effect": 30777
+    },
+    {
+      "guid": "G_CFD5ED68_1703_48EA_9DE0_72B0D07CF444",
+      "description": 30089,
+      "effect": 30089
+    },
+    {
+      "guid": "G_D0B60982_2424_11D4_8F1D_00E02920220C",
+      "description": 30190,
+      "effect": 30190
+    },
+    {
+      "guid": "G_D0EB8149_0047_4C72_96AF_34CAA4ADE049",
+      "description": 30571,
+      "effect": 30571
+    },
+    {
+      "guid": "G_D3327F6F_5F3E_11D4_8F1D_00A0CC6511C6",
+      "description": 30366,
+      "effect": 30366
+    },
+    {
+      "guid": "G_D4679914_4702_4C65_A095_1801DF565B8B",
+      "description": 30896,
+      "effect": 30896
+    },
+    {
+      "guid": "G_D7881535_D169_4436_9C0B_F6FBE4163905",
+      "description": 31198,
+      "effect": 31198
+    },
+    {
+      "guid": "G_D8F6EF0A_1C60_45EE_B185_96C12A90F7E1",
+      "description": 26000,
+      "effect": 40057
+    },
+    {
+      "guid": "G_D98905F4_BAFA_4DC6_B59B_3BEF560370E7",
+      "description": 30853,
+      "effect": 30853
+    },
+    {
+      "guid": "G_DD05B193_CEDA_4E2F_A67D_4E4B4A65E881",
+      "description": 31196,
+      "effect": 31196
+    },
+    {
+      "guid": "G_DD836F5C_E78B_44B0_B586_C014EE5B4DBE",
+      "description": 31208,
+      "effect": 31208
+    },
+    {
+      "guid": "G_E505FDB3_0E4E_11D4_8F1D_00E02920220C",
+      "description": 30034,
+      "effect": 30034
+    },
+    {
+      "guid": "G_E5567186_D08A_4858_8F9D_37AC84ADE3B2",
+      "description": 31209,
+      "effect": 31209
+    },
+    {
+      "guid": "G_EC9E1306_5C76_4023_A7C1_D5EE3C6537D6",
+      "description": 30895,
+      "effect": 30895
+    },
+    {
+      "guid": "G_ECA7449D_0808_4132_BE7C_D2E19121C479",
+      "description": 30636,
+      "effect": 30636
+    },
+    {
+      "guid": "G_ECCB86BC_D82C_40F4_B510_0E303DACE77E",
+      "description": 31174,
+      "effect": 31174
+    },
+    {
+      "guid": "G_EDE24266_8FE4_4043_9188_6F4832665EBB",
+      "description": 4015,
+      "effect": 40047
+    },
+    {
+      "guid": "G_EF101DD6_41B0_4919_968B_F437FA8B8DA0",
+      "description": 30047,
+      "effect": 30047
+    },
+    {
+      "guid": "G_F0D6D5C4_AB7E_4AF9_8038_F0B645703516",
+      "description": 30262,
+      "effect": 30262
+    },
+    {
+      "guid": "G_F2A1043C_E56E_4476_AF8B_7FBC31004EAD",
+      "description": 31144,
+      "effect": 31144
+    },
+    {
+      "guid": "G_F2E52629_10AA_425D_A64C_9E878D903BCB",
+      "description": 31206,
+      "effect": 31206
+    },
+    {
+      "guid": "G_F41431D0_3ECB_404A_B434_3557DAB799F5",
+      "description": 31144,
+      "effect": 31144
+    },
+    {
+      "guid": "G_F41E768F_600F_11D4_9733_00A0D2188310",
+      "description": 30489,
+      "effect": 30489
+    },
+    {
+      "guid": "G_F77CEAB3_37C9_11D4_8F1D_00E02920220C",
+      "description": 8107,
+      "effect": 40023
+    },
+    {
+      "guid": "G_F77CEAB4_37C9_11D4_8F1D_00E02920220C",
+      "description": 8107,
+      "effect": 40024
+    },
+    {
+      "guid": "G_F8E732FE_7227_4286_8763_9420B20FBD29",
+      "description": 15211,
+      "effect": 40040
+    },
+    {
+      "guid": "G_FAC2D424_25D1_453C_AAB8_AE43ACD6511E",
+      "description": 30647,
+      "effect": 30647
+    },
+    {
+      "guid": "G_FB0C0A87_58C6_40AC_949F_01C8E4C7DAE1",
+      "description": 30522,
+      "effect": 30522
+    },
+    {
+      "guid": "G_FD2A47B5_5B82_4E71_B715_CBA3EC49AAB5",
+      "description": 31205,
+      "effect": 31205
+    },
+    {
+      "guid": "G_FD3227AC_C802_47C2_80F4_01B3F1C01E8F",
+      "description": 30880,
+      "effect": 30880
+    },
+    {
+      "guid": "G_FDD5EC8E_A70D_458F_A689_8F3766FB1B99",
+      "description": 30464,
+      "effect": 30464
+    },
+    {
+      "guid": "G_FE35A050_3BEE_4906_B0E6_F45AB98B522F",
+      "description": 31204,
+      "effect": 31204
+    },
+    {
+      "guid": "G_FEBB0696_2549_40F2_8DEB_B3EA9C72F741",
+      "description": 30014,
+      "effect": 30014
+    }
+  ]
+}

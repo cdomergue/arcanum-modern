@@ -91,6 +91,11 @@ optional patches, platform transfers and how the two interfaces interact.
   modes. The world adapts to the window's aspect ratio.
 - **Inventory tools:** search, categories, equipment comparison, item details,
   transfer shortcuts and editable quick slots with hover descriptions.
+- **Integrated AID item descriptions:** French and English descriptions, quest
+  and crafting tags, offerings, gifts, minimum strength and item effects in the
+  Arcanum campaign. Unique items are resolved directly, including in existing
+  saves; no map replacement or cache deletion is required. Magical properties
+  remain hidden until identification. Details scroll in the inventory panel.
 - **Companion grouping:** detach companions to position them independently, then
   regroup them from their portraits. They remain members of your party.
 - **Rotating autosaves:** keep the three latest automatic saves before and after
@@ -222,6 +227,9 @@ back its notes. Keep both when moving your installation.
 - The supplied macOS script targets Apple Silicon. Intel macOS, mobile platforms,
   multiplayer and engine patches other than the documented UAP options are not validated.
 - Do not apply the original High Resolution Patch to the modern executable.
+- AID descriptions target the original Arcanum campaign and UAP. Their reference
+  statistics may differ with mods that rebalance items; other campaigns keep
+  their installed descriptions. Quest tags remain after a quest is completed.
 - Some original interface paths remain as fallbacks. F9 switches presentation
   outside tactical combat.
 - Automated checks and successful packaging do not replace gameplay testing on
@@ -241,6 +249,12 @@ its [Sustainable Use License](https://github.com/alexbatalov/arcanum-ce/blob/a7f
 Packages include upstream and third-party license notices. Noto fonts use the
 [SIL Open Font License](game/modern-ui/FONT-LICENSE.txt). SDL, SDL_mixer, zlib,
 fpattern and stb retain their respective licenses.
+
+Native item descriptions adapt **Arcanum Improved Descriptions (AID)** by
+**SCARaw and contributors**, with a French translation for Renaissance, under
+the [MIT license](resources/aid/LICENSE.txt).
+See the [original mod](https://www.nexusmods.com/arcanumofsteamworksandmagickobscura/mods/13)
+and [its source repository](https://github.com/SCARaw/Arcanum-Item-Description-Project).
 
 The integrated BIK player uses a minimal shared-library build of
 [FFmpeg](https://ffmpeg.org/), under LGPL 2.1 or later. Packages include its exact

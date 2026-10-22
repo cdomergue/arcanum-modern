@@ -49,8 +49,9 @@ def package(exe, build_dir, output):
     files = {'arcanum-modern': binary,
              'Play Arcanum Renaissance.sh': (ROOT/'tools/linux/Play Arcanum Renaissance.sh').read_bytes(),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/linux/INSTALL.txt').read_bytes(),
-             'ArcanumModern/README.md': (ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode(),
-             'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
+             'ArcanumModern/README.md': (ROOT/'README.md').read_text().replace('(resources/aid/LICENSE.txt)', '(licenses/aid.txt)').replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode(),
+             'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes(),
+             'ArcanumModern/licenses/aid.txt': (ROOT/'resources/aid/LICENSE.txt').read_bytes()}
     movies = resources.movie_files(build_dir, 'linux')
     with tempfile.TemporaryDirectory(prefix='arcanum-elf-') as temporary:
         for name in resources.MOVIE_LIBRARIES['linux']:

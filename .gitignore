@@ -45,6 +45,8 @@
 !/source/src/ui/modern_inventory_transfer.inc
 !/source/src/ui/modern_name_input.inc
 !/source/src/ui/modern_encoding.h
+!/source/src/ui/modern_aid.inc
+!/source/src/ui/modern_aid_data.inc
 !/source/src/ui/modern_panels.inc
 !/source/src/ui/modern_map_cache.inc
 !/source/src/ui/modern_map_route.inc

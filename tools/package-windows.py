@@ -174,7 +174,8 @@ def package(exe, build_dir, output, include_game=None):
     files = {'arcanum-modern.exe': binary,
              'Play Arcanum Renaissance.bat': (ROOT/'tools/windows/Play Arcanum Renaissance.bat').read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'),
              'ArcanumModern/INSTALL.txt': (ROOT/'tools/windows/INSTALL.txt').read_bytes(),
-             'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes()}
+             'ArcanumModern/licenses/arcanum-ce.md': (ROOT/'source/LICENSE.md').read_bytes(),
+             'ArcanumModern/licenses/aid.txt': (ROOT/'resources/aid/LICENSE.txt').read_bytes()}
     files.update(movie_files(build_dir, 'windows'))
     files.update(uap_files('windows'))
     validate_pe_dependencies(files)
@@ -185,7 +186,7 @@ def package(exe, build_dir, output, include_game=None):
         files['ArcanumModern/INSTALL.txt'] = (ROOT/'tools/windows/INSTALL-FULL.txt').read_bytes()
     readme = ROOT/'README.md'
     if readme.exists():
-        files['ArcanumModern/README.md'] = readme.read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode()
+        files['ArcanumModern/README.md'] = readme.read_text().replace('(resources/aid/LICENSE.txt)', '(licenses/aid.txt)').replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/').encode()
     cache = (build_dir/'CMakeCache.txt').read_text()
     dependencies = [('SDL3', 'LICENSE.txt'), ('SDL3_mixer','LICENSE.txt'), ('fpattern','LICENSE'), ('zlib','LICENSE')]
     for name, license_file in dependencies:

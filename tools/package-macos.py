@@ -93,6 +93,7 @@ def package(app, build_dir, output):
         licenses = notices/'licenses'
         licenses.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT/'source/LICENSE.md', licenses/'arcanum-ce.md')
+        shutil.copyfile(ROOT/'resources/aid/LICENSE.txt', licenses/'aid.txt')
         cache = (build_dir/'CMakeCache.txt').read_text()
         for name, license_file in [('SDL3', 'LICENSE.txt'), ('SDL3_mixer', 'LICENSE.txt'),
                                    ('fpattern', 'LICENSE'), ('zlib', 'LICENSE')]:
@@ -108,7 +109,7 @@ def package(app, build_dir, output):
         stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
         (licenses/'stb.txt').write_text(stb[stb.rindex('/*\n---'):])
         shutil.copyfile(ROOT/'tools/macos/INSTALL.txt', notices/'INSTALL.txt')
-        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
+        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(resources/aid/LICENSE.txt)', '(licenses/aid.txt)').replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
         git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]
         manifest = {
             'target': 'macos-arm64', 'minimum_macos': '11.0', 'signature': 'ad-hoc',

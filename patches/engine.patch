@@ -4795,7 +4795,29 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7612,6 +7650,7 @@
+@@ -7131,6 +7169,21 @@
+         break;
+     }
+ 
++    /* Native AID keeps identification and quantity handling intact. The text
++     * resolver reads object identity without rewriting maps or saved objects. */
++    if (obj_type == OBJ_TYPE_AMMO
++        || (obj_type == OBJ_TYPE_GENERIC
++            && (obj_field_int32_get(item_obj, OBJ_F_GENERIC_FLAGS)
++                & (OGF_IS_LOCKPICK | OGF_IS_HEALING_ITEM)) != 0)) {
++        char aid[MAX_STRING];
++        if (modern_ui_item_description(item_obj, aid, sizeof(aid))) {
++            size_t used = strlen(buffer);
++            snprintf(buffer + used, sizeof(buffer) - used, "  %s", aid);
++        }
++    } else {
++        modern_ui_item_description(item_obj, buffer, sizeof(buffer));
++    }
++
+     if (buffer[0] != '\0' || !intgame_is_compact_interface()) {
+         intgame_message_window_write_text(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
+             buffer,
+@@ -7612,6 +7665,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -4803,7 +4825,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7679,7 @@
+@@ -7640,7 +7694,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -4812,7 +4834,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7823,7 @@
+@@ -7784,7 +7838,7 @@
          mes_file_entry.str,
          value);
  
@@ -4821,7 +4843,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8311,22 +8350,12 @@
+@@ -8311,22 +8365,12 @@
              switch (target_obj_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
@@ -4848,7 +4870,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  }
                  break;
              case OBJ_TYPE_WEAPON:
-@@ -8833,3 +8862,230 @@
+@@ -8833,3 +8877,230 @@
  
      follower_ui_show();
  }
