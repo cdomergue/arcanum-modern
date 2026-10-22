@@ -44,6 +44,16 @@ class SetupPayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'game data'):
             self.p.extract_payload(self.archive(full=True), self.work/'payload')
 
+    def test_includes_and_requires_aid_license(self):
+        license_name = 'ArcanumModern/licenses/aid.txt'
+        self.files[license_name] = (ROOT/'resources/aid/LICENSE.txt').read_bytes()
+        target = self.work/'payload'
+        self.p.extract_payload(self.archive(), target)
+        self.assertEqual((target/license_name).read_bytes(), self.files[license_name])
+        del self.files[license_name]
+        with self.assertRaisesRegex(ValueError, 'Missing required files: .*aid.txt'):
+            self.p.extract_payload(self.archive(), self.work/'missing-license')
+
     def test_includes_uap_helper_tools_and_notices(self):
         files = {'ArcanumModern/'+name for name in (
             'uap/uap-helper.exe', 'uap/7z.exe', 'uap/7z.dll',
