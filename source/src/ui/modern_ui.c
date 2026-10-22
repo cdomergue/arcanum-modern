@@ -4,6 +4,7 @@
  */
 #include "ui/modern_ui.h"
 #include "ui/modern_graphics.h"
+#include "ui/modern_version.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -2096,7 +2097,14 @@ static void render_overlay(SDL_Renderer* target)
     SDL_BlendMode old_blend;SDL_GetRenderDrawBlendMode(renderer,&old_blend);
     SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
     button_count=0;
-    if(menu) draw_menu();
+    if(menu) {
+        draw_menu();
+        if(mainmenu_ui_window_type_get()==MM_WINDOW_MAINMENU && !confirming_menu) {
+            const char* version="v" ARCANUM_RENAISSANCE_VERSION;
+            text_draw(0,version,canvas_w-text_measure(0,version)-16,
+                canvas_h-fonts[0].size-16,MUTED);
+        }
+    }
     else {
         draw_world_bubbles();
         if(!hud_region(mouse_x,mouse_y) && !(hud && !tactical_active() && hud_message_expanded()))draw_world_hover();
