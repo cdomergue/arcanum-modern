@@ -291,10 +291,21 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                  repo = repo->next;
                  while (repo != NULL) {
                      if ((repo->type & TIG_FILE_DATABASE) != 0
-@@ -1314,6 +1318,27 @@
-     return stream;
- }
+@@ -1256,6 +1260,8 @@
+         if ((repo->type & TIG_FILE_PLAIN) != 0) {
+             compat_join_path(old_path, sizeof(old_path), repo->path, old_file_name);
+             compat_join_path(new_path, sizeof(new_path), repo->path, new_file_name);
++            compat_resolve_path(old_path);
++            compat_resolve_path(new_path);
  
+             if (SDL_RenamePath(old_path, new_path)) {
+                 return 0;
+@@ -1312,6 +1318,27 @@
+     }
+ 
+     return stream;
++}
++
 +TigFile* tig_file_fopen_repository(const char* repository, const char* path)
 +{
 +    char native_repository[TIG_MAX_PATH], native_path[TIG_MAX_PATH];
@@ -314,12 +325,10 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
 +        return stream;
 +    }
 +    return NULL;
-+}
-+
+ }
+ 
  // 0x5303D0
- TigFile* tig_file_reopen_native(const char* path, const char* mode, TigFile* stream)
- {
-@@ -1602,7 +1627,7 @@
+@@ -1602,7 +1629,7 @@
          SDL_snprintf(path, sizeof(path), "%s\\%s", repo->path, filename);
      }
  
@@ -328,7 +337,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
      if (stream == NULL) {
          return false;
      }
-@@ -1737,7 +1762,7 @@
+@@ -1737,7 +1764,7 @@
      stream->flags &= ~(TIG_FILE_DATABASE | TIG_FILE_PLAIN);
  
      if (path[0] == '.' || path[0] == '\\' || path[1] == ':' || path[0] == '/') {
@@ -337,7 +346,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
          if (stream->impl.plain_file_stream == NULL) {
              return 0;
          }
-@@ -1759,7 +1784,7 @@
+@@ -1759,7 +1786,7 @@
                              compat_join_path(mutable_path, sizeof(mutable_path), writeable_repo->path, path);
                              compat_resolve_path(mutable_path);
  
@@ -346,7 +355,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                              if (stream->impl.plain_file_stream != NULL) {
                                  stream->flags |= TIG_FILE_PLAIN;
                                  database_entry->flags &= ~TIG_DATABASE_ENTRY_0x100;
-@@ -1789,7 +1814,7 @@
+@@ -1789,7 +1816,7 @@
                      compat_join_path(mutable_path, sizeof(mutable_path), repo->path, path);
                      compat_resolve_path(mutable_path);
  
@@ -355,7 +364,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                      if (stream->impl.plain_file_stream != NULL) {
                          stream->flags |= TIG_FILE_PLAIN;
                          break;
-@@ -1852,7 +1877,7 @@
+@@ -1852,7 +1879,7 @@
      FILE* stream;
      uint8_t file_owner[1024];
  
