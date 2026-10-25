@@ -19,6 +19,7 @@ prelude=r'''
 #include <ctype.h>
 #include <sys/stat.h>
 #define OID_STR_LEN 100
+enum {SDL_BUTTON_MIDDLE=2,SDL_BUTTON_X1=4,SDL_BUTTON_X2=5};
 typedef uint64_t Uint64;
 #define SDL_isalnum(c) isalnum((unsigned char)(c))
 static void SDL_strlcpy(char* dst,const char* src,size_t size){snprintf(dst,size,"%s",src);}
@@ -39,7 +40,7 @@ code+=notes[notes.index('typedef struct JournalMark'):notes.index('static void n
 code+=r'''
 int main(void){
     assert(mkdir("modern-ui",0700)==0);
-    key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && inventory_middle_sort);
+    key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_MIDDLE));
     assert(KB_COMBAT==15 && key_binding[KB_COMBAT]==(SDL_SCANCODE_SPACE|KEY_SHIFT));
     assert(!key_assign(KB_INVENTORY,SDL_SCANCODE_J));
     assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && *key_status);
@@ -49,12 +50,24 @@ int main(void){
     assert(!key_assign(KB_INVENTORY,SDL_SCANCODE_E|KEY_SHIFT));
     assert(!key_assign(KB_COMBAT,SDL_SCANCODE_E|(1<<20)));
     assert(key_assign(KB_UP,0)); /* An unbound camera direction must stay unbound. */
-    inventory_middle_sort=false;key_save();inventory_middle_sort=true;
-    memset(key_binding,0,sizeof(key_binding));key_load();assert(!inventory_middle_sort);
+    assert(KB_SORT==16);
+    assert(key_assign(KB_SORT,SDL_SCANCODE_B|KEY_SHIFT));
+    assert(!key_assign(KB_SORT,SDL_SCANCODE_J));
+    memset(key_binding,0,sizeof(key_binding));key_load();assert(key_binding[KB_SORT]==(SDL_SCANCODE_B|KEY_SHIFT));
+    assert(key_assign(KB_SORT,KEY_MOUSE|SDL_BUTTON_X1|KEY_SHIFT));
+    key_load();assert(key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_X1|KEY_SHIFT));
+    assert(!key_assign(KB_COMBAT,KEY_MOUSE|SDL_BUTTON_MIDDLE));
+    assert(!key_assign(KB_SORT,KEY_MOUSE|1));
+    assert(key_assign(KB_SORT,0));key_load();assert(!key_binding[KB_SORT]);
     assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_B && key_binding[KB_UP]==0);
     assert(key_binding[KB_END]==SDL_SCANCODE_E && key_binding[KB_COMBAT]==(SDL_SCANCODE_E|KEY_SHIFT));
     FILE* f=fopen("modern-ui/keys.ini","w");assert(f);fputs("0=13\n1=13\n",f);fclose(f);
-    key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && inventory_middle_sort); /* Reject ambiguous file. */
+    key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_MIDDLE)); /* Reject ambiguous file. */
+    f=fopen("modern-ui/keys.ini","w");assert(f);fputs("inventory_middle_sort=0\n",f);fclose(f);
+    key_load();assert(key_binding[KB_SORT]==0); /* Migrate an old disabled gesture to no binding. */
+    key_save();f=fopen("modern-ui/keys.ini","r");assert(f);char line[128];while(fgets(line,sizeof(line),f))assert(!strstr(line,"inventory_middle_sort"));fclose(f);
+    f=fopen("modern-ui/keys.ini","w");assert(f);fprintf(f,"16=%d\ninventory_middle_sort=0\n",KEY_MOUSE|SDL_BUTTON_MIDDLE);fclose(f);
+    key_load();assert(key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_MIDDLE));
     notebook_sync();assert(tracked_quest==-1 && !map_memo_count);
     tracked_quest=1024;journal_marks[journal_mark_count++]=(JournalMark){1,1024};
     map_memos[map_memo_count++]=(MapMemo){2,504,120,-53,"Entrée derrière l’église"};

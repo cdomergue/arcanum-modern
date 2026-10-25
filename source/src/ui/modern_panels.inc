@@ -17,9 +17,9 @@ static int64_t inventory_hover,inventory_detail_object;
 static int inventory_detail_kind,inventory_detail_scroll,inventory_detail_max;
 static ModernDetails inventory_details;
 static SDL_FRect inventory_detail_rect,inventory_rect;
-static bool inventory_middle_pressed;
-static int64_t inventory_middle_pc,inventory_middle_target;
-static int inventory_middle_mode;
+static bool inventory_sort_pressed;
+static int64_t inventory_sort_pc,inventory_sort_target;
+static int inventory_sort_mode,inventory_sort_button;
 static char inventory_query[128];
 static int inventory_filter,inventory_compare_scroll,inventory_compare_max;
 static bool inventory_searching,inventory_compare=true;
@@ -1050,7 +1050,7 @@ static void panels_tick(void)
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
         if(memo_edit>=0)memo_close();memo_placing=false;
         if(inventory_searching)inventory_search_focus(false);
-        inventory_quick_release=false;inventory_middle_pressed=false;
+        inventory_quick_release=false;inventory_sort_pressed=false;
         if(p==9)written_scroll=0;
         if(p==1){sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);}
         if(p!=5)selector=0;
@@ -1113,28 +1113,39 @@ static bool map_drag_event(int type,int button,PanelRegion* region)
     }
     return false;
 }
-/* Own the middle-button pair so it never becomes a legacy left release. */
-static bool inventory_middle_event(SDL_Event* event)
+/* Mouse bindings retain their release; keyboard bindings fire once on press. */
+static bool inventory_sort_event(SDL_Event* event)
 {
-    if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST)inventory_middle_pressed=false;
+    if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST)inventory_sort_pressed=false;
+    if((event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP)
+        && native_panel()==2 && !native_menu() && !slide_ui_is_active()
+        && !SDL_TextInputActive(window) && !(event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI))
+        && key_is(KB_SORT,event->key.scancode,event->key.mod)) {
+        ModernInventory inv;
+        if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat
+            && intgame_mode_get()!=INTGAME_MODE_QUANTITY && !inven_ui_drag_item_obj_get()
+            && !binding_pressed && !inventory_quick_release && modern_inventory_state(&inv))pending_action=731;
+        return true;
+    }
     if((event->type!=SDL_EVENT_MOUSE_BUTTON_DOWN && event->type!=SDL_EVENT_MOUSE_BUTTON_UP)
-        || event->button.button!=SDL_BUTTON_MIDDLE)return false;
-    bool pressed=inventory_middle_pressed;
-    inventory_middle_pressed=false;
+        || (event->button.button!=SDL_BUTTON_MIDDLE && event->button.button!=SDL_BUTTON_X1 && event->button.button!=SDL_BUTTON_X2))return false;
+    bool pressed=inventory_sort_pressed && inventory_sort_button==event->button.button;
+    inventory_sort_pressed=false;
     if(native_panel()!=2 || native_menu() || slide_ui_is_active())return pressed;
     ModernInventory inv;
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
-    bool ready=inventory_middle_sort && ww>0 && wh>0
+    bool ready=key_is(KB_SORT,KEY_MOUSE|event->button.button,SDL_GetModState())
+        && !(SDL_GetModState()&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) && ww>0 && wh>0
         && inside(inventory_rect,event->button.x*canvas_w/ww,event->button.y*canvas_h/wh)
         && intgame_mode_get()!=INTGAME_MODE_QUANTITY && !inven_ui_drag_item_obj_get()
         && !binding_pressed && !inventory_quick_release && modern_inventory_state(&inv);
     if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN) {
         if(ready) {
-            inventory_middle_pressed=true;inventory_middle_pc=inv.pc;
-            inventory_middle_target=inv.target;inventory_middle_mode=inv.mode;
+            inventory_sort_pressed=true;inventory_sort_button=event->button.button;inventory_sort_pc=inv.pc;
+            inventory_sort_target=inv.target;inventory_sort_mode=inv.mode;
         }
-    } else if(pressed && ready && inv.pc==inventory_middle_pc
-        && inv.target==inventory_middle_target && inv.mode==inventory_middle_mode) {
+    } else if(pressed && ready && inv.pc==inventory_sort_pc
+        && inv.target==inventory_sort_target && inv.mode==inventory_sort_mode) {
         pending_action=731; /* Same dispatch as the visible arrange button. */
     }
     return true;

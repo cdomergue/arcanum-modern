@@ -2267,10 +2267,11 @@ static bool handle_binding_event(SDL_Event* event)
     if((event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) || SDL_TextInputActive(window))return false;
     int key=event->key.scancode,mods=event->key.mod;
     for(int i=KB_UP;i<=KB_RIGHT;i++)if(key_is(i,key,mods))return modern_camera_enabled();
-    const int actions[]={2,0,1,3,6,5,8,9,951,950,1100,-1,-1,-1,-1,7};
+    const int actions[]={2,0,1,3,6,5,8,9,951,950,1100,-1,-1,-1,-1,7,-1};
     int binding=-1;
     for(int i=0;i<KB_COUNT;i++)if(key_is(i,key,mods)){binding=i;break;}
     if(binding<0 && key==SDL_SCANCODE_SPACE && !(mods&SDL_KMOD_SHIFT) && tactical_active())binding=KB_END;
+    if(binding==KB_SORT)return true; /* Active only inside the inventory. */
     if(binding>=0) {
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat && !native_panel() && intgame_mode_get()!=INTGAME_MODE_DIALOG) {
             tactical_pressed_actor=combat_input_actor();pending_action=actions[binding];
@@ -2287,7 +2288,8 @@ static bool handle_binding_event(SDL_Event* event)
 
 static bool handle_ui_event(SDL_Event* event)
 {
-    if(inventory_middle_event(event))return true;
+    if(key_options_event(event))return true;
+    if(inventory_sort_event(event))return true;
     if(slide_ui_is_active())return false;
     bool menu=native_menu();
     if(event->type==SDL_EVENT_WINDOW_MOUSE_LEAVE || event->type==SDL_EVENT_WINDOW_FOCUS_LOST)
@@ -2335,7 +2337,6 @@ static bool handle_ui_event(SDL_Event* event)
     }
     if(menu) {
         MainMenuWindowType type=mainmenu_ui_window_type_get();
-        if(type==MM_WINDOW_OPTIONS && key_options_event(event))return true;
         if(!confirming_menu && event->type==SDL_EVENT_TEXT_INPUT && name_focused) {
             menu_name_input(event->text.text,false);return true;
         }

@@ -1,20 +1,20 @@
 /* Physical bindings: labels follow the active SDL keyboard layout. */
 enum {KB_INVENTORY,KB_JOURNAL,KB_CHARACTER,KB_MAP,KB_SPELLS,KB_SKILLS,
     KB_SCHEMATICS,KB_REST,KB_STEALTH,KB_STEAL,KB_END,
-    KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COMBAT,KB_COUNT};
-enum {KEY_SHIFT=1<<16};
+    KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COMBAT,KB_SORT,KB_COUNT};
+enum {KEY_SHIFT=1<<16,KEY_MOUSE=1<<17};
 static int key_binding[KB_COUNT];
-static bool inventory_middle_sort=true;
 static const int key_defaults[]={SDL_SCANCODE_I,SDL_SCANCODE_J,SDL_SCANCODE_C,SDL_SCANCODE_G,
     SDL_SCANCODE_M,SDL_SCANCODE_K,SDL_SCANCODE_T,SDL_SCANCODE_R,SDL_SCANCODE_H,SDL_SCANCODE_P,
-    SDL_SCANCODE_E,SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D,SDL_SCANCODE_SPACE|KEY_SHIFT};
-static int key_edit=-1,key_page;
+    SDL_SCANCODE_E,SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D,SDL_SCANCODE_SPACE|KEY_SHIFT,KEY_MOUSE|SDL_BUTTON_MIDDLE};
+static int key_edit=-1,key_page,key_mouse_capture;
 static char key_status[256];
 static const char* tr(const char* fr,const char* en)
 {return modern_ui_translate(fr,en);}
 static const char* key_label(int i)
 {
     const int labels[]={1006,1004,1005,1007,1000,1001,1003,1009};
+    if(i==KB_SORT)return tr("Trier l’inventaire","Sort inventory");
     if(i==KB_COMBAT)return game_text(modern_intgame_text(1002));
     if(i<8)return game_text(modern_intgame_text(labels[i]));
     if(i==KB_STEALTH || i==KB_STEAL)return game_text(sub_57A700(i==KB_STEALTH?0:1));
@@ -34,7 +34,12 @@ static const char* key_name(int i)
 {
     static char names[KB_COUNT][96];
     if(!key_binding[i])return tr("Aucune","None");
-    const char* name=SDL_GetKeyName(SDL_GetKeyFromScancode(key_binding[i]&~KEY_SHIFT,SDL_KMOD_NONE,false));
+    const char* name;
+    if(key_binding[i]&KEY_MOUSE) {
+        int button=key_binding[i]&~(KEY_SHIFT|KEY_MOUSE);
+        name=button==SDL_BUTTON_MIDDLE?tr("Clic molette","Middle click"):
+            button==SDL_BUTTON_X1?tr("Souris 4","Mouse 4"):tr("Souris 5","Mouse 5");
+    } else name=SDL_GetKeyName(SDL_GetKeyFromScancode(key_binding[i]&~KEY_SHIFT,SDL_KMOD_NONE,false));
     snprintf(names[i],sizeof(names[i]),"%s%s",(key_binding[i]&KEY_SHIFT)?tr("Maj + ","Shift + "):"",name);
     return names[i];
 }
@@ -42,33 +47,36 @@ static void key_save(void)
 {
     FILE* f=fopen("modern-ui/keys.ini.tmp","w");if(!f)return;
     for(int i=0;i<KB_COUNT;i++)fprintf(f,"%d=%d\n",i,key_binding[i]);
-    fprintf(f,"inventory_middle_sort=%d\n",inventory_middle_sort?1:0);
     if(fclose(f)==0)SDL_RenamePath("modern-ui/keys.ini.tmp","modern-ui/keys.ini");
 }
 static bool key_allowed(int key)
 {
     key&=~KEY_SHIFT;
+    if(key&KEY_MOUSE)return key==(KEY_MOUSE|SDL_BUTTON_MIDDLE)
+        || key==(KEY_MOUSE|SDL_BUTTON_X1) || key==(KEY_MOUSE|SDL_BUTTON_X2);
     /* Numbers, modal controls and function keys belong to the engine. */
     return (key>=SDL_SCANCODE_A && key<=SDL_SCANCODE_Z) || key==SDL_SCANCODE_SPACE;
 }
 static void key_load(void)
 {
-    memcpy(key_binding,key_defaults,sizeof(key_binding));inventory_middle_sort=true;
+    memcpy(key_binding,key_defaults,sizeof(key_binding));
     FILE* f=fopen("modern-ui/keys.ini","r");if(!f)return;
-    int next[KB_COUNT];memcpy(next,key_defaults,sizeof(next));int i,k;
+    int next[KB_COUNT];memcpy(next,key_defaults,sizeof(next));int i,k;bool sort_loaded=false;int legacy_sort=1;
     char line[128];
     while(fgets(line,sizeof(line),f)) {
         if(sscanf(line,"inventory_middle_sort=%d",&k)==1) {
-            if(k==0 || k==1)inventory_middle_sort=k!=0;
-        } else if(sscanf(line,"%d=%d",&i,&k)==2 && i>=0 && i<KB_COUNT && (!k || key_allowed(k)))next[i]=k;
+            if(k==0 || k==1)legacy_sort=k;
+        } else if(sscanf(line,"%d=%d",&i,&k)==2 && i>=0 && i<KB_COUNT && (!k || key_allowed(k))
+            && (!(k&KEY_MOUSE) || i==KB_SORT)) {next[i]=k;if(i==KB_SORT)sort_loaded=true;}
     }
     fclose(f);
+    if(!sort_loaded && !legacy_sort)next[KB_SORT]=0;
     for(i=0;i<KB_COUNT;i++)for(int j=0;j<i;j++)if(next[i] && next[i]==next[j])return;
     memcpy(key_binding,next,sizeof(next));
 }
 static bool key_assign(int i,int key)
 {
-    if(i<0 || i>=KB_COUNT || (key && !key_allowed(key))) {
+    if(i<0 || i>=KB_COUNT || (key && !key_allowed(key)) || ((key&KEY_MOUSE) && i!=KB_SORT)) {
         SDL_strlcpy(key_status,tr("Touche réservée : utilisez une lettre ou Espace.","Reserved key: use a letter or Space."),sizeof(key_status));return false;
     }
     for(int j=0;j<KB_COUNT;j++)if(j!=i && key && key_binding[j]==key) {
@@ -78,7 +86,19 @@ static bool key_assign(int i,int key)
 }
 static bool key_options_event(SDL_Event* event)
 {
-    if(options_tab!=3 || key_edit<0)return false;
+    /* Retain the release even if assignment ends or the menu changes. */
+    if(event->type==SDL_EVENT_MOUSE_BUTTON_UP && event->button.button==key_mouse_capture) {
+        key_mouse_capture=0;return true;
+    }
+    if(!native_menu() || mainmenu_ui_window_type_get()!=MM_WINDOW_OPTIONS || options_tab!=3 || key_edit<0)return false;
+    if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN && key_edit==KB_SORT
+        && (event->button.button==SDL_BUTTON_MIDDLE || event->button.button==SDL_BUTTON_X1 || event->button.button==SDL_BUTTON_X2)) {
+        key_mouse_capture=event->button.button;
+        int mods=SDL_GetModState();
+        if(!(mods&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)))
+            key_assign(key_edit,key_chord(KEY_MOUSE|event->button.button,mods));
+        return true;
+    }
     if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
         if(event->key.scancode==SDL_SCANCODE_ESCAPE){key_edit=-1;key_status[0]=0;}
         else if(event->key.scancode==SDL_SCANCODE_BACKSPACE || event->key.scancode==SDL_SCANCODE_DELETE)key_assign(key_edit,0);
@@ -92,7 +112,7 @@ static void draw_key_options(float x,float y,float w,float h)
 {
     float ox=x+246,ow=w-280;
     text_draw(2,tr("Raccourcis","Key bindings"),ox,y+142,GOLD);
-    text_compact(tr("Lettre ou Espace, avec Maj si souhaité. Échap annule ; Retour arrière efface.","Letter or Space, optionally with Shift. Escape cancels; Backspace clears."),ox,y+182,ow,false,MUTED);
+    text_compact(tr("Lettre ou Espace ; molette ou Souris 4/5 pour le tri. Maj possible. Échap annule ; Retour arrière efface.","Letter or Space; middle click or Mouse 4/5 for sorting. Shift optional. Escape cancels; Backspace clears."),ox,y+182,ow,false,MUTED);
     for(int row=0;row<8;row++) {
         int i=key_page*8+row;if(i>=KB_COUNT)break;
         float yy=y+222+row*46;
@@ -105,24 +125,21 @@ static void draw_key_options(float x,float y,float w,float h)
     button((SDL_FRect){ox+115,y+638,160,34},422,"AZERTY",-1,false,true);
     button((SDL_FRect){ox+285,y+638,160,34},423,"QWERTY",-1,false,true);
     button((SDL_FRect){ox+455,y+638,ow-455,34},424,tr("Par défaut","Defaults"),-1,false,true);
-    text_compact(tr("Clic molette : trier l'inventaire","Middle click: sort inventory"),ox,y+696,ow-155,false,GOLD);
-    MesFileEntry entry={.num=inventory_middle_sort?1:0};
-    const char* value=inventory_middle_sort?"✓":"—";
-    if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
-    menu_button((SDL_FRect){ox+ow-130,y+685,130,38},425,value,true);
+    text_compact(key_label(KB_SORT),ox,y+696,ow-235,false,GOLD);
+    button((SDL_FRect){ox+ow-220,y+685,220,38},480+KB_SORT,key_edit==KB_SORT?"...":key_name(KB_SORT),-1,key_edit==KB_SORT,true);
     menu_button((SDL_FRect){x+40,y+h-82,180,54},405,menu_text(4003),true);
 }
 static bool key_options_action(int action)
 {
     if(action==418){options_tab=3;key_edit=-1;key_status[0]=0;return true;}
     if(options_tab!=3)return false;
-    if(action==425){inventory_middle_sort=!inventory_middle_sort;key_edit=-1;key_status[0]=0;key_save();return true;}
     if(action>=480 && action<480+KB_COUNT){key_edit=action-480;key_status[0]=0;return true;}
     if(action==419 || action==420){key_page=action-419;key_edit=-1;return true;}
     if(action>=422 && action<=424){
-        if(action==424)inventory_middle_sort=true;
+        int sort=key_binding[KB_SORT];
         memcpy(key_binding,key_defaults,sizeof(key_binding));
         if(action!=424){
+            key_binding[KB_SORT]=sort;
             const char* keys=action==422?"zqsd":"wasd";
             for(int j=0;j<4;j++)key_binding[KB_UP+j]=SDL_GetScancodeFromKey(keys[j],NULL);
         }
@@ -135,5 +152,5 @@ static int key_for_action(int action)
     switch(action){case 2:case 1104:return KB_INVENTORY;case 0:return KB_JOURNAL;
     case 1:case 1105:return KB_CHARACTER;case 3:return KB_MAP;case 6:return KB_SPELLS;
     case 7:return KB_COMBAT;case 5:return KB_SKILLS;case 8:return KB_SCHEMATICS;case 9:return KB_REST;
-    case 951:return KB_STEALTH;case 950:return KB_STEAL;case 1100:return KB_END;default:return -1;}
+    case 731:return KB_SORT;case 951:return KB_STEALTH;case 950:return KB_STEAL;case 1100:return KB_END;default:return -1;}
 }
