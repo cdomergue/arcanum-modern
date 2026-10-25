@@ -46,3 +46,11 @@ Reuse the installed game's MES entries and engine text accessors for labels,
 descriptions and feedback. Do not hardcode translated copies or track extracted
 game text. Keep encoding conversion at the presentation boundary and check long
 translations, accented names and scrollable descriptions.
+
+## Interface Integration
+
+When adding a command or preference, place it in the existing list or group for
+that type of control, alongside related commands. Follow the existing ordering,
+layout and interaction patterns instead of adding a separate special-purpose row.
+Before declaring UI work complete, inspect the full rendered screen, including
+pagination and footer controls, against the user's request.

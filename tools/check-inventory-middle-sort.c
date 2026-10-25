@@ -30,7 +30,7 @@ static void click(int id)
     for(int i=0;i<button_count;i++)if(buttons[i].action==id)target=&buttons[i];
     assert(target&&target->enabled);
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
-    SDL_Event event={0};event.type=SDL_EVENT_MOUSE_BUTTON_DOWN;
+    SDL_Event event;SDL_zero(event);event.type=SDL_EVENT_MOUSE_BUTTON_DOWN;
     event.button.button=SDL_BUTTON_LEFT;event.button.down=true;
     event.button.x=(target->rect.x+target->rect.w/2)*ww/canvas_w;
     event.button.y=(target->rect.y+target->rect.h/2)*wh/canvas_h;
@@ -65,7 +65,7 @@ int main(int argc,char** argv)
     assert(options_tab==3);action(424);
     assert(key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_MIDDLE));
     click(480+KB_SORT);assert(key_edit==KB_SORT);
-    SDL_Event key={.type=SDL_EVENT_KEY_DOWN};key.key.scancode=SDL_SCANCODE_B;
+    SDL_Event key;SDL_zero(key);key.type=SDL_EVENT_KEY_DOWN;key.key.scancode=SDL_SCANCODE_B;
     assert(handle_event(&key));assert(key_edit==-1&&key_binding[KB_SORT]==SDL_SCANCODE_B);
     SDL_Delay(180);key.key.repeat=true;assert(handle_event(&key));key.key.repeat=false;
     /* Release after leaving options must remain owned by the binding editor. */
@@ -81,7 +81,7 @@ int main(int argc,char** argv)
     click(480+KB_SORT);key.type=SDL_EVENT_KEY_DOWN;key.key.scancode=SDL_SCANCODE_BACKSPACE;
     assert(handle_event(&key)&&key_binding[KB_SORT]==0);key.type=SDL_EVENT_KEY_UP;assert(handle_event(&key));key_load();assert(key_binding[KB_SORT]==0);
     click(480+KB_SORT);
-    SDL_Event bind_mouse={.type=SDL_EVENT_MOUSE_BUTTON_DOWN};bind_mouse.button.button=SDL_BUTTON_X1;bind_mouse.button.down=true;
+    SDL_Event bind_mouse;SDL_zero(bind_mouse);bind_mouse.type=SDL_EVENT_MOUSE_BUTTON_DOWN;bind_mouse.button.button=SDL_BUTTON_X1;bind_mouse.button.down=true;
     assert(handle_event(&bind_mouse)&&key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_X1));
     SDL_Delay(180);mainmenu_ui_close(false);modern_ui_menu_tick();pending_action=-1;
     bind_mouse.type=SDL_EVENT_MOUSE_BUTTON_UP;bind_mouse.button.down=false;assert(handle_event(&bind_mouse)&&pending_action==-1);
@@ -100,7 +100,7 @@ int main(int argc,char** argv)
     assert(inven_ui_open(pc,OBJ_HANDLE_NULL,INVEN_UI_MODE_INVENTORY));panels_tick();
     button_count=panel_region_count=0;draw_inventory();assert(native_panel()==2);
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
-    SDL_Event middle={.type=SDL_EVENT_MOUSE_BUTTON_DOWN};middle.button.button=SDL_BUTTON_MIDDLE;middle.button.down=true;
+    SDL_Event middle;SDL_zero(middle);middle.type=SDL_EVENT_MOUSE_BUTTON_DOWN;middle.button.button=SDL_BUTTON_MIDDLE;middle.button.down=true;
     middle.button.x=(inventory_rect.x+500)*ww/canvas_w;middle.button.y=(inventory_rect.y+300)*wh/canvas_h;
     pending_action=-1;assert(handle_event(&middle));SDL_Delay(200);panels_tick();
     assert(pending_action==-1&&item_inventory_location_get(dagger)==80);

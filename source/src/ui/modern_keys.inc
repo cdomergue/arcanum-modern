@@ -7,6 +7,11 @@ static int key_binding[KB_COUNT];
 static const int key_defaults[]={SDL_SCANCODE_I,SDL_SCANCODE_J,SDL_SCANCODE_C,SDL_SCANCODE_G,
     SDL_SCANCODE_M,SDL_SCANCODE_K,SDL_SCANCODE_T,SDL_SCANCODE_R,SDL_SCANCODE_H,SDL_SCANCODE_P,
     SDL_SCANCODE_E,SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D,SDL_SCANCODE_SPACE|KEY_SHIFT,KEY_MOUSE|SDL_BUTTON_MIDDLE};
+/* Display order is independent of the persisted binding IDs. */
+enum {KEY_ROWS_PER_PAGE=9};
+static const int key_display_order[KB_COUNT]={KB_INVENTORY,KB_SORT,KB_JOURNAL,KB_CHARACTER,
+    KB_MAP,KB_SPELLS,KB_SKILLS,KB_SCHEMATICS,KB_REST,KB_STEALTH,KB_STEAL,KB_END,
+    KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COMBAT};
 static int key_edit=-1,key_page,key_mouse_capture;
 static char key_status[256];
 static const char* tr(const char* fr,const char* en)
@@ -113,20 +118,19 @@ static void draw_key_options(float x,float y,float w,float h)
     float ox=x+246,ow=w-280;
     text_draw(2,tr("Raccourcis","Key bindings"),ox,y+142,GOLD);
     text_compact(tr("Lettre ou Espace ; molette ou Souris 4/5 pour le tri. Maj possible. Échap annule ; Retour arrière efface.","Letter or Space; middle click or Mouse 4/5 for sorting. Shift optional. Escape cancels; Backspace clears."),ox,y+182,ow,false,MUTED);
-    for(int row=0;row<8;row++) {
-        int i=key_page*8+row;if(i>=KB_COUNT)break;
-        float yy=y+222+row*46;
+    for(int row=0;row<KEY_ROWS_PER_PAGE;row++) {
+        int index=key_page*KEY_ROWS_PER_PAGE+row;if(index>=KB_COUNT)break;
+        int i=key_display_order[index];
+        float yy=y+222+row*42;
         text_compact(key_label(i),ox,yy+8,ow-235,false,GOLD);
         button((SDL_FRect){ox+ow-220,yy,220,38},480+i,key_edit==i?"...":key_name(i),-1,key_edit==i,true);
     }
     text_compact(key_status,ox,y+601,ow,false,(SDL_Color){239,156,108,255});
     button((SDL_FRect){ox,y+638,46,34},419,"<",-1,false,key_page>0);
-    button((SDL_FRect){ox+52,y+638,46,34},420,">",-1,false,key_page==0);
+    button((SDL_FRect){ox+52,y+638,46,34},420,">",-1,false,(key_page+1)*KEY_ROWS_PER_PAGE<KB_COUNT);
     button((SDL_FRect){ox+115,y+638,160,34},422,"AZERTY",-1,false,true);
     button((SDL_FRect){ox+285,y+638,160,34},423,"QWERTY",-1,false,true);
     button((SDL_FRect){ox+455,y+638,ow-455,34},424,tr("Par défaut","Defaults"),-1,false,true);
-    text_compact(key_label(KB_SORT),ox,y+696,ow-235,false,GOLD);
-    button((SDL_FRect){ox+ow-220,y+685,220,38},480+KB_SORT,key_edit==KB_SORT?"...":key_name(KB_SORT),-1,key_edit==KB_SORT,true);
     menu_button((SDL_FRect){x+40,y+h-82,180,54},405,menu_text(4003),true);
 }
 static bool key_options_action(int action)
@@ -134,7 +138,11 @@ static bool key_options_action(int action)
     if(action==418){options_tab=3;key_edit=-1;key_status[0]=0;return true;}
     if(options_tab!=3)return false;
     if(action>=480 && action<480+KB_COUNT){key_edit=action-480;key_status[0]=0;return true;}
-    if(action==419 || action==420){key_page=action-419;key_edit=-1;return true;}
+    if(action==419 || action==420){
+        int next=key_page+(action==419?-1:1);
+        if(next>=0 && next*KEY_ROWS_PER_PAGE<KB_COUNT)key_page=next;
+        key_edit=-1;return true;
+    }
     if(action>=422 && action<=424){
         int sort=key_binding[KB_SORT];
         memcpy(key_binding,key_defaults,sizeof(key_binding));
