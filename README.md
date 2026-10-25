@@ -38,10 +38,10 @@ folder. **Play now** remains available.
   prompt to install **UAP 2.0.2 Base + Race Mod**. It downloads the patch,
   prepares French text and backs up saves before activation. Existing campaigns
   may be incompatible. See [installation and restoration](docs/uap-fr.md).
-- **English:** install **UAP 2.0.2** and choose its components before installing
-  Renaissance, then start a new game. Race Mod, Beta Content, additional
-  campaigns and optional data packs are supported.
-  See [supported options and installation](docs/uap.md).
+- **English:** eligible original installations receive the same optional offer
+  for **UAP 2.0.2 Base + Race Mod**, using the original English text. An existing
+  UAP installation is detected and kept. Manual installation remains available
+  for additional components. See [installation and restoration](docs/uap.md).
 
 ## Features
 
@@ -121,6 +121,11 @@ Paths are relative to the game folder.
 Autosaves run when the game permits saving; dialogue, menus and some transitions
 can defer or skip them. Notebook files are independent of saves: loading an
 older save does not restore older notes. Keep both when moving an installation.
+
+In **Options → Game**, **Companion auto-pickup** controls whether companions
+spontaneously collect items and search junk piles. It is enabled by default;
+turning it off preserves explicit pickup orders. This option applies in single
+player and is saved between sessions.
 
 ## Compatibility
 

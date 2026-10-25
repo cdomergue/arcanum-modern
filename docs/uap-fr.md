@@ -32,7 +32,7 @@ base while retaining the saved changes. UAP map edits for that sector do not
 apply. This does not resolve every possible quest or script incompatibility.
 
 Before activation, all existing saved games are copied into a separate ZIP under
-`save-backups/before-uap-fr-…/saves.zip`. The backup is verified against the
+`save-backups/before-uap-…/saves.zip`. The backup is verified against the
 original files and never replaces an older backup. If backup or verification
 fails, the UAP overlay is not activated. Each ZIP contains a checksum manifest
 and restoration instructions.
@@ -49,10 +49,10 @@ game.
 
 ## Scope
 
-The automatic offer requires matching French archive fingerprints. It is skipped
-for English installations, existing UAP installations and unrecognized data sets.
-The English UAP's optional campaigns and other components use the
-[manual UAP installation](uap.md). The French installer selects Base + Race Mod;
+The French offer requires matching original archive fingerprints. Existing UAP
+installations and unrecognized data sets are kept. English editions have their
+own [automatic preparation](uap.md), without the translation step. Optional
+campaigns and other components use manual UAP installation. The French installer selects Base + Race Mod;
 it does not install Beta Content or optional EnginePatcher switches.
 
 Renaissance runs its own engine. Installing UAP data does not execute or import

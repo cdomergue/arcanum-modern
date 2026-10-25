@@ -58,7 +58,7 @@ func verify(path string, want backupEntry) error {
 	}
 	return nil
 }
-func compatible(game string, c catalog) error {
+func compatibleLayout(game string, c catalog) error {
 	entries, err := os.ReadDir(game)
 	if err != nil {
 		return err
@@ -69,15 +69,6 @@ func compatible(game string, c catalog) error {
 			if _, ok := c.Original[n]; !ok {
 				return fmt.Errorf("additional game archive: %s", n)
 			}
-		}
-	}
-	for name, want := range c.Original {
-		p, e := findCase(game, name)
-		if e != nil {
-			return e
-		}
-		if e = verify(p, want); e != nil {
-			return e
 		}
 	}
 	modules, err := findCase(game, "modules")
@@ -106,6 +97,88 @@ func compatible(game string, c catalog) error {
 	}
 	return nil
 }
+func compatible(game string, c catalog) error {
+	if err := compatibleLayout(game, c); err != nil {
+		return err
+	}
+	for name, want := range c.Original {
+		p, e := findCase(game, name)
+		if e != nil {
+			return e
+		}
+		if e = verify(p, want); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+// English releases can package localized archives differently. Verify the
+// shared art archives, parse every required DAT and identify the installed
+// language from the game's own interface text. Additional mods are excluded.
+func compatibleEnglish(game string, c catalog) error {
+	if err := compatibleLayout(game, c); err != nil {
+		return err
+	}
+	for name, want := range c.Original {
+		p, err := findCase(game, name)
+		if err != nil {
+			return err
+		}
+		if name == "arcanum1.dat" || name == "arcanum2.dat" {
+			if err = verify(p, want); err != nil {
+				return err
+			}
+		}
+		a, err := openDAT(p)
+		if err != nil {
+			return err
+		}
+		if len(a.entries) == 0 {
+			return fmt.Errorf("empty game archive: %s", name)
+		}
+	}
+	repos, err := archiveSet(game)
+	if err != nil {
+		return err
+	}
+	raw, err := readResource(repos, "mes/intgame.mes")
+	if err != nil {
+		return err
+	}
+	// Loose text takes precedence in the engine too.
+	if p, e := findCase(game, "data/mes/intgame.mes"); e == nil {
+		raw, err = os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(e) {
+		return e
+	}
+	for _, row := range parseRecords(raw, 2) {
+		if row.ID == 0 && strings.TrimSpace(string(row.Fields[1])) == "Level" {
+			return nil
+		}
+	}
+	return fmt.Errorf("unrecognized English game text")
+}
+
+func detectEdition(game string, c catalog) (string, error) {
+	if err := compatible(game, c); err == nil {
+		return "fr", nil
+	}
+	if err := compatibleEnglish(game, c); err != nil {
+		return "", err
+	}
+	return "en", nil
+}
+
+func overlayVersion(language string) string { return "2.0.2-" + language + "-1" }
+func overlayReady(root, language string) bool {
+	b, err := os.ReadFile(filepath.Join(root, "modern-ui", "uap-"+language, "active", "ready"))
+	return err == nil && string(b) == overlayVersion(language)+"\n"
+}
+
 func copyVerified(source, target string, want backupEntry) error {
 	if err := verify(source, want); err != nil {
 		return err
@@ -134,9 +207,13 @@ func copyVerified(source, target string, want backupEntry) error {
 	}
 	return verify(target, want)
 }
-func prepare(game, installer, seven string, c catalog) error {
-	if err := compatible(game, c); err != nil {
+func prepare(game, installer, seven string, c catalog, language string) error {
+	edition, err := detectEdition(game, c)
+	if err != nil {
 		return err
+	}
+	if edition != language {
+		return fmt.Errorf("game language changed: %s", edition)
 	}
 	active := filepath.Join(work, "active")
 	if _, err := os.Stat(active); err == nil {
@@ -191,23 +268,25 @@ func prepare(game, installer, seven string, c catalog) error {
 		}
 		progress("files", (i+1)*100/len(keys))
 	}
-	progress("translate", 0)
-	packed, _ := assets.ReadFile("data/plan.json.gz")
-	reader, err := gzip.NewReader(bytes.NewReader(packed))
-	if err != nil {
-		return err
-	}
-	plan, err := io.ReadAll(reader)
-	reader.Close()
-	if err != nil {
-		return err
-	}
-	planPath := filepath.Join(stage, "plan.json")
-	if err = os.WriteFile(planPath, plan, 0600); err != nil {
-		return err
-	}
-	if err = buildFrench(game, unpack, overlay, planPath); err != nil {
-		return err
+	if language == "fr" {
+		progress("translate", 0)
+		packed, _ := assets.ReadFile("data/plan.json.gz")
+		reader, err := gzip.NewReader(bytes.NewReader(packed))
+		if err != nil {
+			return err
+		}
+		plan, err := io.ReadAll(reader)
+		reader.Close()
+		if err != nil {
+			return err
+		}
+		planPath := filepath.Join(stage, "plan.json")
+		if err = os.WriteFile(planPath, plan, 0600); err != nil {
+			return err
+		}
+		if err = buildFrench(game, unpack, overlay, planPath); err != nil {
+			return err
+		}
 	}
 	progress("backup", 0)
 	backup, err := backupSaves(game)
@@ -218,11 +297,11 @@ func prepare(game, installer, seven string, c catalog) error {
 	metadata, _ := json.MarshalIndent(struct {
 		Version string `json:"version"`
 		Backup  string `json:"backup"`
-	}{"2.0.2-fr-1", backup}, "", "  ")
+	}{overlayVersion(language), backup}, "", "  ")
 	if err = os.WriteFile(filepath.Join(overlay, "manifest.json"), metadata, 0600); err != nil {
 		return err
 	}
-	if err = os.WriteFile(filepath.Join(overlay, "ready"), []byte("2.0.2-fr-1\n"), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(overlay, "ready"), []byte(overlayVersion(language)+"\n"), 0600); err != nil {
 		return err
 	}
 	if err = os.Rename(overlay, active); err != nil {
@@ -234,6 +313,7 @@ func prepare(game, installer, seven string, c catalog) error {
 func run() int {
 	game := flag.String("game", ".", "Installed game directory")
 	mode := flag.String("mode", "probe", "probe, install, decline or localize")
+	language := flag.String("language", "auto", "auto, fr or en")
 	installer := flag.String("installer", "", "Optional local UAP installer")
 	extracted := flag.String("extracted", "", "Extracted UAP directory for localization checks")
 	output := flag.String("output", "", "Localization check output directory")
@@ -243,11 +323,36 @@ func run() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	work = filepath.Join(root, "modern-ui", "uap-fr")
+	c, err := loadCatalog()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if *language != "auto" && *language != "fr" && *language != "en" {
+		fmt.Fprintln(os.Stderr, "unsupported language")
+		return 1
+	}
 	if *mode == "probe" {
-		if _, err = os.Stat(filepath.Join(work, "active", "ready")); err == nil {
+		if _, e := findCase(root, "Arcanum5.dat"); e == nil {
 			return 0
 		}
+		if overlayReady(root, "fr") || overlayReady(root, "en") {
+			return 0
+		}
+	}
+	if *language == "auto" {
+		edition, e := detectEdition(root, c)
+		if e != nil {
+			fmt.Println("UAP not offered:", e)
+			if *mode == "probe" {
+				return 0
+			}
+			return 1
+		}
+		*language = edition
+	}
+	work = filepath.Join(root, "modern-ui", "uap-"+*language)
+	if *mode == "probe" {
 		if b, e := os.ReadFile(filepath.Join(work, "choice")); e == nil && string(b) == "no\n" {
 			return 0
 		}
@@ -256,16 +361,14 @@ func run() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	c, err := loadCatalog()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
 	switch *mode {
 	case "probe":
-		if err = compatible(root, c); err != nil {
-			fmt.Println("UAP FR not offered:", err)
+		edition, e := detectEdition(root, c)
+		if e != nil || edition != *language {
 			return 0
+		}
+		if edition == "en" {
+			return 21
 		}
 		return 20
 	case "decline":
@@ -280,7 +383,7 @@ func run() int {
 		if runtime.GOOS == "windows" {
 			seven = "7z.exe"
 		}
-		err = prepare(root, *installer, filepath.Join(filepath.Dir(exe), seven), c)
+		err = prepare(root, *installer, filepath.Join(filepath.Dir(exe), seven), c, *language)
 	case "localize":
 		packed, _ := assets.ReadFile("data/plan.json.gz")
 		r, e := gzip.NewReader(bytes.NewReader(packed))

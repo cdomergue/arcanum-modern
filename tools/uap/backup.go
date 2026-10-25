@@ -105,7 +105,7 @@ func backupSaves(game string) (string, error) {
 	if err = os.MkdirAll(base, 0700); err != nil {
 		return "", err
 	}
-	dir, err := os.MkdirTemp(base, "before-uap-fr-"+time.Now().UTC().Format("20060102T150405Z")+"-")
+	dir, err := os.MkdirTemp(base, "before-uap-"+time.Now().UTC().Format("20060102T150405Z")+"-")
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +150,7 @@ func backupSaves(game string) (string, error) {
 		if err == nil {
 			w, e = z.Create("RESTORE.txt")
 			if e == nil {
-				_, e = io.WriteString(w, "Close Arcanum before restoring. Preserve any newer saves separately. Disable the UAP overlay by renaming modern-ui/uap-fr/active to a different name, then copy the saved files back to their matching paths under the game folder. Keep this ZIP intact.\n\nFermez Arcanum avant la restauration. Conservez les nouvelles sauvegardes a part. Desactivez la couche UAP en renommant modern-ui/uap-fr/active, puis replacez les fichiers sauvegardes aux memes chemins dans le dossier du jeu. Conservez ce ZIP intact.\n")
+				_, e = io.WriteString(w, "Close Arcanum before restoring. Preserve any newer saves separately. Disable the UAP overlay by renaming modern-ui/uap-fr/active (French) or modern-ui/uap-en/active (English) to a different name, then copy the saved files back to their matching paths under the game folder. Keep this ZIP intact.\n\nFermez Arcanum avant la restauration. Conservez les nouvelles sauvegardes a part. Desactivez la couche UAP en renommant modern-ui/uap-fr/active (francais) ou modern-ui/uap-en/active (anglais), puis replacez les fichiers sauvegardes aux memes chemins dans le dossier du jeu. Conservez ce ZIP intact.\n")
 			}
 			err = e
 		}

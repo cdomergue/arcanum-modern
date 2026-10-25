@@ -5,7 +5,8 @@
 #include <sys/sysctl.h>
 #endif
 
-#define UAP_WORK "modern-ui/uap-fr/"
+#define UAP_WORK_FR "modern-ui/uap-fr/"
+#define UAP_WORK_EN "modern-ui/uap-en/"
 #ifdef SDL_PLATFORM_WINDOWS
 #define UAP_HELPER "ArcanumModern/uap/uap-helper.exe"
 #else
@@ -32,11 +33,15 @@ static void centered(SDL_Renderer* renderer, SDL_Texture* texture, float y)
 
 static int helper(const char* mode, bool french)
 {
-    SDL_IOStream* log = SDL_IOFromFile(UAP_WORK "preparation.log", "ab");
+    const char* work = french ? UAP_WORK_FR : UAP_WORK_EN;
+    if (!SDL_CreateDirectory(work)) return 1;
+    char path[TIG_MAX_PATH];
+    SDL_snprintf(path, sizeof(path), "%spreparation.log", work);
+    SDL_IOStream* log = SDL_IOFromFile(path, "ab");
     char* cwd = SDL_GetCurrentDirectory();
     char* executable;
     SDL_asprintf(&executable, "%s%s", cwd, UAP_HELPER);
-    const char* args[] = {executable, "--game", cwd, "--mode", mode, NULL};
+    const char* args[] = {executable, "--game", cwd, "--mode", mode, "--language", !strcmp(mode, "probe") ? "auto" : french ? "fr" : "en", NULL};
     SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetPointerProperty(props, SDL_PROP_PROCESS_CREATE_ARGS_POINTER, (void*)args);
     if (log) {
@@ -76,7 +81,8 @@ static int helper(const char* mode, bool french)
         int phase = 0, percent = 0;
         if (!strcmp(mode, "install")) {
             char key[32] = "";
-            char* status = SDL_LoadFile(UAP_WORK "progress", NULL);
+            SDL_snprintf(path, sizeof(path), "%sprogress", work);
+            char* status = SDL_LoadFile(path, NULL);
             if (status) sscanf(status, "%31s %d", key, &percent);
             SDL_free(status);
             for (int i = 0; i < 8; i++) if (!strcmp(key, phase_keys[i])) phase = i;
@@ -112,10 +118,9 @@ bool modern_uap_startup(void)
     if (sysctlbyname("kern.osrelease", version, &size, NULL, 0) != 0 || SDL_atoi(version) < 22) return true;
 #endif
     if (!SDL_GetPathInfo(UAP_HELPER, NULL)) return true;
-    if (!SDL_CreateDirectory(UAP_WORK)) return true;
     int result = helper("probe", false);
     if (result == -1) return false;
-    if (result != 20) return true;
+    if (result != 20 && result != 21) return true;
     SDL_Window* window = NULL;
     tig_video_window_get(&window);
     bool french = result == 20;
@@ -131,7 +136,7 @@ bool modern_uap_startup(void)
         "Téléchargement automatique : environ 485 Mo. Prévoyez 2 Go libres, plus la sauvegarde de vos parties. "
         "Les cartes HD devront être préparées à nouveau.\n\n"
         "Non : continuer sans UAP et mémoriser ce choix." :
-        "Install UAP 2.0.2 (Base + Race Mod) adapted for French game files?\n\n"
+        "Install UAP 2.0.2 (Base + Race Mod) for your English game?\n\n"
         "UAP changes quests, scripts, statistics, items and races. Existing campaigns may encounter blocked quests or incompatibilities.\n\n"
         "Saved games will be backed up and verified before activation. Original game archives are preserved.\n\n"
         "Automatic download: about 485 MB. Allow 2 GB of free space plus your save backup. HD maps will need to be prepared again.\n\n"
@@ -145,7 +150,7 @@ bool modern_uap_startup(void)
             french ? "La préparation de l'UAP n'a pas abouti. Aucun patch partiel n'est activé.\n\n"
             "Journal : modern-ui/uap-fr/preparation.log\n\nLe jeu continue sans cette installation UAP." :
             "UAP preparation did not finish. No partial patch is activated.\n\n"
-            "Log: modern-ui/uap-fr/preparation.log\n\nThe game continues without this UAP installation.", window);
+            "Log: modern-ui/uap-en/preparation.log\n\nThe game continues without this UAP installation.", window);
     }
     return true;
 }

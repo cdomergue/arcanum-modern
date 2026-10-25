@@ -20,6 +20,19 @@ int main(int argc, char** argv)
     assert(mapgen_fingerprint(argv[1], &after) && before == after);
     assert(SDL_SaveFile(loose, "edit", 4));
     assert(mapgen_fingerprint(argv[1], &after) && before != after);
+    /* English overlays participate in cache invalidation just like French ones. */
+    char* english = mapgen_join(argv[1], "modern-ui/uap-en/active");
+    assert(SDL_CreateDirectory(english));
+    char* ready = mapgen_join(english, "ready");
+    before = after;
+    assert(SDL_SaveFile(ready, "2.0.2-en-1\n", 11));
+    assert(mapgen_fingerprint(argv[1], &after) && before != after);
+    before = after;
+    assert(SDL_SaveFile(ready, "2.0.2-en-1\n", 11));
+    assert(mapgen_fingerprint(argv[1], &after) && before == after);
+    assert(SDL_RemovePath(ready));
+    assert(mapgen_fingerprint(argv[1], &after) && before != after);
+    SDL_free(english); SDL_free(ready);
     SDL_free(data_dir); SDL_free(saves); SDL_free(loose); SDL_free(save);
     unsigned char sector[18000] = {0};
     size_t at = 4 + 4096 * 4;

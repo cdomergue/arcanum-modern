@@ -6,22 +6,52 @@ Arcanum Renaissance can use an English installation with
 [Unofficial Arcanum Patch 2.0.2](https://terra-arcanum.com/drog/uap.html).
 The UAP is optional; an unmodified Arcanum 1.0.7.4 installation also works.
 
-## Installation
+## Automatic installation
+
+On eligible English installations without UAP, Renaissance offers to download
+and prepare **UAP 2.0.2 Base + Race Mod** at startup. **Yes** downloads the official
+installer (about 485 MB), verifies its checksum, extracts the selected data and
+backs up existing saves before activation. English text is used directly, with
+no French translation. Allow about **2 GB of temporary space**, plus the save
+backup. Automatic preparation is available on Windows 10+, Linux x64 and Apple
+Silicon Macs with macOS 13+.
+
+**No** continues without UAP and remembers the answer. Delete
+`modern-ui/uap-en/choice` to display the offer again. The installer checks the
+shared original art archives, required game archives and English interface text;
+it skips unrecognized installations and additional gameplay patches. An existing
+`Arcanum5.dat` installation or completed Renaissance UAP overlay is kept.
+
+Original archives remain unchanged. Prepared English data lives in
+`modern-ui/uap-en/active`; the log is `modern-ui/uap-en/preparation.log`.
+Only a completed installation is activated. HD maps need preparation again when
+the active game data changes. Release packages include no UAP or original game data.
+
+**Start a new campaign after adding UAP.** Existing saves may have incompatible
+quest, script or map state. Before activation, saves are copied to a verified ZIP
+under `save-backups/before-uap-…/saves.zip`, with checksums and restoration
+instructions. If backup fails, installation remains inactive. To restore, close
+the game, rename the `active` directory and copy the backed-up saves to their
+original paths, keeping newer saves separately. Saves created with UAP may still
+require UAP data.
+
+The [French preparation](uap-fr.md) follows the same process and also adapts text
+from the installed French game.
+
+## Manual installation and optional components
 
 1. Install the English edition of Arcanum.
 2. Install UAP 2.0.2 into that installation and select the components you want.
 3. Apply any desired UAP EnginePatcher options to the original `Arcanum.exe`.
 4. Install Renaissance into the same game folder.
-5. Start a new game. The UAP requires a new campaign rather than a vanilla save.
+5. Start a new game.
 
 For macOS or Linux, copy the complete patched game folder from Windows, then
 extract the corresponding Renaissance package into it. Keep the archives,
 module patches, loose data and original `Arcanum.exe` together.
 
-Renaissance reads the installed English UAP files. For recognized original
-French installations, an [optional automatic installer](uap-fr.md) prepares
-Base + Race Mod with French text and a verified saved-game backup. Release
-packages contain neither UAP data nor original game data.
+Automatic preparation selects Base + Race Mod. Use manual installation for
+Beta Content, additional campaigns or optional EnginePatcher switches.
 
 ## Components
 

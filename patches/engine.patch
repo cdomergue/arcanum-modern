@@ -697,12 +697,14 @@ diff --git a/first_party/tig/src/window.c b/first_party/tig/src/window.c
 diff --git a/src/game/ai.c b/src/game/ai.c
 --- a/src/game/ai.c
 +++ b/src/game/ai.c
-@@ -1,3 +1,4 @@
+@@ -1,4 +1,6 @@
 +#include "ui/follower_ui.h"
  #include "game/ai.h"
++#include "game/gamelib.h"
  
  #include "game/anim.h"
-@@ -299,7 +300,9 @@
+ #include "game/anim_private.h"
+@@ -299,7 +301,9 @@
          return;
      }
  
@@ -713,7 +715,24 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          sub_4A92D0(&ai);
      }
  
-@@ -1048,6 +1051,7 @@
+@@ -676,6 +680,16 @@
+     ObjectNode* node;
+     int item_type;
+     int64_t item_obj;
++
++    /* All autonomous searches (equipment, loose items and junk piles) meet
++     * here. Explicit pickup orders use anim_goal_pickup_item directly. */
++    int64_t leader = critter_pc_leader_get(obj);
++    if (!tig_net_is_active()
++        && leader != OBJ_HANDLE_NULL
++        && player_is_local_pc_obj(leader)
++        && !settings_get_value(&settings, MODERN_FOLLOWER_AUTO_PICKUP_KEY)) {
++        return false;
++    }
+ 
+     if (critter_is_monstrous(obj)) {
+         return false;
+@@ -1048,6 +1062,7 @@
              source_obj,
              NULL);
      }
@@ -721,7 +740,7 @@ diff --git a/src/game/ai.c b/src/game/ai.c
  }
  
  // 0x4A9AD0
-@@ -2415,6 +2419,7 @@
+@@ -2415,6 +2430,7 @@
              return;
          }
  
@@ -729,7 +748,7 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          anim_goal_follow_obj(ai->obj, ai->leader_obj);
  
          if (!sub_423300(ai->obj, NULL)) {
-@@ -3186,7 +3191,7 @@
+@@ -3186,7 +3202,7 @@
          return AI_FOLLOW_LOW_LEVEL;
      }
  
@@ -2121,10 +2140,11 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  static bool gamelib_load_module_data(const char* module_name);
  static void gamelib_unload_module_data(void);
  
-@@ -324,10 +328,11 @@
+@@ -324,10 +328,12 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
++    settings_register(&settings, MODERN_FOLLOWER_AUTO_PICKUP_KEY, "1", NULL);
 +    settings_register(&settings, MODERN_UNLIMITED_FOLLOWERS_KEY, "0", NULL);
      difficulty_changed();
  
@@ -2134,7 +2154,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (!init_info->editor) {
          if (highres_config_get()->logos) {
-@@ -410,6 +415,7 @@
+@@ -410,6 +416,7 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
@@ -2142,7 +2162,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -456,6 +462,7 @@
+@@ -456,6 +463,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2150,7 +2170,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -755,6 +762,7 @@
+@@ -755,6 +763,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -2158,7 +2178,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -940,6 +948,8 @@
+@@ -940,6 +949,8 @@
      int version;
      GameSaveInfo save_info;
  
@@ -2167,7 +2187,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
  
-@@ -1004,7 +1014,7 @@
+@@ -1004,7 +1015,7 @@
          }
      }
  
@@ -2176,7 +2196,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (index < MODULE_COUNT) {
          tig_file_remove(path);
-@@ -1078,6 +1088,7 @@
+@@ -1078,6 +1089,7 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
@@ -2184,7 +2204,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_load = true;
  
      ui_progressbar_init(MODULE_COUNT + 2);
-@@ -1200,7 +1211,7 @@
+@@ -1200,7 +1212,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -2193,7 +2213,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1405,9 @@
+@@ -1394,13 +1406,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -2210,7 +2230,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1562,7 @@
+@@ -1555,7 +1563,7 @@
          } while (0);
      }
  
@@ -2219,7 +2239,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1759,81 @@
+@@ -1752,11 +1760,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -2302,7 +2322,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1877,7 @@
+@@ -1800,6 +1878,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -2310,7 +2330,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1895,7 @@
+@@ -1817,7 +1896,7 @@
  }
  
  // 0x404A20
@@ -2319,7 +2339,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1910,9 @@
+@@ -1832,6 +1911,9 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
@@ -2329,7 +2349,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x404C10
-@@ -1874,6 +1955,7 @@
+@@ -1874,6 +1956,7 @@
      }
  
      path1[end] = '\0';
@@ -2337,7 +2357,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +1988,7 @@
+@@ -1906,6 +1989,7 @@
  void gamelib_unload_module_data(void)
  {
      int index;
@@ -2348,15 +2368,16 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 diff --git a/src/game/gamelib.h b/src/game/gamelib.h
 --- a/src/game/gamelib.h
 +++ b/src/game/gamelib.h
-@@ -13,6 +13,7 @@
+@@ -13,6 +13,8 @@
  #define AUTO_SWITCH_WEAPON_KEY "auto switch"
  #define ALWAYS_RUN_KEY "always run"
  #define FOLLOWER_SKILLS_KEY "follower skills"
++#define MODERN_FOLLOWER_AUTO_PICKUP_KEY "modern follower auto pickup"
 +#define MODERN_UNLIMITED_FOLLOWERS_KEY "modern unlimited followers"
  
  #define BRIGHTNESS_KEY "brightness"
  #define TEXT_DURATION_KEY "text duration"
-@@ -85,6 +86,7 @@
+@@ -85,6 +87,7 @@
  bool gamelib_init(GameInitInfo* init_info);
  void gamelib_reset(void);
  void gamelib_exit(void);

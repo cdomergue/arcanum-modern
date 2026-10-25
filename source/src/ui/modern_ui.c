@@ -1603,7 +1603,7 @@ static void draw_menu(void)
     if(type==MM_WINDOW_NEW_CHAR || type==MM_WINDOW_PREGEN_CHAR) {draw_character_menu();return;}
     if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME) {draw_load_menu();return;}
     if(type==MM_WINDOW_CHAREDIT) {draw_character_sheet();return;}
-    float w = options ? 1180 : 610, h = options ? 760 : 660;
+    float w = options ? 1180 : 610, h = options ? 830 : 660;
     float x = (canvas_w-w)/2, y = (canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
     centered(3, options ? menu_text(12) : "Arcanum Renaissance", canvas_w/2, y+33, GOLD);
@@ -1662,6 +1662,13 @@ static void draw_menu(void)
             if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
             menu_button((SDL_FRect){ox+ow-130,y+595,130,36},417,value,!tig_net_is_active());
             text_compact(french?"Retire la limite liée au charisme ; les conditions de recrutement restent actives.":"Removes the Charisma limit; recruitment requirements still apply.",ox,y+630,ow,false,MUTED);
+            on=settings_get_value(&settings,MODERN_FOLLOWER_AUTO_PICKUP_KEY)!=0;
+            menu_paragraph(tr("Ramassage automatique des compagnons","Companion auto-pickup"),(SDL_FRect){ox,y+664,ow-160,30},0,GOLD);
+            entry.num=on?1:0;
+            value=on?"✓":"—";
+            if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
+            menu_button((SDL_FRect){ox+ow-130,y+658,130,36},419,value,!tig_net_is_active());
+            text_compact(tr("Les compagnons ramassent spontanément les objets et fouillent les tas de déchets.","Companions pick up items and search junk piles on their own."),ox,y+693,ow,false,MUTED);
         }
         rule(x+30,y+h-110,w-60,(SDL_Color){117,87,44,255});
         menu_button((SDL_FRect){x+40,y+h-82,220,54},405,menu_text(4003),true);
@@ -1895,6 +1902,12 @@ void modern_ui_menu_tick(void)
     case 414: modern_graphics_apply(); break;
     case 415: modern_graphics_confirm(); break;
     case 416: modern_graphics_cancel(); break;
+    case 419:
+        if(type==MM_WINDOW_OPTIONS && options_tab==0 && !tig_net_is_active()) {
+            settings_set_value(&settings,MODERN_FOLLOWER_AUTO_PICKUP_KEY,!settings_get_value(&settings,MODERN_FOLLOWER_AUTO_PICKUP_KEY));
+            settings_save(&settings);
+        }
+        break;
     case 417:
         if(type==MM_WINDOW_OPTIONS && options_tab==0 && !tig_net_is_active()) {
             settings_set_value(&settings,MODERN_UNLIMITED_FOLLOWERS_KEY,settings_get_value(&settings,MODERN_UNLIMITED_FOLLOWERS_KEY)==1?0:1);
