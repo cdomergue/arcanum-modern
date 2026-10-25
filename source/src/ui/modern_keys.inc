@@ -4,6 +4,7 @@ enum {KB_INVENTORY,KB_JOURNAL,KB_CHARACTER,KB_MAP,KB_SPELLS,KB_SKILLS,
     KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COMBAT,KB_COUNT};
 enum {KEY_SHIFT=1<<16};
 static int key_binding[KB_COUNT];
+static bool inventory_middle_sort=true;
 static const int key_defaults[]={SDL_SCANCODE_I,SDL_SCANCODE_J,SDL_SCANCODE_C,SDL_SCANCODE_G,
     SDL_SCANCODE_M,SDL_SCANCODE_K,SDL_SCANCODE_T,SDL_SCANCODE_R,SDL_SCANCODE_H,SDL_SCANCODE_P,
     SDL_SCANCODE_E,SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D,SDL_SCANCODE_SPACE|KEY_SHIFT};
@@ -41,6 +42,7 @@ static void key_save(void)
 {
     FILE* f=fopen("modern-ui/keys.ini.tmp","w");if(!f)return;
     for(int i=0;i<KB_COUNT;i++)fprintf(f,"%d=%d\n",i,key_binding[i]);
+    fprintf(f,"inventory_middle_sort=%d\n",inventory_middle_sort?1:0);
     if(fclose(f)==0)SDL_RenamePath("modern-ui/keys.ini.tmp","modern-ui/keys.ini");
 }
 static bool key_allowed(int key)
@@ -51,10 +53,15 @@ static bool key_allowed(int key)
 }
 static void key_load(void)
 {
-    memcpy(key_binding,key_defaults,sizeof(key_binding));
+    memcpy(key_binding,key_defaults,sizeof(key_binding));inventory_middle_sort=true;
     FILE* f=fopen("modern-ui/keys.ini","r");if(!f)return;
     int next[KB_COUNT];memcpy(next,key_defaults,sizeof(next));int i,k;
-    while(fscanf(f,"%d=%d\n",&i,&k)==2)if(i>=0 && i<KB_COUNT && (!k || key_allowed(k)))next[i]=k;
+    char line[128];
+    while(fgets(line,sizeof(line),f)) {
+        if(sscanf(line,"inventory_middle_sort=%d",&k)==1) {
+            if(k==0 || k==1)inventory_middle_sort=k!=0;
+        } else if(sscanf(line,"%d=%d",&i,&k)==2 && i>=0 && i<KB_COUNT && (!k || key_allowed(k)))next[i]=k;
+    }
     fclose(f);
     for(i=0;i<KB_COUNT;i++)for(int j=0;j<i;j++)if(next[i] && next[i]==next[j])return;
     memcpy(key_binding,next,sizeof(next));
@@ -98,15 +105,22 @@ static void draw_key_options(float x,float y,float w,float h)
     button((SDL_FRect){ox+115,y+638,160,34},422,"AZERTY",-1,false,true);
     button((SDL_FRect){ox+285,y+638,160,34},423,"QWERTY",-1,false,true);
     button((SDL_FRect){ox+455,y+638,ow-455,34},424,tr("Par défaut","Defaults"),-1,false,true);
+    text_compact(tr("Clic molette : trier l'inventaire","Middle click: sort inventory"),ox,y+696,ow-155,false,GOLD);
+    MesFileEntry entry={.num=inventory_middle_sort?1:0};
+    const char* value=inventory_middle_sort?"✓":"—";
+    if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
+    menu_button((SDL_FRect){ox+ow-130,y+685,130,38},425,value,true);
     menu_button((SDL_FRect){x+40,y+h-82,180,54},405,menu_text(4003),true);
 }
 static bool key_options_action(int action)
 {
     if(action==418){options_tab=3;key_edit=-1;key_status[0]=0;return true;}
     if(options_tab!=3)return false;
+    if(action==425){inventory_middle_sort=!inventory_middle_sort;key_edit=-1;key_status[0]=0;key_save();return true;}
     if(action>=480 && action<480+KB_COUNT){key_edit=action-480;key_status[0]=0;return true;}
     if(action==419 || action==420){key_page=action-419;key_edit=-1;return true;}
     if(action>=422 && action<=424){
+        if(action==424)inventory_middle_sort=true;
         memcpy(key_binding,key_defaults,sizeof(key_binding));
         if(action!=424){
             const char* keys=action==422?"zqsd":"wasd";

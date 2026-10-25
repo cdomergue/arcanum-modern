@@ -2287,6 +2287,7 @@ static bool handle_binding_event(SDL_Event* event)
 
 static bool handle_ui_event(SDL_Event* event)
 {
+    if(inventory_middle_event(event))return true;
     if(slide_ui_is_active())return false;
     bool menu=native_menu();
     if(event->type==SDL_EVENT_WINDOW_MOUSE_LEAVE || event->type==SDL_EVENT_WINDOW_FOCUS_LOST)

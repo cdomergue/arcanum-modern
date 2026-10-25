@@ -91,8 +91,10 @@ available.
 
 - **Quick slots:** hover an item, spell or skill and press **1–0**, or drag it
   onto the bar. Assignments are saved separately for each controlled character.
-- **Inventory:** Shift-click transfers a whole stack. **Transfer all** moves bag
-  contents to or from a companion or container, leaving equipped or immovable items.
+- **Inventory:** Shift-click transfers a whole stack. Middle-click runs the same
+  arrangement as the sort button; disable it in **Options → Key bindings** if
+  desired. **Transfer all** moves bag contents to or from a companion or container,
+  leaving equipped or immovable items.
 - **Companions:** outside combat, click a portrait to select and detach a
   companion. Use the portrait's **`=` / `/`** control to toggle grouping.
   Click the portrait again, **Player**, or right-click the world to return to
@@ -113,7 +115,7 @@ Paths are relative to the game folder.
 | --- | --- |
 | `modern-ui/settings.ini` | Interface and gameplay preferences |
 | `modern-ui/graphics.ini` | Display mode and resolution |
-| `modern-ui/keys.ini` | Key bindings |
+| `modern-ui/keys.ini` | Key bindings and inventory middle-click preference |
 | `modern-ui/notebook-*.txt` | Favorites, tracked quests and map notes per character |
 | `arcanum.cfg` | Engine and game settings |
 | `modules/<module>/Save/` | Saved games |

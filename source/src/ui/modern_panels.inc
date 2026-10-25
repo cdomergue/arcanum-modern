@@ -16,7 +16,10 @@ static int map_texture_mode=-1;
 static int64_t inventory_hover,inventory_detail_object;
 static int inventory_detail_kind,inventory_detail_scroll,inventory_detail_max;
 static ModernDetails inventory_details;
-static SDL_FRect inventory_detail_rect;
+static SDL_FRect inventory_detail_rect,inventory_rect;
+static bool inventory_middle_pressed;
+static int64_t inventory_middle_pc,inventory_middle_target;
+static int inventory_middle_mode;
 static char inventory_query[128];
 static int inventory_filter,inventory_compare_scroll,inventory_compare_max;
 static bool inventory_searching,inventory_compare=true;
@@ -355,7 +358,8 @@ static void draw_inventory(void)
     panel_backdrop();inventory_hover=0;
     float footer=inv.transfer_all?792:748;
     float w=fminf(1430,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-footer-72)/2;
-    frame((SDL_FRect){x,y,w,footer+72});
+    inventory_rect=(SDL_FRect){x,y,w,footer+72};
+    frame(inventory_rect);
     binding_dock=(SDL_FRect){x+400,y+footer,w-690,48};
     centered(3,actor_name(inv.pc),canvas_w/2,y+22,GOLD);
     bool single=inv.mode==INVEN_UI_MODE_INVENTORY || inv.mode>=INVEN_UI_MODE_NPC_IDENTIFY;
@@ -1046,7 +1050,7 @@ static void panels_tick(void)
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
         if(memo_edit>=0)memo_close();memo_placing=false;
         if(inventory_searching)inventory_search_focus(false);
-        inventory_quick_release=false;
+        inventory_quick_release=false;inventory_middle_pressed=false;
         if(p==9)written_scroll=0;
         if(p==1){sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);}
         if(p!=5)selector=0;
@@ -1109,6 +1113,33 @@ static bool map_drag_event(int type,int button,PanelRegion* region)
     }
     return false;
 }
+/* Own the middle-button pair so it never becomes a legacy left release. */
+static bool inventory_middle_event(SDL_Event* event)
+{
+    if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST)inventory_middle_pressed=false;
+    if((event->type!=SDL_EVENT_MOUSE_BUTTON_DOWN && event->type!=SDL_EVENT_MOUSE_BUTTON_UP)
+        || event->button.button!=SDL_BUTTON_MIDDLE)return false;
+    bool pressed=inventory_middle_pressed;
+    inventory_middle_pressed=false;
+    if(native_panel()!=2 || native_menu() || slide_ui_is_active())return pressed;
+    ModernInventory inv;
+    int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
+    bool ready=inventory_middle_sort && ww>0 && wh>0
+        && inside(inventory_rect,event->button.x*canvas_w/ww,event->button.y*canvas_h/wh)
+        && intgame_mode_get()!=INTGAME_MODE_QUANTITY && !inven_ui_drag_item_obj_get()
+        && !binding_pressed && !inventory_quick_release && modern_inventory_state(&inv);
+    if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        if(ready) {
+            inventory_middle_pressed=true;inventory_middle_pc=inv.pc;
+            inventory_middle_target=inv.target;inventory_middle_mode=inv.mode;
+        }
+    } else if(pressed && ready && inv.pc==inventory_middle_pc
+        && inv.target==inventory_middle_target && inv.mode==inventory_middle_mode) {
+        pending_action=731; /* Same dispatch as the visible arrange button. */
+    }
+    return true;
+}
+
 static bool panels_event(SDL_Event* event)
 {
     int p=native_panel();if(!p)return false;
