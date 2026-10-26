@@ -319,7 +319,12 @@ static void equipment_slots(SDL_FRect r,int side,int mode)
                 inventory_hover=obj;fill(slot,UI_RED_WASH);outline(slot,UI_RED_BORDER);
             }
             slot.x+=8;slot.y+=8;slot.w-=16;slot.h-=16;
-            draw_art_id(obj_field_int32_get(obj,OBJ_F_ITEM_INV_AID),slot,true);
+            int art_field=OBJ_F_ITEM_INV_AID;
+            switch(obj_field_int32_get(obj,OBJ_F_TYPE)) {
+            case OBJ_TYPE_WEAPON:art_field=OBJ_F_WEAPON_PAPER_DOLL_AID;break;
+            case OBJ_TYPE_ARMOR:art_field=OBJ_F_ARMOR_PAPER_DOLL_AID;break;
+            }
+            draw_art_id(obj_field_int32_get(obj,art_field),slot,true);
         } else centered(0,"·",slot.x+slot.w/2,slot.y+slot.h/2,MUTED);
     }
 }
