@@ -43,6 +43,9 @@ jobs:
           python3 tests/test_ui_localization.py
           python3 tests/test_autosave.py
           python3 tests/test_save_rename.py
+          python3 tests/test_auto_level_schemes.py
+          python3 tests/test_sheet_navigation.py
+          python3 tests/test_sheet_labels.py
           python3 tests/test_map_camera.py
           python3 tests/test_map_cache_residency.py
           python3 tests/test_map_fog.py

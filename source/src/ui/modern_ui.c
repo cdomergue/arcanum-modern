@@ -1753,8 +1753,19 @@ static bool creation_menu_action(int action)
         }
     }
     if(type==MM_WINDOW_CHAREDIT || play_sheet()) {
-        if(action>=651 && action<=653) {
-            sheet_category=action-650;sheet_page=sheet_selected=0;sheet_select_detail(sheet_category,0);return true;
+        if(action>=651 && action<=654) {
+            sheet_category=action-650;sheet_page=sheet_selected=0;
+            if(sheet_category==4)sheet_scheme_focus();else sheet_select_detail(sheet_category,0);return true;
+        }
+        if(sheet_category==4 && (action==655 || action==656)) {
+            int pages=(modern_charedit_scheme_count()+7)/8;
+            sheet_scheme_page+=action==655?-1:1;
+            if(sheet_scheme_page<0)sheet_scheme_page=0;
+            if(sheet_scheme_page>=pages)sheet_scheme_page=pages>0?pages-1:0;
+            return true;
+        }
+        if(sheet_category==4 && action>=660 && action<668) {
+            modern_charedit_scheme_select(sheet_scheme_page*8+action-660);return true;
         }
         if(action>=684 && action<=687) {
             sheet_page=action-684;sheet_selected=sheet_page*4;sheet_select_detail(1,sheet_selected);return true;

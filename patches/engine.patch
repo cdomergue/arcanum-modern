@@ -3590,7 +3590,7 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
  #include <stdio.h>
  
-@@ -3887,3 +3888,44 @@
+@@ -3887,3 +3888,71 @@
      charedit_error_msg.str = charedit_errors[CHAREDIT_ERR_SKILL_AT_MIN];
      intgame_message_window_display_msg(&charedit_error_msg);
  }
@@ -3635,6 +3635,33 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +
 +int64_t modern_charedit_object(void) { return charedit_created ? charedit_obj : OBJ_HANDLE_NULL; }
 +bool modern_charedit_editable(void) { return charedit_created && charedit_mode!=CHAREDIT_MODE_PASSIVE; }
++
++int modern_charedit_scheme_count(void)
++{
++    return charedit_created ? charedit_num_schemes : 0;
++}
++
++int modern_charedit_scheme_id(int index)
++{
++    return index >= 0 && index < modern_charedit_scheme_count() ? charedit_scheme_ids[index] : -1;
++}
++
++bool modern_charedit_scheme_editable(void)
++{
++    if (!charedit_created || charedit_obj == OBJ_HANDLE_NULL) return false;
++    int64_t pc = player_get_local_pc_obj();
++    return pc != OBJ_HANDLE_NULL
++        && ((charedit_obj == pc && charedit_mode != CHAREDIT_MODE_PASSIVE)
++            || (charedit_obj != pc && critter_pc_leader_get(charedit_obj) == pc));
++}
++
++void modern_charedit_scheme_select(int index)
++{
++    int scheme = modern_charedit_scheme_id(index);
++    if (scheme < 0 || !modern_charedit_scheme_editable()) return;
++    auto_level_scheme_set(charedit_obj, scheme);
++    charedit_refresh();
++}
 diff --git a/src/ui/combat_ui.c b/src/ui/combat_ui.c
 --- a/src/ui/combat_ui.c
 +++ b/src/ui/combat_ui.c

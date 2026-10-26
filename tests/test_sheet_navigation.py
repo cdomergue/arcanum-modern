@@ -8,7 +8,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / 'source/src/ui/modern_ui.c').read_text()
 sheet = (root / 'source/src/ui/modern_sheet.inc').read_text()
-a = source.index('        if(action>=651 && action<=653)')
+a = source.index('        if(action>=651 && action<=654)')
 b = source.index('\n    }\n    return false;', a)
 actions = source[a:b]
 a = sheet.index('static void sheet_select_detail(')
@@ -18,7 +18,11 @@ code = r'''
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
-static int sheet_category=1,sheet_page,sheet_selected,description_scroll;
+static int sheet_category=1,sheet_page,sheet_selected,description_scroll,sheet_scheme_page;
+static int scheme_choice=-1;
+static int modern_charedit_scheme_count(void){return 19;}
+static void modern_charedit_scheme_select(int index){scheme_choice=index;}
+static void sheet_scheme_focus(void){sheet_scheme_page=1;}
 static int sheet_detail_category=1,sheet_detail_index,sheet_degree=-1;
 static char message_text[2];
 static int changed_category=-1,changed_index=-1,changed_direction;
@@ -57,6 +61,12 @@ int main(void) {
     description_scroll=12;action(690);
     assert(sheet_detail_category==0 && sheet_detail_index==0 && description_scroll==0);
     action(653);assert(sheet_selected==0 && sheet_detail_category==3 && sheet_degree==-1);
+    action(654);assert(sheet_category==4&&sheet_scheme_page==1);
+    action(656);action(656);assert(sheet_scheme_page==2);
+    action(662);assert(scheme_choice==18);
+    action(655);action(655);action(655);assert(sheet_scheme_page==0);
+    action(660);assert(scheme_choice==0);
+    action(651);action(656);assert(sheet_scheme_page==0&&scheme_choice==0);
     puts("PASS: independent attribute edits, all skill groups, last college/discipline, recipe selection and detail reset");
 }
 '''

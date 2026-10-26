@@ -125,6 +125,10 @@ int64_t modern_dialog_actor(void);
 bool modern_dialog_anchor(int* x,int* y);
 int64_t modern_charedit_object(void);
 bool modern_charedit_editable(void);
+int modern_charedit_scheme_count(void);
+int modern_charedit_scheme_id(int index);
+bool modern_charedit_scheme_editable(void);
+void modern_charedit_scheme_select(int index);
 typedef struct ModernInventory {
     int mode, scroll, rows;
     int64_t pc, target, owner;

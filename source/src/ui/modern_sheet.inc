@@ -1,5 +1,39 @@
 /* Native character sheet: original grouping, live engine values and controls. */
 static int sheet_detail_category=1, sheet_detail_index, sheet_degree=-1;
+static int sheet_scheme_page;
+static int64_t sheet_scheme_object;
+
+static void sheet_scheme_focus(void)
+{
+    sheet_scheme_object=modern_charedit_object();sheet_scheme_page=0;
+    int current=auto_level_scheme_get(sheet_scheme_object);
+    for(int i=0;i<modern_charedit_scheme_count();i++)
+        if(modern_charedit_scheme_id(i)==current){sheet_scheme_page=i/8;break;}
+}
+
+static void sheet_schemes(int64_t obj,SDL_FRect rect)
+{
+    if(sheet_scheme_object!=obj)sheet_scheme_focus();
+    int count=modern_charedit_scheme_count(),pages=(count+7)/8;
+    if(pages<1)pages=1;
+    if(sheet_scheme_page>=pages)sheet_scheme_page=pages-1;
+    int current=auto_level_scheme_get(obj);
+    const char* name=auto_level_scheme_name(current);
+    SDL_FRect active={rect.x+10,rect.y,rect.w-20,58};
+    hud_panel(active);
+    menu_paragraph(name?game_text(name):"",(SDL_FRect){active.x+12,active.y+7,active.w-24,48},0,GOLD);
+    float row_h=(rect.h-126)/8;
+    for(int row=0;row<8 && sheet_scheme_page*8+row<count;row++) {
+        int id=modern_charedit_scheme_id(sheet_scheme_page*8+row);
+        SDL_FRect r={rect.x+10,rect.y+70+row*row_h,rect.w-20,row_h-5};
+        text_in_button(r,660+row,game_text(auto_level_scheme_name(id)),id==current,modern_charedit_scheme_editable());
+    }
+    float fy=rect.y+rect.h-46;
+    menu_button((SDL_FRect){rect.x+10,fy,64,40},655,"<",sheet_scheme_page>0);
+    menu_button((SDL_FRect){rect.x+rect.w-74,fy,64,40},656,">",sheet_scheme_page+1<pages);
+    char page[32];snprintf(page,sizeof(page),"%d / %d",sheet_scheme_page+1,pages);
+    centered(0,page,rect.x+rect.w/2,fy+11,MUTED);
+}
 
 static void sheet_select_detail(int category,int index)
 {
@@ -26,6 +60,18 @@ static void sheet_stat_control(int64_t obj,int index,SDL_FRect r)
     button((SDL_FRect){r.x+r.w-32,r.y+36,32,32},621+index*2,"+",-1,false,
         modern_charedit_editable() && stat_level_get(obj,STAT_UNSPENT_POINTS)>0);
     rule(r.x,r.y+r.h-1,r.w,(SDL_Color){99,73,41,255});
+}
+static void sheet_tab(SDL_FRect rect,int action,const char* text,bool active)
+{
+    button(rect,action,"",-1,active,true);
+    char label[512];SDL_strlcpy(label,text,sizeof(label));
+    SDL_Color color=menu_control_color(rect,active,true);
+    char* split=text_measure(0,label)>rect.w-30?strchr(label,' '):NULL;
+    if(split) {
+        *split++=0;
+        text_compact(label,rect.x+10,rect.y+7,rect.w-20,true,color);
+        text_compact(split,rect.x+10,rect.y+23,rect.w-20,true,color);
+    } else text_compact(label,rect.x+10,rect.y+15,rect.w-20,true,color);
 }
 static void sheet_moral(int64_t obj,SDL_FRect r)
 {
@@ -74,7 +120,7 @@ static void draw_character_sheet(void)
     bool playing=play_sheet();
     int64_t obj=playing?modern_charedit_object():player_get_local_pc_obj();
     if(!obj)return;
-    if(sheet_category<1 || sheet_category>3)sheet_category=1;
+    if(sheet_category<1 || sheet_category>4)sheet_category=1;
     float w=fminf(1760,canvas_w-48),h=canvas_h-48,x=(canvas_w-w)/2,y=24;
     frame((SDL_FRect){x,y,w,h});
     float left=x+20,top=y+142,body=h-222;
@@ -115,10 +161,16 @@ static void draw_character_sheet(void)
         (SDL_FRect){derived.x+dw+8,derived.y+49+i*26,derived.w-dw-22,25});
     sheet_affinity(obj,(SDL_FRect){right+rw+gap,top,aw,body});
     fill((SDL_FRect){right,top,rw,body},(SDL_Color){22,18,13,245});
-    for(int i=0;i<3;i++)button((SDL_FRect){right+i*(rw+6)/3,top,(rw-12)/3,44},651+i,character_text(132+i),-1,sheet_category==i+1,true);
+    for(int i=0;i<4;i++) {
+        SDL_FRect tab={right+i*(rw+6)/4,top,(rw-18)/4,44};
+        sheet_tab(tab,651+i,character_text(i==3?140:132+i),sheet_category==i+1);
+    }
     float content_y=top+54,detail_y=top+body-150;
-    if(sheet_category==1) {
-        for(int i=0;i<4;i++)button((SDL_FRect){right+i*(rw+5)/4,content_y,(rw-15)/4,42},684+i,character_text(135+i),-1,sheet_page==i,true);
+    if(sheet_category==4) {
+        sheet_schemes(obj,(SDL_FRect){right,content_y,rw,body-54});
+    } else if(sheet_category==1) {
+        for(int i=0;i<4;i++)sheet_tab((SDL_FRect){right+i*(rw+5)/4,content_y,(rw-15)/4,42},
+            684+i,character_text(135+i),sheet_page==i);
         for(int row=0;row<4;row++) {
             int index=sheet_page*4+row,value;const char *label,*description;
             sheet_item(obj,1,index,&label,&description,&value);
@@ -169,23 +221,25 @@ static void draw_character_sheet(void)
             }
         }
     }
-    const char *label,*description;int value;
-    sheet_item(obj,sheet_detail_category,sheet_detail_index,&label,&description,&value);
-    char detail[8192];
-    if(sheet_degree>=0 && sheet_detail_category==2) {
-        label=game_text(schematic_ui_learned_schematic_product_name(sheet_detail_index,sheet_degree+1));
-        description=game_text(tech_degree_description_get(sheet_degree+1,sheet_detail_index));
-    } else if(sheet_degree>=0 && sheet_detail_category==3) {
-        label=game_text(spell_name(sheet_detail_index*5+sheet_degree));
-        description=game_text(spell_description(sheet_detail_index*5+sheet_degree));
+    if(sheet_category!=4) {
+        const char *label,*description;int value;
+        sheet_item(obj,sheet_detail_category,sheet_detail_index,&label,&description,&value);
+        char detail[8192];
+        if(sheet_degree>=0 && sheet_detail_category==2) {
+            label=game_text(schematic_ui_learned_schematic_product_name(sheet_detail_index,sheet_degree+1));
+            description=game_text(tech_degree_description_get(sheet_degree+1,sheet_detail_index));
+        } else if(sheet_degree>=0 && sheet_detail_category==3) {
+            label=game_text(spell_name(sheet_detail_index*5+sheet_degree));
+            description=game_text(spell_description(sheet_detail_index*5+sheet_degree));
+        }
+        if(sheet_detail_category==0)SDL_strlcpy(detail,description,sizeof(detail));
+        else if(sheet_detail_category==2 && sheet_degree>=0) {
+            char item1[2048]={0},item2[2048]={0};
+            schematic_ui_learned_schematic_component_names(sheet_detail_index,sheet_degree+1,item1,item2);
+            snprintf(detail,sizeof(detail),"%s\n%s + %s\n%s",label,game_text(item1),game_text(item2),description);
+        } else snprintf(detail,sizeof(detail),"%s\n%s",label,description);
+        description_panel(detail,(SDL_FRect){right,detail_y,rw,150});
     }
-    if(sheet_detail_category==0)SDL_strlcpy(detail,description,sizeof(detail));
-    else if(sheet_detail_category==2 && sheet_degree>=0) {
-        char item1[2048]={0},item2[2048]={0};
-        schematic_ui_learned_schematic_component_names(sheet_detail_index,sheet_degree+1,item1,item2);
-        snprintf(detail,sizeof(detail),"%s\n%s + %s\n%s",label,game_text(item1),game_text(item2),description);
-    } else snprintf(detail,sizeof(detail),"%s\n%s",label,description);
-    description_panel(detail,(SDL_FRect){right,detail_y,rw,150});
     float fy=y+h-60;
     if(!playing)menu_button((SDL_FRect){left,fy,230,44},501,menu_text(7002),true);
     if(*message_text && SDL_GetTicks()-message_time<12000)

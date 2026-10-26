@@ -59,6 +59,8 @@ folder. **Play now** remains available.
   offerings and gifts. Supports existing saves and installations with AID
   already present. Magical properties remain hidden until identification.
 - Independent companion positioning, regrouping and control outside combat.
+- Select automatic level-up schemes for your character and companions from the
+  character sheet, using the schemes supplied by your installed game.
 - Three rotating autosaves before and after combat and before eligible area
   transitions, separate from manual saves.
 - Journal search, quest filters, favorites, quest tracking and personal map notes.
