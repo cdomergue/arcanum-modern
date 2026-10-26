@@ -75,6 +75,17 @@ diff --git a/first_party/tig/include/tig/art.h b/first_party/tig/include/tig/art
  int tig_art_exists(tig_art_id_t art_id);
  int tig_art_touch(tig_art_id_t art_id);
  void sub_5022B0(TigArtBlitPaletteAdjustCallback callback);
+diff --git a/first_party/tig/include/tig/button.h b/first_party/tig/include/tig/button.h
+--- a/first_party/tig/include/tig/button.h
++++ b/first_party/tig/include/tig/button.h
+@@ -43,6 +43,7 @@
+ void tig_button_exit(void);
+ int tig_button_create(TigButtonData* button_data, tig_button_handle_t* button_handle);
+ int tig_button_destroy(tig_button_handle_t button_handle);
++int tig_button_move(tig_button_handle_t button_handle, int dx, int dy);
+ int tig_button_data(tig_button_handle_t button_handle, TigButtonData* button_data);
+ int tig_button_refresh_rect(tig_window_handle_t window_handle, TigRect* rect);
+ void tig_button_state_change(tig_button_handle_t button_handle, TigButtonState state);
 diff --git a/first_party/tig/include/tig/compat.h b/first_party/tig/include/tig/compat.h
 --- a/first_party/tig/include/tig/compat.h
 +++ b/first_party/tig/include/tig/compat.h
@@ -183,15 +194,29 @@ diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/v
 diff --git a/first_party/tig/include/tig/window.h b/first_party/tig/include/tig/window.h
 --- a/first_party/tig/include/tig/window.h
 +++ b/first_party/tig/include/tig/window.h
-@@ -123,6 +123,8 @@
+@@ -22,6 +22,12 @@
+ #define TIG_WINDOW_HIDDEN 0x0020
+ #define TIG_WINDOW_RENDER_TARGET 0x0040
+ #define TIG_WINDOW_ALWAYS_ON_BOTTOM 0x0080
++/* Preserve the layout reference when the world framebuffer changes size. */
++#define TIG_WINDOW_ANCHOR_CENTER_X 0x0100
++#define TIG_WINDOW_ANCHOR_RIGHT 0x0200
++#define TIG_WINDOW_ANCHOR_CENTER_Y 0x0400
++#define TIG_WINDOW_ANCHOR_BOTTOM 0x0800
++#define TIG_WINDOW_ANCHOR_MASK 0x0F00
+ 
+ typedef bool (*TigWindowMessageFilterFunc)(TigMessage* msg);
+ 
+@@ -122,6 +128,9 @@
+ int tig_window_vbid_get(tig_window_handle_t window_handle, TigVideoBuffer** video_buffer_ptr);
  int tig_window_modal_dialog(TigWindowModalDialogInfo* modal_info, TigWindowModalDialogChoice* choice_ptr);
  int tig_window_move(tig_window_handle_t window_handle, int x, int y);
- 
-+int tig_window_resize_world(tig_window_handle_t handle, int width, int height);
++int tig_window_set_anchor(tig_window_handle_t window_handle, TigWindowFlags anchor);
 +
++int tig_window_resize_world(tig_window_handle_t handle, int width, int height);
+ 
  #ifdef __cplusplus
  }
- #endif
 diff --git a/first_party/tig/src/art.c b/first_party/tig/src/art.c
 --- a/first_party/tig/src/art.c
 +++ b/first_party/tig/src/art.c
@@ -210,6 +235,24 @@ diff --git a/first_party/tig/src/art.c b/first_party/tig/src/art.c
  }
  
  // 0x5021E0
+diff --git a/first_party/tig/src/button.c b/first_party/tig/src/button.c
+--- a/first_party/tig/src/button.c
++++ b/first_party/tig/src/button.c
+@@ -877,3 +877,14 @@
+         tig_button_refresh_rect(btn->window_handle, &(btn->rect));
+     }
+ }
++
++/* Called by the parent window: button rectangles are stored in screen space. */
++int tig_button_move(tig_button_handle_t button_handle, int dx, int dy)
++{
++    int index = tig_button_handle_to_index(button_handle);
++    if (index < 0 || index >= MAX_BUTTONS || (buttons[index].usage & TIG_BUTTON_USAGE_FREE))
++        return TIG_ERR_INVALID_PARAM;
++    buttons[index].rect.x += dx;
++    buttons[index].rect.y += dy;
++    return TIG_OK;
++}
 diff --git a/first_party/tig/src/compat.c b/first_party/tig/src/compat.c
 --- a/first_party/tig/src/compat.c
 +++ b/first_party/tig/src/compat.c
@@ -660,10 +703,51 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 diff --git a/first_party/tig/src/window.c b/first_party/tig/src/window.c
 --- a/first_party/tig/src/window.c
 +++ b/first_party/tig/src/window.c
-@@ -1804,3 +1804,33 @@
+@@ -1785,22 +1785,68 @@
  
-     return TIG_OK;
- }
+ int tig_window_move(tig_window_handle_t window_handle, int x, int y)
+ {
+-    int window_index;
+-    TigWindow* win;
+-
+-    window_index = tig_window_handle_to_index(window_handle);
+-    win = &(windows[window_index]);
+-
+-    if ((win->flags & TIG_WINDOW_HIDDEN) != 0) {
+-        tig_window_invalidate_rect(&(win->frame));
+-    }
+-
++    int index = tig_window_handle_to_index(window_handle);
++    if (!tig_window_initialized) return TIG_ERR_NOT_INITIALIZED;
++    if (index < 0 || index >= TIG_WINDOW_MAX || (windows[index].usage & TIG_WINDOW_USAGE_FREE))
++        return TIG_ERR_INVALID_PARAM;
++    TigWindow* win = &windows[index];
++    int dx = x - win->frame.x, dy = y - win->frame.y;
++    if (dx == 0 && dy == 0) return TIG_OK;
++    if (!(win->flags & TIG_WINDOW_HIDDEN)) tig_window_invalidate_rect(&win->frame);
++    for (int i = 0; i < win->num_buttons; i++) tig_button_move(win->buttons[i], dx, dy);
+     win->frame.x = x;
+     win->frame.y = y;
+-
+-    if ((win->flags & TIG_WINDOW_HIDDEN) != 0) {
+-        tig_window_invalidate_rect(&(win->frame));
+-    }
+-
+-    return TIG_OK;
+-}
++    if (!(win->flags & TIG_WINDOW_HIDDEN)) tig_window_invalidate_rect(&win->frame);
++    return TIG_OK;
++}
++
++int tig_window_set_anchor(tig_window_handle_t window_handle, TigWindowFlags anchor)
++{
++    int index = tig_window_handle_to_index(window_handle);
++    if (!tig_window_initialized) return TIG_ERR_NOT_INITIALIZED;
++    if (index < 0 || index >= TIG_WINDOW_MAX || (windows[index].usage & TIG_WINDOW_USAGE_FREE))
++        return TIG_ERR_INVALID_PARAM;
++    windows[index].flags = (windows[index].flags & ~TIG_WINDOW_ANCHOR_MASK) | (anchor & TIG_WINDOW_ANCHOR_MASK);
++    return TIG_OK;
++}
 +
 +/* Keep the world handle and message filter stable while changing its raster size. */
 +int tig_window_resize_world(tig_window_handle_t handle, int width, int height)
@@ -685,6 +769,17 @@ diff --git a/first_party/tig/src/window.c b/first_party/tig/src/window.c
 +    tig_video_buffer_destroy(win->video_buffer); win->video_buffer = buffer;
 +    win->frame.width = win->bounds.width = width;
 +    win->frame.height = win->bounds.height = height;
++    /* UI windows keep their own buffers and handles, including open modals. */
++    int old_width = tig_window_screen_rect.width, old_height = tig_window_screen_rect.height;
++    for (int i = 0; i < TIG_WINDOW_MAX; i++) {
++        TigWindow* ui = &windows[i];
++        if ((ui->usage & TIG_WINDOW_USAGE_FREE) || !(ui->flags & TIG_WINDOW_ANCHOR_MASK)) continue;
++        int dx = (ui->flags & TIG_WINDOW_ANCHOR_RIGHT) ? width - old_width
++            : (ui->flags & TIG_WINDOW_ANCHOR_CENTER_X) ? (width - 800) / 2 - (old_width - 800) / 2 : 0;
++        int dy = (ui->flags & TIG_WINDOW_ANCHOR_BOTTOM) ? height - old_height
++            : (ui->flags & TIG_WINDOW_ANCHOR_CENTER_Y) ? (height - 600) / 2 - (old_height - 600) / 2 : 0;
++        tig_window_move(tig_window_index_to_handle(i), ui->frame.x + dx, ui->frame.y + dy);
++    }
 +    tig_window_screen_rect = (TigRect){0, 0, width, height};
 +    while (tig_window_dirty_rects) {
 +        TigRectListNode* node = tig_window_dirty_rects;
@@ -2571,6 +2666,57 @@ diff --git a/src/game/highres_config.c b/src/game/highres_config.c
          return false;
      }
  
+diff --git a/src/game/hrp.c b/src/game/hrp.c
+--- a/src/game/hrp.c
++++ b/src/game/hrp.c
+@@ -25,8 +25,8 @@
+ 
+ void hrp_apply(TigRect* rect, Gravity gravity)
+ {
+-    int dx;
+-    int dy;
++    int dx = 0;
++    int dy = 0;
+ 
+     if ((gravity & GRAVITY_LEFT) != 0) {
+         dx = 0;
+@@ -63,3 +63,24 @@
+ {
+     return hrp_iso_window_height;
+ }
++
++static TigWindowFlags hrp_anchor(Gravity gravity)
++{
++    return ((gravity & GRAVITY_CENTER_HORIZONTAL) ? TIG_WINDOW_ANCHOR_CENTER_X : 0)
++        | ((gravity & GRAVITY_RIGHT) ? TIG_WINDOW_ANCHOR_RIGHT : 0)
++        | ((gravity & GRAVITY_CENTER_VERTICAL) ? TIG_WINDOW_ANCHOR_CENTER_Y : 0)
++        | ((gravity & GRAVITY_BOTTOM) ? TIG_WINDOW_ANCHOR_BOTTOM : 0);
++}
++
++void hrp_apply_window(TigWindowData* data, Gravity gravity)
++{
++    hrp_apply(&data->rect, gravity);
++    data->flags = (data->flags & ~TIG_WINDOW_ANCHOR_MASK) | hrp_anchor(gravity);
++}
++
++void hrp_move_window(tig_window_handle_t handle, TigRect rect, Gravity gravity)
++{
++    hrp_apply(&rect, gravity);
++    tig_window_set_anchor(handle, hrp_anchor(gravity));
++    tig_window_move(handle, rect.x, rect.y);
++}
+diff --git a/src/game/hrp.h b/src/game/hrp.h
+--- a/src/game/hrp.h
++++ b/src/game/hrp.h
+@@ -15,6 +15,8 @@
+ bool hrp_init(GameInitInfo* init_info);
+ void hrp_resize(GameResizeInfo* resize_info);
+ void hrp_apply(TigRect* rect, Gravity gravity);
++void hrp_apply_window(TigWindowData* data, Gravity gravity);
++void hrp_move_window(tig_window_handle_t handle, TigRect rect, Gravity gravity);
+ void hrp_center(int* x, int* y);
+ int hrp_iso_window_width_get(void);
+ int hrp_iso_window_height_get(void);
 diff --git a/src/game/item.c b/src/game/item.c
 --- a/src/game/item.c
 +++ b/src/game/item.c
@@ -3590,6 +3736,42 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
  #include <stdio.h>
  
+@@ -2030,7 +2031,7 @@
+     window_data.rect.height = art_frame_data.height;
+     window_data.background_color = 0;
+     window_data.message_filter = charedit_skills_win_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (tig_window_create(&window_data, &charedit_skills_win) != TIG_OK) {
+         return false;
+@@ -2268,7 +2269,7 @@
+     window_data.rect.height = art_frame_data.height;
+     window_data.background_color = 0;
+     window_data.message_filter = charedit_tech_win_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (tig_window_create(&window_data, &charedit_tech_win) != TIG_OK) {
+         return false;
+@@ -2510,7 +2511,7 @@
+     window_data.rect.height = art_frame_data.height;
+     window_data.background_color = 0;
+     window_data.message_filter = charedit_spells_win_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (tig_window_create(&window_data, &charedit_spells_win) != TIG_OK) {
+         return false;
+@@ -2797,7 +2798,7 @@
+     window_data.rect.height = art_frame_data.height;
+     window_data.background_color = 0;
+     window_data.message_filter = charedit_scheme_win_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (tig_window_create(&window_data, &charedit_scheme_win) != TIG_OK) {
+         return false;
 @@ -3887,3 +3888,71 @@
      charedit_error_msg.str = charedit_errors[CHAREDIT_ERR_SKILL_AT_MIN];
      intgame_message_window_display_msg(&charedit_error_msg);
@@ -3716,6 +3898,27 @@ diff --git a/src/ui/combat_ui.c b/src/ui/combat_ui.c
 +    if (combat_ui_ap_bar_window_handle != TIG_WINDOW_HANDLE_INVALID) tig_window_hide(combat_ui_ap_bar_window_handle);
 +    if (combat_ui_compact_ap_bar_window_handle != TIG_WINDOW_HANDLE_INVALID) tig_window_hide(combat_ui_compact_ap_bar_window_handle);
 +}
+diff --git a/src/ui/compact_ui.c b/src/ui/compact_ui.c
+--- a/src/ui/compact_ui.c
++++ b/src/ui/compact_ui.c
+@@ -149,7 +149,7 @@
+         window_data.background_color = tig_color_make(0, 0, 0);
+         window_data.color_key = tig_color_make(comp->r, comp->g, comp->b);
+         window_data.message_filter = comp->message_filter;
+-        hrp_apply(&(window_data.rect), comp->gravity);
++        hrp_apply_window(&window_data, comp->gravity);
+ 
+         if (tig_window_create(&window_data, &(comp->window_handle)) != TIG_OK) {
+             tig_debug_printf("Compact_UI: could not create window component: %s\n", comp->name);
+@@ -167,7 +167,7 @@
+     window_data.rect = compact_ui_message_window_frame;
+     window_data.flags = 0;
+     window_data.color_key = tig_color_make(5, 5, 5);
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
+ 
+     if (tig_window_create(&window_data, &compact_ui_message_window_handle) != TIG_OK) {
+         return false;
 diff --git a/src/ui/cyclic_ui.c b/src/ui/cyclic_ui.c
 --- a/src/ui/cyclic_ui.c
 +++ b/src/ui/cyclic_ui.c
@@ -3897,6 +4100,15 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
  #include "ui/fate_ui.h"
  
  #include "game/critter.h"
+@@ -209,7 +210,7 @@
+     window_data.flags = TIG_WINDOW_MESSAGE_FILTER;
+     window_data.rect = window_rect;
+     window_data.message_filter = fate_ui_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
+ 
+     if (tig_window_create(&window_data, &fate_ui_window) != TIG_OK) {
+         tig_debug_printf("fate_ui_create: ERROR: window create failed!\n");
 @@ -342,3 +343,25 @@
  
      charedit_refresh();
@@ -4390,6 +4602,37 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  #include "ui/dialog_ui.h"
  #include "ui/fate_ui.h"
  #include "ui/follower_ui.h"
+@@ -1076,7 +1080,7 @@
+         window_data.rect.width = 411;
+         window_data.rect.height = 37;
+         window_data.color_key = tig_color_make(5, 5, 5);
+-        hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
++        hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
+ 
+         if (tig_window_create(&window_data, &intgame_fs_hotkey_window) != TIG_OK) {
+             tig_debug_printf("intgame_resize: ERROR: couldn't create window!");
+@@ -1234,10 +1238,10 @@
+ 
+         switch (index) {
+         case 0:
+-            hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
++            hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
+             break;
+         case 1:
+-            hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
++            hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
+             break;
+         }
+ 
+@@ -1364,7 +1368,7 @@
+         window_data.flags = TIG_WINDOW_ALWAYS_ON_TOP;
+         window_data.rect = intgame_maintain_window_rects[index];
+         window_data.color_key = tig_color_make(5, 5, 5);
+-        hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
++        hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
+ 
+         if (tig_window_create(&window_data, &(intgame_maintain_fs_windows[index])) != TIG_OK) {
+             tig_debug_printf("intgame_resize: ERROR: Couldn't create spellFSWid: %d!\n", index);
 @@ -2007,7 +2011,7 @@
              }
  
@@ -4891,6 +5134,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
+@@ -8225,7 +8279,7 @@
+     window_data.rect.height = 400;
+     window_data.background_color = 0;
+     window_data.message_filter = intgame_big_window_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (tig_window_create(&window_data, &intgame_big_window_handle) != TIG_OK) {
+         return false;
 @@ -8311,22 +8365,12 @@
              switch (target_obj_type) {
              case OBJ_TYPE_WALL:
@@ -4918,7 +5170,23 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  }
                  break;
              case OBJ_TYPE_WEAPON:
-@@ -8833,3 +8877,230 @@
+@@ -8791,8 +8835,7 @@
+ 
+     // Move bottom bar window up so its aligned with mainmenu covers.
+     rect = intgame_interface_window_frames[1];
+-    hrp_apply(&rect, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+-    tig_window_move(dword_64C4F8[1], rect.x, rect.y);
++    hrp_move_window(dword_64C4F8[1], rect, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (!intgame_is_compact_interface()) {
+         tig_window_show(dword_64C4F8[1]);
+@@ -8828,8 +8871,238 @@
+ 
+     // Restore bottom bar position.
+     rect = intgame_interface_window_frames[1];
+-    hrp_apply(&rect, GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
+-    tig_window_move(dword_64C4F8[1], rect.x, rect.y);
++    hrp_move_window(dword_64C4F8[1], rect, GRAVITY_CENTER_HORIZONTAL | GRAVITY_BOTTOM);
  
      follower_ui_show();
  }
@@ -5036,12 +5304,16 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    resize.window_handle = dword_64C52C;
 +    resize.window_rect = resize.content_rect = (TigRect){0, 0, width, height};
 +    gamelib_resize(&resize);
++    intgame_pc_lens_dst_rect.x = (width - intgame_pc_lens_dst_rect.width) / 2;
++    intgame_pc_lens_dst_rect.y = (height - intgame_pc_lens_dst_rect.height) / 2;
 +    /* Interface-layout callbacks rebuild classic buttons at new HRP offsets.
 +     * Only the viewport consumers must follow a camera zoom. */
 +    target_resize(&resize);
 +    iso_resize(&resize);
++    if (intgame_pc_lens_mode == PC_LENS_MODE_PASSTHROUGH) sub_558130(&intgame_pc_lens_dst_rect);
 +    combat_ui_resize(&resize);
 +    follower_ui_resize(&resize);
++    if (tig_window_is_hidden(dword_64C52C)) follower_ui_hide();
 +    location_origin_scroll((int)((width-old_width)*anchor_x), (int)((height-old_height)*anchor_y));
 +    object_hover_obj_set(OBJ_HANDLE_NULL);
 +    iso_invalidate_rect(&resize.content_rect);
@@ -5745,6 +6017,33 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          background_clear(obj);
          mainmenu_ui_new_char_set_race(obj, race);
          return true;
+@@ -4602,7 +4740,7 @@
+             window_data.background_color = art_anim_data.color_key;
+             window_data.color_key = art_anim_data.color_key;
+             window_data.message_filter = mainmenu_ui_message_filter;
+-            hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++            hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+             src_rect.x = mainmenu_ui_window_rect.x;
+             src_rect.y = 0;
+@@ -4645,7 +4783,7 @@
+                 window_data.rect.y = mainmenu_ui_bottom_bar_cover_rects[idx].y;
+                 window_data.rect.width = mainmenu_ui_bottom_bar_cover_rects[idx].width;
+                 window_data.rect.height = mainmenu_ui_bottom_bar_cover_rects[idx].height;
+-                hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++                hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+                 src_rect.x = mainmenu_ui_bottom_bar_cover_rects[idx].x;
+                 src_rect.y = 0;
+@@ -4681,7 +4819,7 @@
+             window_data.background_color = art_anim_data.color_key;
+             window_data.color_key = art_anim_data.color_key;
+             window_data.message_filter = mainmenu_ui_message_filter;
+-            hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++            hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+             src_rect.x = mainmenu_ui_top_bar_cover_rect.x;
+             src_rect.y = 0;
 @@ -6046,10 +6184,22 @@
          if (obj != OBJ_HANDLE_NULL
              && tig_art_exists(obj_field_int32_get(obj, OBJ_F_CURRENT_AID)) == TIG_OK) {
@@ -5859,6 +6158,22 @@ diff --git a/src/ui/schematic_ui.c b/src/ui/schematic_ui.c
 +    } else return;
 +    schematic_ui_message_filter(&msg);
 +}
+diff --git a/src/ui/scrollbar_ui.c b/src/ui/scrollbar_ui.c
+--- a/src/ui/scrollbar_ui.c
++++ b/src/ui/scrollbar_ui.c
+@@ -558,6 +558,12 @@
+ 
+     if (scrollbar_ui_ignore_events) {
+         return false;
++    }
++
++    /* Parent windows can move while a native panel remains open. */
++    for (index = 0; index < MAX_CONTROLS; index++) {
++        ctrl = &scrollbar_ui_controls[index];
++        if (ctrl->flags & SB_IN_USE) tig_window_data(ctrl->window_handle, &ctrl->window_data);
+     }
+ 
+     switch (msg->type) {
 diff --git a/src/ui/skill_ui.c b/src/ui/skill_ui.c
 --- a/src/ui/skill_ui.c
 +++ b/src/ui/skill_ui.c
@@ -5922,6 +6237,15 @@ diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
  
  #include "game/combat.h"
  #include "game/critter.h"
+@@ -457,7 +458,7 @@
+     window_data.flags = TIG_WINDOW_MESSAGE_FILTER;
+     window_data.message_filter = sleep_ui_message_filter;
+     window_data.rect = rect;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_TOP);
+ 
+     if (tig_window_create(&window_data, &sleep_ui_window) != TIG_OK) {
+         tig_debug_printf("sleep_ui_create: ERROR: window create failed!\n");
 @@ -741,3 +742,23 @@
  
      object_list_destroy(&objects);
@@ -6490,6 +6814,15 @@ diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
  
  /**
   * Array of text offsets for book pages.
+@@ -563,7 +566,7 @@
+     window_data.flags = TIG_WINDOW_MESSAGE_FILTER;
+     window_data.rect = written_ui_frame;
+     window_data.message_filter = written_ui_message_filter;
+-    hrp_apply(&(window_data.rect), GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
++    hrp_apply_window(&window_data, GRAVITY_CENTER_HORIZONTAL | GRAVITY_CENTER_VERTICAL);
+ 
+     if (tig_window_create(&window_data, &written_ui_window) != TIG_OK) {
+         tig_debug_printf("written_ui_create: ERROR: window create failed!\n");
 @@ -726,6 +729,8 @@
      char* str;
      TigRect rect;
