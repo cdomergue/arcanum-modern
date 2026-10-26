@@ -1459,7 +1459,55 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if ((combat->flags & CF_HIT) == 0
          && (combat->flags & CF_CRITICAL) != 0) {
-@@ -1237,6 +1391,7 @@
+@@ -1223,6 +1377,47 @@
+     return ret;
+ }
+ 
++static bool combat_is_object_target(int64_t target)
++{
++    return target != OBJ_HANDLE_NULL && obj_handle_is_valid(target)
++        && !obj_type_is_critter(obj_field_int32_get(target, OBJ_F_TYPE));
++}
++
++static void combat_stop_object_attack(int64_t actor)
++{
++    bool stopped = false;
++    AnimID id;
++    AnimRunInfo* run_info;
++    /* Includes attack/attempt/kill roots and their movement subgoals. A queued
++     * player-directed attack may not have an AI combat focus yet. */
++    if (anim_is_current_goal_type(actor, AG_ATTEMPT_ATTACK, &id)
++        && anim_id_to_run_info(&id, &run_info)
++        && combat_is_object_target(run_info->goals[0].params[AGDATA_TARGET_OBJ].obj)) {
++        stopped = anim_interrupt(&id, PRIORITY_5);
++    }
++    if (obj_field_int32_get(actor, OBJ_F_TYPE) != OBJ_TYPE_NPC) return;
++    int64_t focus = obj_field_handle_get(actor, OBJ_F_NPC_COMBAT_FOCUS);
++    if (combat_is_object_target(focus)) {
++        ai_target_unlock(actor);
++        sub_4AA300(actor, focus);
++        stopped = true;
++    }
++    /* Do not impose ONF_NO_ATTACK: companions must still defend the party in
++     * the next encounter. Hostility toward actual critters is left intact. */
++    if (stopped && !ai_is_fighting(actor)) combat_critter_deactivate_combat_mode(actor);
++}
++
++void combat_stop_party_object_attacks(int64_t pc)
++{
++    ObjectList followers;
++    combat_stop_object_attack(pc);
++    object_list_all_followers(pc, &followers);
++    for (ObjectNode* node = followers.head; node != NULL; node = node->next) {
++        combat_stop_object_attack(node->obj);
++    }
++    object_list_destroy(&followers);
++}
++
+ // 0x4B3F20
+ void combat_critter_deactivate_combat_mode(int64_t obj)
+ {
+@@ -1237,6 +1432,7 @@
      if (!combat_critter_is_combat_mode_active(obj)) {
          combat_critter_toggle_combat_mode(obj);
      }
@@ -1467,7 +1515,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B3F80
-@@ -1316,6 +1471,7 @@
+@@ -1316,6 +1512,7 @@
              object_flags_set(obj, OF_INVISIBLE);
          }
      } else {
@@ -1475,7 +1523,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          obj_field_int32_set(obj, OBJ_F_CRITTER_FLAGS, critter_flags | OCF_COMBAT_MODE_ACTIVE);
  
          art_id = tig_art_critter_id_weapon_set(art_id, TIG_ART_WEAPON_TYPE_UNARMED);
-@@ -1813,6 +1969,7 @@
+@@ -1813,6 +2010,7 @@
              }
          }
  
@@ -1483,7 +1531,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -1833,7 +1990,8 @@
+@@ -1833,7 +2031,8 @@
              tf_add(combat->target_obj, TF_TYPE_GREEN, str);
          }
  
@@ -1493,7 +1541,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              && obj_type == OBJ_TYPE_NPC
              && (spell_flags & OSF_STONED) == 0) {
              int remaining_experience = obj_field_int32_get(combat->target_obj, OBJ_F_NPC_EXPERIENCE_POOL);
-@@ -2857,12 +3015,19 @@
+@@ -2857,12 +3056,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -1513,7 +1561,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3123,7 @@
+@@ -2958,7 +3164,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -1522,7 +1570,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2990,14 +3155,20 @@
+@@ -2990,14 +3196,20 @@
          }
      }
  
@@ -1547,7 +1595,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3196,7 @@
+@@ -3025,6 +3237,7 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
@@ -1555,7 +1603,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          && !gamelib_in_load()) {
          if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3226,9 @@
+@@ -3054,8 +3267,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -1567,7 +1615,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3257,10 @@
+@@ -3084,9 +3298,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -1580,7 +1628,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3160,10 +3334,12 @@
+@@ -3160,10 +3375,12 @@
  {
      ObjectNode* node;
  
@@ -1593,7 +1641,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
          sub_423FE0(NULL);
  
-@@ -3189,6 +3365,7 @@
+@@ -3189,6 +3406,7 @@
  
      dword_5FC250 = 0;
      pc_obj = player_get_local_pc_obj();
@@ -1601,7 +1649,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based_turn++;
      pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
      combat_recalc_perception_range();
-@@ -3205,7 +3382,7 @@
+@@ -3205,7 +3423,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1610,7 +1658,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3243,6 +3420,9 @@
+@@ -3243,6 +3461,9 @@
          return true;
      }
  
@@ -1620,7 +1668,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!critter_is_active(object_node->obj)) {
          sub_427000(object_node->obj);
          return true;
-@@ -3286,6 +3466,7 @@
+@@ -3286,6 +3507,7 @@
  
      dword_5FC250++;
      combat_turn_based_subturn_end();
@@ -1628,7 +1676,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      dword_5FC240 = dword_5FC240->next;
      if (dword_5FC240 == NULL) {
-@@ -3549,6 +3730,8 @@
+@@ -3549,6 +3771,8 @@
          return true;
      }
  
@@ -1637,7 +1685,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3574,6 +3757,7 @@
+@@ -3574,6 +3798,7 @@
          return true;
      }
  
@@ -1645,7 +1693,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_action_points = 0;
      combat_turn_based_next_subturn();
  
-@@ -3741,6 +3925,12 @@
+@@ -3741,6 +3966,12 @@
          return false;
      }
  
@@ -1681,6 +1729,14 @@ diff --git a/src/game/combat.h b/src/game/combat.h
  bool combat_init(GameInitInfo* init_info);
  void combat_exit(void);
  void combat_reset(void);
+@@ -107,6 +120,7 @@
+ void combat_throw(int64_t attacker_obj, int64_t weapon_obj, int64_t target_obj, int64_t target_loc, int hit_loc);
+ bool combat_critter_is_combat_mode_active(int64_t obj);
+ bool combat_can_exit_combat_mode(int64_t obj);
++void combat_stop_party_object_attacks(int64_t pc);
+ void combat_critter_deactivate_combat_mode(int64_t obj);
+ void combat_critter_activate_combat_mode(int64_t obj);
+ void sub_4B4320(int64_t obj);
 diff --git a/src/game/critter.c b/src/game/critter.c
 --- a/src/game/critter.c
 +++ b/src/game/critter.c
@@ -4781,7 +4837,15 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!combat_turn_based_is_active()
          || combat_turn_based_whos_turn_get() == pc_obj) {
-@@ -3245,8 +3273,12 @@
+@@ -3200,6 +3228,7 @@
+ 
+     if (combat_critter_is_combat_mode_active(pc_obj)) {
+         if (combat_can_exit_combat_mode(pc_obj)) {
++            combat_stop_party_object_attacks(pc_obj);
+             combat_critter_deactivate_combat_mode(pc_obj);
+         } else {
+             mes_file_entry.num = 24; // "You cannot exit combat-mode when under attack."
+@@ -3245,8 +3274,12 @@
      sub_57CCF0(player_get_local_pc_obj(), qword_64C690);
  }
  
@@ -4796,7 +4860,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  // 0x54ED30
  void sub_54ED30(TargetDescriptor* td)
  {
-@@ -3261,16 +3293,19 @@
+@@ -3261,16 +3294,19 @@
      int anim;
      bool v26 = false;
  
@@ -4818,7 +4882,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,56 +3349,13 @@
+@@ -3314,56 +3350,13 @@
              }
          }
  
@@ -4877,7 +4941,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  break;
              case OBJ_TYPE_WEAPON:
              case OBJ_TYPE_AMMO:
-@@ -3396,8 +3388,8 @@
+@@ -3396,8 +3389,8 @@
                      }
  
                      if (!td->is_loc
@@ -4888,7 +4952,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3570,6 +3562,7 @@
+@@ -3570,6 +3563,7 @@
          }
  
          if (!anim_goal_add_ex(&goal_data, &anim_id, flags)) {
@@ -4896,7 +4960,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              return;
          }
  
-@@ -3712,10 +3705,12 @@
+@@ -3712,10 +3706,12 @@
          return;
      }
  
@@ -4910,7 +4974,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3776,7 @@
+@@ -3781,7 +3777,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -4919,7 +4983,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4051,6 +4046,8 @@
+@@ -4051,6 +4047,8 @@
  // 0x5506C0
  void iso_interface_window_set(RotatingWindowType window_type)
  {
@@ -4928,7 +4992,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4085,9 +4082,21 @@
+@@ -4085,9 +4083,21 @@
      }
  }
  
@@ -4950,7 +5014,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4109,7 @@
+@@ -4100,6 +4110,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -4958,7 +5022,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4166,6 +4176,7 @@
+@@ -4166,6 +4177,7 @@
  // 0x550930
  void intgame_message_window_clear_internal(void)
  {
@@ -4966,7 +5030,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4213,11 @@
+@@ -4202,6 +4214,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -4978,7 +5042,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4849,14 @@
+@@ -4833,14 +4850,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -4995,7 +5059,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4928,13 @@
+@@ -4912,13 +4929,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -5011,7 +5075,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -5431,7 +5447,7 @@
+@@ -5431,7 +5448,7 @@
      int prev_idx;
  
      if (ui_message->type >= 6 && ui_message->type <= 12) {
@@ -5020,7 +5084,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              && intgame_iso_window_type == ROTWIN_TYPE_MSG) {
              intgame_message_window_clear_internal();
              intgame_message_draw(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
-@@ -5888,6 +5904,8 @@
+@@ -5888,6 +5905,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
  {
@@ -5029,7 +5093,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = func;
      tc_show();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -5899,6 +5917,8 @@
+@@ -5899,6 +5918,8 @@
  // 0x553350
  void intgame_dialog_end(void)
  {
@@ -5038,7 +5102,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6378,7 +6398,9 @@
+@@ -6378,7 +6399,9 @@
          }
  
          // Generic race-specific icon.
@@ -5049,7 +5113,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          return false;
      default:
          return false;
-@@ -6573,6 +6595,7 @@
+@@ -6573,6 +6596,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -5057,7 +5121,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6634,16 @@
+@@ -6611,6 +6635,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -5074,7 +5138,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6828,11 @@
+@@ -6795,6 +6829,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -5086,7 +5150,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7131,6 +7169,21 @@
+@@ -7131,6 +7170,21 @@
          break;
      }
  
@@ -5108,7 +5172,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (buffer[0] != '\0' || !intgame_is_compact_interface()) {
          intgame_message_window_write_text(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
              buffer,
-@@ -7612,6 +7665,7 @@
+@@ -7612,6 +7666,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -5116,7 +5180,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7694,7 @@
+@@ -7640,7 +7695,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -5125,7 +5189,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7838,7 @@
+@@ -7784,7 +7839,7 @@
          mes_file_entry.str,
          value);
  
@@ -5134,7 +5198,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8225,7 +8279,7 @@
+@@ -8225,7 +8280,7 @@
      window_data.rect.height = 400;
      window_data.background_color = 0;
      window_data.message_filter = intgame_big_window_message_filter;
@@ -5143,7 +5207,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (tig_window_create(&window_data, &intgame_big_window_handle) != TIG_OK) {
          return false;
-@@ -8311,22 +8365,12 @@
+@@ -8311,22 +8366,12 @@
              switch (target_obj_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
@@ -5170,7 +5234,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  }
                  break;
              case OBJ_TYPE_WEAPON:
-@@ -8791,8 +8835,7 @@
+@@ -8791,8 +8836,7 @@
  
      // Move bottom bar window up so its aligned with mainmenu covers.
      rect = intgame_interface_window_frames[1];
@@ -5180,7 +5244,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!intgame_is_compact_interface()) {
          tig_window_show(dword_64C4F8[1]);
-@@ -8828,8 +8871,238 @@
+@@ -8828,8 +8872,238 @@
  
      // Restore bottom bar position.
      rect = intgame_interface_window_frames[1];

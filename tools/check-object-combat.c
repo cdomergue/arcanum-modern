@@ -47,10 +47,45 @@ static void check_preview(int64_t actor, int64_t target)
     abort();
 }
 
+static void check_object_attack_exit(int64_t pc, int64_t companion, int64_t target, bool locked, bool queued)
+{
+    int64_t party[8];int count=modern_followers_get(party,8);
+    combat_critter_activate_combat_mode(pc);
+    combat_turn_based_whos_turn_set(companion);
+    sub_423FF0(companion);
+    if (locked) for (int i=0;i<count;i++) if (party[i]!=pc) {
+        ai_target_lock(party[i], target);
+        assert(obj_field_handle_get(party[i], OBJ_F_NPC_COMBAT_FOCUS) == target);
+    }
+    if (queued) {
+        assert(anim_goal_attack(companion, target));
+        assert(anim_is_current_goal_type(companion, AG_ATTACK, NULL));
+    }
+    combat_turn_based_whos_turn_set(pc);
+    sub_423FF0(pc);
+    assert(combat_can_exit_combat_mode(pc));
+    intgame_combat_mode_toggle();
+    assert(!combat_turn_based_is_active());
+    for (int i=0;i<count;i++) if (party[i]!=pc) {
+        assert(obj_field_handle_get(party[i], OBJ_F_NPC_COMBAT_FOCUS) == OBJ_HANDLE_NULL);
+        assert(!anim_is_current_goal_type(party[i], AG_ATTACK, NULL));
+        assert(!ai_is_fighting(party[i]));
+        assert((obj_field_int32_get(party[i], OBJ_F_NPC_FLAGS) & ONF_NO_ATTACK) == 0);
+    }
+    for (int frame = 0; frame < 100; frame++) {
+        for (int i=0;i<count;i++) if (party[i]!=pc) ai_process(party[i]);
+        tig_ping();gamelib_ping();modern_ui_tick();SDL_Delay(20);
+        assert(!combat_turn_based_is_active());
+    }
+    puts("PASS: object attack cancelled for companion, no combat restart after AI ticks");
+}
+
 int main(int argc, char** argv)
 {
     assert(argc == 3 && !chdir(argv[1]) && !access(".map-export-sandbox", R_OK));
+    setvbuf(stdout, NULL, _IOLBF, 0);
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
+    SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     TigInitInfo init = {0};
     init.width = 1280; init.height = 720; init.bpp = 32;
@@ -60,6 +95,7 @@ int main(int argc, char** argv)
     init.art_id_reset_func = name_normalize_aid;
     init.sound_file_path_resolver = gsound_resolve_path;
     assert(tig_init(&init) == TIG_OK);
+    printf("Isolated object combat test process %ld, directory %s\n", (long)getpid(), argv[1]);
     intgame_set_iso_window_width(init.width); intgame_set_iso_window_height(init.height);
     GameInitInfo game = {0};
     assert(intgame_create_iso_window(&game.iso_window_handle));
@@ -119,6 +155,13 @@ int main(int argc, char** argv)
     SDL_SetModState(SDL_KMOD_ALT);
     check_goal(actor, targets[0], AG_ATTACK);
     SDL_SetModState(SDL_KMOD_NONE);
+    int64_t party[8];int count=modern_followers_get(party,8);
+    int64_t companion=OBJ_HANDLE_NULL;
+    for(int i=0;i<count;i++)if(party[i]!=pc){companion=party[i];break;}
+    assert(companion);
+    check_object_attack_exit(pc, companion, targets[0], true, true);
+    check_object_attack_exit(pc, companion, targets[1], false, true);
+    check_object_attack_exit(pc, companion, targets[2], true, false);
     puts("PASS: real door/container/scenery goals, noncombat use, realtime/tactical attack, Shift/Alt, screen picking and read-only AP preview");
     modern_ui_exit();
     gameuilib_exit(); gamelib_exit(); tig_exit();

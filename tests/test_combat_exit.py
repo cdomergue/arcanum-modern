@@ -25,7 +25,7 @@ code=r'''
 typedef struct {int num;const char* str;} MesFileEntry;
 typedef struct {int type;const char* str;} UiMessage;
 static bool turn_based,armed[5],under_attack,active=true,prone,busy,fidget,concealed;
-static int spell_flags,critter_flags,feedback,activations;
+static int spell_flags,critter_flags,feedback,activations,stops;
 static int intgame_mes_file;
 static int64_t qword_64C690;
 static int64_t player_get_local_pc_obj(void){return 1;}
@@ -35,6 +35,7 @@ static bool critter_is_prone(int64_t obj){(void)obj;return prone;}
 static bool combat_turn_based_is_active(void){return turn_based;}
 static bool combat_critter_is_combat_mode_active(int64_t obj){return armed[obj];}
 static bool combat_can_exit_combat_mode(int64_t obj){assert(obj==1);return !under_attack;}
+static void combat_stop_party_object_attacks(int64_t obj){assert(obj==1&&!under_attack);stops++;}
 static void combat_critter_deactivate_combat_mode(int64_t obj){assert(obj==1);armed[1]=false;turn_based=false;}
 static void combat_critter_activate_combat_mode(int64_t obj){assert(obj==1);armed[1]=true;turn_based=true;activations++;}
 static void mes_get_msg(int file,MesFileEntry* entry){(void)file;assert(entry->num==24);entry->str="under attack";}
@@ -55,7 +56,9 @@ int main(void){
   right_click(actor);assert(!turn_based&&!armed[1]&&!activations);
  }
  armed[1]=true;armed[2]=false;turn_based=true;under_attack=true;
+ int previous_stops=stops;
  right_click(2);assert(turn_based&&armed[1]&&feedback==1);
+ assert(stops==previous_stops);
  under_attack=false;busy=true;
  right_click(2);assert(turn_based);
  fidget=true;right_click(2);assert(!turn_based);busy=fidget=false;
