@@ -105,6 +105,13 @@ int main(int argc,char** argv)
     combat_critter_deactivate_combat_mode(pc);assert(!combat_turn_based_is_active());
     wallcheck_ping(0);assert(wallcheck_observer==pc&&qword_5E0A08==original);
     location_origin_set(original);capture("combat-ended");
+    assert(modern_party_select(companion));wallcheck_ping(0);
+    assert(wallcheck_observer==companion&&qword_5E0A08==obj_field_int64_get(companion,OBJ_F_LOCATION));
+    location_origin_set(near_wall);capture("companion-outside-combat");
+    int64_t selected_moved=LOCATION_MAKE(LOCATION_GET_X(near_wall)+1,LOCATION_GET_Y(near_wall));
+    sub_43E770(companion,selected_moved,0,0);wallcheck_ping(0);
+    assert(wallcheck_observer==companion&&qword_5E0A08==selected_moved);
+    modern_party_select(0);wallcheck_ping(0);assert(wallcheck_observer==pc&&qword_5E0A08==original);
     puts("PASS: native wall fading follows stationary hero/companion/nonparty turns and movement; restores hero after combat without changing player identity");
     return 0;
 }

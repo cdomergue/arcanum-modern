@@ -3657,15 +3657,16 @@ diff --git a/src/game/wallcheck.c b/src/game/wallcheck.c
  }
  
  // 0x437E00
-@@ -696,11 +701,32 @@
+@@ -696,11 +701,33 @@
      dword_5E0A00 = 0;
  }
  
 +static int64_t wallcheck_observer_get(void)
 +{
 +    int64_t pc = player_get_local_pc_obj();
-+    if (combat_tactical_enabled() && combat_turn_based_is_active()) {
-+        int64_t actor = combat_turn_based_whos_turn_get();
++    if (combat_tactical_enabled()) {
++        int64_t actor = combat_turn_based_is_active()
++            ? combat_turn_based_whos_turn_get() : combat_input_actor();
 +        if (actor != OBJ_HANDLE_NULL && obj_handle_is_valid(actor) && critter_is_active(actor))
 +            return actor;
 +    }
@@ -3690,7 +3691,7 @@ diff --git a/src/game/wallcheck.c b/src/game/wallcheck.c
      if (wallcheck_dirty) {
          roof_recalc(qword_5E0A08);
          wallcheck_recalc(qword_5E0A08);
-@@ -932,7 +958,7 @@
+@@ -932,7 +959,7 @@
  // 0x438530
  void sub_438530(int64_t obj)
  {
