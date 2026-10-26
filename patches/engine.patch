@@ -3629,6 +3629,76 @@ diff --git a/src/game/tf.c b/src/game/tf.c
      TextFloaterList* list;
      TextFloaterList* prev_list;
      TextFloaterEntry* entry;
+diff --git a/src/game/wallcheck.c b/src/game/wallcheck.c
+--- a/src/game/wallcheck.c
++++ b/src/game/wallcheck.c
+@@ -1,5 +1,8 @@
+ #include "game/wallcheck.h"
+ 
++#include "game/combat.h"
++#include "game/critter.h"
++#include "game/obj_pool.h"
+ #include "game/object.h"
+ #include "game/player.h"
+ #include "game/roof.h"
+@@ -656,6 +659,7 @@
+ 
+ // 0x5DE6E8
+ static bool wallcheck_dirty;
++static int64_t wallcheck_observer;
+ 
+ // 0x5DE6F0
+ static ObjectList stru_5DE6F0[34][3];
+@@ -687,6 +691,7 @@
+     qword_5E0E18 = 0;
+     dword_5E0E10 = 0;
+     wallcheck_dirty = false;
++    wallcheck_observer = OBJ_HANDLE_NULL;
+ }
+ 
+ // 0x437E00
+@@ -696,11 +701,32 @@
+     dword_5E0A00 = 0;
+ }
+ 
++static int64_t wallcheck_observer_get(void)
++{
++    int64_t pc = player_get_local_pc_obj();
++    if (combat_tactical_enabled() && combat_turn_based_is_active()) {
++        int64_t actor = combat_turn_based_whos_turn_get();
++        if (actor != OBJ_HANDLE_NULL && obj_handle_is_valid(actor) && critter_is_active(actor))
++            return actor;
++    }
++    return pc;
++}
++
+ // 0x437E10
+ void wallcheck_ping(tig_timestamp_t timestamp)
+ {
+     (void)timestamp;
+ 
++    int64_t observer = wallcheck_observer_get();
++    if (observer == OBJ_HANDLE_NULL || !obj_handle_is_valid(observer)) return;
++    int64_t loc = obj_field_int64_get(observer, OBJ_F_LOCATION);
++    /* Turn selection can change without movement. Follow the actor's movement
++     * too: the original direct movement refresh only runs for the local PC. */
++    if (observer != wallcheck_observer || loc != qword_5E0A08) {
++        wallcheck_observer = observer;
++        qword_5E0A08 = loc;
++        wallcheck_dirty = true;
++    }
+     if (wallcheck_dirty) {
+         roof_recalc(qword_5E0A08);
+         wallcheck_recalc(qword_5E0A08);
+@@ -932,7 +958,7 @@
+ // 0x438530
+ void sub_438530(int64_t obj)
+ {
+-    if (player_is_local_pc_obj(obj)) {
++    if (obj != OBJ_HANDLE_NULL && obj == wallcheck_observer_get()) {
+         qword_5E0A08 = obj_field_int64_get(obj, OBJ_F_LOCATION);
+         wallcheck_dirty = true;
+     }
 diff --git a/src/main.c b/src/main.c
 --- a/src/main.c
 +++ b/src/main.c
