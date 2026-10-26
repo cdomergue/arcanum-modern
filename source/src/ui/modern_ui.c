@@ -1821,7 +1821,10 @@ static void world_zoom_sync(void)
     float minimum=fmaxf(.5f,fmaxf(zoom_base_width/4096.0f,zoom_base_height/4096.0f));
     float maximum=fminf(zoom_base_width/800.0f,zoom_base_height/600.0f);
     world_zoom=fmaxf(minimum,fminf(maximum,world_zoom));
-    bool active=world_zoom_allowed();
+    /* A modal blocks camera input, not its scale. Resetting here exposed a
+     * 100% world frame when a panel closed before the next UI tick. Keep the
+     * same raster throughout modern panels, dialogue and pause menus. */
+    bool active=enabled && in_game && !intgame_is_compact_interface();
     float zoom=active?world_zoom:1;
     int width=(int)lroundf(zoom_base_width/zoom),height=(int)lroundf(zoom_base_height/zoom);
     if(width==hrp_iso_window_width_get() && height==hrp_iso_window_height_get()) {zoom_pending=false;return;}

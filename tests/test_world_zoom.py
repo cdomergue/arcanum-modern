@@ -65,10 +65,18 @@ int main(void){
     for(int i=0;i<40;i++)world_zoom_event(&e);
     world_zoom_sync();assert(logical_w==3840 && logical_h==2160 && world_zoom==.5f);
     int calls=resizes;world_zoom_sync();assert(resizes==calls);
-    menu=true;assert(!world_zoom_event(&e));world_zoom_sync();assert(logical_w==1920);
-    menu=false;world_zoom_sync();assert(logical_w==3840);
-    panel=true;assert(!world_zoom_event(&e));world_zoom_sync();assert(logical_w==1920);
-    panel=false;world_zoom_sync();assert(logical_w==3840);
+    /* Modal windows block wheel input without changing the camera scale.
+     * Their first exposed world frame must match all subsequent frames. */
+    menu=true;assert(!world_zoom_event(&e));world_zoom_sync();assert(logical_w==3840&&resizes==calls);
+    menu=false;world_zoom_sync();assert(logical_w==3840&&resizes==calls);
+    for(panel=1;panel<=9;panel++) {
+        assert(!world_zoom_event(&e));world_zoom_sync();assert(logical_w==3840&&resizes==calls);
+    }
+    panel=0;journal=true;assert(!world_zoom_event(&e));world_zoom_sync();
+    assert(logical_w==3840&&resizes==calls);journal=false;
+    mode=20;assert(!world_zoom_event(&e));world_zoom_sync(); /* Dialogue or another modal mode. */
+    assert(logical_w==3840&&resizes==calls);mode=INTGAME_MODE_MAIN;
+    for(int frame=0;frame<3;frame++){world_zoom_sync();assert(logical_w==3840&&resizes==calls);}
     /* Opening a native selector, then targeting a skill/spell/item retains zoom. */
     calls=resizes;panel=5;world_zoom_sync();
     assert(logical_w==3840&&resizes==calls&&!world_zoom_event(&e));
@@ -80,9 +88,13 @@ int main(void){
     mode=INTGAME_MODE_MAIN;world_zoom_sync();assert(logical_w==3840);
     enabled=false;world_zoom_sync();assert(logical_w==1920 && !world_zoom_event(&e));
     enabled=true;world_zoom_sync();assert(logical_w==3840);
+    compact=true;world_zoom_sync();assert(logical_w==1920&&!world_zoom_event(&e));
+    compact=false;world_zoom_sync();assert(logical_w==3840);
     e.wheel.y=1;
     for(int i=0;i<40;i++)world_zoom_event(&e);
     world_zoom_sync();assert(logical_h==600 && fabsf(world_zoom-1.8f)<.001);
+    calls=resizes;menu=true;world_zoom_sync();menu=false;world_zoom_sync();
+    assert(logical_h==600&&resizes==calls); /* The same guarantee while zoomed in. */
     float saved=world_zoom;e.wheel.mouse_y=1040;world_zoom_event(&e);assert(world_zoom==saved);
     e.wheel.mouse_y=650;buttons=1;world_zoom_event(&e);assert(world_zoom==saved);buttons=0;
     e.wheel.direction=1;world_zoom_event(&e);assert(world_zoom<saved);world_zoom_sync();
