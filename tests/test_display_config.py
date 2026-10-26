@@ -16,13 +16,13 @@ code = r'''
 static int zoom_base_width, zoom_base_height, actual_w=800, actual_h=600;
 static int output_w=1728, output_h=1084, calls;
 static float world_zoom=1, zoom_anchor_x=.5f, zoom_anchor_y=.5f;
-static bool zoom_pending, active=true;
+static bool zoom_pending, enabled=true, in_game=true;
 static void* window=(void*)1;
 static bool SDL_GetWindowSize(void* w,int* x,int* y){*x=output_w;*y=output_h;return true;}
 #define SDL_Log(...) ((void)0)
 static int hrp_iso_window_width_get(void){return actual_w;}
 static int hrp_iso_window_height_get(void){return actual_h;}
-static bool world_zoom_allowed(void){return active;}
+static bool intgame_is_compact_interface(void){return false;}
 static bool modern_world_resize(int w,int h,float x,float y){
     assert(w>=800 && h>=600 && w<=4096 && h<=4096);
     actual_w=w;actual_h=h;calls++;return true;
@@ -41,10 +41,10 @@ int main(void){
     world_zoom_sync();assert(calls==1);
     world_zoom=.8f;world_zoom_sync();assert(actual_w==2160 && actual_h==1355);
     output_w=1920;output_h=1080;world_zoom_sync();assert(actual_w==2400 && actual_h==1350);
-    active=false;world_zoom_sync();assert(actual_w==1920 && actual_h==1080);
+    enabled=false;world_zoom_sync();assert(actual_w==1920 && actual_h==1080);
     output_w=800;output_h=500;world_zoom_sync();assert(actual_w==960 && actual_h==600);
     output_w=0;output_h=0;world_zoom_sync();assert(actual_w==960 && actual_h==600);
-    output_w=7680;output_h=4320;active=true;world_zoom=.5f;world_zoom_sync();
+    output_w=7680;output_h=4320;enabled=true;world_zoom=.5f;world_zoom_sync();
     assert(actual_w==4096 && actual_h==2304);
     return 0;
 }
@@ -58,6 +58,6 @@ with tempfile.TemporaryDirectory(prefix='arcanum-display-') as directory:
     (work / 'test.c').write_text(code)
     subprocess.run([os.environ.get('CC', 'cc'), '-std=c11', '-I', str(work),
                     '-I', str(root / 'source/src'), str(work / 'test.c'),
-                    str(root / 'source/src/game/highres_config.c'), '-o', str(work / 'test')], check=True)
+                    str(root / 'source/src/game/highres_config.c'), '-lm', '-o', str(work / 'test')], check=True)
     subprocess.run([str(work / 'test')], cwd=work, check=True)
 print('PASS: graphics.ini alone, HighRes ignored, automatic aspect ratio, resize and zoom limits')

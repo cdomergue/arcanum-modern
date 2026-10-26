@@ -113,6 +113,12 @@ available.
 
 Paths are relative to the game folder.
 
+In **Options → Graphics**, **Button text size** adjusts button labels from 75%
+to 150%, including character sheet and journal tabs. The choice is saved
+automatically. Long labels wrap or show their full text on hover. The journal's
+**A− / A+** controls adjust reading text separately; F9's original interface
+keeps its native fonts.
+
 | Path | Contents |
 | --- | --- |
 | `modern-ui/settings.ini` | Interface and gameplay preferences |

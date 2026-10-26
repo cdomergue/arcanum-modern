@@ -62,6 +62,7 @@
 !/source/src/ui/modern_movie.c
 !/source/src/ui/modern_movie.h
 !/source/src/ui/modern_sheet.inc
+!/source/src/ui/modern_button_text.inc
 !/source/src/ui/modern_keys.inc
 !/source/src/ui/modern_notebook.inc
 !/source/src/ui/modern_combat.inc

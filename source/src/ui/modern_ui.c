@@ -58,7 +58,9 @@
 
 #define GLYPH_FIRST 32
 #define GLYPH_COUNT 352
-#define FONT_COUNT 5
+#define FONT_COUNT 7
+#define BUTTON_FONT 5
+#define MENU_BUTTON_FONT 6
 #define MAX_BUTTONS 256
 
 typedef struct NativeFont {
@@ -137,6 +139,8 @@ static int output_width, output_height;
 static float canvas_w = 1600, canvas_h = 900, density = 1;
 static float mouse_x, mouse_y, text_width;
 static int body_size = 20;
+static int button_text_scale = 100;
+static void save_settings(void);
 static char search[128];
 static char message_text[1024];
 static Uint64 message_time;
@@ -355,13 +359,15 @@ static bool inside(SDL_FRect r, float x, float y)
     return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 }
 
+#include "modern_button_text.inc"
+
 static void material(SDL_Texture* texture, SDL_FRect rect)
 {
     SDL_RenderTexture(renderer, texture, NULL, &rect);
 }
 
 static bool native_menu(void);
-static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,bool pressed);
+static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,bool pressed,bool title);
 
 static bool ornate_menu_style(void)
 {
@@ -587,18 +593,10 @@ static void button(SDL_FRect rect, int action, const char* label, int icon, bool
     if(icon>=0) draw_art(icon,(SDL_FRect){rect.x+9,rect.y+6,rect.h-12,rect.h-12},true);
     if(label && *label && !(icon<0 && control_symbol(rect,label,available,active||hover))) {
         SDL_Color color=menu_control_color(rect,active,available);
-        if(icon>=0) text_compact(label,rect.x+rect.h+3,rect.y+(rect.h-14)/2-3,rect.w-rect.h-6,false,color);
-        else if(ornate_menu_style() && text_measure(0,label)>rect.w-24) {
-            char wrapped[512];SDL_strlcpy(wrapped,label,sizeof(wrapped));
-            char* split=strchr(wrapped,' ');
-            SDL_Color color=menu_control_color(rect,active,available);
-            if(split && rect.h>=38) {
-                *split++=0;
-                text_compact(wrapped,rect.x+10,rect.y+(rect.h-28)/2-3,rect.w-20,true,color);
-                text_compact(split,rect.x+10,rect.y+(rect.h-28)/2+11,rect.w-20,true,color);
-            } else text_compact(label,rect.x+10,rect.y+(rect.h-14)/2-3,rect.w-20,true,color);
-        }
-        else centered(0,label,rect.x+rect.w/2,rect.y+(rect.h-14)/2-3,menu_control_color(rect,active,available));
+        SDL_FRect text_rect=icon>=0
+            ? (SDL_FRect){rect.x+rect.h+3,rect.y+3,rect.w-rect.h-9,rect.h-6}
+            : (SDL_FRect){rect.x+8,rect.y+3,rect.w-16,rect.h-6};
+        button_label(BUTTON_FONT,label,text_rect,icon<0,color);
     }
     if(!available && !ornate_menu_style() && !((drawing_hud || drawing_play_panel) && hud_atlas)) fill(rect,(SDL_Color){0,0,0,85});
     if(button_count<MAX_BUTTONS) buttons[button_count++]=(Button){rect,action,available};
@@ -732,15 +730,20 @@ static void update_geometry(void)
     SDL_GetCurrentRenderOutputSize(renderer,&w,&h);
     float next_density=(float)h/900.0f;
     if(next_density<0.5f) next_density=0.5f;
-    if(w!=output_width || h!=output_height || fonts[1].size!=body_size) {
+    bool rebuild=w!=output_width || h!=output_height || fonts[1].size!=body_size;
+    if(rebuild) {
         output_width=w;output_height=h;density=next_density;
         canvas_w=w/density;canvas_h=h/density;
         make_font(&fonts[0],book_font_data,14);
         make_font(&fonts[1],book_font_data,(float)body_size);
         make_font(&fonts[2],heading_font_data,22);
         make_font(&fonts[3],heading_font_data,30);
-        make_font(&fonts[4],book_font_data,42);
         dirty=true;
+    }
+    if(rebuild || fonts[BUTTON_FONT].size!=14*button_text_scale/100.0f) {
+        make_font(&fonts[BUTTON_FONT],book_font_data,14*button_text_scale/100.0f);
+        make_font(&fonts[MENU_BUTTON_FONT],heading_font_data,22*button_text_scale/100.0f);
+        make_font(&fonts[4],book_font_data,42*button_text_scale/100.0f);
     }
     float width=fminf(1270,canvas_w-56);
     panel=(SDL_FRect){(canvas_w-width)/2,90,width,650};
@@ -1138,18 +1141,12 @@ static void menu_button(SDL_FRect rect, int action, const char* label, bool avai
 {
     button(rect, action, "", -1, false, available);
     if(ornate_menu_style()) {
-        main_menu_label(rect,label,menu_control_color(rect,false,available),available && pressed_action==action);
+        main_menu_label(rect,label,menu_control_color(rect,false,available),available && pressed_action==action,false);
         return;
     }
     if(control_symbol(rect,label,available,inside(rect,mouse_x,mouse_y)))return;
-    /* Center the visible glyphs, including accents, in buttons of any height. */
-    NativeFont* font=&fonts[2];
-    float top=font->size,bottom=0;
-    for(const char* p=label;*p;) {
-        int c=codepoint(&p);stbtt_packedchar* g=&font->glyphs[c-GLYPH_FIRST];
-        if(g->y1>g->y0){top=fminf(top,font->size+g->yoff/font->density);bottom=fmaxf(bottom,font->size+g->yoff2/font->density);}
-    }
-    centered(2,label,rect.x+rect.w/2,rect.y+(rect.h-bottom-top)/2,menu_control_color(rect,false,available));
+    button_label(MENU_BUTTON_FONT,label,(SDL_FRect){rect.x+10,rect.y+3,rect.w-20,rect.h-6},true,
+        menu_control_color(rect,false,available));
 }
 
 static void draw_menu_background(void)
@@ -1196,7 +1193,7 @@ static SDL_FRect main_menu_plaque(SDL_FRect bounds,int index)
     return (SDL_FRect){bounds.x+662*scale,bounds.y+rows[index]*scale,348*scale,83*scale};
 }
 
-static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,bool pressed)
+static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,bool pressed,bool title)
 {
     NativeFont* font=&fonts[4];
     float top=font->size,bottom=0,width=text_measure(4,label);
@@ -1206,7 +1203,9 @@ static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,boo
         if(g->y1>g->y0){top=fminf(top,font->size+g->yoff/font->density);bottom=fmaxf(bottom,font->size+g->yoff2/font->density);}
     }
     if(bottom<=top)return;
-    float scale=fminf(1,fminf((rect.w-rect.h*.65f)/width,rect.h*.46f/(bottom-top)));
+    float requested=title?1:button_text_scale/100.0f;
+    float scale=fminf(requested*42/font->size,
+        fminf((rect.w-rect.h*.65f)/width,rect.h*.46f*requested/(bottom-top)));
     float x=rect.x+(rect.w-width*scale)/2;
     float y=rect.y+(rect.h-(bottom-top)*scale)/2-top*scale+(pressed?1:0);
     for(int pass=0;pass<2;pass++) {
@@ -1246,7 +1245,7 @@ static bool draw_main_menu(void)
         SDL_RenderTexture(renderer,main_menu_texture,&src,&rect);
         SDL_SetTextureColorMod(main_menu_texture,255,255,255);
         SDL_Color color=hidden?MUTED:hover?UI_RED:(SDL_Color){244,225,184,255};
-        main_menu_label(rect,menu_text(info->num+i),color,pressed);
+        main_menu_label(rect,menu_text(info->num+i),color,pressed,false);
         if(button_count<MAX_BUTTONS)buttons[button_count++]=(Button){rect,500+i,!hidden};
     }
     return true;
@@ -1261,7 +1260,7 @@ static bool draw_navigation_menu(MainMenuWindowType type)
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){0,0,0,255});
     SDL_RenderTexture(renderer,single_player_texture,NULL,&bounds);
     SDL_FRect title={bounds.x+640*scale,bounds.y+162*scale,392*scale,83*scale};
-    main_menu_label(title,menu_text(pause?4000:type==MM_WINDOW_SINGLE_PLAYER?10:50),GOLD,false);
+    main_menu_label(title,menu_text(pause?4000:type==MM_WINDOW_SINGLE_PLAYER?10:50),GOLD,false,true);
     float first=296+(5-info->num_buttons)*42;
     for(int i=0;i<info->num_buttons;i++) {
         int index=pause?(i==0?info->num_buttons-1:i-1):i;
@@ -1382,11 +1381,8 @@ static void description_panel(const char* text,SDL_FRect rect)
 static void text_in_button(SDL_FRect rect,int action,const char* label,bool selected,bool available)
 {
     button(rect,action,"",-1,selected,available);
-    int font=text_measure(2,label)<=rect.w-24 ? 2 : 0;
-    /* Very long names use a second line instead of leaking into adjacent controls. */
-    SDL_Color color=menu_control_color(rect,selected,available);
-    if(text_measure(font,label)<=rect.w-24) centered(font,label,rect.x+rect.w/2,rect.y+10,color);
-    else menu_paragraph(label,(SDL_FRect){rect.x+12,rect.y+4,rect.w-24,rect.h-6},0,color);
+    button_label(MENU_BUTTON_FONT,label,(SDL_FRect){rect.x+12,rect.y+3,rect.w-24,rect.h-6},true,
+        menu_control_color(rect,selected,available));
 }
 
 #include "modern_keys.inc"
@@ -1691,6 +1687,15 @@ static void draw_menu(void)
     text_draw(0,g->selected.mode==1 ? tr("Le mode sans bordure suit la définition du bureau.","Borderless mode uses the desktop resolution.") :
         tr("Choisissez une définition adaptée à votre écran.","Choose a resolution for your display."),rx,y+416,MUTED);
     if (*g->status) text_draw(0,g->status,rx,y+455,GOLD);
+    text_draw(1,tr("Taille du texte des boutons","Button text size"),rx,y+500,GOLD);
+    menu_button((SDL_FRect){rx,y+536,42,42},426,"<",!confirming && button_text_scale>75);
+    char text_scale[32];snprintf(text_scale,sizeof(text_scale),"%d %%",button_text_scale);
+    centered(2,text_scale,rx+rw/2,y+545,GOLD);
+    menu_button((SDL_FRect){rx+rw-42,y+536,42,42},427,">",!confirming && button_text_scale<150);
+    SDL_FRect preview={rx,y+600,rw-232,46};hud_panel(preview);
+    button_label(BUTTON_FONT,tr("Aperçu du texte des boutons","Button text preview"),
+        (SDL_FRect){preview.x+12,preview.y+4,preview.w-24,preview.h-8},true,GOLD);
+    menu_button((SDL_FRect){rx+rw-220,y+600,220,46},428,tr("Par défaut","Defaults"),!confirming && button_text_scale!=100);
     rule(x+30,y+h-157,w-60,(SDL_Color){117,87,44,255});
     if (confirming) {
         Uint64 now=SDL_GetTicks();
@@ -1916,6 +1921,14 @@ void modern_ui_menu_tick(void)
     case 414: modern_graphics_apply(); break;
     case 415: modern_graphics_confirm(); break;
     case 416: modern_graphics_cancel(); break;
+    case 426:case 427:case 428:
+        if(type==MM_WINDOW_OPTIONS && options_tab<0 && !modern_graphics.deadline) {
+            button_text_scale=action==428?100:button_text_scale+(action==426?-25:25);
+            if(button_text_scale<75)button_text_scale=75;
+            if(button_text_scale>150)button_text_scale=150;
+            save_settings();
+        }
+        break;
     case 419:
         if(type==MM_WINDOW_OPTIONS && options_tab==0 && !tig_net_is_active()) {
             settings_set_value(&settings,MODERN_FOLLOWER_AUTO_PICKUP_KEY,!settings_get_value(&settings,MODERN_FOLLOWER_AUTO_PICKUP_KEY));
@@ -2124,6 +2137,7 @@ static void render_overlay(SDL_Renderer* target)
     SDL_BlendMode old_blend;SDL_GetRenderDrawBlendMode(renderer,&old_blend);
     SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
     button_count=0;
+    button_overflow_hint[0]=0;
     if(menu) {
         draw_menu();
         if(mainmenu_ui_window_type_get()==MM_WINDOW_MAINMENU && !confirming_menu) {
@@ -2152,7 +2166,7 @@ static void render_overlay(SDL_Renderer* target)
         draw_binding_bar();
         drawing_play_panel=false;
     }
-    if(key_edit<0)for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
+    if(key_edit<0 && !*button_overflow_hint)for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
         int action=buttons[i].action,binding=key_for_action(action);char hint[256]="";
         if(binding>=0)snprintf(hint,sizeof(hint),"%s [%s]",key_label(binding),key_name(binding));
         if(*hint) {
@@ -2164,6 +2178,16 @@ static void render_overlay(SDL_Renderer* target)
         break;
     }
     if(!menu && !journal)draw_quickslot_hint();
+    if(*button_overflow_hint) {
+        float width=fminf(540,canvas_w-24);
+        SDL_FRect box={fmaxf(12,fminf(canvas_w-width-12,mouse_x-width/2)),0,width,0};
+        SDL_FRect content={box.x+12,0,width-24,0};
+        int rows=menu_paragraph(button_overflow_hint,content,0,GOLD);
+        if(rows>4)rows=4;
+        box.h=rows*27+16;box.y=fmaxf(8,fminf(canvas_h-box.h-8,mouse_y+24));
+        hud_panel(box);content.y=box.y+8;content.h=box.h-16;
+        menu_paragraph(button_overflow_hint,content,0,GOLD);
+    }
     SDL_SetRenderDrawBlendMode(renderer,old_blend);
     SDL_SetRenderLogicalPresentation(renderer,old_w,old_h,old_mode);
 }
@@ -2198,9 +2222,22 @@ static void save_settings(void)
 {
     FILE* f=fopen("modern-ui/settings.ini.tmp","w");
     if(f) {
-        fprintf(f,"TextSize=%d\n",body_size);
+        fprintf(f,"TextSize=%d\nButtonTextScale=%d\n",body_size,button_text_scale);
         if(fclose(f)==0) SDL_RenamePath("modern-ui/settings.ini.tmp","modern-ui/settings.ini");
     }
+}
+
+static void load_settings(void)
+{
+    body_size=20;button_text_scale=100;
+    FILE* file=fopen("modern-ui/settings.ini","r");
+    if(!file)return;
+    char line[128];int value;
+    while(fgets(line,sizeof(line),file)) {
+        if(sscanf(line,"TextSize=%d",&value)==1 && value>=16 && value<=26)body_size=value;
+        else if(sscanf(line,"ButtonTextScale=%d",&value)==1 && value>=75 && value<=150 && value%25==0)button_text_scale=value;
+    }
+    fclose(file);
 }
 
 static void activate(int action)
@@ -2458,11 +2495,11 @@ bool modern_ui_init(void)
     book_font_data=SDL_LoadFile("modern-ui/Book.ttf",&book_font_size);
     heading_font_data=SDL_LoadFile("modern-ui/Heading.ttf",&heading_font_size);
     if(!book_font_data || !heading_font_data) {modern_ui_exit();return false;}
-    FILE* settings=fopen("modern-ui/settings.ini","r");
-    if(settings) {int n;if(fscanf(settings,"TextSize=%d",&n)==1 && n>=16 && n<=26) body_size=n;fclose(settings);}
+    load_settings();
     key_load();
     update_geometry();
-    if(!fonts[0].texture || !fonts[1].texture || !fonts[2].texture || !fonts[3].texture) {modern_ui_exit();return false;}
+    if(!fonts[0].texture || !fonts[1].texture || !fonts[2].texture || !fonts[3].texture
+        || !fonts[BUTTON_FONT].texture || !fonts[MENU_BUTTON_FONT].texture) {modern_ui_exit();return false;}
     wood_texture=make_material(false);paper_texture=make_material(true);
     SDL_Surface* background=SDL_LoadPNG("modern-ui/menu-background.png");
     if(background) {

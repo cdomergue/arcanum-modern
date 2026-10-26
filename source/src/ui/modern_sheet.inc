@@ -53,7 +53,7 @@ static void sheet_stat_control(int64_t obj,int index,SDL_FRect r)
     sheet_item(obj,0,index,&name,&description,&value);
     button((SDL_FRect){r.x,r.y,r.w,30},690+index,"",-1,
         sheet_detail_category==0 && sheet_detail_index==index,true);
-    text_compact(name,r.x+9,r.y+6,r.w-18,false,GOLD);
+    button_label(BUTTON_FONT,name,(SDL_FRect){r.x+9,r.y+3,r.w-18,24},false,GOLD);
     char number[32];snprintf(number,sizeof(number),"%d",value);
     button((SDL_FRect){r.x,r.y+36,32,32},620+index*2,"-",-1,false,modern_charedit_editable());
     centered(2,number,r.x+r.w/2,r.y+39,GOLD);
@@ -64,14 +64,8 @@ static void sheet_stat_control(int64_t obj,int index,SDL_FRect r)
 static void sheet_tab(SDL_FRect rect,int action,const char* text,bool active)
 {
     button(rect,action,"",-1,active,true);
-    char label[512];SDL_strlcpy(label,text,sizeof(label));
-    SDL_Color color=menu_control_color(rect,active,true);
-    char* split=text_measure(0,label)>rect.w-30?strchr(label,' '):NULL;
-    if(split) {
-        *split++=0;
-        text_compact(label,rect.x+10,rect.y+7,rect.w-20,true,color);
-        text_compact(split,rect.x+10,rect.y+23,rect.w-20,true,color);
-    } else text_compact(label,rect.x+10,rect.y+15,rect.w-20,true,color);
+    button_label(BUTTON_FONT,text,(SDL_FRect){rect.x+8,rect.y+3,rect.w-16,rect.h-6},true,
+        menu_control_color(rect,active,true));
 }
 static void sheet_moral(int64_t obj,SDL_FRect r)
 {
