@@ -2926,7 +2926,15 @@ diff --git a/src/game/mp_utils.c b/src/game/mp_utils.c
 diff --git a/src/game/obj.c b/src/game/obj.c
 --- a/src/game/obj.c
 +++ b/src/game/obj.c
-@@ -1367,6 +1367,11 @@
+@@ -91,6 +91,7 @@
+ static void object_convert_array_ids_to_handles(Object* object);
+ static bool convert_handle_to_id(void* entry, int index);
+ static bool convert_id_to_handle(void* entry, int index);
++static bool convert_follower_id_to_handle(void* entry, int index);
+ static int sub_40C030(ObjectType object_type);
+ static bool object_field_valid(int type, int fld);
+ static bool sub_40C560(Object* object, int fld);
+@@ -1367,6 +1368,11 @@
  // 0x406930
  bool obj_dif_read(TigFile* stream, int64_t obj)
  {
@@ -2938,7 +2946,7 @@ diff --git a/src/game/obj.c b/src/game/obj.c
      Object* object;
      unsigned int marker;
      ObjectID oid;
-@@ -1406,7 +1411,8 @@
+@@ -1406,7 +1412,8 @@
  
      if (object->oid.type != OID_TYPE_NULL) {
          if (!objid_is_equal(object->oid, oid)) {
@@ -2948,6 +2956,60 @@ diff --git a/src/game/obj.c b/src/game/obj.c
              obj_unlock(obj);
              return false;
          }
+@@ -1848,6 +1855,12 @@
+ 
+     obj_arrayfield_fetch(object, fld, index, &oid);
+     obj_unlock(obj);
++
++    // Followers on another map retain their persistent ID until that map loads.
++    if (fld == OBJ_F_CRITTER_FOLLOWER_IDX
++        && oid.type != OID_TYPE_NULL && oid.type != OID_TYPE_HANDLE) {
++        return obj_pool_perm_lookup(oid);
++    }
+ 
+     if (oid.type == OID_TYPE_NULL || oid.type != OID_TYPE_HANDLE) {
+         return OBJ_HANDLE_NULL;
+@@ -4081,7 +4094,8 @@
+             && sub_40D320(object, fld)) {
+             sub_408F40(object, fld, &sa_ptr, &prototype_obj);
+             if (*sa_ptr != NULL) {
+-                if (!sa_enumerate(sa_ptr, convert_id_to_handle)) {
++                if (!sa_enumerate(sa_ptr, fld == OBJ_F_CRITTER_FOLLOWER_IDX
++                        ? convert_follower_id_to_handle : convert_id_to_handle)) {
+                     tig_debug_printf("Can't convert sizeable array of objects to handles (oft_as_count: %d)\n", idx);
+                 }
+             }
+@@ -4098,6 +4112,9 @@
+     (void)index;
+ 
+     oid = *(ObjectID*)entry;
++
++    // An unresolved cross-map follower is already stored as a persistent ID.
++    if (oid.type != OID_TYPE_NULL && oid.type != OID_TYPE_HANDLE) return true;
+ 
+     if (oid.type != OID_TYPE_NULL) {
+         if (obj_handle_is_valid(oid.d.h)) {
+@@ -4119,6 +4136,20 @@
+         return oid.type != OID_TYPE_NULL;
+     }
+ 
++    return true;
++}
++
++static bool convert_follower_id_to_handle(void* entry, int index)
++{
++    ObjectID* oid = entry;
++    (void)index;
++    if (oid->type != OID_TYPE_NULL && oid->type != OID_TYPE_HANDLE) {
++        int64_t obj = obj_pool_perm_lookup(*oid);
++        if (obj != OBJ_HANDLE_NULL) {
++            oid->type = OID_TYPE_HANDLE;
++            oid->d.h = obj;
++        }
++    }
+     return true;
+ }
+ 
 diff --git a/src/game/obj.h b/src/game/obj.h
 --- a/src/game/obj.h
 +++ b/src/game/obj.h
@@ -2967,7 +3029,22 @@ diff --git a/src/game/object.c b/src/game/object.c
  #include "game/object.h"
  
  #include <inttypes.h>
-@@ -4000,8 +4001,16 @@
+@@ -3631,6 +3632,14 @@
+     for (index = 0; index < cnt; index++) {
+         follower_obj = obj_arrayfield_handle_get(obj, OBJ_F_CRITTER_FOLLOWER_IDX, index);
+ 
++        // A separated follower can already be on another map. Keep its saved
++        // party reference, but do not expose the unloaded source-map object.
++        if (follower_obj == OBJ_HANDLE_NULL || !obj_handle_is_valid(follower_obj)
++            || (obj_field_int32_get(follower_obj, OBJ_F_FLAGS) & (OF_DESTROYED | OF_EXTINCT)) != 0
++            || !obj_type_is_critter(obj_field_int32_get(follower_obj, OBJ_F_TYPE))) {
++            continue;
++        }
++
+         node = object_node_create();
+         node->obj = follower_obj;
+         node->next = NULL;
+@@ -4000,8 +4009,16 @@
      stat_base_set(obj, STAT_GENDER, gender);
  
      aid = obj_field_int32_get(obj, OBJ_F_CURRENT_AID);
@@ -2986,7 +3063,7 @@ diff --git a/src/game/object.c b/src/game/object.c
      obj_field_int32_set(obj, OBJ_F_AID, aid);
      obj_field_int32_set(obj, OBJ_F_CURRENT_AID, aid);
      obj_field_int32_set(obj, OBJ_F_SOUND_EFFECT, 10 * (gender + 2 * race + 1));
-@@ -4057,27 +4066,33 @@
+@@ -4057,27 +4074,33 @@
  }
  
  // 0x441DD0
@@ -3024,7 +3101,7 @@ diff --git a/src/game/object.c b/src/game/object.c
          flags |= (type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED);
      } else {
          flags &= ~(type == OBJ_TYPE_PORTAL ? OPF_LOCKED : OCOF_LOCKED);
-@@ -4097,8 +4112,14 @@
+@@ -4097,8 +4120,14 @@
      tig_art_id_t aid;
  
      obj = timeevent->params[0].object_value;
@@ -3598,7 +3675,7 @@ diff --git a/src/game/teleport.c b/src/game/teleport.c
      int inventory_list_fld;
      TeleportObjectNode* node;
  
-+    if (!obj_handle_is_valid(obj)) {
++    if (obj == OBJ_HANDLE_NULL || !obj_handle_is_valid(obj)) {
 +        return true;
 +    }
 +
@@ -4376,7 +4453,50 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                          return true;
                      }
                  }
-@@ -1139,7 +1113,7 @@
+@@ -977,6 +951,13 @@
+     intgame_mode_set(INTGAME_MODE_MAIN);
+ }
+ 
++static int follower_ui_bar_percent(int current, int maximum)
++{
++    if (maximum <= 0 || current <= 0) return 0;
++    if (current >= maximum) return 100;
++    return (int)(100LL * current / maximum);
++}
++
+ /**
+  * Redraws all visible follower portrait slots.
+  *
+@@ -1016,7 +997,9 @@
+         sub_444130(&(follower_ui_followers[follower_ui_top_index + index]));
+ 
+         follower_obj = follower_ui_followers[follower_ui_top_index + index].obj;
+-        if (follower_obj == OBJ_HANDLE_NULL) {
++        if (follower_obj == OBJ_HANDLE_NULL || !obj_handle_is_valid(follower_obj)
++            || (obj_field_int32_get(follower_obj, OBJ_F_FLAGS) & (OF_DESTROYED | OF_EXTINCT)) != 0
++            || !obj_type_is_critter(obj_field_int32_get(follower_obj, OBJ_F_TYPE))) {
+             // Follower is no longer valid - rebuild the list and stop.
+             follower_ui_refresh();
+             break;
+@@ -1039,7 +1022,7 @@
+         }
+ 
+         // Draw health bar.
+-        hp_percent = 100 * object_hp_current(follower_obj) / object_hp_max(follower_obj);
++        hp_percent = follower_ui_bar_percent(object_hp_current(follower_obj), object_hp_max(follower_obj));
+         if (stat_level_get(follower_obj, STAT_POISON_LEVEL) > FOLLOWER_UI_POISON_LEVEL_THRESHOLD) {
+             follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_POISON_BAR_ART, 3, 39, hp_percent, 100);
+         } else {
+@@ -1052,7 +1035,7 @@
+         }
+ 
+         // Draw fatigue bar.
+-        fatigue_percent = 100 * critter_fatigue_current(follower_obj) / critter_fatigue_max(follower_obj);
++        fatigue_percent = follower_ui_bar_percent(critter_fatigue_current(follower_obj), critter_fatigue_max(follower_obj));
+         follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_FATIGUE_BAR_ART, 3, 44, fatigue_percent, 100);
+     }
+ 
+@@ -1139,7 +1122,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -4385,7 +4505,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
  
          tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
-@@ -1212,7 +1186,7 @@
+@@ -1212,7 +1195,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -4394,7 +4514,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
      }
  
-@@ -1243,7 +1217,7 @@
+@@ -1243,7 +1226,7 @@
  void update_toggle_button_visibility(void)
  {
      if (follower_ui_followers_count > 0) {
@@ -4403,7 +4523,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
      }
-@@ -1271,7 +1245,7 @@
+@@ -1271,7 +1254,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
@@ -4412,7 +4532,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
          // Scroll-down button is active if not already at the bottom.
          if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
-@@ -1280,7 +1254,7 @@
+@@ -1280,7 +1263,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
@@ -4421,7 +4541,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          // Either all portraits fit into existing slots, or the follower UI is
          // hidden.
-@@ -1351,3 +1325,106 @@
+@@ -1351,3 +1334,108 @@
          follower_ui_refresh();
      }
  }
@@ -4489,7 +4609,9 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 +    int n = 0;
 +    for (int i = 0; i < count && n < capacity; i++) {
 +        int64_t obj = obj_arrayfield_handle_get(pc, OBJ_F_CRITTER_FOLLOWER_IDX, i);
-+        if (obj && obj_handle_is_valid(obj)) objects[n++] = obj;
++        if (obj && obj_handle_is_valid(obj)
++            && (obj_field_int32_get(obj, OBJ_F_FLAGS) & (OF_DESTROYED | OF_EXTINCT)) == 0
++            && obj_type_is_critter(obj_field_int32_get(obj, OBJ_F_TYPE))) objects[n++] = obj;
 +    }
 +    return n;
 +}

@@ -12,6 +12,7 @@ code = r'''
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#define OBJ_HANDLE_NULL 0
 #define OF_DESTROYED 1
 #define OF_EXTINCT 2
 #define OF_TEXT 4
@@ -35,9 +36,9 @@ static TeleportObjectNode* teleport_obj_node_head;
 static bool teleport_is_teleporting_pc;
 static int flags[5],waiting;
 static ObjectNode followers[]={{2,&followers[1]},{3,NULL}};
-static bool obj_handle_is_valid(int64_t obj){return obj>0&&obj<5;}
+static bool obj_handle_is_valid(int64_t obj){return obj>=0&&obj<5;}
 static int obj_field_int32_get(int64_t obj,int field){
- assert(obj_handle_is_valid(obj));
+ assert(obj>0&&obj_handle_is_valid(obj));
  if(field==OBJ_F_TYPE)return obj==1?OBJ_TYPE_PC:obj<4?OBJ_TYPE_NPC:4;
  if(field==OBJ_F_FLAGS)return flags[obj];
  if(field==OBJ_F_NPC_FLAGS)return obj==3?waiting:0;

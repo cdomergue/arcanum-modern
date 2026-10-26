@@ -8,6 +8,7 @@ static bool party_control_member(int64_t obj)
     int64_t pc=player_get_local_pc_obj();
     return obj && pc && obj_handle_is_valid(obj)
         && obj_field_int32_get(obj,OBJ_F_TYPE)==OBJ_TYPE_NPC
+        && !(obj_field_int32_get(obj,OBJ_F_FLAGS)&(OF_DESTROYED|OF_EXTINCT))
         && critter_pc_leader_get(obj)==pc;
 }
 

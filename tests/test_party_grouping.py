@@ -21,6 +21,9 @@ static int intgame_mode_get(void){return mode;}
 static bool intgame_mode_set(int value){mode=value;return true;}
 static void dialog_speaker_set(int64_t value){(void)value;}
 #define OBJ_TYPE_NPC 1
+#define OBJ_F_FLAGS 4
+#define OF_DESTROYED 1
+#define OF_EXTINCT 2
 #define OBJ_F_TYPE 1
 #define OBJ_F_CRITTER_FLAGS 2
 #define OBJ_F_SPELL_FLAGS 3
@@ -31,10 +34,11 @@ static void dialog_speaker_set(int64_t value){(void)value;}
 typedef struct {int64_t id;} ObjectID;
 typedef FILE TigFile;
 static bool combat,dialog,interruptible=true,alive=true,member=true;
-static int interruptions,flags,spells;
+static int interruptions,flags,spells,object_flags;
 static bool obj_handle_is_valid(int64_t obj){return obj>=1&&obj<=3;}
 static int64_t player_get_local_pc_obj(void){return 1;}
 static int obj_field_int32_get(int64_t obj,int field){
+ if(field==OBJ_F_FLAGS)return object_flags;
  if(field==OBJ_F_TYPE)return obj==1?0:OBJ_TYPE_NPC;
  return field==OBJ_F_CRITTER_FLAGS?flags:spells;
 }
@@ -67,6 +71,8 @@ int main(void){
  interruptible=true;spells=OSF_MIND_CONTROLLED;assert(!modern_party_select(2));
  spells=0;assert(modern_party_select(2));member=false;assert(!modern_party_selected());member=true;
  assert(modern_party_select(2));alive=false;assert(!modern_party_selected());alive=true;
+ for(int state=1;state<=3;state++){object_flags=state;assert(!modern_party_select(2)&&!modern_party_set_grouped(2,true)&&!modern_party_selected());}
+ object_flags=0;
  assert(modern_party_set_grouped(2,true));assert(party_control_save());
  party_detached_count=1;assert(party_control_load()&&!modern_party_detached(2));
  FILE* corrupt=fopen("party.dat","wb");fputs("bad",corrupt);fclose(corrupt);
