@@ -3190,7 +3190,35 @@ diff --git a/src/game/reaction.c b/src/game/reaction.c
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
-@@ -972,14 +972,11 @@
+@@ -281,6 +281,7 @@
+     int attachee_type;
+     bool script_num_changed;
+     int saved_script_num;
++    int locked_script_num;
+     ScriptState state;
+     ScriptFile* script_file;
+     int iter;
+@@ -344,7 +345,8 @@
+     memset(state.lc_vars, 0, sizeof(state.lc_vars));
+     memset(state.lc_objs, 0, sizeof(state.lc_objs));
+ 
+-    script_file = script_lock(invocation->script->num);
++    locked_script_num = invocation->script->num;
++    script_file = script_lock(locked_script_num);
+     if (script_file != NULL) {
+         line = invocation->line;
+ 
+@@ -380,7 +382,8 @@
+             }
+         }
+ 
+-        script_unlock(invocation->script->num);
++        // Auto-removing scripts clear their number before reaching this point.
++        script_unlock(locked_script_num);
+     } else {
+         run_default = true;
+     }
+@@ -972,14 +975,11 @@
      case SCT_OBJ_HAS_MAX_FOLLOWERS: {
          // (obj) has maximum followers
  
@@ -3206,7 +3234,7 @@ diff --git a/src/game/script.c b/src/game/script.c
                      matched++;
                  }
              } else {
-@@ -1746,6 +1743,7 @@
+@@ -1746,6 +1746,7 @@
      case SAT_GET_STAT: {
          int stat = script_get_value(action->op_type[0], action->op_value[0], state);
          int64_t critter_obj = script_get_obj(action->op_type[1], action->op_value[1], state);
@@ -3214,7 +3242,7 @@ diff --git a/src/game/script.c b/src/game/script.c
          int value = stat_level_get(critter_obj, stat);
          if (stat == STAT_INTELLIGENCE
              && value > LOW_INTELLIGENCE
-@@ -1912,10 +1910,12 @@
+@@ -1912,10 +1913,12 @@
      case SAT_GET_SKILL: {
          int skill = script_get_value(action->op_type[0], action->op_value[0], state);
          int64_t obj = script_get_obj(action->op_type[1], action->op_value[1], state);
@@ -3227,6 +3255,16 @@ diff --git a/src/game/script.c b/src/game/script.c
      }
      case SAT_CAST_SPELL: {
          int64_t source_obj = script_get_obj(action->op_type[0], action->op_value[0], state);
+@@ -3390,7 +3393,8 @@
+ {
+     int cache_entry_id;
+ 
+-    if (!script_editor) {
++    // Match script_lock: only the editor bypasses the runtime cache.
++    if (script_editor) {
+         return;
+     }
+ 
 diff --git a/src/game/sector.c b/src/game/sector.c
 --- a/src/game/sector.c
 +++ b/src/game/sector.c
