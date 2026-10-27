@@ -44,6 +44,10 @@ static int script_calls;
 static const char* object_name;
 static void object_examine(int64_t obj,int64_t pc,char* out){(void)obj;(void)pc;strcpy(out,object_name);}
 static bool modern_ui_enabled(void){return enabled;}
+static int64_t player_get_local_pc_obj(void){return 1;}
+static bool combat_turn_based_is_active(void){return false;}
+static bool combat_critter_is_combat_mode_active(int64_t obj){(void)obj;return false;}
+static const ModernDetails* modern_combat_hover_details(int64_t obj){(void)obj;return NULL;}
 static int64_t object_hover_obj_get(void){return hovered;}
 static bool obj_handle_is_valid(int64_t o){(void)o;return valid;}
 static int intgame_mode_get(void){return mode;}

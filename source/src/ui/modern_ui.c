@@ -2151,6 +2151,7 @@ static void render_overlay(SDL_Renderer* target)
     }
     else {
         draw_world_bubbles();
+        world_hover_rect=(SDL_FRect){0};
         if(!hud_region(mouse_x,mouse_y) && !(hud && !tactical_active() && hud_message_expanded()))draw_world_hover();
         drawing_hud=true;
         draw_maintained_spells();
@@ -2574,6 +2575,7 @@ bool modern_ui_enabled(void) {return enabled;}
 void modern_ui_tick(void)
 {
     modern_ui_menu_tick();
+    modern_map_route_tick();
     tactical_tick();
     if(pending_action==999 && tactical_active())pending_action=-1;
     if(pending_action==999) {

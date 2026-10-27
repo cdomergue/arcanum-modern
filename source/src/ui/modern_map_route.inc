@@ -1,4 +1,4 @@
-enum {TOWN_ROUTE_LIMIT=6, TOWN_ROUTE_SPAN=32, TOWN_ROUTE_PROBES=128};
+enum {TOWN_ROUTE_SPAN=32, TOWN_ROUTE_PROBES=128};
 typedef struct TownRouteSearch {
     int64_t actor;
     int probes;
@@ -49,19 +49,36 @@ static int town_route_plan(TownRouteSearch* search,int64_t from,int64_t to,int s
     return 0;
 }
 
+/* Local routes are runtime-only; the world route keeps its native 30 slots. */
+static bool town_route_reserve(WmapRoute* route,int extra)
+{
+    if(extra<0 || route->length>INT_MAX-extra)return false;
+    int needed=route->length+extra;
+    if(needed<=route->capacity)return true;
+    int capacity=needed<=INT_MAX/2?needed*2:needed;
+    if((size_t)capacity>SIZE_MAX/sizeof(*route->waypoints))return false;
+    WmapRouteWaypoint* points=malloc((size_t)capacity*sizeof(*points));
+    if(!points)return false;
+    memcpy(points,route->waypoints,(size_t)route->length*sizeof(*points));
+    if(route->waypoints!=route->initial_waypoints)free(route->waypoints);
+    route->waypoints=points;route->capacity=capacity;
+    return true;
+}
+
 static bool modern_town_route_add(WmapCoords* coords)
 {
     WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
     int64_t actor=player_get_local_pc_obj();
     int64_t from=route->length?route->waypoints[route->length-1].loc:obj_field_int64_get(actor,OBJ_F_LOCATION);
-    int64_t to,points[TOWN_ROUTE_LIMIT];
+    /* The search budget bounds work per click, not the accumulated route. */
+    int64_t to,points[TOWN_ROUTE_PROBES];
     townmap_coords_to_loc(&wmap_ui_tmi,coords->x,coords->y,&to);
     if(from==to)return false;
     TownRouteSearch search={.actor=actor,.deadline=SDL_GetTicks()+250};
-    int slots=TOWN_ROUTE_LIMIT-route->length;
+    int slots=TOWN_ROUTE_PROBES;
     int count=town_route_plan(&search,from,to,slots,points);
-    if(!count) {
-        MesFileEntry entry={.num=slots<=0 || town_route_distance(from,to)>TOWN_ROUTE_SPAN*slots?611:610};
+    if(!count || !town_route_reserve(route,count)) {
+        MesFileEntry entry={.num=610};
         mes_get_msg(wmap_ui_worldmap_mes_file,&entry);
         UiMessage message={.type=UI_MSG_TYPE_FEEDBACK,.str=entry.str};
         intgame_message_window_display_msg(&message);

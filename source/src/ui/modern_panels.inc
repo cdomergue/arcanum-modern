@@ -832,16 +832,18 @@ static void draw_map(void)
     if(map_texture)SDL_RenderTexture(renderer,map_texture,&src,&overlay);
     if(local) {
         float origin_x=map_camera_active?0:map.origin_x,origin_y=map_camera_active?0:map.origin_y;
+        float previous_x=0,previous_y=0;
         for(int i=0;i<=map_local.count;i++) {
-            float xx=dest.x+(map_local.x[i]+origin_x-map.offset_x)*scale;
-            float yy=dest.y+(map_local.y[i]+origin_y-map.offset_y)*scale;
+            int point_x,point_y;
+            if(!modern_map_local_point(i,&point_x,&point_y))break;
+            float xx=dest.x+(point_x+origin_x-map.offset_x)*scale;
+            float yy=dest.y+(point_y+origin_y-map.offset_y)*scale;
             if(i) {
-                float previous_x=dest.x+(map_local.x[i-1]+origin_x-map.offset_x)*scale;
-                float previous_y=dest.y+(map_local.y[i-1]+origin_y-map.offset_y)*scale;
                 SDL_SetRenderDrawColor(renderer,235,193,100,255);
                 SDL_RenderLine(renderer,previous_x,previous_y,xx,yy);
                 SDL_RenderLine(renderer,previous_x,previous_y+1,xx,yy+1);
             }
+            previous_x=xx;previous_y=yy;
             float radius=i==map_local.count && i?7:4;
             fill((SDL_FRect){xx-radius,yy-radius,radius*2,radius*2},i?GOLD:(SDL_Color){240,240,230,255});
             outline((SDL_FRect){xx-radius-2,yy-radius-2,radius*2+4,radius*2+4},GOLD);
@@ -881,8 +883,10 @@ static void dialogue_scroll_button(SDL_FRect rect,int action,const char* label,b
     if(!active)return;
     button(rect,action,label,-1,false,true);
 }
+static SDL_FRect world_hover_rect;
 static void draw_world_hover(void)
 {
+    world_hover_rect=(SDL_FRect){0};
     if(journal || native_panel() || !visible())return;
     const ModernDetails* detail=modern_hover_details();if(!detail)return;
     float width=fminf(700,canvas_w-80),text_width=width-96;
@@ -901,7 +905,8 @@ static void draw_world_hover(void)
     float height=20+(title_rows+rows)*27+(detail->bar_count?26:0)+(detail->extra_count?28:0);
     if(height<86)height=86;
     float x=(canvas_w-width)/2,y=canvas_h-136-height;
-    hud_panel((SDL_FRect){x,y,width,height});
+    world_hover_rect=(SDL_FRect){x,y,width,height};
+    hud_panel(world_hover_rect);
     if(detail->portrait>=0)draw_portrait(detail->portrait,(SDL_FRect){x+10,y+10,56,65});
     else if(detail->icon>=0)draw_art(detail->icon,(SDL_FRect){x+10,y+10,56,56},true);
     float tx=x+78,ty=y+10;
@@ -1180,7 +1185,6 @@ static bool panels_action(int action)
 }
 static void panels_tick(void)
 {
-    modern_map_route_tick();
     int p=native_panel();
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;

@@ -54,7 +54,9 @@ folder. **Play now** remains available.
 
 - Turn-based combat with direct companion control, switching between allies
   with consecutive turns, action previews and a scrollable combat log showing
-  attack rolls, hit chances and outcomes. Combat uses Arcanum's rules.
+  attack rolls, hit chances and outcomes. Walls fade around all combat
+  participants throughout the fight, including between their turns. Combat uses
+  Arcanum's rules.
 - Redesigned HUD, character sheet, inventory, trading, dialogue, journal, maps,
   spell and skill panels, save/load menus and display options.
 - World zoom, keyboard camera movement, remappable keys, and windowed,
@@ -66,12 +68,13 @@ folder. **Play now** remains available.
   offerings and gifts. Supports existing saves and installations with AID
   already present. Magical properties remain hidden until identification.
 - Independent companion positioning, regrouping and control outside combat.
+  Your character and companions avoid detected ground traps and stop if no safe route is available.
 - Select automatic level-up schemes for your character and companions.
   Choose **None** for a companion to assign their available points yourself.
 - Three rotating autosaves before and after combat and before eligible area
   transitions, separate from manual saves.
 - Journal search, quest filters, favorites, quest tracking and personal map notes.
-- Zoomable local maps with exploration fog, localized labels and route planning.
+- Zoomable local maps with exploration fog, localized labels and route planning without a waypoint limit.
 - Books, letters, newspapers, inscriptions, telegrams and floating dialogue
   using the installed game's text, plus playback of its original cinematics.
 - Optional unlimited companions; disabled by default. Recruitment conditions apply.

@@ -366,6 +366,10 @@ static void draw_tactical_preview(void)
     float height=31+(*health?24:0)+(*detail?24:0);
     float width=fminf(900,fmaxf(text_measure(0,detail),fmaxf(text_measure(0,line),text_measure(0,health)))+42);
     float x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(canvas_h-137-height,mouse_y+36);
+    /* Keep action cost/chance feedback clear of the character inspection card. */
+    if(world_hover_rect.h>0 && x<world_hover_rect.x+world_hover_rect.w && x+width>world_hover_rect.x
+        && y<world_hover_rect.y+world_hover_rect.h && y+height>world_hover_rect.y)
+        y=fmaxf(8,world_hover_rect.y-height-8);
     fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,225});outline((SDL_FRect){x,y,width,height},p->affordable?green:red);
     text_compact(line,x+10,y+6,width-20,false,p->affordable?GOLD:red);
     if(*detail)text_compact(detail,x+10,y+30,width-20,false,p->affordable?MUTED:red);

@@ -38,16 +38,37 @@ static void capture(const char* name)
     char path[4096];snprintf(path,sizeof(path),"%s/%s.png",capture_dir,name);
     assert(SDL_SavePNG(surface,path));SDL_DestroySurface(surface);
 }
-static void check_actor(int64_t actor,int64_t pc,const char* shot)
+typedef struct ExpectedWall { int64_t obj; unsigned int sides; } ExpectedWall;
+static void check_group(int64_t pc,const char* shot,int64_t camera)
 {
-    int64_t loc=obj_field_int64_get(actor,OBJ_F_LOCATION);
-    roof_recalc(loc);wallcheck_recalc(loc);uint64_t expected=faded_hash();
-    roof_recalc(obj_field_int64_get(pc,OBJ_F_LOCATION));wallcheck_recalc(obj_field_int64_get(pc,OBJ_F_LOCATION));
-    combat_turn_based_whos_turn_set(actor);assert(combat_turn_based_whos_turn_get()==actor);
-    wallcheck_ping(0);assert(wallcheck_observer==actor&&qword_5E0A08==loc);
-    assert(faded_hash()==expected);assert(player_get_local_pc_obj()==pc);
-    printf("Verified %s: %d faded walls\n",shot,dword_5E2E24);
-    location_origin_set(loc);capture(shot);
+    int count=combat_visibility_actors(NULL,0);
+    int64_t fallback=combat_input_actor();
+    int64_t* actors=malloc(sizeof(*actors)*(count?count:1));assert(actors);
+    if(count)assert(combat_visibility_actors(actors,count)==count);
+    else {count=1;actors[0]=fallback;}
+    ExpectedWall* expected=NULL;int expected_count=0;
+    for(int i=0;i<count;i++) {
+        wallcheck_recalc(obj_field_int64_get(actors[i],OBJ_F_LOCATION));
+        for(int w=0;w<dword_5E2E24;w++) {
+            int64_t obj=stru_5E0E20[w].obj;int j=0;
+            while(j<expected_count && expected[j].obj!=obj)j++;
+            if(j==expected_count){expected=realloc(expected,sizeof(*expected)*(++expected_count));assert(expected);expected[j]=(ExpectedWall){obj,0};}
+            expected[j].sides|=obj_field_int32_get(obj,OBJ_F_WALL_FLAGS)&6;
+        }
+    }
+    wallcheck_ping(0);assert(wallcheck_observer_count==count);
+    assert(dword_5E2E24==expected_count);
+    for(int j=0;j<expected_count;j++) {
+        int index;assert(sub_4386B0(expected[j].obj,&index));
+        assert((obj_field_int32_get(expected[j].obj,OBJ_F_WALL_FLAGS)&6)==expected[j].sides);
+    }
+    assert(player_get_local_pc_obj()==pc);
+    uint64_t before=faded_hash();
+    for(int i=0;i<100;i++)wallcheck_ping(0);
+    assert(faded_hash()==before);
+    printf("Verified %s: %d actors, %d walls in the union\n",shot,count,dword_5E2E24);
+    location_origin_set(camera);capture(shot);
+    free(expected);free(actors);
 }
 int main(int argc,char** argv)
 {
@@ -61,7 +82,7 @@ int main(int argc,char** argv)
     init.texture_width=init.texture_height=2048;init.flags=TIG_INITIALIZE_WINDOWED|TIG_INITIALIZE_NO_SOUND;
     init.art_file_path_resolver=name_resolve_path;init.art_id_reset_func=name_normalize_aid;init.sound_file_path_resolver=gsound_resolve_path;
     assert(tig_init(&init)==TIG_OK);intgame_set_iso_window_width(init.width);intgame_set_iso_window_height(init.height);
-    GameInitInfo game={0};assert(intgame_create_iso_window(&game.iso_window_handle)&&gamelib_init(&game));
+    GameInitInfo game={0};game.draw_func=iso_redraw;game.invalidate_rect_func=iso_invalidate_rect;assert(intgame_create_iso_window(&game.iso_window_handle)&&gamelib_init(&game));
     sub_549A70();assert(gameuilib_init(&game)&&gamelib_mod_load("Arcanum")&&gameuilib_mod_load());
     gamelib_splash_clear();assert(modern_ui_init());
     assert(tig_video_renderer_get(&renderer)==TIG_OK);
@@ -94,24 +115,34 @@ int main(int argc,char** argv)
     sub_43E770(enemy,LOCATION_MAKE(LOCATION_GET_X(near_wall)+1,LOCATION_GET_Y(near_wall)),0,0);
     wallcheck_ping(0);assert(wallcheck_observer==pc);
     combat_critter_activate_combat_mode(pc);assert(combat_turn_based_is_active());
-    check_actor(pc,pc,"hero");
-    check_actor(companion,pc,"companion");assert(dword_5E2E24>0);
-    assert(!combat_player_controls(enemy));check_actor(enemy,pc,"enemy");
-    int64_t moved=near_wall;sub_43E770(enemy,moved,0,0);
-    wallcheck_ping(0);assert(wallcheck_observer==enemy&&qword_5E0A08==moved);
-    uint64_t actual=faded_hash();wallcheck_recalc(moved);assert(faded_hash()==actual);
-    location_origin_set(moved);capture("enemy-moved");
-    check_actor(companion,pc,"companion-again");
+    combat_turn_based_add_critter(companion);combat_turn_based_add_critter(enemy);
+    check_group(pc,"all-actors-hero-turn",near_wall);assert(dword_5E2E24>0);
+    uint64_t all=faded_hash();
+    combat_turn_based_whos_turn_set(companion);wallcheck_ping(0);assert(faded_hash()==all);
+    check_group(pc,"all-actors-companion-turn",near_wall);
+    assert(!combat_player_controls(enemy));combat_turn_based_whos_turn_set(enemy);
+    wallcheck_ping(0);assert(faded_hash()==all);
+    check_group(pc,"all-actors-enemy-turn",near_wall);
+    /* Moving someone whose turn has not started must also refresh the union. */
+    combat_turn_based_whos_turn_set(pc);
+    int64_t moved=LOCATION_MAKE(LOCATION_GET_X(near_wall)+3,LOCATION_GET_Y(near_wall));
+    sub_43E770(enemy,moved,0,0);wallcheck_ping(0);
+    check_group(pc,"enemy-moved-outside-turn",near_wall);
+    int flags=obj_field_int32_get(enemy,OBJ_F_CRITTER_FLAGS);
+    obj_field_int32_set(enemy,OBJ_F_CRITTER_FLAGS,flags|OCF_PARALYZED);
+    check_group(pc,"paralyzed-enemy",near_wall);
+    obj_field_int32_set(enemy,OBJ_F_CRITTER_FLAGS,flags);
+    object_flags_set(enemy,OF_OFF);wallcheck_ping(0);
+    check_group(pc,"enemy-removed",near_wall);object_flags_unset(enemy,OF_OFF);
     combat_critter_deactivate_combat_mode(pc);assert(!combat_turn_based_is_active());
-    wallcheck_ping(0);assert(wallcheck_observer==pc&&qword_5E0A08==original);
-    location_origin_set(original);capture("combat-ended");
+    check_group(pc,"combat-ended",near_wall);assert(wallcheck_observer==pc);
     assert(modern_party_select(companion));wallcheck_ping(0);
+    check_group(pc,"companion-outside-combat",near_wall);
     assert(wallcheck_observer==companion&&qword_5E0A08==obj_field_int64_get(companion,OBJ_F_LOCATION));
-    location_origin_set(near_wall);capture("companion-outside-combat");
-    int64_t selected_moved=LOCATION_MAKE(LOCATION_GET_X(near_wall)+1,LOCATION_GET_Y(near_wall));
-    sub_43E770(companion,selected_moved,0,0);wallcheck_ping(0);
-    assert(wallcheck_observer==companion&&qword_5E0A08==selected_moved);
+    sub_43E770(companion,moved,0,0);wallcheck_ping(0);
+    assert(wallcheck_observer==companion&&qword_5E0A08==moved);
     modern_party_select(0);wallcheck_ping(0);assert(wallcheck_observer==pc&&qword_5E0A08==original);
-    puts("PASS: native wall fading follows stationary hero/companion/nonparty turns and movement; restores hero after combat without changing player identity");
+    wallcheck_reset();assert(!dword_5E2E24&&!dword_5E2E28&&!wallcheck_observer_count);
+    puts("PASS: simultaneous native wall union, stationary turns, off-turn movement, incapacitated/removed actors, combat exit and selected companion; player identity unchanged");
     return 0;
 }

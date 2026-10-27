@@ -59,3 +59,23 @@ void check_travel_map_backend(void (*moving_frame)(void))
     assert(modern_map_travel_buffer(0, 0, info->map_width, info->map_height));
     printf("PASS: travel render restores native viewport; absolute route clicks, live travel movement and route cancellation\n");
 }
+
+void check_local_map_route(void)
+{
+    assert(wmap_ui_mode==WMAP_UI_MODE_TOWN);
+    WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
+    route->length=0;assert(town_route_reserve(route,40));
+    WmapCoords center=wmap_ui_mode_info[wmap_ui_mode].field_3C;
+    for(int i=0;i<40;i++) {
+        route->waypoints[i]=(WmapRouteWaypoint){.field_4=-1,.steps=1,
+            .coords={center.x+(i%8)*20-70,center.y+(i/8)*20-40}};
+    }
+    route->length=40;
+    WmapCoords selected=route->waypoints[38].coords;
+    modern_map_local_mouse(selected.x,selected.y,TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP,3);
+    assert(dword_5C9AD8==38 && route->length==40);
+    modern_map_local_mouse(selected.x,selected.y,TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP,3);
+    assert(route->length==39 && route->waypoints[38].coords.x!=selected.x);
+    ModernLocalMap state;assert(modern_map_local_state(&state) && state.count==39);
+    puts("PASS: selecting, deleting and displaying local waypoints beyond 30");
+}

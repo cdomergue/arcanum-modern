@@ -11,17 +11,18 @@ code=r'''
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
 typedef uint64_t Uint64;
 #define OBJ_HANDLE_NULL 0
 enum {WMAP_ROUTE_TYPE_TOWN,OBJ_F_LOCATION,UI_MSG_TYPE_FEEDBACK};
 typedef struct {int64_t loc;} WmapRouteWaypoint;
-typedef struct {WmapRouteWaypoint waypoints[6];int length;} WmapRoute;
+typedef struct {WmapRouteWaypoint waypoints[1000];int length;} WmapRoute;
 typedef struct {int num;char* str;} MesFileEntry;
 typedef struct {int type;char* str;} UiMessage;
 static WmapRoute wmap_ui_routes[1];
 static int wmap_ui_worldmap_mes_file;
-static int feedback,closed,moves,queued,previews,failed_preview,failed_queue;
-static bool can_start=true,idle,valid=true,combat,modern=true;
+static int feedback,closed,moves,previews,failed_preview;
+static bool can_start=true,idle,valid=true,combat,camera_follow;
 static int map_id=1;
 static int64_t player=1,location;
 static Uint64 ticks=100;
@@ -33,14 +34,10 @@ static void intgame_message_window_display_msg(UiMessage* m){(void)m;feedback++;
 static bool anim_preview_route_segment(int64_t obj,int64_t from,int64_t to){
     (void)obj;(void)from;(void)to;return ++previews!=failed_preview;
 }
-static bool anim_goal_move_to_tile(int64_t obj,int64_t loc){(void)obj;(void)loc;moves++;return can_start;}
-static bool sub_433A00(int64_t obj,int64_t loc,bool client){(void)obj;(void)loc;(void)client;return ++queued!=failed_queue;}
-static bool tig_net_is_active(void){return false;}
-static bool tig_net_is_host(void){return true;}
+static bool anim_goal_move_to_tile(int64_t obj,int64_t loc){(void)obj;(void)loc;moves++;camera_follow=false;return can_start;}
 static int map_current_map(void){return map_id;}
-static void sub_436D20(int flags,int zero){(void)flags;(void)zero;}
+static void sub_436D20(int flags,int zero){assert(can_start && flags==0x80000 && zero==0);camera_follow=true;}
 static void wmap_ui_close(void){closed++;}
-static bool modern_ui_enabled(void){return modern;}
 static bool obj_handle_is_valid(int64_t obj){(void)obj;return valid;}
 static bool combat_critter_is_combat_mode_active(int64_t obj){(void)obj;return combat;}
 static bool sub_423300(int64_t obj,void* id){(void)obj;(void)id;return true;}
@@ -49,22 +46,38 @@ static bool anim_is_idle(int64_t obj){(void)obj;return idle;}
 static void reset(void){
     modern_map_route_cancel_tracking();
     wmap_ui_routes[0]=(WmapRoute){.length=3,.waypoints={{10},{20},{30}}};
-    feedback=closed=moves=queued=previews=failed_preview=failed_queue=0;
-    can_start=valid=modern=true;idle=combat=false;map_id=1;player=1;location=0;ticks=100;
+    feedback=closed=moves=previews=failed_preview=0;
+    can_start=valid=true;idle=combat=camera_follow=false;map_id=1;player=1;location=0;ticks=100;
 }
 int main(void){
     reset();failed_preview=2;assert(modern_town_route_start());assert(feedback==1 && !moves && !closed);
-    reset();can_start=false;modern_town_route_start();assert(feedback==1 && moves==1 && !closed && !queued);
-    reset();failed_queue=1;modern_town_route_start();assert(feedback==1 && queued==1 && closed==1 && !town_travel_actor);
-    reset();modern_town_route_start();assert(previews==3 && moves==1 && queued==2 && closed==1 && !feedback);
+    reset();can_start=false;modern_town_route_start();assert(feedback==1 && moves==1 && !closed);
+    reset();modern_town_route_start();assert(previews==3 && moves==1 && closed==1 && !feedback);
     modern_map_route_tick();assert(town_travel_actor);
-    location=30;modern_map_route_tick();assert(!town_travel_actor && !feedback);
+    /* Every point is visited in order, including beyond both former limits. */
+    reset();wmap_ui_routes[0].length=1000;
+    for(int i=0;i<1000;i++)wmap_ui_routes[0].waypoints[i].loc=(i%2)?20:10;
+    modern_town_route_start();assert(previews==1000);
+    wmap_ui_routes[0].length=0; /* Reopening/clearing the map cannot truncate travel. */
+    for(int i=0;i<1000;i++) {
+        assert(town_travel_destination==((i%2)?20:10));
+        assert(camera_follow); /* Each new animation must retain camera tracking. */
+        location=town_travel_destination;idle=false;modern_map_route_tick();
+        assert(moves==i+1); /* Tile reached but animation still in progress. */
+        idle=true;modern_map_route_tick();
+    }
+    assert(moves==1000 && !town_travel_actor && !town_travel_points && !feedback);
+    reset();modern_town_route_start();location=10;idle=true;can_start=false;
+    modern_map_route_tick();assert(!town_travel_actor && !town_travel_points && feedback==1);
+    reset();modern_town_route_start();location=10;idle=true;failed_preview=4;
+    modern_map_route_tick();assert(!town_travel_actor && moves==1 && feedback==1);
     reset();modern_town_route_start();idle=true;modern_map_route_tick();ticks+=749;
     modern_map_route_tick();assert(!feedback);ticks++;modern_map_route_tick();assert(feedback==1);
     modern_map_route_tick();assert(feedback==1);
     reset();modern_town_route_start();idle=true;modern_map_route_tick();idle=false;ticks+=1000;
     modern_map_route_tick();assert(!feedback && !town_travel_idle_since);
     reset();modern_town_route_start();valid=false;modern_map_route_tick();assert(!town_travel_actor && !feedback);
+    reset();modern_town_route_start();player=2;modern_map_route_tick();assert(!town_travel_actor && !feedback);
     reset();modern_town_route_start();map_id=2;modern_map_route_tick();assert(!town_travel_actor && !feedback);
     reset();modern_town_route_start();combat=true;modern_map_route_tick();assert(!town_travel_actor && !feedback);
     reset();modern_town_route_start();modern_map_route_cancel_tracking();idle=true;ticks+=10000;
@@ -75,4 +88,4 @@ with tempfile.TemporaryDirectory(prefix='arcanum-map-travel-') as directory:
     path=Path(directory);(path/'test.c').write_text(code)
     subprocess.run([os.environ.get('CC','cc'),'-std=c17','-Wall','-Wextra','-Werror',str(path/'test.c'),'-o',str(path/'test')],check=True)
     subprocess.run([str(path/'test')],check=True)
-print('PASS: native route preflight, queue rejection, completion, blocked feedback and interruption tracking')
+print('PASS: route preflight, 1000 streamed waypoints, animation completion, movement rejection, blocked feedback and interruption tracking')

@@ -66,6 +66,7 @@
 !/source/src/ui/modern_button_text.inc
 !/source/src/ui/modern_keys.inc
 !/source/src/ui/modern_notebook.inc
+!/source/src/ui/modern_combat_hover.inc
 !/source/src/ui/modern_combat.inc
 !/source/src/ui/modern_party.inc
 !/source/src/ui/modern_party_control.inc

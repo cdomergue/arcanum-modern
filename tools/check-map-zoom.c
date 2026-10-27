@@ -18,6 +18,7 @@ void sub_549A70(void);
 void sub_5412D0(void);
 /* Test fixture: exercise the travel view even when the save is in a town. */
 void check_travel_map_open(void);
+void check_local_map_route(void);
 void check_travel_map_backend(void (*moving_frame)(void));
 
 static void paint(const char* prefix,const char* name)
@@ -121,6 +122,8 @@ int main(int argc,char** argv)
     modern_map_action(1);paint(argv[3],NULL);assert(modern_map_state(&native)&&map_camera_local&&map_camera_id==native.townmap);
     float local=map_camera.scale;x=map_destination.x+map_destination.w/2;y=map_destination.y+map_destination.h/2;
     wheel(-1,false,x,y);paint(argv[3],NULL);assert(map_camera.scale<=local&&map_camera_local);
+    check_local_map_route();paint(argv[3],"local-route");assert(map_local.count==39);
+    modern_map_route_clear();
     wmap_ui_close();panels_tick();wmap_ui_open();panels_tick();modern_map_action(2);paint(argv[3],NULL);
     assert(map_camera.scale==fit&&!map_camera_local);
     check_travel_map_open();paint(argv[3],"travel-start");

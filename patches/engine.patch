@@ -949,7 +949,15 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          v1--;
          rotations++;
          v2 = false;
-@@ -5244,7 +5249,7 @@
+@@ -5221,6 +5226,7 @@
+         }
+ 
+         if (!tile_is_blocking(adjacent_loc, false)
++            && !trap_party_avoids_location(obj, adjacent_loc)
+             && !object_traversal_is_blocked(obj, from, rot, path_translate_flags(flags), NULL)) {
+             from = adjacent_loc;
+         } else {
+@@ -5244,7 +5250,7 @@
      }
  
      if (path->max == 0) {
@@ -958,7 +966,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
              combat_turn_based_end_critter_turn(obj);
          }
          return false;
-@@ -5261,6 +5266,27 @@
+@@ -5261,6 +5267,27 @@
  
      return true;
  }
@@ -986,7 +994,19 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  
  // 0x426840
  bool sub_426840(AnimRunInfo* run_info)
-@@ -5926,7 +5952,7 @@
+@@ -5630,6 +5657,11 @@
+ 
+     if (!location_in_dir(loc, rot, &adjacent_loc)) {
+         return false;
++    }
++
++    // A trap may have been revealed after this path was calculated.
++    if (trap_party_avoids_location(obj, adjacent_loc)) {
++        return true;
+     }
+ 
+     if (run_info->path.curr > run_info->path.max - 2) {
+@@ -5926,7 +5958,7 @@
          }
  
          if (run_info->path.max == 0) {
@@ -995,7 +1015,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -10416,6 +10442,7 @@
+@@ -10416,6 +10448,7 @@
      sub_42EDC0(run_info, obj, &art_id, (run_info->flags & 0x40) != 0, &v2);
  
      if (!combat_check_action_points(obj, v2)) {
@@ -1003,7 +1023,18 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
          return false;
      }
-@@ -11333,7 +11360,7 @@
+@@ -10459,6 +10492,10 @@
+ 
+     loc = obj_field_int64_get(obj, OBJ_F_LOCATION);
+     if (!location_in_dir(loc, run_info->path.rotations[0], &next_loc)) {
++        return false;
++    }
++
++    if (trap_party_avoids_location(obj, next_loc)) {
+         return false;
+     }
+ 
+@@ -11333,7 +11370,7 @@
  
      always_run = settings_get_value(&settings, ALWAYS_RUN_KEY);
  
@@ -1012,7 +1043,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          if (always_run) {
              if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
                  return false;
-@@ -11480,8 +11507,11 @@
+@@ -11480,8 +11517,11 @@
              if (tig_art_anim_data(art_id, &art_anim_data) == TIG_OK) {
                  frame = tig_art_id_frame_get(art_id);
                  if (frame == 3 || frame == 8) {
@@ -1026,7 +1057,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  }
              }
          }
-@@ -11568,6 +11598,7 @@
+@@ -11568,6 +11608,7 @@
                  }
  
                  if (!combat_check_action_points(obj, v3)) {
@@ -1034,7 +1065,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
                      return false;
                  }
-@@ -13334,13 +13365,15 @@
+@@ -13334,13 +13375,15 @@
          return false;
      }
  
@@ -1052,7 +1083,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_MOVE_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
          if (!sub_424070(obj, 3, false, false)) {
-@@ -13441,7 +13474,7 @@
+@@ -13441,7 +13484,7 @@
          return false;
      }
  
@@ -1061,7 +1092,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)) {
          return sub_434030(obj, loc);
      }
-@@ -13507,7 +13540,8 @@
+@@ -13507,7 +13550,8 @@
          return false;
      }
  
@@ -1071,7 +1102,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_RUN_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
  
-@@ -13901,6 +13935,7 @@
+@@ -13901,6 +13945,7 @@
          return true;
      }
  
@@ -1194,7 +1225,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
  #define _USE_MATH_DEFINES
  #include <math.h>
-@@ -195,6 +199,104 @@
+@@ -195,6 +199,120 @@
  static CombatCallbacks combat_callbacks;
  
  // 0x4B1D50
@@ -1294,12 +1325,28 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 +    return count;
 +}
 +
++int combat_visibility_actors(int64_t* actors, int capacity)
++{
++    int count = 0;
++    if (!combat_turn_based_active) return 0;
++    for (ObjectNode* node = combat_critter_list.head; node && (!actors || count < capacity); node = node->next) {
++        int64_t obj = node->obj;
++        /* Stunned, paralyzed and unconscious fighters still need to be visible. */
++        if (obj_handle_is_valid(obj) && !critter_is_dead(obj)
++            && !(obj_field_int32_get(obj, OBJ_F_FLAGS) & (OF_DESTROYED | OF_OFF | OF_DONTDRAW))) {
++            if (actors) actors[count] = obj;
++            count++;
++        }
++    }
++    return count;
++}
++
 +#include "modern_shared_turn.inc"
 +
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
-@@ -215,7 +317,7 @@
+@@ -215,7 +333,7 @@
          }
      }
  
@@ -1308,7 +1355,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
  
      settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
-@@ -256,7 +358,7 @@
+@@ -256,7 +374,7 @@
      if (tig_file_fwrite(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, stream) != 1) return false;
  
      if (!combat_turn_based_active) {
@@ -1317,7 +1364,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      }
  
      if (tig_file_fwrite(&combat_action_points, sizeof(combat_action_points), 1, stream) != 1) return false;
-@@ -276,13 +378,13 @@
+@@ -276,13 +394,13 @@
      oid = obj_get_id(qword_5FC248);
      if (tig_file_fwrite(&oid, sizeof(oid), 1, stream) != 1) return false;
  
@@ -1333,7 +1380,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      ObjectID oid;
      int64_t obj;
      ObjectNode* node;
-@@ -292,10 +394,12 @@
+@@ -292,10 +410,12 @@
      if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
      if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
  
@@ -1349,7 +1396,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_callbacks.field_4();
  
      if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
-@@ -307,6 +411,7 @@
+@@ -307,6 +427,7 @@
      }
  
      combat_action_points = saved_action_points;
@@ -1357,7 +1404,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
      qword_5FC238 = obj_pool_perm_lookup(oid);
-@@ -343,7 +448,7 @@
+@@ -343,7 +464,7 @@
  
      combat_callbacks.field_C(combat_action_points);
  
@@ -1366,7 +1413,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B2210
-@@ -422,7 +527,7 @@
+@@ -422,7 +543,7 @@
  // 0x4B2410
  void fast_turn_based_changed(void)
  {
@@ -1375,7 +1422,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B24F0
-@@ -783,12 +888,52 @@
+@@ -783,12 +904,52 @@
      }
  }
  
@@ -1428,7 +1475,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (combat->target_obj != OBJ_HANDLE_NULL
          && obj_field_int32_get(combat->target_obj, OBJ_F_TYPE) == OBJ_TYPE_SCENERY) {
-@@ -924,6 +1069,10 @@
+@@ -924,6 +1085,10 @@
                  return 0;
              }
  
@@ -1439,7 +1486,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              if ((skill_invocation.flags & SKILL_INVOCATION_SUCCESS) != 0) {
                  combat->flags |= CF_HIT;
              }
-@@ -941,7 +1090,10 @@
+@@ -941,7 +1106,10 @@
                      return 0;
                  }
  
@@ -1450,7 +1497,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
                      MesFileEntry mes_file_entry;
  
                      mes_file_entry.num = 11; // "Dodge!"
-@@ -973,6 +1125,8 @@
+@@ -973,6 +1141,8 @@
              combat->flags |= CF_CRITICAL;
          }
      }
@@ -1459,7 +1506,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if ((combat->flags & CF_HIT) == 0
          && (combat->flags & CF_CRITICAL) != 0) {
-@@ -1223,6 +1377,47 @@
+@@ -1223,6 +1393,47 @@
      return ret;
  }
  
@@ -1507,7 +1554,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  // 0x4B3F20
  void combat_critter_deactivate_combat_mode(int64_t obj)
  {
-@@ -1237,6 +1432,7 @@
+@@ -1237,6 +1448,7 @@
      if (!combat_critter_is_combat_mode_active(obj)) {
          combat_critter_toggle_combat_mode(obj);
      }
@@ -1515,7 +1562,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B3F80
-@@ -1316,6 +1512,7 @@
+@@ -1316,6 +1528,7 @@
              object_flags_set(obj, OF_INVISIBLE);
          }
      } else {
@@ -1523,7 +1570,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          obj_field_int32_set(obj, OBJ_F_CRITTER_FLAGS, critter_flags | OCF_COMBAT_MODE_ACTIVE);
  
          art_id = tig_art_critter_id_weapon_set(art_id, TIG_ART_WEAPON_TYPE_UNARMED);
-@@ -1813,6 +2010,7 @@
+@@ -1813,6 +2026,7 @@
              }
          }
  
@@ -1531,7 +1578,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -1833,7 +2031,8 @@
+@@ -1833,7 +2047,8 @@
              tf_add(combat->target_obj, TF_TYPE_GREEN, str);
          }
  
@@ -1541,7 +1588,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              && obj_type == OBJ_TYPE_NPC
              && (spell_flags & OSF_STONED) == 0) {
              int remaining_experience = obj_field_int32_get(combat->target_obj, OBJ_F_NPC_EXPERIENCE_POOL);
-@@ -2857,12 +3056,19 @@
+@@ -2857,12 +3072,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -1561,7 +1608,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3164,7 @@
+@@ -2958,7 +3180,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -1570,7 +1617,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2990,14 +3196,20 @@
+@@ -2990,14 +3212,20 @@
          }
      }
  
@@ -1595,15 +1642,23 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3025,6 +3237,7 @@
+@@ -3025,8 +3253,14 @@
  {
      if (obj == dword_5FC240->obj
          && !player_is_pc_obj(obj)
 +        && !combat_player_controls(obj)
          && !gamelib_in_load()) {
-         if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
+-        if (object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
++        // Completing an animation can re-enter here after the final AP was
++        // spent. Do not enqueue another attack: it cannot run, and another
++        // actor's pending goal can prevent the global completion callback.
++        // Wait for this actor's own action before scheduling the next turn.
++        if (combat_action_points > 0
++            && object_script_execute(obj, obj, OBJ_HANDLE_NULL, SAP_HEARTBEAT, 0) == 1) {
              ai_process(obj);
-@@ -3054,8 +3267,9 @@
+         }
+ 
+@@ -3054,8 +3288,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -1615,7 +1670,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3298,10 @@
+@@ -3084,9 +3319,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -1628,7 +1683,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3160,10 +3375,12 @@
+@@ -3160,10 +3396,12 @@
  {
      ObjectNode* node;
  
@@ -1641,7 +1696,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
          sub_423FE0(NULL);
  
-@@ -3189,6 +3406,7 @@
+@@ -3189,6 +3427,7 @@
  
      dword_5FC250 = 0;
      pc_obj = player_get_local_pc_obj();
@@ -1649,7 +1704,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based_turn++;
      pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
      combat_recalc_perception_range();
-@@ -3205,7 +3423,7 @@
+@@ -3205,7 +3444,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1658,7 +1713,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3243,6 +3461,9 @@
+@@ -3243,6 +3482,9 @@
          return true;
      }
  
@@ -1668,7 +1723,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!critter_is_active(object_node->obj)) {
          sub_427000(object_node->obj);
          return true;
-@@ -3286,6 +3507,7 @@
+@@ -3286,6 +3528,7 @@
  
      dword_5FC250++;
      combat_turn_based_subturn_end();
@@ -1676,7 +1731,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      dword_5FC240 = dword_5FC240->next;
      if (dword_5FC240 == NULL) {
-@@ -3549,6 +3771,8 @@
+@@ -3549,6 +3792,8 @@
          return true;
      }
  
@@ -1685,7 +1740,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3574,6 +3798,7 @@
+@@ -3574,6 +3819,7 @@
          return true;
      }
  
@@ -1693,7 +1748,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_action_points = 0;
      combat_turn_based_next_subturn();
  
-@@ -3741,6 +3966,12 @@
+@@ -3741,6 +3987,12 @@
          return false;
      }
  
@@ -1709,7 +1764,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 diff --git a/src/game/combat.h b/src/game/combat.h
 --- a/src/game/combat.h
 +++ b/src/game/combat.h
-@@ -93,6 +93,19 @@
+@@ -93,6 +93,21 @@
  // Serializeable.
  static_assert(sizeof(CombatContext) == 0x68, "wrong size");
  
@@ -1723,13 +1778,15 @@ diff --git a/src/game/combat.h b/src/game/combat.h
 +bool combat_input_ready(int64_t obj);
 +bool combat_input_end_turn(int64_t expected_actor);
 +int combat_turn_order(int64_t* actors, int capacity);
++/* Includes incapacitated fighters; pass NULL to count without truncation. */
++int combat_visibility_actors(int64_t* actors, int capacity);
 +bool combat_shared_turn_available(int64_t actor);
 +bool combat_shared_turn_select(int64_t actor);
 +
  bool combat_init(GameInitInfo* init_info);
  void combat_exit(void);
  void combat_reset(void);
-@@ -107,6 +120,7 @@
+@@ -107,6 +122,7 @@
  void combat_throw(int64_t attacker_obj, int64_t weapon_obj, int64_t target_obj, int64_t target_loc, int hit_loc);
  bool combat_critter_is_combat_mode_active(int64_t obj);
  bool combat_can_exit_combat_mode(int64_t obj);
@@ -3117,6 +3174,17 @@ diff --git a/src/game/object.c b/src/game/object.c
      if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PORTAL) {
          if (portal_is_open(obj)) {
              portal_toggle(obj);
+@@ -5238,8 +5267,8 @@
+     if (player_is_pc_obj(obj)) {
+         if (player_is_local_pc_obj(obj)) {
+             townmap_mark_visited(loc);
+-            roof_recalc(loc);
+-            wallcheck_recalc(loc);
++            sub_438530(obj);
++            wallcheck_ping(0);
+             scroll_set_center(loc);
+         }
+ 
 diff --git a/src/game/object.h b/src/game/object.h
 --- a/src/game/object.h
 +++ b/src/game/object.h
@@ -3130,6 +3198,36 @@ diff --git a/src/game/object.h b/src/game/object.h
  bool object_lock_timeevent_process(TimeEvent* timeevent);
  bool object_jammed_set(int64_t obj, bool jammed);
  void sub_441FC0(int64_t obj, int a2);
+diff --git a/src/game/path.c b/src/game/path.c
+--- a/src/game/path.c
++++ b/src/game/path.c
+@@ -247,6 +247,13 @@
+         rot = location_rot(loc, path_create_info->to);
+         path_create_info->rotations[idx] = (int8_t)rot;
+         location_in_dir(loc, rot, &adjacent_loc);
++
++        // An adjacent-target path omits its final step (e.g. disarming a trap).
++        if ((adjacent_loc != path_create_info->to
++                || (path_create_info->flags & PATH_FLAG_0x0001) == 0)
++            && trap_party_avoids_location(path_create_info->obj, adjacent_loc)) {
++            break;
++        }
+ 
+         if ((path_create_info->flags & PATH_FLAG_0x0040) == 0) {
+             if (adjacent_loc != path_create_info->to
+@@ -435,6 +442,12 @@
+             }
+ 
+             bool is_window = false;
++            if ((adjacent_loc != path_create_info->to
++                    || (path_create_info->flags & PATH_FLAG_0x0001) == 0)
++                && trap_party_avoids_location(path_create_info->obj, adjacent_loc)) {
++                path_cost_tbl[neighbor_index] = -32768;
++                continue;
++            }
+             if ((path_create_info->flags & PATH_FLAG_0x0040) == 0) {
+                 if (adjacent_loc != path_create_info->to
+                     || (path_create_info->flags & PATH_FLAG_0x0001) == 0) {
 diff --git a/src/game/portrait.c b/src/game/portrait.c
 --- a/src/game/portrait.c
 +++ b/src/game/portrait.c
@@ -3187,6 +3285,52 @@ diff --git a/src/game/reaction.c b/src/game/reaction.c
          if ((flags & 0x1) != 0) {
              if (v1 < -49) {
                  v1 = -49;
+diff --git a/src/game/roof.c b/src/game/roof.c
+--- a/src/game/roof.c
++++ b/src/game/roof.c
+@@ -501,7 +501,7 @@
+ }
+ 
+ // 0x439D30
+-void roof_recalc(int64_t loc)
++static void roof_recalc_pass(int64_t loc, bool hide)
+ {
+     tig_art_id_t aid;
+     int piece;
+@@ -597,9 +597,21 @@
+         assert(0);
+     }
+ 
+-    if (tig_art_roof_id_fill_get(aid) != fill) {
++    if (fill == hide && tig_art_roof_id_fill_get(aid) != fill) {
+         roof_fill(roof_normalize_loc(loc), fill, -1);
+     }
++}
++
++void roof_recalc_many(const int64_t* locations, int count)
++{
++    /* An outside observer must not restore a roof over someone still inside. */
++    for (int i = 0; i < count; i++) roof_recalc_pass(locations[i], false);
++    for (int i = 0; i < count; i++) roof_recalc_pass(locations[i], true);
++}
++
++void roof_recalc(int64_t loc)
++{
++    roof_recalc_many(&loc, 1);
+ }
+ 
+ // 0x439EA0
+diff --git a/src/game/roof.h b/src/game/roof.h
+--- a/src/game/roof.h
++++ b/src/game/roof.h
+@@ -12,6 +12,7 @@
+ int64_t roof_normalize_loc(int64_t loc);
+ bool roof_hit_test(int x, int y);
+ void roof_recalc(int64_t loc);
++void roof_recalc_many(const int64_t* locations, int count);
+ void roof_fill_off(int64_t loc);
+ void roof_fill_on(int64_t loc);
+ void roof_fade_on(int64_t loc);
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
@@ -3744,6 +3888,67 @@ diff --git a/src/game/tf.c b/src/game/tf.c
      TextFloaterList* list;
      TextFloaterList* prev_list;
      TextFloaterEntry* entry;
+diff --git a/src/game/trap.c b/src/game/trap.c
+--- a/src/game/trap.c
++++ b/src/game/trap.c
+@@ -230,6 +230,46 @@
+     }
+ 
+     return true;
++}
++
++// PCs and their companions (including summons) avoid known ground traps.
++// Unlike the ordinary path cost penalty, this is a movement restriction.
++bool trap_party_avoids_location(int64_t obj, int64_t loc)
++{
++    if (obj == OBJ_HANDLE_NULL) {
++        return false;
++    }
++
++    int type = obj_field_int32_get(obj, OBJ_F_TYPE);
++    if (!obj_type_is_critter(type)) {
++        return false;
++    }
++
++    int64_t leader = type == OBJ_TYPE_PC ? obj : critter_pc_leader_get(obj);
++    if (leader == OBJ_HANDLE_NULL) {
++        int64_t summoner;
++        if ((obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_SUMMONED) == 0
++            || !sub_459040(obj, OSF_SUMMONED, &summoner)
++            || summoner == OBJ_HANDLE_NULL) {
++            return false;
++        }
++        leader = player_is_pc_obj(summoner) ? summoner : critter_pc_leader_get(summoner);
++        if (leader == OBJ_HANDLE_NULL) {
++            return false;
++        }
++    }
++
++    ObjectList traps;
++    bool avoid = false;
++    object_list_location(loc, OBJ_TM_TRAP, &traps);
++    for (ObjectNode* node = traps.head; node != NULL; node = node->next) {
++        if (trap_is_spotted(leader, node->obj)) {
++            avoid = true;
++            break;
++        }
++    }
++    object_list_destroy(&traps);
++    return avoid;
+ }
+ 
+ // 0x4BC090
+diff --git a/src/game/trap.h b/src/game/trap.h
+--- a/src/game/trap.h
++++ b/src/game/trap.h
+@@ -23,6 +23,7 @@
+ int trap_type(int64_t obj);
+ bool trap_attempt_spot(int64_t pc_obj, int64_t trap_obj);
+ bool trap_is_spotted(int64_t pc_obj, int64_t trap_obj);
++bool trap_party_avoids_location(int64_t obj, int64_t loc);
+ void trap_mark_known(int64_t pc_obj, int64_t trap_obj, int reason);
+ bool trap_use_on_obj(int64_t pc_obj, int64_t item_obj, int64_t target_obj);
+ bool trap_use_at_loc(int64_t pc_obj, int64_t item_obj, int64_t target_loc);
 diff --git a/src/game/wallcheck.c b/src/game/wallcheck.c
 --- a/src/game/wallcheck.c
 +++ b/src/game/wallcheck.c
@@ -3756,26 +3961,79 @@ diff --git a/src/game/wallcheck.c b/src/game/wallcheck.c
  #include "game/object.h"
  #include "game/player.h"
  #include "game/roof.h"
-@@ -656,6 +659,7 @@
+@@ -22,6 +25,8 @@
+     /* 0008 */ int64_t sector_id;
+     /* 0010 */ int64_t obj;
+     /* 0018 */ int64_t field_18;
++    int observer_index;
++    unsigned int previous_sides;
+ } S5E0E20;
+ 
+ typedef struct S5A3FF0 {
+@@ -35,6 +40,8 @@
+     /* 0040 */ int field_40[4][5];
+ } S5A3FF0;
+ 
++static void wallcheck_begin(void);
++static void wallcheck_collect(int64_t loc);
+ static void sub_438570(int64_t obj, int64_t sector_id, int type);
+ static bool sub_4386B0(int64_t obj, int* index_ptr);
+ static void sub_438720(int64_t a1);
+@@ -637,7 +644,8 @@
+ static int64_t qword_5E0A08;
+ 
+ // 0x5E0A10
+-static S5E0A10 stru_5E0A10[64];
++static S5E0A10* stru_5E0A10;
++static int wallcheck_roof_capacity;
+ 
+ // 0x5E0E10
+ static int dword_5E0E10;
+@@ -646,7 +654,8 @@
+ static int64_t qword_5E0E18;
+ 
+ // 0x5E0E20
+-static S5E0E20 stru_5E0E20[256];
++static S5E0E20* stru_5E0E20;
++static int wallcheck_wall_capacity;
+ 
+ // 0x5E2E24
+ static int dword_5E2E24;
+@@ -656,6 +665,13 @@
  
  // 0x5DE6E8
  static bool wallcheck_dirty;
 +static int64_t wallcheck_observer;
++static int64_t* wallcheck_actors;
++static int64_t* wallcheck_previous_actors;
++static int64_t* wallcheck_locations;
++static int wallcheck_actor_capacity;
++static int wallcheck_observer_count;
++static int wallcheck_collection_index;
  
  // 0x5DE6F0
  static ObjectList stru_5DE6F0[34][3];
-@@ -687,6 +691,7 @@
+@@ -687,29 +703,104 @@
      qword_5E0E18 = 0;
      dword_5E0E10 = 0;
      wallcheck_dirty = false;
 +    wallcheck_observer = OBJ_HANDLE_NULL;
++    wallcheck_observer_count = 0;
  }
  
  // 0x437E00
-@@ -696,11 +701,33 @@
+ void wallcheck_exit(void)
+ {
+     wallcheck_reset();
++    FREE(stru_5E0A10); stru_5E0A10 = NULL;
++    FREE(stru_5E0E20); stru_5E0E20 = NULL;
++    FREE(wallcheck_actors); wallcheck_actors = NULL;
++    FREE(wallcheck_previous_actors); wallcheck_previous_actors = NULL;
++    FREE(wallcheck_locations); wallcheck_locations = NULL;
++    wallcheck_roof_capacity = wallcheck_wall_capacity = wallcheck_actor_capacity = 0;
      dword_5E0A00 = 0;
- }
- 
++}
++
 +static int64_t wallcheck_observer_get(void)
 +{
 +    int64_t pc = player_get_local_pc_obj();
@@ -3786,35 +4044,198 @@ diff --git a/src/game/wallcheck.c b/src/game/wallcheck.c
 +            return actor;
 +    }
 +    return pc;
-+}
-+
+ }
+ 
  // 0x437E10
  void wallcheck_ping(tig_timestamp_t timestamp)
  {
      (void)timestamp;
- 
-+    int64_t observer = wallcheck_observer_get();
-+    if (observer == OBJ_HANDLE_NULL || !obj_handle_is_valid(observer)) return;
-+    int64_t loc = obj_field_int64_get(observer, OBJ_F_LOCATION);
-+    /* Turn selection can change without movement. Follow the actor's movement
-+     * too: the original direct movement refresh only runs for the local PC. */
-+    if (observer != wallcheck_observer || loc != qword_5E0A08) {
-+        wallcheck_observer = observer;
-+        qword_5E0A08 = loc;
-+        wallcheck_dirty = true;
+-
+-    if (wallcheck_dirty) {
+-        roof_recalc(qword_5E0A08);
+-        wallcheck_recalc(qword_5E0A08);
+-        wallcheck_dirty = false;
+-    }
++    bool all_combatants = combat_tactical_enabled() && combat_turn_based_is_active();
++    int count = all_combatants ? combat_visibility_actors(NULL, 0) : 0;
++    int capacity = count > 0 ? count : 1;
++    if (capacity > wallcheck_actor_capacity) {
++        wallcheck_actor_capacity = capacity;
++        wallcheck_actors = REALLOC(wallcheck_actors, sizeof(*wallcheck_actors) * capacity);
++        wallcheck_previous_actors = REALLOC(wallcheck_previous_actors, sizeof(*wallcheck_previous_actors) * capacity);
++        wallcheck_locations = REALLOC(wallcheck_locations, sizeof(*wallcheck_locations) * capacity);
 +    }
-     if (wallcheck_dirty) {
-         roof_recalc(qword_5E0A08);
-         wallcheck_recalc(qword_5E0A08);
-@@ -932,7 +959,7 @@
++    if (count > 0) {
++        count = combat_visibility_actors(wallcheck_actors, capacity);
++    } else {
++        int64_t observer = wallcheck_observer_get();
++        if (observer != OBJ_HANDLE_NULL && obj_handle_is_valid(observer)) {
++            wallcheck_actors[0] = observer;
++            count = 1;
++        }
++    }
++    if (count != wallcheck_observer_count) wallcheck_dirty = true;
++    for (int i = 0; i < count; i++) {
++        if (i >= wallcheck_observer_count || wallcheck_previous_actors[i] != wallcheck_actors[i]
++            || wallcheck_locations[i] != obj_field_int64_get(wallcheck_actors[i], OBJ_F_LOCATION))
++            wallcheck_dirty = true;
++    }
++    if (!wallcheck_dirty) return;
++
++    /* Restore only previously observed roofs, then apply the union for the new
++     * positions. Removed actors must not leave their buildings hidden forever. */
++    for (int i = 0; i < wallcheck_observer_count; i++) roof_fill_off(wallcheck_locations[i]);
++    for (int i = 0; i < count; i++) {
++        wallcheck_previous_actors[i] = wallcheck_actors[i];
++        wallcheck_locations[i] = obj_field_int64_get(wallcheck_actors[i], OBJ_F_LOCATION);
++    }
++    wallcheck_observer_count = count;
++    wallcheck_observer = count ? wallcheck_actors[0] : OBJ_HANDLE_NULL;
++    qword_5E0A08 = count ? wallcheck_locations[0] : 0;
++    roof_recalc_many(wallcheck_locations, count);
++    wallcheck_begin();
++    if (wallcheck_enabled) {
++        for (int i = 0; i < count; i++) wallcheck_collect(wallcheck_locations[i]);
++    }
++    sub_438830();
++    wallcheck_dirty = false;
++}
++
++static void wallcheck_begin(void)
++{
++    wallcheck_collection_index = 0;
++    for (int i = 0; i < dword_5E2E24; i++) {
++        stru_5E0E20[i].flags = 0x01;
++        stru_5E0E20[i].observer_index = -1;
++    }
++}
++
++void wallcheck_recalc(int64_t loc)
++{
++    if (!wallcheck_enabled) return;
++    wallcheck_begin();
++    wallcheck_collect(loc);
++    sub_438830();
++    wallcheck_dirty = true;
+ }
+ 
+ // 0x437E50
+-void wallcheck_recalc(int64_t loc)
++static void wallcheck_collect(int64_t loc)
+ {
+     int v1;
+     int v2;
+@@ -727,6 +818,7 @@
+         return;
+     }
+ 
++    wallcheck_collection_index++;
+     x = LOCATION_GET_X(loc);
+     y = LOCATION_GET_Y(loc);
+     v1 = (int)((LOCATION_GET_X(loc) - 2) % 4);
+@@ -767,18 +859,8 @@
+     y -= v2;
+     v3 = byte_5A3E94[v2][v1];
+ 
+-    if (qword_5E0E18 == LOCATION_MAKE(x, y)
+-        && (dword_5E0E10 & v3) != 0) {
+-        return;
+-    }
+-
+     qword_5E0E18 = LOCATION_MAKE(x, y);
+     dword_5E0E10 = v3;
+-
+-    for (int i = 0; i < dword_5E2E24; i++) {
+-        stru_5E0E20[i].flags &= ~0x02;
+-        stru_5E0E20[i].flags |= 0x01;
+-    }
+ 
+     for (int i = 0; i < 34; i++) {
+         stru_5A3FF0[i].field_0 &= 0xFFFF;
+@@ -906,7 +988,6 @@
+         }
+     }
+ 
+-    sub_438830();
+ }
+ 
+ // 0x4384F0
+@@ -920,6 +1001,7 @@
+ {
+     if (wallcheck_enabled != enabled) {
+         wallcheck_enabled = enabled;
++        wallcheck_dirty = true;
+     }
+ }
+ 
+@@ -932,9 +1014,10 @@
  // 0x438530
  void sub_438530(int64_t obj)
  {
 -    if (player_is_local_pc_obj(obj)) {
-+    if (obj != OBJ_HANDLE_NULL && obj == wallcheck_observer_get()) {
-         qword_5E0A08 = obj_field_int64_get(obj, OBJ_F_LOCATION);
-         wallcheck_dirty = true;
+-        qword_5E0A08 = obj_field_int64_get(obj, OBJ_F_LOCATION);
+-        wallcheck_dirty = true;
++    if (obj == OBJ_HANDLE_NULL) return;
++    if (obj == wallcheck_observer_get()) wallcheck_dirty = true;
++    for (int i = 0; i < wallcheck_observer_count; i++) {
++        if (wallcheck_previous_actors[i] == obj) wallcheck_dirty = true;
      }
+ }
+ 
+@@ -945,26 +1028,34 @@
+     Sector* sector;
+ 
+     if (!sub_4386B0(obj, &index)) {
++        if (!sector_lock(sector_id, &sector)) return;
++        if (dword_5E2E24 == wallcheck_wall_capacity) {
++            wallcheck_wall_capacity = wallcheck_wall_capacity ? wallcheck_wall_capacity * 2 : 256;
++            stru_5E0E20 = REALLOC(stru_5E0E20, sizeof(*stru_5E0E20) * wallcheck_wall_capacity);
++        }
+         memmove(&(stru_5E0E20[index + 1]),
+             &(stru_5E0E20[index]),
+             sizeof(*stru_5E0E20) * (dword_5E2E24 - index));
+         stru_5E0E20[index].flags = 0;
++        stru_5E0E20[index].observer_index = -1;
+         stru_5E0E20[index].sector_id = sector_id;
+         stru_5E0E20[index].obj = obj;
+         stru_5E0E20[index].field_18 = roof_normalize_loc(obj_field_int64_get(obj, OBJ_F_LOCATION));
+ 
+-        sector_lock(sector_id, &sector);
+         sub_438720(stru_5E0E20[index].field_18);
+         dword_5E2E24++;
+     }
+ 
+-    if (type == 1 || type == 16) {
+-        stru_5E0E20[index].flags = 0x04 | 0x02;
+-    } else if (type == 2 || type == 32) {
+-        stru_5E0E20[index].flags = 0x08 | 0x02;
+-    } else {
+-        stru_5E0E20[index].flags = 0x08 | 0x04 | 0x02;
+-    }
++    /* Keep the native precedence within one observer's calculation, while
++     * retaining every side requested by earlier observers in this batch. */
++    if (stru_5E0E20[index].flags & 0x01) stru_5E0E20[index].flags = 0;
++    if (stru_5E0E20[index].observer_index != wallcheck_collection_index) {
++        stru_5E0E20[index].previous_sides = stru_5E0E20[index].flags & (0x04 | 0x08);
++        stru_5E0E20[index].observer_index = wallcheck_collection_index;
++    }
++    unsigned int sides = type == 1 || type == 16 ? 0x04
++        : type == 2 || type == 32 ? 0x08 : 0x04 | 0x08;
++    stru_5E0E20[index].flags = stru_5E0E20[index].previous_sides | sides | 0x02;
+ }
+ 
+ // 0x4386B0
+@@ -1001,6 +1092,10 @@
+     int index;
+ 
+     if (!sub_4387C0(a1, &index)) {
++        if (dword_5E2E28 == wallcheck_roof_capacity) {
++            wallcheck_roof_capacity = wallcheck_roof_capacity ? wallcheck_roof_capacity * 2 : 64;
++            stru_5E0A10 = REALLOC(stru_5E0A10, sizeof(*stru_5E0A10) * wallcheck_roof_capacity);
++        }
+         memmove(&(stru_5E0A10[index + 1]),
+             &(stru_5E0A10[index]),
+             sizeof(*stru_5E0A10) * (dword_5E2E28 - index));
 diff --git a/src/main.c b/src/main.c
 --- a/src/main.c
 +++ b/src/main.c
@@ -5413,7 +5834,17 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          return false;
      default:
          return false;
-@@ -6573,6 +6596,7 @@
+@@ -6405,7 +6428,8 @@
+         alignment = stat_level_get(critter_obj, STAT_ALIGNMENT);
+     }
+ 
+-    if (pc_obj != critter_obj
++    if ((!modern_details_capture || modern_details_passthrough)
++        && pc_obj != critter_obj
+         && combat_critter_is_combat_mode_active(pc_obj)
+         && !critter_is_dead(critter_obj)) {
+         sub_554830(pc_obj, critter_obj);
+@@ -6573,6 +6597,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -5421,7 +5852,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6635,16 @@
+@@ -6611,6 +6636,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -5438,7 +5869,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6829,11 @@
+@@ -6795,6 +6830,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -5450,7 +5881,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7131,6 +7170,21 @@
+@@ -7131,6 +7171,21 @@
          break;
      }
  
@@ -5472,7 +5903,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (buffer[0] != '\0' || !intgame_is_compact_interface()) {
          intgame_message_window_write_text(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
              buffer,
-@@ -7612,6 +7666,7 @@
+@@ -7612,6 +7667,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -5480,7 +5911,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7695,7 @@
+@@ -7640,7 +7696,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -5489,7 +5920,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7839,7 @@
+@@ -7784,7 +7840,7 @@
          mes_file_entry.str,
          value);
  
@@ -5498,7 +5929,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8225,7 +8280,7 @@
+@@ -8225,7 +8281,7 @@
      window_data.rect.height = 400;
      window_data.background_color = 0;
      window_data.message_filter = intgame_big_window_message_filter;
@@ -5507,7 +5938,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (tig_window_create(&window_data, &intgame_big_window_handle) != TIG_OK) {
          return false;
-@@ -8311,22 +8366,12 @@
+@@ -8311,22 +8367,12 @@
              switch (target_obj_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
@@ -5534,7 +5965,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  }
                  break;
              case OBJ_TYPE_WEAPON:
-@@ -8791,8 +8836,7 @@
+@@ -8791,8 +8837,7 @@
  
      // Move bottom bar window up so its aligned with mainmenu covers.
      rect = intgame_interface_window_frames[1];
@@ -5544,7 +5975,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!intgame_is_compact_interface()) {
          tig_window_show(dword_64C4F8[1]);
-@@ -8828,8 +8872,238 @@
+@@ -8828,8 +8873,244 @@
  
      // Restore bottom bar position.
      rect = intgame_interface_window_frames[1];
@@ -5648,8 +6079,14 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +    }
 +}
 +
++#include "modern_combat_hover.inc"
++
 +const ModernDetails* modern_hover_details(void)
 +{
++    int64_t viewer=player_get_local_pc_obj();
++    if(modern_ui_enabled() && viewer && obj_handle_is_valid(viewer)
++        && (combat_turn_based_is_active() || combat_critter_is_combat_mode_active(viewer)))
++        return modern_combat_hover_details(viewer);
 +    int64_t object=object_hover_obj_get();
 +    if(object==OBJ_HANDLE_NULL || object!=modern_hover_object || !obj_handle_is_valid(object)
 +        || !modern_hover_snapshot.count || intgame_mode_get()==INTGAME_MODE_DIALOG)return NULL;
@@ -6868,14 +7305,18 @@ diff --git a/src/ui/tech_ui.c b/src/ui/tech_ui.c
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c
-@@ -1,4 +1,6 @@
+@@ -1,12 +1,18 @@
  #include "ui/wmap_ui.h"
-+
+ 
 +#include "ui/modern_ui.h"
- 
++
  #include <stdio.h>
++#include <limits.h>
++#include <stdlib.h>
++#include <string.h>
  
-@@ -7,6 +9,7 @@
+ #include "game/ai.h"
+ #include "game/anim.h"
  #include "game/antiteleport.h"
  #include "game/area.h"
  #include "game/critter.h"
@@ -6883,7 +7324,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  #include "game/gamelib.h"
  #include "game/gsound.h"
  #include "game/hrp.h"
-@@ -15,6 +18,7 @@
+@@ -15,6 +21,7 @@
  #include "game/map.h"
  #include "game/mes.h"
  #include "game/obj.h"
@@ -6891,7 +7332,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  #include "game/path.h"
  #include "game/player.h"
  #include "game/sector.h"
-@@ -25,6 +29,8 @@
+@@ -25,6 +32,8 @@
  #include "ui/intgame.h"
  #include "ui/textedit_ui.h"
  #include "ui/types.h"
@@ -6900,7 +7341,18 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  typedef enum WmapUiMode {
      WMAP_UI_MODE_WORLD,
-@@ -314,6 +320,12 @@
+@@ -170,7 +179,9 @@
+ } WmapRouteWaypoint;
+ 
+ typedef struct WmapRoute {
+-    /* 0000 */ WmapRouteWaypoint waypoints[30];
++    WmapRouteWaypoint initial_waypoints[30];
++    WmapRouteWaypoint* waypoints;
++    int capacity;
+     /* 03C0 */ int length;
+     /* 03C4 */ int field_3C4;
+     /* 03C8 */ int field_3C8;
+@@ -314,6 +325,12 @@
  
  // 0x5C9B00
  static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
@@ -6913,7 +7365,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x5C9B08
  static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
-@@ -435,6 +447,7 @@
+@@ -435,6 +452,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -6921,7 +7373,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +761,7 @@
+@@ -748,7 +766,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -6930,16 +7382,33 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -789,6 +802,8 @@
+@@ -775,6 +793,8 @@
+     wmap_ui_compass_arrow_num_frames = art_anim_data.num_frames;
+ 
+     for (index = 0; index < WMAP_ROUTE_TYPE_COUNT; index++) {
++        wmap_ui_routes[index].waypoints = wmap_ui_routes[index].initial_waypoints;
++        wmap_ui_routes[index].capacity = 30;
+         wmap_ui_routes[index].length = 0;
+         wmap_ui_routes[index].field_3C4 = 1;
+         wmap_ui_routes[index].field_3C8 = 1;
+@@ -789,6 +809,16 @@
  {
      int mode;
      int tile;
 +
++    modern_map_route_cancel_tracking();
++    for (int index = 0; index < WMAP_ROUTE_TYPE_COUNT; index++) {
++        WmapRoute* route = &wmap_ui_routes[index];
++        if (route->waypoints != route->initial_waypoints) free(route->waypoints);
++        route->waypoints = route->initial_waypoints;
++        route->capacity = 30;
++        route->length = 0;
++    }
 +    modern_travel_buffer_clear();
  
      wmap_ui_mode = WMAP_UI_MODE_WORLD;
      wmap_ui_state = WMAP_UI_STATE_NORMAL;
-@@ -911,6 +926,7 @@
+@@ -911,6 +941,7 @@
  // 0x560200
  void wmap_ui_reset(void)
  {
@@ -6947,7 +7416,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int index;
  
      if (wmap_ui_initialized) {
-@@ -1017,6 +1033,7 @@
+@@ -1017,6 +1048,7 @@
  // 0x5604B0
  bool wmap_ui_load(GameLoadInfo* load_info)
  {
@@ -6955,7 +7424,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int mode;
      int cnt;
      int note;
-@@ -1411,6 +1428,9 @@
+@@ -1411,6 +1443,9 @@
      if (!wmap_ui_created) {
          return;
      }
@@ -6965,7 +7434,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      pc_obj = player_get_local_pc_obj();
      if (pc_obj != OBJ_HANDLE_NULL
-@@ -1523,6 +1543,7 @@
+@@ -1523,6 +1558,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -6973,15 +7442,27 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -2188,6 +2209,7 @@
+@@ -2188,18 +2224,7 @@
                          }
                      } else {
                          if (wmap_ui_mode == WMAP_UI_MODE_TOWN && wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length > 0) {
-+                            if(modern_ui_enabled())return modern_town_route_start();
-                             anim_goal_move_to_tile(player_get_local_pc_obj(),
-                                 wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].waypoints[0].loc);
- 
-@@ -3569,6 +3591,9 @@
+-                            anim_goal_move_to_tile(player_get_local_pc_obj(),
+-                                wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].waypoints[0].loc);
+-
+-                            for (int idx = 1; idx < wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length; idx++) {
+-                                sub_433A00(player_get_local_pc_obj(),
+-                                    wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].waypoints[idx].loc,
+-                                    tig_net_is_active()
+-                                        && !tig_net_is_host());
+-                            }
+-
+-                            sub_436D20(0x80000, 0);
+-                            wmap_ui_close();
++                            return modern_town_route_start();
+                         }
+                     }
+                     return true;
+@@ -3569,6 +3594,9 @@
      return false;
  }
  
@@ -6991,18 +7472,102 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  // 0x5643E0
  bool sub_5643E0(WmapCoords* coords)
  {
-@@ -3592,6 +3617,10 @@
-             return false;
-         }
+@@ -3594,6 +3622,10 @@
          route_type = WMAP_ROUTE_TYPE_TOWN;
-+    }
-+
-+    if (wmap_ui_mode == WMAP_UI_MODE_TOWN && modern_ui_enabled()) {
-+        return modern_town_route_add(coords);
      }
  
++    if (wmap_ui_mode == WMAP_UI_MODE_TOWN) {
++        return modern_town_route_add(coords);
++    }
++
      wp_idx = wmap_ui_routes[route_type].length;
-@@ -4212,7 +4241,7 @@
+     if (wp_idx >= 30) {
+         return false;
+@@ -3601,60 +3633,30 @@
+ 
+     wp = &(wmap_ui_routes[route_type].waypoints[wp_idx]);
+ 
+-    if (wmap_ui_mode == WMAP_UI_MODE_TOWN) {
+-        if (wp_idx == 0) {
+-            from = obj_field_int64_get(player_get_local_pc_obj(), OBJ_F_LOCATION);
+-        } else if (wp_idx < 6) {
+-            from = wmap_ui_routes[route_type].waypoints[wp_idx - 1].loc;
+-        } else {
+-            // "You have reached the maximum allowable number of waypoints and may not add another."
+-            mes_file_entry.num = 611;
+-            mes_get_msg(wmap_ui_worldmap_mes_file, &mes_file_entry);
+-            ui_message.type = UI_MSG_TYPE_FEEDBACK;
+-            ui_message.str = mes_file_entry.str;
+-            intgame_message_window_display_msg(&ui_message);
+-            return false;
+-        }
+-
+-        townmap_coords_to_loc(&wmap_ui_tmi, coords->x, coords->y, &to);
+-
+-        steps = sub_44EB40(player_get_local_pc_obj(), from, to);
+-        if (steps == 0) {
+-            // "Your path is blocked. Try clicking closer to the previous
+-            // waypoint."
+-            mes_file_entry.num = 610;
+-            mes_get_msg(wmap_ui_worldmap_mes_file, &mes_file_entry);
+-            ui_message.type = UI_MSG_TYPE_FEEDBACK;
+-            ui_message.str = mes_file_entry.str;
+-            intgame_message_window_display_msg(&ui_message);
+-            return false;
+-        }
++    if (wp_idx == 0) {
++        sub_561800(&(wmap_ui_mode_info[wmap_ui_mode].field_3C), &from);
+     } else {
+-        if (wp_idx == 0) {
+-            sub_561800(&(wmap_ui_mode_info[wmap_ui_mode].field_3C), &from);
+-        } else {
+-            start = wmap_ui_routes[route_type].waypoints[wp_idx - 1].start + wmap_ui_routes[route_type].waypoints[wp_idx - 1].steps;
+-            from = wmap_ui_routes[route_type].waypoints[wp_idx - 1].loc;
+-        }
+-
+-        path_info.from = sector_id_from_loc(from);
+-
+-        sub_561800(coords, &to);
+-        path_info.to = sector_id_from_loc(to);
+-        path_info.max_rotations = 5000 - start;
+-        path_info.rotations = &(byte_64E828[start]);
+-
+-        steps = wmap_path_make(&path_info);
+-        if (steps == 0) {
+-            // "Your path is blocked. You must locate either a bridge, pass or
+-            // means of transporation in order to travel to this destination."
+-            mes_file_entry.num = 601;
+-            mes_get_msg(wmap_ui_worldmap_mes_file, &mes_file_entry);
+-            ui_message.type = UI_MSG_TYPE_FEEDBACK;
+-            ui_message.str = mes_file_entry.str;
+-            intgame_message_window_display_msg(&ui_message);
+-            return false;
+-        }
++        start = wmap_ui_routes[route_type].waypoints[wp_idx - 1].start + wmap_ui_routes[route_type].waypoints[wp_idx - 1].steps;
++        from = wmap_ui_routes[route_type].waypoints[wp_idx - 1].loc;
++    }
++
++    path_info.from = sector_id_from_loc(from);
++
++    sub_561800(coords, &to);
++    path_info.to = sector_id_from_loc(to);
++    path_info.max_rotations = 5000 - start;
++    path_info.rotations = &(byte_64E828[start]);
++
++    steps = wmap_path_make(&path_info);
++    if (steps == 0) {
++        // "Your path is blocked. You must locate either a bridge, pass or
++        // means of transporation in order to travel to this destination."
++        mes_file_entry.num = 601;
++        mes_get_msg(wmap_ui_worldmap_mes_file, &mes_file_entry);
++        ui_message.type = UI_MSG_TYPE_FEEDBACK;
++        ui_message.str = mes_file_entry.str;
++        intgame_message_window_display_msg(&ui_message);
++        return false;
+     }
+ 
+     dword_5C9AD8 = wmap_ui_routes[route_type].length;
+@@ -4212,7 +4214,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -7011,7 +7576,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4376,6 +4405,11 @@
+@@ -4376,6 +4378,11 @@
          }
      }
  
@@ -7023,7 +7588,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      art_blit_info.flags = 0;
      art_blit_info.src_rect = &src_rect;
      art_blit_info.dst_rect = &dst_rect;
-@@ -4390,8 +4424,10 @@
+@@ -4390,8 +4397,10 @@
          note = &(wmap_info->notes[idx]);
          if (wmap_note_type_info[note->type].enabled
              && sub_565CF0(note)) {
@@ -7036,7 +7601,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          }
      }
  
-@@ -4402,7 +4438,7 @@
+@@ -4402,7 +4411,7 @@
          WmapCoords coords;
  
          sub_561490(area_get_location(area), &coords);
@@ -7045,7 +7610,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      offset_x = wmap_info->field_3C.x - wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width / 2 - wmap_info->field_34;
-@@ -4413,7 +4449,7 @@
+@@ -4413,7 +4422,7 @@
      vb_dst_rect.width = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width;
      vb_dst_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].height;
  
@@ -7054,7 +7619,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          dst_rect = vb_dst_rect;
          vb_dst_rect.x -= tmp_rect.x + offset_x;
          vb_dst_rect.y -= tmp_rect.y + offset_y;
-@@ -4426,7 +4462,7 @@
+@@ -4426,7 +4435,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -7063,7 +7628,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4707,8 @@
+@@ -4671,7 +4680,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -7073,7 +7638,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4733,7 @@
+@@ -4696,7 +4706,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -7082,7 +7647,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4888,7 @@
+@@ -4851,7 +4861,7 @@
          object_list_destroy(&objects);
      }
  
@@ -7091,7 +7656,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4929,7 +4966,7 @@
+@@ -4929,7 +4939,7 @@
          src_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].height;
          art_blit_info.art_id = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].art_id;
  
@@ -7100,7 +7665,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
              dst_rect = src_rect;
  
              src_rect.x -= x2 - wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].width / 2;
-@@ -4984,3 +5021,307 @@
+@@ -4984,3 +4994,311 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
@@ -7191,13 +7756,17 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
 +    *state=(ModernLocalMap){.width=info->map_width,.height=info->map_height,
 +        .columns=info->num_hor_tiles,.rows=info->num_vert_tiles,
-+        .count=route->length>6?6:route->length};
-+    state->x[0]=info->field_3C.x;state->y[0]=info->field_3C.y;
-+    for(int i=0;i<state->count;i++) {
-+        state->x[i+1]=route->waypoints[i].coords.x;
-+        state->y[i+1]=route->waypoints[i].coords.y;
-+    }
++        .count=route->length};
 +    return true;
++}
++
++/* Read points directly: the route can grow without a fixed UI snapshot. */
++bool modern_map_local_point(int index,int* x,int* y)
++{
++    WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
++    if(!wmap_ui_created || wmap_ui_mode!=WMAP_UI_MODE_TOWN || index<0 || index>route->length)return false;
++    WmapCoords coords=index?route->waypoints[index-1].coords:wmap_ui_mode_info[wmap_ui_mode].field_3C;
++    *x=coords.x;*y=coords.y;return true;
 +}
 +
 +void modern_map_local_mouse(int x,int y,int event,int radius)
@@ -7417,9 +7986,9 @@ diff --git a/src/ui/wmap_ui.h b/src/ui/wmap_ui.h
  
 +typedef struct ModernLocalMap {
 +    int width,height,columns,rows,count;
-+    int x[7],y[7];
 +} ModernLocalMap;
 +bool modern_map_local_state(ModernLocalMap* state);
++bool modern_map_local_point(int index,int* x,int* y);
 +void modern_map_local_mouse(int x,int y,int event,int radius);
 +void* modern_map_local_tile(int index);
 +void modern_map_local_tile_release(int index);

@@ -15,7 +15,7 @@ def function(name):
     return source[m.start():end]+'\n'
 names=['combat_player_controls','combat_input_actor','combat_input_ready',
        'combat_input_end_turn','combat_check_action_points','combat_consume_action_points',
-       'combat_turn_based_end_critter_turn','sub_4B7080','combat_tb_timeevent_process']
+       'combat_turn_based_end_critter_turn','sub_4B7080','sub_4B7010','combat_tb_timeevent_process']
 prelude=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -38,6 +38,7 @@ prelude=r'''
 #define AG_ANIM_FIDGET 1
 #define DAMAGE_TYPE_FATIGUE 0
 #define TIMEEVENT_TYPE_TB_COMBAT 1
+#define SAP_HEARTBEAT 1
 typedef struct {int value;} AnimID;
 typedef struct {int obj;} ObjectNode;
 typedef struct {int flags,dam[1];} CombatContext;
@@ -55,6 +56,14 @@ static int dword_5FC260,dword_5FC264;
 static int flags[5],spells[5],leader[5]={0,0,1,0,1},controller[5],fatigue[5]={0,30,30,30,30};
 static bool busy[5],fidget[5],active[5]={false,true,true,true,true};
 static int advanced,scheduled,damage,callback_value,rejections;
+static int heartbeats,ai_calls;
+static bool loading,ai_has_action=true;
+static bool gamelib_in_load(void){return loading;}
+static bool player_is_pc_obj(int64_t obj){return obj==1;}
+static int object_script_execute(int64_t a,int64_t b,int64_t c,int event,int d){
+ assert(a==b&&c==0&&event==SAP_HEARTBEAT&&d==0);heartbeats++;return 1;
+}
+static void ai_process(int64_t obj){ai_calls++;busy[obj]=ai_has_action;}
 static void modern_combat_rejected(int64_t actor,int64_t target,int reason,int cost){assert(actor==2&&target==0&&reason==0&&cost==4&&combat_action_points==1);rejections++;}
 static void ap_callback(int value){callback_value=value;}
 static struct {void(*field_C)(int);} combat_callbacks={ap_callback};
@@ -127,6 +136,24 @@ int main(void){
  combat_action_points=4;advanced=0;
  combat_tb_timeevent_process(&event);assert(advanced==1&&combat_action_points==0);
  active[2]=true;
+ /* Exhausted AI actors must not restart an attack after its animation ends,
+    even when another actor's animation prevents the global callback. */
+ turn.obj=3;combat_action_points=0;scheduled=advanced=heartbeats=ai_calls=0;
+ busy[2]=true;busy[3]=true;
+ sub_4B7010(3);assert(!heartbeats&&!ai_calls&&!scheduled); /* last action still animating */
+ busy[3]=false;
+ sub_4B7010(3);assert(!heartbeats&&!ai_calls&&scheduled==1&&busy[2]);
+ combat_tb_timeevent_process(&event);assert(advanced==1);
+ /* A normal AI action still runs; an AI with nothing to do ends its turn. */
+ combat_action_points=4;scheduled=0;sub_4B7010(3);
+ assert(heartbeats==1&&ai_calls==1&&busy[3]&&!scheduled&&combat_action_points==4);
+ busy[3]=false;ai_has_action=false;sub_4B7010(3);
+ assert(heartbeats==2&&ai_calls==2&&scheduled==1&&combat_action_points==0);
+ /* Callbacks for other actors, manual turns, and loading never start AI. */
+ scheduled=0;sub_4B7010(2);turn.obj=2;sub_4B7010(2);
+ turn.obj=1;sub_4B7010(1);turn.obj=3;loading=true;sub_4B7010(3);loading=false;
+ assert(heartbeats==2&&ai_calls==2&&!scheduled);
+ busy[2]=false;
  combat_turn_based_active=false;assert(combat_input_actor()==1);
  selected=2;assert(combat_input_actor()==2&&combat_player_controls(2)&&!combat_player_controls(3));
  assert(player_get_local_pc_obj()==1);selected=0;assert(!combat_player_controls(2));

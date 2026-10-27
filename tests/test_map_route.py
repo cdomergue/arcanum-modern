@@ -12,13 +12,15 @@ code=r'''
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
+#include <limits.h>
 typedef uint64_t Uint64;
 #define LOCATION_GET_X(loc) ((uint32_t)(loc))
 #define LOCATION_GET_Y(loc) ((uint32_t)((uint64_t)(loc)>>32))
 static int64_t location_make(int64_t x,int64_t y){return (int64_t)(((uint64_t)y<<32)|(uint32_t)x);}
 typedef struct {int x,y;} WmapCoords;
 typedef struct {int field_0,field_4;WmapCoords coords;int64_t loc;int start,steps;} WmapRouteWaypoint;
-typedef struct {WmapRouteWaypoint waypoints[30];int length,field_3C4;} WmapRoute;
+typedef struct {WmapRouteWaypoint initial_waypoints[30];WmapRouteWaypoint* waypoints;int capacity,length,field_3C4;} WmapRoute;
 typedef struct {int num;char* str;} MesFileEntry;
 typedef struct {int type;char* str;} UiMessage;
 enum {WMAP_ROUTE_TYPE_TOWN,OBJ_F_LOCATION,UI_MSG_TYPE_FEEDBACK};
@@ -49,7 +51,9 @@ static bool anim_preview_route_segment(int64_t obj,int64_t from,int64_t to){
 }
 ''' + source + r'''
 static void reset(void){
+    if(wmap_ui_routes[0].waypoints!=wmap_ui_routes[0].initial_waypoints)free(wmap_ui_routes[0].waypoints);
     memset(wmap_ui_routes,0,sizeof(wmap_ui_routes));
+    wmap_ui_routes[0].waypoints=wmap_ui_routes[0].initial_waypoints;wmap_ui_routes[0].capacity=30;
     calls=blocked=feedback=refreshes=0;ticks=probe_time=0;player_loc=location_make(10,10);
 }
 static void check_route(int x,int y,int expected){
@@ -65,9 +69,12 @@ static void check_route(int x,int y,int expected){
 int main(void){
     reset();check_route(30,10,1);
     reset();check_route(100,10,3);check_route(150,10,5);
-    WmapRoute before=wmap_ui_routes[0];WmapCoords far={202,10};
-    assert(!modern_town_route_add(&far));assert(!memcmp(&before,&wmap_ui_routes[0],sizeof(before)));
-    assert(feedback==611);
+    check_route(202,10,7);
+    WmapRoute before;
+    reset();
+    for(int i=1;i<=1000;i++)check_route(10+i,10,i);
+    assert(wmap_ui_routes[0].capacity>=1000);
+    check_route(2020,10,1032);
     reset();check_route(202,10,6);
     reset();check_route(100,100,3);
     reset();player_loc=location_make(100,100);check_route(10,10,3);
@@ -79,11 +86,12 @@ int main(void){
     reset();probe_time=250;target=(WmapCoords){100,10};assert(!modern_town_route_add(&target));
     assert(calls==1 && !wmap_ui_routes[0].length);
     reset();target=(WmapCoords){10,10};assert(!modern_town_route_add(&target));assert(!calls);
-    reset();target=(WmapCoords){1000,1000};assert(!modern_town_route_add(&target));assert(!calls);
+    reset();check_route(1000,1000,31);
+    reset();
 }
 '''
 with tempfile.TemporaryDirectory(prefix='arcanum-map-route-') as directory:
     path=Path(directory);(path/'test.c').write_text(code)
     subprocess.run([os.environ.get('CC','cc'),'-std=c17','-Wall','-Wextra','-Werror',str(path/'test.c'),'-o',str(path/'test')],check=True)
     subprocess.run([str(path/'test')],check=True)
-print('PASS: distant waypoints, diagonals, detours, appending, limits, timeout and atomic failure')
+print('PASS: distant waypoints, diagonals, detours, 1000-point growth, appending, timeout and atomic failure')
