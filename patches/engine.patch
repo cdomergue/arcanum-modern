@@ -3888,6 +3888,110 @@ diff --git a/src/game/tf.c b/src/game/tf.c
      TextFloaterList* list;
      TextFloaterList* prev_list;
      TextFloaterEntry* entry;
+diff --git a/src/game/townmap.c b/src/game/townmap.c
+--- a/src/game/townmap.c
++++ b/src/game/townmap.c
+@@ -57,6 +57,11 @@
+  * 0x5FC510
+  */
+ static uint8_t* townmap_kstate;
++// Bitmap availability is immutable while a module is loaded. Remember both
++// present and missing tiles instead of probing repositories for every fog cell.
++static uint8_t* townmap_tile_availability;
++static int townmap_tile_availability_count;
++static uint64_t townmap_exploration_generation;
+ 
+ /**
+  * The size of `townmap_kstate` in bytes.
+@@ -585,6 +590,12 @@
+  */
+ void townmap_kstate_reset(void)
+ {
++    if (townmap_tile_availability != NULL) {
++        FREE(townmap_tile_availability);
++        townmap_tile_availability = NULL;
++    }
++    townmap_tile_availability_count = 0;
++    townmap_exploration_generation++;
+     if (townmap_kstate != NULL) {
+         FREE(townmap_kstate);
+         townmap_kstate = NULL;
+@@ -609,6 +620,7 @@
+         // bits.
+         value = known ? 0xFF : 0;
+         for (idx = 0; idx < townmap_kstate_size; idx++) {
++            if (townmap_kstate[idx] != value) townmap_exploration_generation++;
+             townmap_kstate[idx] = value;
+         }
+ 
+@@ -624,7 +636,8 @@
+  */
+ void townmap_tile_known_set(int map, int index)
+ {
+-    if (townmap_kstate_load(map)) {
++    if (townmap_kstate_load(map) && index >= 0 && index < townmap_tile_availability_count) {
++        if ((townmap_kstate[index / 8] & (1 << (index % 8))) == 0) townmap_exploration_generation++;
+         townmap_kstate[index / 8] |= 1 << (index % 8);
+         townmap_kstate_modified = true;
+     }
+@@ -642,23 +655,30 @@
+     char path[TIG_MAX_PATH];
+ 
+     // Load k-state for the specified map.
+-    if (!townmap_kstate_load(map)) {
++    if (!townmap_kstate_load(map) || index < 0 || index >= townmap_tile_availability_count) {
+         return false;
+     }
+ 
+     // Check if the tile's bit is set.
+     if ((townmap_kstate[index / 8] & (1 << (index % 8))) == 0) {
+         return false;
++    }
++
++    if (townmap_tile_availability[index] != 0) {
++        return townmap_tile_availability[index] == 2;
+     }
+ 
+     // Verify that the bitmap for this tile actually exist.
+     name = townmap_name(map);
+     snprintf(path, sizeof(path), "townmap\\%s\\%s%06d.bmp", name, name, index);
+-    if (!tig_file_exists(path, NULL)) {
+-        return false;
+-    }
+-
+-    return true;
++    bool exists = tig_file_exists(path, NULL);
++    townmap_tile_availability[index] = exists ? 2 : 1;
++    return exists;
++}
++
++uint64_t townmap_exploration_revision(int map)
++{
++    return townmap_kstate_load(map) ? townmap_exploration_generation : 0;
+ }
+ 
+ /**
+@@ -723,6 +743,10 @@
+         }
+ 
+         townmap_kstate = (uint8_t*)MALLOC(townmap_kstate_size);
++        memset(townmap_kstate, 0, townmap_kstate_size);
++        townmap_tile_availability_count = tmi.num_hor_tiles * tmi.num_vert_tiles;
++        townmap_tile_availability = (uint8_t*)MALLOC(townmap_tile_availability_count);
++        memset(townmap_tile_availability, 0, townmap_tile_availability_count);
+ 
+         // Save the map which k-state was initialized for.
+         townmap_kstate_map = map;
+diff --git a/src/game/townmap.h b/src/game/townmap.h
+--- a/src/game/townmap.h
++++ b/src/game/townmap.h
+@@ -37,5 +37,6 @@
+ bool townmap_set_known(int map, bool known);
+ bool townmap_tile_blit_info(int map, int index, TigVideoBufferBlitInfo* vb_blit_info);
+ bool townmap_is_waitable(int map);
++uint64_t townmap_exploration_revision(int map);
+ 
+ #endif /* ARCANUM_GAME_TOWNMAP_H_ */
 diff --git a/src/game/trap.c b/src/game/trap.c
 --- a/src/game/trap.c
 +++ b/src/game/trap.c
