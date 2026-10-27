@@ -86,7 +86,7 @@ available.
 | Toggle combat mode | Shift + Space |
 | End turn | E or Space |
 | Move camera | WASD positions, ZQSD on AZERTY, or arrow keys |
-| Zoom world or local map | Mouse wheel over the world or map |
+| Zoom game view, travel map, local map or continent map | Mouse wheel over the world or map |
 | Use quick slot | 1–0 |
 | Close panel or open pause menu | Escape |
 
@@ -105,7 +105,10 @@ available.
   with consecutive turns can switch while they have action points. **End turn**
   finishes the selected character; enemies act after the group finishes.
   Left-click highlighted scenery in combat mode to attack it.
-- **Maps and journal:** drag the map to pan. Set a route and use the travel
+- **Maps and journal:** drag the map to pan. On travel and continent maps, the
+  mouse wheel zooms in and out continuously, down to the full map. Travel
+  destinations and route points follow the zoomed view.
+  Set a route and use the travel
   button to follow it; the cancel control clears it. In the journal, the star
   marks favorites and the pin tracks a quest.
 

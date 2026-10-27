@@ -13,6 +13,7 @@ static SDL_Texture* map_texture;
 static SDL_Texture* inventory_actions_texture;
 static Uint64 map_texture_time;
 static int map_texture_mode=-1;
+static float map_continent_texture_width,map_continent_texture_height;
 static int64_t inventory_hover,inventory_detail_object;
 static int inventory_detail_kind,inventory_detail_scroll,inventory_detail_max;
 static ModernDetails inventory_details;
@@ -59,14 +60,16 @@ static int map_press_x,map_press_y;
 static MapCamera map_camera;
 static ModernLocalMap map_local;
 static SDL_FRect map_viewport,map_destination;
-static bool map_camera_active;
+static bool map_camera_active,map_camera_local,map_camera_travel;
+static TigRect map_travel_texture_rect;
+static float map_camera_width,map_camera_height;
 static int map_camera_id=-1;
 
 static void map_zoom(float factor,float x,float y)
 {
     if(!map_camera_active || map_pressed)return;
     map_camera_zoom(&map_camera,factor,x-map_destination.x,y-map_destination.y,
-        map_viewport.w,map_viewport.h,map_local.width,map_local.height);
+        map_viewport.w,map_viewport.h,map_camera_width,map_camera_height);
 }
 
 
@@ -649,10 +652,96 @@ static void draw_memo_editor(void)
     button((SDL_FRect){x+405,y+155,170,42},2194,menu_text(54),-1,false,true);
 }
 #include "modern_map_bitmap.inc"
+/* Travel labels are UI text, not pixels in the zoomed terrain texture. */
+static SDL_FRect map_label_rects[200];
+static int map_label_count;
+static ModernMapMarker map_markers[240];
+static SDL_FRect map_marker_rects[240];
+static int map_marker_count;
+static void draw_travel_markers(const ModernMap* map,SDL_FRect dest,float scale)
+{
+    ModernMapMarker markers[240];
+    int count=modern_map_travel_markers(markers,SDL_arraysize(markers));
+    map_marker_count=0;
+    for(int i=0;i<count;i++) {
+        float x=dest.x+(markers[i].x-map->offset_x)*scale;
+        float y=dest.y+(markers[i].y-map->offset_y)*scale;
+        if(!inside(dest,x,y))continue;
+        SDL_FRect rect={x-8,y-8,16,16};
+        map_markers[map_marker_count]=markers[i];
+        map_marker_rects[map_marker_count++]=rect;
+        draw_art_id(markers[i].art_id,rect,true);
+    }
+}
+static int map_label_x[200],map_label_y[200];
+static void map_label_target(int* x,int* y)
+{
+    if(!map_camera_travel)return;
+    int nearest=-1;float distance=12*12;
+    for(int i=0;i<map_marker_count;i++)if(map_markers[i].selectable) {
+        SDL_FRect rect=map_marker_rects[i];
+        float dx=mouse_x-(rect.x+rect.w/2),dy=mouse_y-(rect.y+rect.h/2);
+        float d=dx*dx+dy*dy;
+        if(d<=distance){distance=d;nearest=i;}
+    }
+    if(nearest>=0){*x=map_markers[nearest].x;*y=map_markers[nearest].y;return;}
+    for(int i=0;i<map_label_count;i++)if(inside(map_label_rects[i],mouse_x,mouse_y)) {
+        *x=map_label_x[i];*y=map_label_y[i];return;
+    }
+}
+static void draw_travel_labels(const ModernMap* map,SDL_FRect dest,float scale)
+{
+    ModernMapLabel labels[200];
+    int count=modern_map_travel_labels(labels,SDL_arraysize(labels));
+    map_label_count=0;
+    float height=fonts[0].size+6;
+    for(int i=0;i<count;i++) {
+        ModernMapLabel* label=&labels[i];
+        float px=dest.x+(label->x-map->offset_x)*scale;
+        float py=dest.y+(label->y-map->offset_y)*scale;
+        if(!inside(dest,px,py))continue;
+        const char* name=game_text(label->text);
+        float width=fminf(text_measure(0,name)+10,dest.w-8);
+        float x=px+14+label->offset_x*scale,y=py-height/2+label->offset_y*scale;
+        if(x+width>dest.x+dest.w-4)x=px-width-14;
+        x=fmaxf(dest.x+4,fminf(x,dest.x+dest.w-width-4));
+        SDL_FRect rect={x,y,width,height};bool placed=false;
+        for(int slot=0;slot<31 && !placed;slot++) {
+            int step=(slot+1)/2*(slot%2?1:-1);
+            rect.y=fmaxf(dest.y+2,fminf(y+step*(height+2),dest.y+dest.h-height-2));
+            placed=true;
+            /* Keep names clear of fixed-size markers and their click targets. */
+            for(int j=0;j<map_marker_count;j++) {
+                SDL_FRect marker=map_marker_rects[j];
+                float cx=marker.x+marker.w/2,cy=marker.y+marker.h/2;
+                if(rect.x<cx+13 && rect.x+rect.w>cx-13
+                    && rect.y<cy+13 && rect.y+rect.h>cy-13){placed=false;break;}
+            }
+            for(int j=0;j<map_label_count;j++) {
+                SDL_FRect other=map_label_rects[j];
+                if(rect.x<other.x+other.w+3 && rect.x+rect.w+3>other.x
+                    && rect.y<other.y+other.h+2 && rect.y+rect.h+2>other.y){placed=false;break;}
+            }
+        }
+        if(!placed)continue;
+        map_label_x[map_label_count]=label->x;map_label_y[map_label_count]=label->y;
+        map_label_rects[map_label_count++]=rect;
+        if(fabsf(rect.y-y)>2) {
+            SDL_SetRenderDrawColor(renderer,47,34,20,210);
+            SDL_RenderLine(renderer,px,py,fmaxf(rect.x,fminf(px,rect.x+rect.w)),rect.y+height/2);
+        }
+        SDL_Color shadow={20,14,8,255},ink={255,244,214,255};
+        for(int dy=-1;dy<=1;dy++)for(int dx=-1;dx<=1;dx++)
+            if(dx||dy)text_compact(name,rect.x+dx,rect.y+dy,width,false,shadow);
+        text_compact(name,rect.x,rect.y,width,false,ink);
+    }
+}
 static void draw_map(void)
 {
     ModernMap map;if(!modern_map_state(&map))return;
     bool local=modern_map_local_state(&map_local);
+    ModernTravelMap travel_state;
+    bool travel=modern_map_travel_state(&travel_state);
     bool hd=map_cache_prepare(&map);
     modern_map_hd_enable(local);
     panel_backdrop();float w=fminf(1440,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-820)/2;
@@ -662,35 +751,73 @@ static void draw_map(void)
     menu_button((SDL_FRect){x+310,y+78,260,48},742,game_text(modern_map_text(502)),true);
     button((SDL_FRect){x+590,y+78,220,48},2190,tr("Ajouter une note","Add note"),-1,memo_placing,map_memo_count<64 && !map.moving);
     button((SDL_FRect){x+830,y+78,200,48},2191,tr("Notes visibles","Show notes"),-1,memos_visible,true);
-    if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || map_texture_hd!=local || !map_texture) {
+    if(!travel && (SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || map_texture_hd!=local || !map_texture)) {
         float ww,hh;SDL_DestroyTexture(map_texture);
-        map_texture=local?map_overlay_texture(map.buffer):texture_from_buffer(map.buffer,&ww,&hh);
+        if(map.mode==1) {
+            int width,height;TigVideoBuffer* buffer=modern_map_continent_buffer(&width,&height);
+            map_texture=buffer?texture_from_buffer(buffer,&map_continent_texture_width,&map_continent_texture_height):NULL;
+            if(!map_texture) {
+                map_texture=texture_from_buffer(map.buffer,&ww,&hh);
+                map_continent_texture_width=map_continent_texture_height=0;
+            }
+        } else map_texture=local?map_overlay_texture(map.buffer):texture_from_buffer(map.buffer,&ww,&hh);
         map_texture_time=SDL_GetTicks();map_texture_mode=map.mode;
         map_texture_hd=local;
     }
     SDL_FRect available={x+30,y+150,w-60,550};
     float scale=fminf(available.w/map.width,available.h/map.height);
     ModernMap native=map;
-    map_camera_active=local;
+    bool continent=map.mode==1;
+    map_camera_active=local || continent || travel;
+    map_camera_travel=travel;
+    map_camera_local=local;
     map_viewport=available;
     if(map_camera_active) {
-        if(map_camera_id!=map.townmap) {
+        int camera_id=local?map.townmap:travel?-3:-2;
+        map_camera_width=local?map_local.width:travel?travel_state.width:map.width;
+        map_camera_height=local?map_local.height:travel?travel_state.height:map.height;
+        if(map_camera_id!=camera_id) {
             map_camera=(MapCamera){
-                .x=map.offset_x-map.origin_x+(map.width-fminf(map_local.width,available.w/scale))/2,
-                .y=map.offset_y-map.origin_y+(map.height-fminf(map_local.height,available.h/scale))/2,.scale=scale};
-            map_camera_id=map.townmap;
+                .x=continent?0:map.offset_x-map.origin_x+(map.width-fminf(map_camera_width,available.w/scale))/2,
+                .y=continent?0:map.offset_y-map.origin_y+(map.height-fminf(map_camera_height,available.h/scale))/2,.scale=scale};
+            map_camera_id=camera_id;
         }
-        map_camera.min_scale=fminf(available.w/map_local.width,available.h/map_local.height);
-        map_camera.max_scale=fmaxf(scale,hd && map_cache_info.scale>0?1/map_cache_info.scale:4);
-        map_camera_zoom(&map_camera,1,0,0,available.w,available.h,map_local.width,map_local.height);
+        map_camera.min_scale=fminf(available.w/map_camera_width,available.h/map_camera_height);
+        if(travel)map_camera.min_scale=fmaxf(map_camera.min_scale,fmaxf(
+            map_camera_width>4096?available.w/4096:0,map_camera_height>4096?available.h/4096:0));
+        map_camera.max_scale=continent?map_camera.min_scale*4:fmaxf(scale,hd && map_cache_info.scale>0?1/map_cache_info.scale:4);
+        map_camera_zoom(&map_camera,1,0,0,available.w,available.h,map_camera_width,map_camera_height);
+        if(travel && map.moving && !map_pressed) {
+            map_camera.x=travel_state.x-map_camera.width/2;
+            map_camera.y=travel_state.y-map_camera.height/2;
+            map_camera_clamp(&map_camera,map_camera_width,map_camera_height);
+        }
         scale=map_camera.scale;
         map.width=(int)ceilf(map_camera.width);map.height=(int)ceilf(map_camera.height);
         map.offset_x=(int)map_camera.x;map.offset_y=(int)map_camera.y;
         map.origin_x=map.origin_y=0;
-    }
+    } else map_camera_id=-1;
     SDL_FRect dest={available.x+(available.w-map.width*scale)/2,available.y+(available.h-map.height*scale)/2,map.width*scale,map.height*scale};
     map_destination=dest;
     SDL_FRect src={native.x,native.y-41,native.width,native.height};
+    if(continent) {
+        if(map_continent_texture_width>0 && map_continent_texture_height>0) {
+            float sx=map_continent_texture_width/native.width,sy=map_continent_texture_height/native.height;
+            src=(SDL_FRect){map_camera.x*sx,map_camera.y*sy,map_camera.width*sx,map_camera.height*sy};
+        } else src=(SDL_FRect){native.x+map_camera.x,native.y-41+map_camera.y,map_camera.width,map_camera.height};
+    }
+    if(travel) {
+        TigRect view={map.offset_x,map.offset_y,map.width,map.height};
+        if(SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || !map_texture
+            || memcmp(&view,&map_travel_texture_rect,sizeof(view))) {
+            TigVideoBuffer* buffer=modern_map_travel_buffer(view.x,view.y,view.width,view.height);
+            float tw,th;SDL_Texture* texture=buffer?texture_from_buffer(buffer,&tw,&th):NULL;
+            SDL_DestroyTexture(map_texture);map_texture=texture;
+            map_texture_time=SDL_GetTicks();map_texture_mode=map.mode;map_texture_hd=false;
+            map_travel_texture_rect=view;
+        }
+        src=(SDL_FRect){0,0,map.width,map.height};
+    }
     fill(available,(SDL_Color){12,10,8,255});
     if(local && (!hd || !map_cache_draw(&map,dest,scale)))map_bitmap_draw(&map,dest,scale);
     SDL_Rect saved_clip;bool clipped=SDL_RenderClipEnabled(renderer);
@@ -698,7 +825,7 @@ static void draw_map(void)
     SDL_Rect clip={(int)dest.x,(int)dest.y,(int)dest.w,(int)dest.h};
     SDL_SetRenderClipRect(renderer,&clip);
     SDL_FRect overlay=dest;
-    if(map_camera_active)overlay=(SDL_FRect){
+    if(local)overlay=(SDL_FRect){
         dest.x+(native.offset_x-native.origin_x-map.offset_x)*scale,
         dest.y+(native.offset_y-native.origin_y-map.offset_y)*scale,
         native.width*scale,native.height*scale};
@@ -720,13 +847,17 @@ static void draw_map(void)
             outline((SDL_FRect){xx-radius-2,yy-radius-2,radius*2+4,radius*2+4},GOLD);
         }
     }
+    if(travel){draw_travel_markers(&map,dest,scale);draw_travel_labels(&map,dest,scale);}
     draw_map_memos(&map,dest,scale);
     SDL_SetRenderClipRect(renderer,clipped?&saved_clip:NULL);
     outline(dest,GOLD);
-    panel_region(dest,map_camera_active?map.offset_x:map.x,map_camera_active?map.offset_y:map.y,map.width,map.height,3);
-    if(local) {
+    panel_region(dest,(local || travel)?map.offset_x:map.x+(continent?(int)map_camera.x:0),
+        (local || travel)?map.offset_y:map.y+(continent?(int)map_camera.y:0),map.width,map.height,3);
+    if(map_camera_active) {
         button((SDL_FRect){x+w-140,y+78,48,48},749,"-",-1,false,map_camera_active && map_camera.scale>map_camera.min_scale+0.001f);
         button((SDL_FRect){x+w-82,y+78,48,48},750,"+",-1,false,map_camera_active && map_camera.scale<map_camera.max_scale-0.001f);
+    }
+    if(local) {
         menu_button((SDL_FRect){x+w-585,y+741,220,50},748,menu_text(54),map_local.count>0);
     }
     menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
@@ -1060,13 +1191,13 @@ static void panels_tick(void)
         if(p==1){sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);}
         if(p!=5)selector=0;
         binding_cancel=binding_pressed;binding_pressed=binding_moved=false;binding_bar_visible=false;
-        map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;map_camera_id=-1;map_camera_active=false;map_bitmap_clear();SDL_CaptureMouse(false);
+        map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;map_camera_id=-1;map_camera_active=map_camera_local=map_camera_travel=false;map_bitmap_clear();SDL_CaptureMouse(false);
         if(p==2){inventory_query[0]=0;inventory_filter=0;inventory_compare_scroll=0;memset(&inventory_details,0,sizeof(inventory_details));inventory_detail_object=0;inventory_detail_scroll=0;}
         panel_previous=p;
     }
     if(p==3 && ((int)map_pan_x || (int)map_pan_y)) {
         int dx=(int)map_pan_x,dy=(int)map_pan_y;
-        if(map_camera_active){map_camera.x+=dx;map_camera.y+=dy;map_camera_clamp(&map_camera,map_local.width,map_local.height);}
+        if(map_camera_active){map_camera.x+=dx;map_camera.y+=dy;map_camera_clamp(&map_camera,map_camera_width,map_camera_height);}
         else modern_map_pan(dx,dy);
         map_pan_x-=dx;map_pan_y-=dy;map_texture_time=0;
     }
@@ -1078,7 +1209,8 @@ static void panels_tick(void)
         if(panel_events[i].kind==p) {
             if(p==2)modern_inventory_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
             if(p==3){
-                if(map_camera_active)modern_map_local_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event,(int)ceilf(10/map_camera.scale));
+                if(map_camera_local)modern_map_local_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event,(int)ceilf(10/map_camera.scale));
+                else if(map_camera_travel)modern_map_travel_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
                 else modern_map_mouse(panel_events[i].x,panel_events[i].y,panel_events[i].event);
             }
         }
@@ -1114,6 +1246,7 @@ static bool map_drag_event(int type,int button,PanelRegion* region)
         map_start_x=map_last_x=mouse_x;map_start_y=map_last_y=mouse_y;
         map_press_x=region->x+(mouse_x-region->rect.x)*region->w/region->rect.w;
         map_press_y=region->y+(mouse_y-region->rect.y)*region->h/region->rect.h;
+        map_label_target(&map_press_x,&map_press_y);
         SDL_CaptureMouse(true);return true;
     }
     return false;
@@ -1165,6 +1298,7 @@ static bool panels_event(SDL_Event* event)
     }
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);if(ww<=0 || wh<=0)return false;
     if(event->type==SDL_EVENT_MOUSE_MOTION){mouse_x=event->motion.x*canvas_w/ww;mouse_y=event->motion.y*canvas_h/wh;}
+    if(event->type==SDL_EVENT_MOUSE_WHEEL){mouse_x=event->wheel.mouse_x*canvas_w/ww;mouse_y=event->wheel.mouse_y*canvas_h/wh;}
     if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP){mouse_x=event->button.x*canvas_w/ww;mouse_y=event->button.y*canvas_h/wh;}
     if(p==3 && memo_event(event))return true;
     if(p==3 && memo_edit<0 && (event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP)) {
@@ -1239,6 +1373,7 @@ static bool panels_event(SDL_Event* event)
         if(p==3 && map_pressed && map_drag_event(event->type,motion?0:event->button.button,NULL))return true;
         for(int i=0;i<panel_region_count;i++)if(inside(panel_regions[i].rect,mouse_x,mouse_y)) {
             PanelRegion* r=&panel_regions[i];int xx=r->x+(mouse_x-r->rect.x)*r->w/r->rect.w,yy=r->y+(mouse_y-r->rect.y)*r->h/r->rect.h;
+            if(p==3)map_label_target(&xx,&yy);
             if(p==2 && r->w && !inven_ui_drag_item_obj_get()){
                 int64_t obj=modern_inventory_at(xx,yy);
                 if(obj && !inventory_match(obj))return true;

@@ -6793,15 +6793,20 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  typedef enum WmapUiMode {
      WMAP_UI_MODE_WORLD,
-@@ -314,6 +320,7 @@
+@@ -314,6 +320,12 @@
  
  // 0x5C9B00
  static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
 +static bool modern_map_hd;
++static tig_window_handle_t modern_travel_window = TIG_WINDOW_HANDLE_INVALID;
++static int modern_travel_width, modern_travel_height;
++static int modern_map_render_pass;
++static void modern_continent_marks(WmapInfo* info, TigRect* rect);
++static void modern_travel_buffer_clear(void);
  
  // 0x5C9B08
  static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
-@@ -435,6 +442,7 @@
+@@ -435,6 +447,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -6809,7 +6814,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +756,7 @@
+@@ -748,7 +761,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -6818,7 +6823,16 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -911,6 +919,7 @@
+@@ -789,6 +802,8 @@
+ {
+     int mode;
+     int tile;
++
++    modern_travel_buffer_clear();
+ 
+     wmap_ui_mode = WMAP_UI_MODE_WORLD;
+     wmap_ui_state = WMAP_UI_STATE_NORMAL;
+@@ -911,6 +926,7 @@
  // 0x560200
  void wmap_ui_reset(void)
  {
@@ -6826,7 +6840,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int index;
  
      if (wmap_ui_initialized) {
-@@ -1017,6 +1026,7 @@
+@@ -1017,6 +1033,7 @@
  // 0x5604B0
  bool wmap_ui_load(GameLoadInfo* load_info)
  {
@@ -6834,16 +6848,17 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int mode;
      int cnt;
      int note;
-@@ -1411,6 +1421,8 @@
+@@ -1411,6 +1428,9 @@
      if (!wmap_ui_created) {
          return;
      }
 +
 +    modern_map_hd = false;
++    modern_travel_buffer_clear();
  
      pc_obj = player_get_local_pc_obj();
      if (pc_obj != OBJ_HANDLE_NULL
-@@ -1523,6 +1535,7 @@
+@@ -1523,6 +1543,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -6851,7 +6866,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -2188,6 +2201,7 @@
+@@ -2188,6 +2209,7 @@
                          }
                      } else {
                          if (wmap_ui_mode == WMAP_UI_MODE_TOWN && wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length > 0) {
@@ -6859,7 +6874,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
                              anim_goal_move_to_tile(player_get_local_pc_obj(),
                                  wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].waypoints[0].loc);
  
-@@ -3569,6 +3583,9 @@
+@@ -3569,6 +3591,9 @@
      return false;
  }
  
@@ -6869,7 +6884,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  // 0x5643E0
  bool sub_5643E0(WmapCoords* coords)
  {
-@@ -3592,6 +3609,10 @@
+@@ -3592,6 +3617,10 @@
              return false;
          }
          route_type = WMAP_ROUTE_TYPE_TOWN;
@@ -6880,7 +6895,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      wp_idx = wmap_ui_routes[route_type].length;
-@@ -4212,7 +4233,7 @@
+@@ -4212,7 +4241,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -6889,7 +6904,50 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4426,7 +4447,7 @@
+@@ -4376,6 +4405,11 @@
+         }
+     }
+ 
++    if (modern_map_render_pass == 2) {
++        modern_continent_marks(wmap_info, &tmp_rect);
++        return;
++    }
++
+     art_blit_info.flags = 0;
+     art_blit_info.src_rect = &src_rect;
+     art_blit_info.dst_rect = &dst_rect;
+@@ -4390,8 +4424,10 @@
+         note = &(wmap_info->notes[idx]);
+         if (wmap_note_type_info[note->type].enabled
+             && sub_565CF0(note)) {
+-            sub_566D10(note->type, &(note->coords), &tmp_rect, rect, wmap_info);
+-            sub_565D00(note, &tmp_rect, rect);
++            if (modern_map_render_pass != 1) {
++                sub_566D10(note->type, &(note->coords), &tmp_rect, rect, wmap_info);
++                sub_565D00(note, &tmp_rect, rect);
++            }
+         }
+     }
+ 
+@@ -4402,7 +4438,7 @@
+         WmapCoords coords;
+ 
+         sub_561490(area_get_location(area), &coords);
+-        sub_566D10(WMAP_NOTE_TYPE_NEW_LOC, &coords, &tmp_rect, rect, wmap_info);
++        if (modern_map_render_pass != 1) sub_566D10(WMAP_NOTE_TYPE_NEW_LOC, &coords, &tmp_rect, rect, wmap_info);
+     }
+ 
+     offset_x = wmap_info->field_3C.x - wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width / 2 - wmap_info->field_34;
+@@ -4413,7 +4449,7 @@
+     vb_dst_rect.width = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width;
+     vb_dst_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].height;
+ 
+-    if (tig_rect_intersection(&vb_dst_rect, rect, &vb_dst_rect) == TIG_OK) {
++    if (modern_map_render_pass != 1 && tig_rect_intersection(&vb_dst_rect, rect, &vb_dst_rect) == TIG_OK) {
+         dst_rect = vb_dst_rect;
+         vb_dst_rect.x -= tmp_rect.x + offset_x;
+         vb_dst_rect.y -= tmp_rect.y + offset_y;
+@@ -4426,7 +4462,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -6898,7 +6956,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4692,8 @@
+@@ -4671,7 +4707,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -6908,7 +6966,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4718,7 @@
+@@ -4696,7 +4733,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -6917,7 +6975,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4873,7 @@
+@@ -4851,7 +4888,7 @@
          object_list_destroy(&objects);
      }
  
@@ -6926,7 +6984,16 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4984,3 +5006,144 @@
+@@ -4929,7 +4966,7 @@
+         src_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].height;
+         art_blit_info.art_id = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].art_id;
+ 
+-        if (tig_rect_intersection(&src_rect, a3, &src_rect) == TIG_OK) {
++        if (modern_map_render_pass != 1 && tig_rect_intersection(&src_rect, a3, &src_rect) == TIG_OK) {
+             dst_rect = src_rect;
+ 
+             src_rect.x -= x2 - wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].width / 2;
+@@ -4984,3 +5021,307 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
@@ -7071,10 +7138,173 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +{
 +    wmTileArtUnlock(index);
 +}
++
++static void modern_travel_buffer_clear(void)
++{
++    if (modern_travel_window != TIG_WINDOW_HANDLE_INVALID) {
++        tig_window_destroy(modern_travel_window);
++        modern_travel_window = TIG_WINDOW_HANDLE_INVALID;
++    }
++    modern_travel_width = modern_travel_height = 0;
++}
++
++bool modern_map_travel_state(ModernTravelMap* state)
++{
++    if (!wmap_ui_created || wmap_ui_mode != WMAP_UI_MODE_WORLD) return false;
++    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    *state = (ModernTravelMap){info->map_width, info->map_height, info->field_3C.x, info->field_3C.y};
++    return state->width > 0 && state->height > 0;
++}
++
++/* Reuse the native map renderer for terrain, localized labels, destinations and
++ * the live route. Its output goes to a private hidden surface, with the native
++ * window and viewport restored synchronously before any input is dispatched. */
++static void* modern_map_world_buffer(int x, int y, int width, int height, bool overview)
++{
++    ModernTravelMap map;
++    if (!modern_ui_enabled() || !wmap_ui_created
++        || (overview ? wmap_ui_mode != WMAP_UI_MODE_CONTINENT : wmap_ui_mode != WMAP_UI_MODE_WORLD)) return NULL;
++    WmapInfo* world = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    map = (ModernTravelMap){world->map_width, world->map_height, world->field_3C.x, world->field_3C.y};
++    if (map.width <= 0 || map.height <= 0
++        || width <= 0 || height <= 0 || width > map.width || height > map.height
++        || width > 4096 || height > 4096) return NULL;
++    if (x < 0) x = 0;
++    if (y < 0) y = 0;
++    if (x > map.width - width) x = map.width - width;
++    if (y > map.height - height) y = map.height - height;
++    if (width != modern_travel_width || height != modern_travel_height) {
++        modern_travel_buffer_clear();
++        TigWindowData data = {0};
++        data.flags = TIG_WINDOW_HIDDEN;
++        data.rect = (TigRect){0, 0, width, height};
++        if (tig_window_create(&data, &modern_travel_window) != TIG_OK) return NULL;
++        modern_travel_width = width;
++        modern_travel_height = height;
++    }
++    TigVideoBuffer* buffer = NULL;
++    if (tig_window_vbid_get(modern_travel_window, &buffer) != TIG_OK) return NULL;
++    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    TigRect saved_rect = info->rect;
++    int saved_x = info->field_34, saved_y = info->field_38;
++    tig_window_handle_t saved_window = wmap_ui_window;
++    info->rect = (TigRect){0, 0, width, height};
++    info->field_34 = x;
++    info->field_38 = y;
++    WmapUiMode saved_mode = wmap_ui_mode;
++    int saved_pass = modern_map_render_pass;
++    wmap_ui_window = modern_travel_window;
++    wmap_ui_mode = WMAP_UI_MODE_WORLD;
++    modern_map_render_pass = overview ? 2 : 1;
++    wmap_world_refresh_rect(NULL);
++    modern_map_render_pass = saved_pass;
++    wmap_ui_mode = saved_mode;
++    wmap_ui_window = saved_window;
++    info->rect = saved_rect;
++    info->field_34 = saved_x;
++    info->field_38 = saved_y;
++    return buffer;
++}
++
++/* Feed absolute map coordinates through the existing travel/teleport handlers.
++ * Bring that point into the native viewport first; its size and click bounds
++ * stay unchanged even when the modern camera sees the entire continent. */
++void modern_map_travel_mouse(int x, int y, int event)
++{
++    ModernTravelMap map;
++    if (!modern_map_travel_state(&map) || x < 0 || y < 0 || x >= map.width || y >= map.height) return;
++    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    if (wmap_ui_state != WMAP_UI_STATE_MOVING) {
++        modern_map_pan(x - info->field_14.width / 2 - info->field_34,
++            y - info->field_14.height / 2 - info->field_38);
++    }
++    modern_map_mouse(x - info->field_34 + info->rect.x,
++        y - info->field_38 + info->rect.y + wmap_ui_window_frame.y, event);
++}
++
++void* modern_map_travel_buffer(int x, int y, int width, int height)
++{
++    return modern_map_world_buffer(x, y, width, height, false);
++}
++
++void* modern_map_continent_buffer(int* width, int* height)
++{
++    WmapInfo* world = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    *width = world->map_width;
++    *height = world->map_height;
++    return modern_map_world_buffer(0, 0, *width, *height, true);
++}
++
++static void modern_continent_mark(WmapCoords coords, int size, tig_color_t color, WmapInfo* info, TigRect* rect)
++{
++    int diameter = size * info->map_width / wmap_ui_mode_info[WMAP_UI_MODE_CONTINENT].rect.width;
++    if (diameter < 1) diameter = 1;
++    TigRect marker = {rect->x + coords.x - info->field_34 - diameter / 2,
++        rect->y + coords.y - info->field_38 - diameter / 2, diameter, diameter};
++    tig_window_fill(wmap_ui_window, &marker, color);
++}
++
++static void modern_continent_marks(WmapInfo* info, TigRect* rect)
++{
++    for (int i = 0; i < *info->num_notes; i++) {
++        WmapNote* note = &info->notes[i];
++        if (wmap_note_type_info[note->type].enabled)
++            modern_continent_mark(note->coords, 2, tig_color_make(255, 0, 0), info, rect);
++    }
++    int area = area_get_last_known_area(player_get_local_pc_obj());
++    if (area != AREA_UNKNOWN) {
++        WmapCoords coords;
++        sub_561490(area_get_location(area), &coords);
++        modern_continent_mark(coords, 5, tig_color_make(255, 255, 0), info, rect);
++    }
++    modern_continent_mark(info->field_3C, 3, tig_color_make(0, 255, 0), info, rect);
++}
++
++int modern_map_travel_labels(ModernMapLabel* labels, int capacity)
++{
++    if (!wmap_ui_created || wmap_ui_mode != WMAP_UI_MODE_WORLD) return 0;
++    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    int count = 0;
++    for (int i = 0; i < *info->num_notes && count < capacity; i++) {
++        WmapNote* note = &info->notes[i];
++        if (!wmap_note_type_info[note->type].enabled || !sub_565CF0(note) || !*note->str) continue;
++        ModernMapLabel* label = &labels[count++];
++        *label = (ModernMapLabel){.x = note->coords.x, .y = note->coords.y, .text = note->str};
++        if (note->id <= area_count()) area_get_wm_offset(note->id, &label->offset_x, &label->offset_y);
++    }
++    return count;
++}
++
++int modern_map_travel_markers(ModernMapMarker* markers, int capacity)
++{
++    if (!wmap_ui_created || wmap_ui_mode != WMAP_UI_MODE_WORLD) return 0;
++    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    int count = 0;
++    for (int i = 0; i < *info->num_notes && count < capacity; i++) {
++        WmapNote* note = &info->notes[i];
++        if (wmap_note_type_info[note->type].enabled && sub_565CF0(note))
++            markers[count++] = (ModernMapMarker){note->coords.x, note->coords.y,
++                wmap_note_type_info[note->type].art_id, true};
++    }
++    WmapRoute* route = &wmap_ui_routes[WMAP_ROUTE_TYPE_WORLD];
++    for (int i = 0; i < route->length && count < capacity; i++)
++        markers[count++] = (ModernMapMarker){route->waypoints[i].coords.x, route->waypoints[i].coords.y,
++            wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].art_id, true};
++    int area = area_get_last_known_area(player_get_local_pc_obj());
++    if (area != AREA_UNKNOWN && count < capacity) {
++        WmapCoords coords;
++        sub_561490(area_get_location(area), &coords);
++        markers[count++] = (ModernMapMarker){coords.x, coords.y,
++            wmap_note_type_info[WMAP_NOTE_TYPE_NEW_LOC].art_id, true};
++    }
++    if (count < capacity) markers[count++] = (ModernMapMarker){info->field_3C.x, info->field_3C.y,
++        wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].art_id, false};
++    return count;
++}
 diff --git a/src/ui/wmap_ui.h b/src/ui/wmap_ui.h
 --- a/src/ui/wmap_ui.h
 +++ b/src/ui/wmap_ui.h
-@@ -23,4 +23,16 @@
+@@ -23,4 +23,35 @@
  void wmap_ui_notify_sector_changed(int64_t pc_obj, int64_t sec);
  void wmap_ui_get_current_location(int64_t* loc_ptr);
  
@@ -7089,6 +7319,25 @@ diff --git a/src/ui/wmap_ui.h b/src/ui/wmap_ui.h
 +void modern_map_route_clear(void);
 +void modern_map_route_tick(void);
 +void modern_map_route_cancel_tracking(void);
++
++typedef struct ModernTravelMap {
++    int width,height,x,y;
++} ModernTravelMap;
++bool modern_map_travel_state(ModernTravelMap* state);
++void* modern_map_travel_buffer(int x,int y,int width,int height);
++void modern_map_travel_mouse(int x,int y,int event);
++void* modern_map_continent_buffer(int* width,int* height);
++typedef struct ModernMapLabel {
++    int x,y,offset_x,offset_y;
++    const char* text;
++} ModernMapLabel;
++int modern_map_travel_labels(ModernMapLabel* labels,int capacity);
++typedef struct ModernMapMarker {
++    int x,y;
++    tig_art_id_t art_id;
++    bool selectable;
++} ModernMapMarker;
++int modern_map_travel_markers(ModernMapMarker* markers,int capacity);
 +
  #endif /* ARCANUM_UI_WMAP_UI_H_ */
 diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
