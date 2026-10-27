@@ -125,6 +125,7 @@ int64_t modern_dialog_actor(void);
 bool modern_dialog_anchor(int* x,int* y);
 int64_t modern_charedit_object(void);
 bool modern_charedit_editable(void);
+bool modern_charedit_manual_follower(int64_t obj);
 int modern_charedit_scheme_count(void);
 int modern_charedit_scheme_id(int index);
 bool modern_charedit_scheme_editable(void);

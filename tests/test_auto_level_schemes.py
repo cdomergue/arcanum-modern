@@ -15,6 +15,9 @@ code = r'''
 #include <stdio.h>
 #define OBJ_HANDLE_NULL 0
 #define CHAREDIT_MODE_PASSIVE 2
+#define CHAREDIT_MODE_ACTIVE 1
+typedef int ChareditMode;
+static int dword_64E01C;
 static bool charedit_created=true;
 static int charedit_mode=2,charedit_num_schemes=4,charedit_scheme_ids[]={0,1,50,199};
 static int64_t charedit_obj=2,pc=1,leader=1;
@@ -23,6 +26,9 @@ static int64_t player_get_local_pc_obj(void){return pc;}
 static int64_t critter_pc_leader_get(int64_t obj){return obj==2?leader:0;}
 static void auto_level_scheme_set(int64_t obj,int scheme){assert(obj>0&&obj<4);selected[obj]=scheme;}
 static void charedit_refresh(void){refreshes++;}
+static bool modern_charedit_manual_follower(int64_t obj){return obj==2&&leader==pc&&selected[obj]==0;}
+static void charedit_close(void){charedit_created=false;}
+static bool charedit_open(int64_t obj,ChareditMode mode){charedit_created=true;charedit_obj=obj;charedit_mode=mode;return true;}
 ''' + source[start:end] + r'''
 int main(void){
  assert(modern_charedit_scheme_count()==4);
@@ -31,10 +37,10 @@ int main(void){
  assert(modern_charedit_scheme_editable());modern_charedit_scheme_select(3);
  assert(selected[2]==199&&selected[1]==50&&refreshes==1);
  modern_charedit_scheme_select(-1);modern_charedit_scheme_select(4);assert(refreshes==1);
- modern_charedit_scheme_select(0);assert(selected[2]==0&&refreshes==2);
+ modern_charedit_scheme_select(0);assert(selected[2]==0&&refreshes==2&&charedit_mode==CHAREDIT_MODE_ACTIVE);
  leader=0;assert(!modern_charedit_scheme_editable());modern_charedit_scheme_select(1);assert(selected[2]==0);
  charedit_obj=3;assert(!modern_charedit_scheme_editable());modern_charedit_scheme_select(1);assert(selected[3]==50);
- charedit_obj=1;assert(!modern_charedit_scheme_editable());modern_charedit_scheme_select(1);assert(selected[1]==50);
+ charedit_obj=1;charedit_mode=CHAREDIT_MODE_PASSIVE;assert(!modern_charedit_scheme_editable());modern_charedit_scheme_select(1);assert(selected[1]==50);
  charedit_mode=1;assert(modern_charedit_scheme_editable());modern_charedit_scheme_select(1);assert(selected[1]==1);
  pc=0;assert(!modern_charedit_scheme_editable());pc=1;
  charedit_created=false;assert(modern_charedit_scheme_count()==0&&modern_charedit_scheme_id(0)==-1&&!modern_charedit_scheme_editable());

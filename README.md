@@ -60,6 +60,7 @@ folder. **Play now** remains available.
   already present. Magical properties remain hidden until identification.
 - Independent companion positioning, regrouping and control outside combat.
 - Select automatic level-up schemes for your character and companions.
+  Choose **None** for a companion to assign their available points yourself.
 - Three rotating autosaves before and after combat and before eligible area
   transitions, separate from manual saves.
 - Journal search, quest filters, favorites, quest tracking and personal map notes.

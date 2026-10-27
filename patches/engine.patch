@@ -3978,7 +3978,33 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
  #include <stdio.h>
  
-@@ -2030,7 +2031,7 @@
+@@ -9,6 +10,7 @@
+ #include "game/gamelib.h"
+ #include "game/hrp.h"
+ #include "game/level.h"
++#include "game/obj_pool.h"
+ #include "game/mes.h"
+ #include "game/object.h"
+ #include "game/player.h"
+@@ -916,6 +918,8 @@
+     }
+ 
+     charedit_obj = obj;
++    if (obj != pc_obj && (mode == CHAREDIT_MODE_ACTIVE || mode == CHAREDIT_MODE_PASSIVE))
++        mode = modern_charedit_manual_follower(obj) ? CHAREDIT_MODE_ACTIVE : CHAREDIT_MODE_PASSIVE;
+     charedit_mode = mode;
+ 
+     if (charedit_mode == CHAREDIT_MODE_CREATE) {
+@@ -1152,7 +1156,7 @@
+     dword_64C824 = TIG_BUTTON_HANDLE_INVALID;
+     dword_64CA5C = TIG_BUTTON_HANDLE_INVALID;
+ 
+-    if (charedit_mode == CHAREDIT_MODE_PASSIVE
++    if ((charedit_mode == CHAREDIT_MODE_PASSIVE || modern_charedit_manual_follower(charedit_obj))
+         && critter_leader_get(charedit_obj) == pc_obj
+         && critter_follower_next(charedit_obj) != charedit_obj) {
+         button_data.flags = TIG_BUTTON_MOMENTARY;
+@@ -2030,7 +2034,7 @@
      window_data.rect.height = art_frame_data.height;
      window_data.background_color = 0;
      window_data.message_filter = charedit_skills_win_message_filter;
@@ -3987,7 +4013,7 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
      if (tig_window_create(&window_data, &charedit_skills_win) != TIG_OK) {
          return false;
-@@ -2268,7 +2269,7 @@
+@@ -2268,7 +2272,7 @@
      window_data.rect.height = art_frame_data.height;
      window_data.background_color = 0;
      window_data.message_filter = charedit_tech_win_message_filter;
@@ -3996,7 +4022,7 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
      if (tig_window_create(&window_data, &charedit_tech_win) != TIG_OK) {
          return false;
-@@ -2510,7 +2511,7 @@
+@@ -2510,7 +2514,7 @@
      window_data.rect.height = art_frame_data.height;
      window_data.background_color = 0;
      window_data.message_filter = charedit_spells_win_message_filter;
@@ -4005,7 +4031,7 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
      if (tig_window_create(&window_data, &charedit_spells_win) != TIG_OK) {
          return false;
-@@ -2797,7 +2798,7 @@
+@@ -2797,7 +2801,7 @@
      window_data.rect.height = art_frame_data.height;
      window_data.background_color = 0;
      window_data.message_filter = charedit_scheme_win_message_filter;
@@ -4014,7 +4040,28 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
  
      if (tig_window_create(&window_data, &charedit_scheme_win) != TIG_OK) {
          return false;
-@@ -3887,3 +3888,71 @@
+@@ -3162,8 +3166,8 @@
+             }
+ 
+             if (msg->data.button.button_handle == charedit_dec_tech_degree_btn) {
+-                // TODO: Missing check for accepted level, check.
+-                tech_ui_dec_degree(charedit_obj, charedit_selected_tech);
++                if (tech_degree_get(charedit_obj, charedit_selected_tech) > dword_64DEEC[charedit_selected_tech])
++                    tech_ui_dec_degree(charedit_obj, charedit_selected_tech);
+             }
+         }
+ 
+@@ -3324,8 +3328,7 @@
+             for (index = 0; index < 15; index++) {
+                 if (msg->data.button.button_handle == dword_64C7E8[index]) {
+                     if (index < charedit_num_schemes) {
+-                        auto_level_scheme_set(charedit_obj, charedit_scheme_ids[index + charedit_top_scheme_index]);
+-                        charedit_scheme_win_refresh();
++                        modern_charedit_scheme_select(index + charedit_top_scheme_index);
+                     }
+ 
+                     return true;
+@@ -3887,3 +3890,93 @@
      charedit_error_msg.str = charedit_errors[CHAREDIT_ERR_SKILL_AT_MIN];
      intgame_message_window_display_msg(&charedit_error_msg);
  }
@@ -4030,7 +4077,7 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +
 +void modern_charedit_adjust(int category, int index, int direction)
 +{
-+    if (!charedit_is_created() || charedit_obj != player_get_local_pc_obj()) return;
++    if (!modern_charedit_editable()) return;
 +    TigMessage message = { 0 };
 +    message.type = TIG_MESSAGE_BUTTON;
 +    message.data.button.state = TIG_BUTTON_STATE_PRESSED;
@@ -4046,7 +4093,7 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +        /* Classic +/- buttons are created only when their panel is refreshed. */
 +        int degree = tech_degree_get(charedit_obj, index);
 +        if (direction > 0 && degree < DEGREE_COUNT - 1) tech_ui_inc_degree(charedit_obj, index);
-+        else if (direction < 0 && degree > 0) tech_ui_dec_degree(charedit_obj, index);
++        else if (direction < 0 && degree > dword_64DEEC[index]) tech_ui_dec_degree(charedit_obj, index);
 +    } else if (category == 3 && index >= 0 && index < COLLEGE_COUNT) {
 +        int level = spell_college_level_get(charedit_obj, index);
 +        if (direction > 0 && level < 5) spell_ui_add(charedit_obj, 5 * index + level);
@@ -4058,7 +4105,20 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +
 +
 +int64_t modern_charedit_object(void) { return charedit_created ? charedit_obj : OBJ_HANDLE_NULL; }
-+bool modern_charedit_editable(void) { return charedit_created && charedit_mode!=CHAREDIT_MODE_PASSIVE; }
++bool modern_charedit_manual_follower(int64_t obj)
++{
++    int64_t pc = player_get_local_pc_obj();
++    return pc != OBJ_HANDLE_NULL && obj != OBJ_HANDLE_NULL && obj != pc && obj_handle_is_valid(obj)
++        && obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_NPC
++        && (obj_field_int32_get(obj, OBJ_F_FLAGS) & (OF_DESTROYED | OF_EXTINCT)) == 0
++        && critter_pc_leader_get(obj) == pc && auto_level_scheme_get(obj) == 0;
++}
++
++bool modern_charedit_editable(void)
++{
++    return charedit_created && charedit_mode != CHAREDIT_MODE_PASSIVE
++        && (charedit_obj == player_get_local_pc_obj() || modern_charedit_manual_follower(charedit_obj));
++}
 +
 +int modern_charedit_scheme_count(void)
 +{
@@ -4084,6 +4144,15 @@ diff --git a/src/ui/charedit_ui.c b/src/ui/charedit_ui.c
 +    int scheme = modern_charedit_scheme_id(index);
 +    if (scheme < 0 || !modern_charedit_scheme_editable()) return;
 +    auto_level_scheme_set(charedit_obj, scheme);
++    if (charedit_obj != player_get_local_pc_obj()) {
++        ChareditMode mode = modern_charedit_manual_follower(charedit_obj) ? CHAREDIT_MODE_ACTIVE : CHAREDIT_MODE_PASSIVE;
++        if (mode != charedit_mode) {
++            int64_t obj = charedit_obj;
++            int tab = dword_64E01C;
++            charedit_close();
++            if (charedit_open(obj, mode)) dword_64E01C = tab;
++        }
++    }
 +    charedit_refresh();
 +}
 diff --git a/src/ui/combat_ui.c b/src/ui/combat_ui.c
@@ -6708,6 +6777,15 @@ diff --git a/src/ui/spell_ui.c b/src/ui/spell_ui.c
      MesFileEntry mes_file_entry;
      UiMessage ui_message;
      MagicTechInvocation mt_invocation;
+@@ -531,7 +535,7 @@
+     cost = spell_cost(spell);
+     unspent_points = stat_level_get(obj, STAT_UNSPENT_POINTS);
+     if (spell_remove(obj, spell)) {
+-        hotkey_ui_notify_spell_removed(spell);
++        if (player_is_local_pc_obj(obj)) hotkey_ui_notify_spell_removed(spell);
+         stat_base_set(obj, STAT_UNSPENT_POINTS, unspent_points + cost);
+ 
+         if (charedit_is_created()) {
 @@ -540,3 +544,5 @@
          }
      }
@@ -6758,6 +6836,35 @@ diff --git a/src/ui/tb_ui.c b/src/ui/tb_ui.c
  }
  
  // 0x57CD60
+diff --git a/src/ui/tech_ui.c b/src/ui/tech_ui.c
+--- a/src/ui/tech_ui.c
++++ b/src/ui/tech_ui.c
+@@ -4,6 +4,7 @@
+ #include "game/stat.h"
+ #include "game/tech.h"
+ #include "ui/charedit_ui.h"
++#include "ui/modern_ui.h"
+ #include "ui/intgame.h"
+ 
+ /**
+@@ -22,7 +23,7 @@
+     degree = tech_degree_get(obj, tech);
+     cost = tech_degree_cost_get(degree + 1);
+     points = stat_level_get(obj, STAT_UNSPENT_POINTS);
+-    is_pc = player_is_local_pc_obj(obj);
++    is_pc = player_is_local_pc_obj(obj) || (charedit_is_created() && modern_charedit_object() == obj);
+ 
+     // Check if there are enough character points to increment the degree.
+     if (cost > points) {
+@@ -70,7 +71,7 @@
+     degree = tech_degree_get(obj, tech);
+     cost = tech_degree_cost_get(degree);
+     points = stat_level_get(obj, STAT_UNSPENT_POINTS);
+-    is_pc = player_is_local_pc_obj(obj);
++    is_pc = player_is_local_pc_obj(obj) || (charedit_is_created() && modern_charedit_object() == obj);
+ 
+     // Attempt to decrease the technology degree.
+     if (tech_degree_dec(obj, tech) < degree) {
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c
