@@ -312,12 +312,16 @@ func prepare(game, installer, seven string, c catalog, language string) error {
 }
 func run() int {
 	game := flag.String("game", ".", "Installed game directory")
-	mode := flag.String("mode", "probe", "probe, install, decline or localize")
+	mode := flag.String("mode", "probe", "probe, install, decline, localize or check-update")
+	currentVersion := flag.String("current-version", "", "Installed Arcanum Renaissance version")
 	language := flag.String("language", "auto", "auto, fr or en")
 	installer := flag.String("installer", "", "Optional local UAP installer")
 	extracted := flag.String("extracted", "", "Extracted UAP directory for localization checks")
 	output := flag.String("output", "", "Localization check output directory")
 	flag.Parse()
+	if *mode == "check-update" {
+		return checkUpdate(*currentVersion)
+	}
 	root, err := filepath.Abs(*game)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

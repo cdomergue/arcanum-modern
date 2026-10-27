@@ -22,6 +22,13 @@ Download the package for your platform from
 Installation preserves the original executable, saved games and personal settings.
 Back up your saves before changing engines or installing game patches.
 
+### Updates
+
+At startup, Renaissance checks for a newer published release in the background.
+If one is available, choose **View update** to open its download page or **Ignore**
+to continue playing. Ignoring dismisses the notice for this launch. An unavailable
+connection does not prevent the game from starting.
+
 ### Local maps
 
 On first launch, Renaissance prepares detailed local maps from your game files.
@@ -189,3 +196,10 @@ no original game data in its standard packages.
 
 Packages include license notices for SDL, SDL_mixer, zlib, fpattern, stb and
 other bundled dependencies.
+
+## Special thanks
+
+Thanks to [OliverCooperMirror](https://github.com/OliverCooperMirror),
+[Seldon24](https://www.reddit.com/user/Seldon24) and
+[LazarusHimself](https://www.reddit.com/user/LazarusHimself) for helping find bugs
+and suggesting new features.

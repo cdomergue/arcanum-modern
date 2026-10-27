@@ -1860,8 +1860,11 @@ static bool world_zoom_event(SDL_Event* event)
     return true;
 }
 
+#include "modern_update.inc"
+
 void modern_ui_menu_tick(void)
 {
+    update_tick();
     world_zoom_sync();
     if (!enabled) return;
     if(mainmenu_ui_is_active() && mainmenu_ui_window_type_get()==MM_WINDOW_SHOP) {
@@ -2622,6 +2625,7 @@ void modern_ui_message(const char* text)
 
 void modern_ui_exit(void)
 {
+    update_close();
     tactical_portraits_clear();
     if(option_boolean_file!=MES_FILE_HANDLE_INVALID){mes_unload(option_boolean_file);option_boolean_file=MES_FILE_HANDLE_INVALID;}
     modern_graphics_cancel();
