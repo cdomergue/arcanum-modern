@@ -4,6 +4,8 @@ import argparse
 import hashlib
 import json
 import os
+import errno
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -16,6 +18,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--game', type=Path, required=True)
 p.add_argument('--helper', type=Path, required=True)
 p.add_argument('--installer', type=Path, required=True)
+p.add_argument('--hotfix-downloads', type=Path, required=True)
 p.add_argument('--english-fixture', action='store_true', help='Exercise the English path with synthetic English UI text over shared original art')
 a = p.parse_args()
 catalog = json.loads((ROOT/'tools/uap/data/catalog.json').read_text())
@@ -28,7 +31,10 @@ with tempfile.TemporaryDirectory(prefix='uap-installer-', dir=ROOT/'build') as d
     for name in catalog['original']:
         target = game/name
         target.parent.mkdir(parents=True, exist_ok=True)
-        os.link(find(a.game, name), target)
+        try: os.link(find(a.game, name), target)
+        except OSError as e:
+            if e.errno != errno.EXDEV: raise
+            shutil.copy2(find(a.game, name), target)
     language = 'en' if a.english_fixture else 'fr'
     overlay = game/f'modern-ui/uap-{language}/active'
     if a.english_fixture:
@@ -48,6 +54,7 @@ with tempfile.TemporaryDirectory(prefix='uap-installer-', dir=ROOT/'build') as d
     def run(mode, expected, installer=None):
         args = [str(a.helper.resolve()), '--game', str(game), '--mode', mode]
         if installer: args += ['--installer', str(installer.resolve())]
+        args += ['--hotfix-downloads', str(a.hotfix_downloads.resolve())]
         result = subprocess.run(args, capture_output=True, text=True)
         assert result.returncode == expected, (mode, result.returncode, result.stdout[-300:], result.stderr[-500:])
     run('probe', 21 if a.english_fixture else 20)
@@ -74,6 +81,8 @@ with tempfile.TemporaryDirectory(prefix='uap-installer-', dir=ROOT/'build') as d
     for name, expected in catalog['original'].items():
         assert hashlib.sha256((game/name).read_bytes()).hexdigest() == originals[name]
     assert (overlay/'ready').read_text() == f'2.0.2-{language}-1\n'
+    assert (overlay/'hotfix/ready').read_text() == f'1.1.0-{language}-1\n'
+    assert (overlay/'hotfix/french-module.dat').exists() == (language == 'fr')
     assert (overlay/'french-global.dat').exists() == (language == 'fr')
     assert (overlay/'french-module.dat').exists() == (language == 'fr')
     for name, expected in catalog['patch'].items():

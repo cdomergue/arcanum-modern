@@ -9,7 +9,7 @@ The UAP is optional; an unmodified Arcanum 1.0.7.4 installation also works.
 ## Automatic installation
 
 On eligible English installations without UAP, Renaissance offers to download
-and prepare **UAP 2.0.2 Base + Race Mod** at startup. **Yes** downloads the official
+and prepare **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0** at startup. **Yes** downloads the official
 installer (about 485 MB), verifies its checksum, extracts the selected data and
 backs up existing saves before activation. English text is used directly, with
 no French translation. Allow about **2 GB of temporary space**, plus the save
@@ -37,6 +37,46 @@ require UAP data.
 
 The [French preparation](uap-fr.md) follows the same process and also adapts text
 from the installed French game.
+
+## Post-UAP hotfixes
+
+Automatic preparation includes [Dergash’s UAP hotfixes 1.1.0](https://github.com/Dergash/arcanum-uap-hotfixes/releases/tag/1.1.0),
+also published on [Nexus Mods](https://www.nexusmods.com/arcanumofsteamworksandmagickobscura/mods/49).
+They restore companion travelogues, correct dialogue conditions and training,
+repair the Great Helm and Morning Star Perfume, and adjust travel locations and
+the Torin Quarry map. See the [author’s complete changelog](https://github.com/Dergash/arcanum-uap-hotfixes/blob/1.1.0/CHANGELOG.md).
+
+Recognized existing UAP 2.0.2 installations receive a separate **Yes / No** offer
+at startup. The two downloads total less than 1 MB; pinned SHA-256 checksums are
+verified before use. This installs data only, without a replacement executable
+or `dinput.dll`. English uses the original hotfix text. French reuses the
+installed French dialogue while preserving the hotfix's conditions and actions.
+No original game text or hotfix archive is bundled with Renaissance.
+
+Preparation checks the affected resources before installation. Unknown changes
+from other mods, unsupported UAP data, or an unrecognized existing hotfix prevent
+automatic installation. Read the startup log for the affected file. A manually
+installed English hotfix is kept as installed; automatic French adaptation
+requires recognized original French archives.
+
+The hotfix has its own version marker. On a Renaissance-prepared UAP it lives in
+`modern-ui/uap-en/active/hotfix` (or `uap-fr` for French); on a recognized manual
+UAP it lives in `modern-ui/uap-hotfix/en/active` (or `fr`). Existing UAP files and
+saves are never replaced. A verified save backup is created before activation;
+a failed preparation leaves the existing UAP active. HD map preparation detects
+the changed data and regenerates the affected cache.
+
+An existing campaign can continue, but already recorded quest states, visited
+sectors or individual objects may retain their previous state. Installing the
+hotfix does not reset or repair those saved states. To undo installation, close
+the game and rename **only the hotfix directory**, keeping UAP installed. Keep
+newer saves separately before restoring the pre-hotfix backup. The backup's
+`RESTORE.txt` gives the matching path.
+
+**No** remembers the refusal for this hotfix version. Delete
+`modern-ui/uap-hotfix/en/choice` (or `fr/choice`) to see the offer again. Its
+installation log is `modern-ui/uap-hotfix/en/preparation.log` (or `fr`). During a
+fresh UAP installation, the combined operation uses the existing UAP log.
 
 ## Manual installation and optional components
 

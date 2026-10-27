@@ -1,6 +1,6 @@
 # French UAP installation
 
-Renaissance can install **UAP 2.0.2 Base + Race Mod** over recognized original
+Renaissance can install **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0** over recognized original
 French 1.0.7.4 game files. A **Yes / No** prompt appears before the game loads.
 This is an experimental French adaptation, separate from the official English
 [Unofficial Arcanum Patch](https://terra-arcanum.com/drog/uap.html).
@@ -21,6 +21,21 @@ Apple Silicon Macs with macOS 13 or later. The game itself can run without the
 automatic installer on macOS 11 and 12. Allow about **2 GB of temporary space**,
 plus space for your saved-game backup. HD maps are generated from the active
 UAP data and need preparation when the installed data changes.
+
+## Post-UAP hotfixes in French
+
+The [post-UAP hotfix integration](uap.md#post-uap-hotfixes) also supports a
+recognized existing French UAP overlay. Its separate startup offer preserves the
+base installation and creates a verified backup before adding the hotfix.
+Dialogue text comes from the installed French game and the existing adaptation;
+two new Magnus player responses are translated separately. Conditions, actions,
+voice references and travel coordinates retain the hotfix values. The French
+text archive is loaded after the English hotfix and the base French adaptation.
+
+Prepared files live in `modern-ui/uap-fr/active/hotfix`. Rename only that directory
+to disable these fixes while keeping UAP. Delete `modern-ui/uap-hotfix/fr/choice`
+to reconsider a refused offer. See `modern-ui/uap-hotfix/fr/preparation.log` if
+preparation fails or the startup log if conflicting resources suppress the offer.
 
 ## Existing campaigns and backups
 
@@ -50,7 +65,8 @@ game.
 ## Scope
 
 The French offer requires matching original archive fingerprints. Existing UAP
-installations and unrecognized data sets are kept. English editions have their
+installations are kept and checked separately for eligible hotfix upgrades;
+unrecognized data sets are kept unchanged. English editions have their
 own [automatic preparation](uap.md), without the translation step. Optional
 campaigns and other components use manual UAP installation. The French installer selects Base + Race Mod;
 it does not install Beta Content or optional EnginePatcher switches.

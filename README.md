@@ -42,13 +42,17 @@ folder. **Play now** remains available.
 ### Unofficial Arcanum Patch (UAP)
 
 - **French:** recognized original installations receive an optional startup
-  prompt to install **UAP 2.0.2 Base + Race Mod**. It downloads the patch,
+  prompt to install **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0**. It downloads the patch,
   prepares French text and backs up saves before activation. Existing campaigns
   may be incompatible. See [installation and restoration](docs/uap-fr.md).
 - **English:** eligible original installations receive the same optional offer
-  for **UAP 2.0.2 Base + Race Mod**, using the original English text. An existing
+  for **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0**, using the original English text. An existing
   UAP installation is detected and kept. Manual installation remains available
   for additional components. See [installation and restoration](docs/uap.md).
+- Recognized existing UAP 2.0.2 installations receive a separate optional offer
+  for [Dergash’s UAP hotfixes](https://github.com/Dergash/arcanum-uap-hotfixes),
+  with original English text or a French adaptation. Conflicting game data is
+  kept unchanged; saves are backed up before activation.
 
 ## Features
 

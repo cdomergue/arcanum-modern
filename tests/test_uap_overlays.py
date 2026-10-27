@@ -45,6 +45,15 @@ int main(void){
   for(int i=0;i<added;i++)assert(!strcmp(removed_paths[i],paths[added-1-i]));
   added=removed=0;assert(modern_uap_module_load("Vormantown"));assert(added==1&&strstr(paths[0],"vormantown.patch9"));modern_uap_module_unload();
   added=removed=0;assert(modern_uap_module_load("Other"));assert(!added);
+  char hotfix_dir[260],hotfix_path[300];snprintf(hotfix_dir,sizeof(hotfix_dir),"modern-ui/uap-%s/active/hotfix",lang);mkdir(hotfix_dir,0700);
+  const char* hotfix_files[]={"Arcanum8.dat","Arcanum.PATCH8","french-module.dat","ready"};
+  for(int i=0;i<4;i++){snprintf(hotfix_path,sizeof(hotfix_path),"%s/%s",hotfix_dir,hotfix_files[i]);FILE* f=fopen(hotfix_path,"wb");assert(f);if(i==3)fputs(french?"1.1.0-fr-1\n":"1.1.0-en-1\n",f);fclose(f);}
+  added=removed=0;assert(modern_uap_load());assert(added==(french?9:8));assert(strstr(paths[added-1],"hotfix/Arcanum8.dat"));
+  added=removed=0;assert(modern_uap_module_load("Arcanum"));assert(added==(french?5:3));assert(strstr(paths[added-(french?2:1)],"hotfix/Arcanum.PATCH8"));
+  modern_uap_module_unload();assert(removed==added);for(int i=0;i<added;i++)assert(!strcmp(removed_paths[i],paths[added-1-i]));
+  added=removed=0;assert(modern_uap_module_load("Vormantown"));assert(added==1);modern_uap_module_unload();
+  snprintf(hotfix_path,sizeof(hotfix_path),"%s/Arcanum8.dat",hotfix_dir);unlink(hotfix_path);
+  added=removed=0;assert(modern_uap_load());assert(added==(french?8:7));
   added=removed=0;fail_at=1;assert(!modern_uap_module_load("Arcanum"));assert(removed==1&&!strcmp(paths[0],removed_paths[0]));fail_at=-1;
   added=removed=0;fail_at=french?7:6;assert(!modern_uap_load());assert(removed==fail_at);assert(!modern_uap_ready());disabled=false;fail_at=-1;
   char path[260];snprintf(path,260,"modern-ui/uap-%s/active/ready",lang);unlink(path);

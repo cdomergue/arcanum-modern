@@ -33,6 +33,18 @@ int main(int argc, char** argv)
     assert(SDL_RemovePath(ready));
     assert(mapgen_fingerprint(argv[1], &after) && before != after);
     SDL_free(english); SDL_free(ready);
+    const char* hotfix_roots[]={"modern-ui/uap-fr/active/hotfix", "modern-ui/uap-en/active/hotfix", "modern-ui/uap-hotfix/fr/active", "modern-ui/uap-hotfix/en/active"};
+    for(size_t i=0;i<SDL_arraysize(hotfix_roots);i++) {
+        char* directory=mapgen_join(argv[1],hotfix_roots[i]);
+        assert(SDL_CreateDirectory(directory));
+        char* patch=mapgen_join(directory,"Arcanum.PATCH8");
+        before=after;assert(SDL_SaveFile(patch,"patch fixture",13));
+        assert(mapgen_fingerprint(argv[1],&after) && before!=after);
+        before=after;assert(SDL_RemovePath(patch));
+        assert(mapgen_fingerprint(argv[1],&after) && before!=after);
+        SDL_free(directory);SDL_free(patch);
+    }
+
     SDL_free(data_dir); SDL_free(saves); SDL_free(loose); SDL_free(save);
     unsigned char sector[18000] = {0};
     size_t at = 4 + 4096 * 4;

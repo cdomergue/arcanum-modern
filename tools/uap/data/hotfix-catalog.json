@@ -1,0 +1,1239 @@
+{
+  "version": "1.1.0",
+  "assets": {
+    "Arcanum8.dat": {
+      "size": 558,
+      "sha256": "6d39c02f5f529b8606d62afe8e660f8d5d8e218d02b2a8e94b29bf312cbfd3fa"
+    },
+    "Arcanum.PATCH8": {
+      "size": 943032,
+      "sha256": "9afba7a0ed43666e099263ee32538223f834eb1c5f8b0377c7a15aab2467f61c"
+    }
+  },
+  "inputs": {
+    "proto/008219 - armor.pro": [
+      "0fe9b70634fe14776229001b3d22f7a5a921dbe2fa4d981c1ed3693fdc69432f",
+      "8d332097805206fd3637cf7c210feadf361e59c7d5e3f03b0486c0a0f31ca814"
+    ],
+    "proto/010114 - food.pro": [
+      "",
+      "b4ad20f3129132ace68f9020be8c1c3c7a499ae2c81f93b47ae54bb143878cfb"
+    ],
+    "dlg/01046magnus_shale_fist.dlg": [
+      "5f78acead328176171b4eda97d614fbeadb4d6176a998ef828559369bb3e8b75",
+      "92fd6a35016ab6a0cbf8f32276397d228aa0c1801bb16a55a092069ec8275232"
+    ],
+    "dlg/01324virgil.dlg": [
+      "30a43a5c782498a4e70d75852fac31affb98d83db7524b6019e649959729c973",
+      "d55a8f9d91d8515c5014439031491a80daca96809dd003a205e015a99e1891af"
+    ],
+    "dlg/01358geoffrey_tarellond-ashe.dlg": [
+      "0daeef2cf2f75f10ca80b91f6f85c3c113629b161371bd054824d50e256c64ce",
+      "384917087644197c6f18a12158f80c9fdfc8bd4dadf02ce91c0e69b86ecb0af7"
+    ],
+    "dlg/01471vegard_moltenflow.dlg": [
+      "0a37cebb610ea78000ed4f6ccce7032da6fc528f302a50c8a3c38a2f1aad3a81",
+      "303524ba8b9eac0b8cacaa9e1a88fde2e93b22b25eeedc9396836bb0e2cc31a6"
+    ],
+    "dlg/01649zan_alurin.dlg": [
+      "26b614f07df9c80d2b67121f7b57ee8bc0d1b4c10803207a56a610655238158b",
+      "665aa99fead1ec781ff54bdef7d93b0a4039777c7d00ddba9b98fcc4ee37c776"
+    ],
+    "dlg/02635sarahtoone.dlg": [
+      "1abd60d1bffbcba6c06809104bf529930754c64dd69d4997a4635a83a2b8e5fa",
+      "1eee64cb156255e1c51578542a2cd98a611270152e44d7019b9b9c980d6b51cb"
+    ],
+    "maps/arcanum1-024-fixed/73685534090.sec": [
+      "a71f7f250fc04c1a5887fa7061a0654b275c4d35f6e521ce7acb1f43b250ad36"
+    ],
+    "maps/arcanum1-024-fixed/73685534091.sec": [
+      "c6e01589b1fc549ba1191e330b6e91b366e7bfbe348d37137d40358864f3444d"
+    ],
+    "mes/gamearea.mes": [
+      "e046fa47dee044a61ababc83510da4af8dca7780a8168b46953a984d20a81abc",
+      "e1ba8974e375e18e5a6f70066de13e1b6919b19116b9bca0bdc75e4439a769ea"
+    ],
+    "townmap/torin quarry/torin quarry.tmi": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000000.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000017.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000018.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000019.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000020.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000021.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000022.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000056.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000057.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000058.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000059.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000060.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000061.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000062.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000063.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000095.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000096.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000097.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000098.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000099.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000100.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000101.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000102.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000103.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000104.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000134.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000135.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000136.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000137.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000138.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000139.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000140.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000141.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000142.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000143.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000144.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000145.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000173.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000174.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000175.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000176.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000177.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000178.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000179.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000180.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000181.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000182.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000183.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000184.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000185.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000186.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000212.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000213.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000214.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000215.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000216.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000217.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000218.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000219.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000220.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000221.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000222.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000223.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000224.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000225.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000226.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000227.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000251.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000252.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000253.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000254.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000255.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000256.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000257.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000258.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000259.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000260.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000261.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000262.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000263.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000264.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000265.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000266.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000267.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000268.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000290.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000291.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000292.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000293.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000294.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000295.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000296.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000297.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000298.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000299.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000300.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000301.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000302.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000303.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000304.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000305.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000306.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000307.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000308.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000309.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000329.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000330.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000331.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000332.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000333.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000334.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000335.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000336.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000337.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000338.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000339.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000340.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000341.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000342.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000343.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000344.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000345.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000346.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000347.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000348.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000349.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000350.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000368.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000369.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000370.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000371.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000372.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000373.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000374.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000375.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000376.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000377.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000378.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000379.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000380.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000381.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000382.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000383.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000384.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000385.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000386.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000387.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000388.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000389.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000390.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000407.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000408.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000409.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000410.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000411.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000412.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000413.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000414.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000415.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000416.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000417.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000418.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000419.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000420.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000421.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000422.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000423.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000424.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000425.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000426.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000427.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000428.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000429.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000430.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000446.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000447.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000448.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000449.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000450.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000451.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000452.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000453.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000454.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000455.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000456.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000457.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000458.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000459.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000460.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000461.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000462.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000463.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000464.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000465.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000466.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000467.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000468.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000469.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000470.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000485.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000486.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000487.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000488.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000489.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000490.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000491.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000492.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000493.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000494.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000495.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000496.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000497.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000498.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000499.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000500.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000501.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000502.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000503.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000504.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000505.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000506.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000507.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000508.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000509.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000524.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000525.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000526.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000527.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000528.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000529.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000530.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000531.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000532.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000533.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000534.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000535.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000536.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000537.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000538.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000539.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000540.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000541.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000542.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000543.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000544.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000545.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000546.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000547.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000548.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000565.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000566.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000567.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000568.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000569.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000570.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000571.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000572.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000573.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000574.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000575.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000576.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000577.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000578.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000579.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000580.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000581.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000582.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000583.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000584.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000585.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000586.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000587.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000606.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000607.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000608.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000609.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000610.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000611.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000612.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000613.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000614.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000615.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000616.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000617.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000618.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000619.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000620.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000621.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000622.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000623.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000624.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000625.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000626.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000647.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000648.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000649.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000650.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000651.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000652.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000653.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000654.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000655.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000656.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000657.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000658.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000659.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000660.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000661.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000662.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000663.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000664.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000665.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000688.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000689.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000690.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000691.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000692.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000693.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000694.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000695.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000696.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000697.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000698.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000699.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000700.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000701.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000702.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000703.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000704.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000729.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000730.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000731.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000732.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000733.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000734.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000735.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000736.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000737.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000738.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000739.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000740.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000741.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000742.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000743.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000770.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000771.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000772.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000773.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000774.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000775.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000776.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000777.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000778.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000779.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000780.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000781.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000782.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000811.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000812.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000813.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000814.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000815.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000816.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000817.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000818.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000819.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000820.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000821.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000852.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000853.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000854.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000855.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000856.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000857.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000858.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000859.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000860.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000893.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000894.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000895.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000896.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000897.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000898.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000899.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000934.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000935.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000936.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000937.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000938.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000975.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000976.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry000977.bmp": [
+      ""
+    ],
+    "townmap/torin quarry/torin quarry001016.bmp": [
+      ""
+    ]
+  }
+}

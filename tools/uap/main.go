@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-//go:embed data/catalog.json data/plan.json.gz
+//go:embed data/catalog.json data/plan.json.gz data/hotfix-catalog.json data/hotfix-plan.json.gz
 var assets embed.FS
 
 type catalog struct {
@@ -207,7 +207,7 @@ func copyVerified(source, target string, want backupEntry) error {
 	}
 	return verify(target, want)
 }
-func prepare(game, installer, seven string, c catalog, language string) error {
+func prepare(game, installer, seven string, c catalog, language string, hotfixDownloads string) error {
 	edition, err := detectEdition(game, c)
 	if err != nil {
 		return err
@@ -288,9 +288,24 @@ func prepare(game, installer, seven string, c catalog, language string) error {
 			return err
 		}
 	}
+	base, err := inspectHotfixBase(game, overlay, language, c)
+	if err != nil {
+		return err
+	}
+	hotfix, err := loadHotfixCatalog()
+	if err != nil {
+		return err
+	}
+	hotfixOutput := filepath.Join(overlay, "hotfix")
+	if err = buildHotfix(game, base, hotfixOutput, hotfixDownloads, hotfix); err != nil {
+		return err
+	}
 	progress("backup", 0)
 	backup, err := backupSaves(game)
 	if err != nil {
+		return err
+	}
+	if err = finishHotfix(hotfixOutput, language, backup); err != nil {
 		return err
 	}
 	fmt.Println("Verified save backup:", backup)
@@ -312,9 +327,10 @@ func prepare(game, installer, seven string, c catalog, language string) error {
 }
 func run() int {
 	game := flag.String("game", ".", "Installed game directory")
-	mode := flag.String("mode", "probe", "probe, install, decline, localize or check-update")
+	mode := flag.String("mode", "probe", "probe, install, decline, install-hotfix, decline-hotfix, localize or check-update")
 	currentVersion := flag.String("current-version", "", "Installed Arcanum Renaissance version")
 	language := flag.String("language", "auto", "auto, fr or en")
+	hotfixDownloads := flag.String("hotfix-downloads", "", "Directory with the two verified hotfix release archives (offline installation)")
 	installer := flag.String("installer", "", "Optional local UAP installer")
 	extracted := flag.String("extracted", "", "Extracted UAP directory for localization checks")
 	output := flag.String("output", "", "Localization check output directory")
@@ -338,11 +354,31 @@ func run() int {
 	}
 	if *mode == "probe" {
 		if _, e := findCase(root, "Arcanum5.dat"); e == nil {
-			return 0
+			return probeHotfix(root, c)
 		}
 		if overlayReady(root, "fr") || overlayReady(root, "en") {
-			return 0
+			return probeHotfix(root, c)
 		}
+	}
+	if *mode == "install-hotfix" || *mode == "decline-hotfix" {
+		base, e := inspectHotfixBase(root, "", "", c)
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			return 1
+		}
+		work = hotfixWork(root, base.language)
+		if e = os.MkdirAll(work, 0700); e == nil {
+			if *mode == "decline-hotfix" {
+				e = os.WriteFile(filepath.Join(work, "choice"), []byte("no "+hotfixVersion+"\n"), 0600)
+			} else {
+				e = installHotfix(root, *hotfixDownloads, c)
+			}
+		}
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			return 1
+		}
+		return 0
 	}
 	if *language == "auto" {
 		edition, e := detectEdition(root, c)
@@ -387,7 +423,7 @@ func run() int {
 		if runtime.GOOS == "windows" {
 			seven = "7z.exe"
 		}
-		err = prepare(root, *installer, filepath.Join(filepath.Dir(exe), seven), c, *language)
+		err = prepare(root, *installer, filepath.Join(filepath.Dir(exe), seven), c, *language, *hotfixDownloads)
 	case "localize":
 		packed, _ := assets.ReadFile("data/plan.json.gz")
 		r, e := gzip.NewReader(bytes.NewReader(packed))

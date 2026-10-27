@@ -33,7 +33,10 @@ static void centered(SDL_Renderer* renderer, SDL_Texture* texture, float y)
 
 static int helper(const char* mode, bool french)
 {
-    const char* work = french ? UAP_WORK_FR : UAP_WORK_EN;
+    bool hotfix = strstr(mode, "hotfix") != NULL;
+    const char* work = hotfix ? (french ? "modern-ui/uap-hotfix/fr/" : "modern-ui/uap-hotfix/en/")
+        : french ? UAP_WORK_FR : UAP_WORK_EN;
+    bool installing = !strcmp(mode, "install") || !strcmp(mode, "install-hotfix");
     if (!SDL_CreateDirectory(work)) return 1;
     char path[TIG_MAX_PATH];
     SDL_snprintf(path, sizeof(path), "%spreparation.log", work);
@@ -54,7 +57,7 @@ static int helper(const char* mode, bool french)
     SDL_free(executable); SDL_free(cwd);
     if (!process) {if (log) SDL_CloseIO(log); return 1;}
     SDL_Renderer* renderer = NULL;
-    if (!strcmp(mode, "install")) tig_video_renderer_get(&renderer);
+    if (installing) tig_video_renderer_get(&renderer);
     int old_w = 0, old_h = 0, code = 1;
     SDL_RendererLogicalPresentation old_mode = SDL_LOGICAL_PRESENTATION_DISABLED;
     SDL_Texture* target = renderer ? SDL_GetRenderTarget(renderer) : NULL;
@@ -63,13 +66,13 @@ static int helper(const char* mode, bool french)
         SDL_GetRenderLogicalPresentation(renderer, &old_w, &old_h, &old_mode);
         SDL_SetRenderLogicalPresentation(renderer, 1000, 700, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     }
-    const char* phase_keys[] = {"check", "download", "verify", "extract", "files", "translate", "backup", "ready"};
-    const char* fr[] = {"Vérification du jeu", "Téléchargement de l'UAP", "Vérification du téléchargement", "Extraction de l'UAP", "Installation des données UAP", "Adaptation française", "Sauvegarde et vérification de vos parties", "Préparation terminée"};
-    const char* en[] = {"Checking game files", "Downloading UAP", "Verifying download", "Extracting UAP", "Installing UAP data", "Preparing French text", "Backing up and verifying saved games", "Preparation complete"};
+    const char* phase_keys[] = {"check", "download", "verify", "extract", "files", "translate", "backup", "ready", "hotfix"};
+    const char* fr[] = {"Vérification du jeu", "Téléchargement de l'UAP", "Vérification du téléchargement", "Extraction de l'UAP", "Installation des données UAP", "Adaptation française", "Sauvegarde et vérification de vos parties", "Préparation terminée", "Téléchargement des correctifs UAP"};
+    const char* en[] = {"Checking game files", "Downloading UAP", "Verifying download", "Extracting UAP", "Installing UAP data", "Preparing French text", "Backing up and verifying saved games", "Preparation complete", "Downloading UAP hotfixes"};
     SDL_Texture* title = renderer ? label(renderer, "Arcanum Renaissance", 38) : NULL;
     SDL_Texture* hint = renderer ? label(renderer, french ? "Échap : annuler et quitter" : "Esc: cancel and exit", 22) : NULL;
-    SDL_Texture* phases[8] = {0};
-    for (int i = 0; renderer && i < 8; i++) phases[i] = label(renderer, french ? fr[i] : en[i], 25);
+    SDL_Texture* phases[9] = {0};
+    for (int i = 0; renderer && i < 9; i++) phases[i] = label(renderer, french ? fr[i] : en[i], 25);
     while (!SDL_WaitProcess(process, false, &code)) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -79,13 +82,13 @@ static int helper(const char* mode, bool french)
             }
         }
         int phase = 0, percent = 0;
-        if (!strcmp(mode, "install")) {
+        if (installing) {
             char key[32] = "";
             SDL_snprintf(path, sizeof(path), "%sprogress", work);
             char* status = SDL_LoadFile(path, NULL);
             if (status) sscanf(status, "%31s %d", key, &percent);
             SDL_free(status);
-            for (int i = 0; i < 8; i++) if (!strcmp(key, phase_keys[i])) phase = i;
+            for (int i = 0; i < 9; i++) if (!strcmp(key, phase_keys[i])) phase = i;
         }
         if (renderer) {
             SDL_SetRenderDrawColor(renderer, 17, 13, 9, 255); SDL_RenderClear(renderer);
@@ -103,7 +106,7 @@ static int helper(const char* mode, bool french)
     SDL_DestroyProcess(process);
     if (log) SDL_CloseIO(log);
     SDL_DestroyTexture(title); SDL_DestroyTexture(hint);
-    for (int i = 0; i < 8; i++) SDL_DestroyTexture(phases[i]);
+    for (int i = 0; i < 9; i++) SDL_DestroyTexture(phases[i]);
     if (renderer) {
         SDL_SetRenderLogicalPresentation(renderer, old_w, old_h, old_mode);
         SDL_SetRenderTarget(renderer, target);
@@ -120,37 +123,50 @@ bool modern_uap_startup(void)
     if (!SDL_GetPathInfo(UAP_HELPER, NULL)) return true;
     int result = helper("probe", false);
     if (result == -1) return false;
-    if (result != 20 && result != 21) return true;
+    if (result < 20 || result > 23) return true;
     SDL_Window* window = NULL;
     tig_video_window_get(&window);
-    bool french = result == 20;
+    bool french = result == 20 || result == 22;
+    bool hotfix = result >= 22;
     const SDL_MessageBoxButtonData buttons[] = {
         {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT | SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, french ? "Non" : "No"},
         {0, 1, french ? "Oui" : "Yes"}
     };
     SDL_MessageBoxData question = {SDL_MESSAGEBOX_WARNING, window, "Arcanum Renaissance — UAP",
-        french ? "Installer l'UAP 2.0.2 (Base + Race Mod) adapté en français ?\n\n"
-        "L'UAP modifie les quêtes, scripts, caractéristiques, objets et races. "
+        french ? "Installer l'UAP 2.0.2 (Base + Race Mod) et les correctifs 1.1.0 en français ?\n\n"
+        "L'UAP modifie les quêtes, scripts, caractéristiques, objets et races.\n"
         "Une partie existante peut présenter des blocages ou des incompatibilités.\n\n"
-        "Vos sauvegardes seront copiées et vérifiées avant toute activation. Les archives d'origine seront conservées.\n\n"
-        "Téléchargement automatique : environ 485 Mo. Prévoyez 2 Go libres, plus la sauvegarde de vos parties. "
+        "Vos sauvegardes seront copiées et vérifiées avant toute activation.\nLes archives d'origine seront conservées.\n\n"
+        "Téléchargement automatique : environ 485 Mo.\nPrévoyez 2 Go libres, plus la sauvegarde de vos parties.\n"
         "Les cartes HD devront être préparées à nouveau.\n\n"
         "Non : continuer sans UAP et mémoriser ce choix." :
-        "Install UAP 2.0.2 (Base + Race Mod) for your English game?\n\n"
-        "UAP changes quests, scripts, statistics, items and races. Existing campaigns may encounter blocked quests or incompatibilities.\n\n"
-        "Saved games will be backed up and verified before activation. Original game archives are preserved.\n\n"
-        "Automatic download: about 485 MB. Allow 2 GB of free space plus your save backup. HD maps will need to be prepared again.\n\n"
+        "Install UAP 2.0.2 (Base + Race Mod) and hotfixes 1.1.0 for your English game?\n\n"
+        "UAP changes quests, scripts, statistics, items and races.\nExisting campaigns may encounter blocked quests or incompatibilities.\n\n"
+        "Saved games will be backed up and verified before activation.\nOriginal game archives are preserved.\n\n"
+        "Automatic download: about 485 MB.\nAllow 2 GB of free space plus your save backup.\nHD maps will need to be prepared again.\n\n"
         "No: continue without UAP and remember this choice.", 2, buttons, NULL};
+    if (hotfix) question.message = french ?
+        "Ajouter les correctifs UAP 1.1.0 en français ?\n\n"
+        "Ils corrigent des dialogues, des objets et des zones.\nVotre installation UAP sera conservée.\n\n"
+        "Téléchargement : moins de 1 Mo.\nVos sauvegardes seront copiées et vérifiées avant activation.\n"
+        "Les cartes HD devront être préparées à nouveau.\nCertaines corrections peuvent ne pas être rétroactives dans une partie existante.\n\n"
+        "Non : continuer sans ces correctifs et mémoriser ce choix.":
+        "Add UAP hotfixes 1.1.0?\n\n"
+        "They fix dialogues, items and areas.\nYour existing UAP installation will be preserved.\n\n"
+        "Download: less than 1 MB.\nSaved games will be backed up and verified before activation.\n"
+        "HD maps will need to be prepared again.\nSome fixes may not apply retroactively to existing saves.\n\n"
+        "No: continue without these hotfixes and remember this choice.";
     int choice = 0;
     if (!SDL_ShowMessageBox(&question, &choice)) return true;
-    result = helper(choice == 1 ? "install" : "decline", french);
+    result = helper(hotfix ? (choice == 1 ? "install-hotfix" : "decline-hotfix")
+        : (choice == 1 ? "install" : "decline"), french);
     if (result == -1) return false;
     if (result != 0) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Arcanum Renaissance — UAP",
-            french ? "La préparation de l'UAP n'a pas abouti. Aucun patch partiel n'est activé.\n\n"
-            "Journal : modern-ui/uap-fr/preparation.log\n\nLe jeu continue sans cette installation UAP." :
-            "UAP preparation did not finish. No partial patch is activated.\n\n"
-            "Log: modern-ui/uap-en/preparation.log\n\nThe game continues without this UAP installation.", window);
+            hotfix ? (french ? "La préparation des correctifs n'a pas abouti. Votre UAP reste inchangé.\n\nJournal : modern-ui/uap-hotfix/fr/preparation.log" :
+                "Hotfix preparation did not finish. Your UAP is unchanged.\n\nLog: modern-ui/uap-hotfix/en/preparation.log") :
+            french ? "La préparation de l'UAP n'a pas abouti. Aucun patch partiel n'est activé.\n\nJournal : modern-ui/uap-fr/preparation.log" :
+                "UAP preparation did not finish. No partial patch is activated.\n\nLog: modern-ui/uap-en/preparation.log", window);
     }
     return true;
 }
