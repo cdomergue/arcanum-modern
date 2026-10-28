@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "seller": {
+    "name": "Edwin Harrow",
+    "script_id": 48301,
+    "description_id": 61002,
+    "location": {
+      "en": "in the office just inside Tarant Town Hall",
+      "fr": "dans le bureau à l'entrée de l'hôtel de ville de Tarante"
+    },
+    "position": {
+      "x": 61991,
+      "y": 65620,
+      "offset_x": 0,
+      "offset_y": 0,
+      "rotation": 3
+    }
+  },
+  "properties": [
+    {
+      "id": "woodland_house",
+      "slot": 0,
+      "price": 10000,
+      "standing": "upmarket",
+      "ownership_global": 1989,
+      "key_id": 61003,
+      "sector": [
+        1346,
+        1024
+      ],
+      "scene": "scene",
+      "text": {
+        "en": {
+          "name": "Woodland House",
+          "standing": "Well-appointed",
+          "description": "A well-appointed, furnished house in the countryside between Shrouded Hills and Tarant, away from the main route. It offers comfortable living quarters and storage.",
+          "disclosure": "The former owner's tame wolf still lives there. He is harmless and will remain in the house.",
+          "key": "Woodland House key"
+        },
+        "fr": {
+          "name": "Maison des bois",
+          "standing": "Bon standing",
+          "description": "Une maison de bon standing, meublée, dans la campagne entre Tristes Collines et Tarante, à l'écart du trajet principal. Elle offre un intérieur confortable et des espaces de rangement.",
+          "disclosure": "Le loup apprivoisé de l'ancien propriétaire vit encore sur place. Il est inoffensif et restera dans la maison.",
+          "key": "Clé de la Maison des bois"
+        }
+      },
+      "discovery_global": 1988
+    }
+  ]
+}

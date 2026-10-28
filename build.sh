@@ -21,6 +21,7 @@ for dep in fpattern sdl3 sdl3_mixer zlib; do
     fi
 done
 "$arcanum_cmake" -S "$arcanum_project/source" -B "$arcanum_build" "${args[@]}"
+python3 "$arcanum_project/tools/check-sdl-runtime.py" "$arcanum_build"
 "$arcanum_cmake" --build "$arcanum_build" --parallel "${ARCANUM_BUILD_JOBS:-8}"
 mkdir -p "$arcanum_project/game/ArcanumModern/lib"
 for arcanum_movie_library in libavformat.so.62 libavcodec.so.62 libavutil.so.60; do
@@ -33,4 +34,5 @@ python3 "$arcanum_project/tools/build-uap.py" --target linux --output "$arcanum_
 cp -R "$arcanum_build/uap-runtime/ArcanumModern/." "$arcanum_project/game/ArcanumModern/"
 mkdir -p "$arcanum_project/game/ArcanumModern/licenses"
 cp "$arcanum_project/resources/aid/LICENSE.txt" "$arcanum_project/game/ArcanumModern/licenses/aid.txt"
+python3 "$arcanum_project/tools/house/build-content.py" --output "$arcanum_project/game/ArcanumModern/house"
 printf '%s\n' 'Compilation installée. Elle sera utilisée au prochain lancement.'

@@ -83,3 +83,6 @@ __pycache__/
 ._*
 
 /dist/
+
+!/source/src/game/modern_house.c
+!/source/src/game/modern_house.h

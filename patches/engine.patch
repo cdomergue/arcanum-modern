@@ -9,12 +9,14 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # ------------------------------------------------------------------------------
  # ARCANUM
-@@ -24,6 +25,22 @@
+@@ -24,6 +25,24 @@
  
  # Keep alphabetically sorted.
  set(SRCS
 +    "src/game/modern_uap.c"
 +    "src/game/modern_uap.h"
++    "src/game/modern_house.c"
++    "src/game/modern_house.h"
 +    "src/game/modern_compat.c"
 +    "src/game/modern_compat.h"
 +    "src/game/modern_autosave.c"
@@ -32,7 +34,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +350,31 @@
+@@ -333,7 +352,31 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -1842,6 +1844,32 @@ diff --git a/src/game/critter.h b/src/game/critter.h
 +bool critter_follower_limit_reached(int64_t leader);
 +
  #endif /* ARCANUM_GAME_CRITTER_H_ */
+diff --git a/src/game/description.c b/src/game/description.c
+--- a/src/game/description.c
++++ b/src/game/description.c
+@@ -1,3 +1,4 @@
++#include "game/modern_house.h"
+ #include "game/description.h"
+ 
+ #include "game/mes.h"
+@@ -122,6 +123,8 @@
+  */
+ const char* description_get(int num)
+ {
++    const char* house = modern_house_description(num);
++    if (house) return house;
+     mes_file_handle_t mes_file;
+     MesFileEntry mes_file_entry;
+ 
+@@ -154,6 +157,8 @@
+  */
+ const char* key_description_get(int num)
+ {
++    const char* house = modern_house_description(num);
++    if (house) return house;
+     MesFileEntry mes_file_entry;
+ 
+     mes_file_entry.num = num;
 diff --git a/src/game/dialog.c b/src/game/dialog.c
 --- a/src/game/dialog.c
 +++ b/src/game/dialog.c
@@ -2330,7 +2358,8 @@ diff --git a/src/game/effect.c b/src/game/effect.c
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -1,4 +1,8 @@
+@@ -1,4 +1,9 @@
++#include "game/modern_house.h"
 +#include "game/modern_compat.h"
 +#include "game/modern_uap.h"
 +#include "game/modern_autosave.h"
@@ -2339,7 +2368,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
  #include <stdio.h>
  
-@@ -121,7 +125,7 @@
+@@ -121,7 +126,7 @@
  static void gamelib_draw_editor(GameDrawInfo* draw_info);
  static void gamelib_logo(void);
  static void gamelib_splash(tig_window_handle_t window_handle);
@@ -2348,7 +2377,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  static bool gamelib_load_module_data(const char* module_name);
  static void gamelib_unload_module_data(void);
  
-@@ -324,10 +328,12 @@
+@@ -324,10 +329,12 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -2362,7 +2391,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (!init_info->editor) {
          if (highres_config_get()->logos) {
-@@ -410,6 +416,7 @@
+@@ -410,6 +417,7 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
@@ -2370,7 +2399,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -456,6 +463,7 @@
+@@ -456,6 +464,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2378,7 +2407,15 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -755,6 +763,7 @@
+@@ -501,6 +510,7 @@
+             gamelib_modules[index].ping_func(gamelib_ping_time);
+         }
+     }
++    modern_house_tick();
+ }
+ 
+ // 0x4025C0
+@@ -755,6 +765,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -2386,7 +2423,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -940,6 +949,8 @@
+@@ -940,6 +951,8 @@
      int version;
      GameSaveInfo save_info;
  
@@ -2395,7 +2432,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
  
-@@ -1004,7 +1015,7 @@
+@@ -1004,7 +1017,7 @@
          }
      }
  
@@ -2404,7 +2441,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (index < MODULE_COUNT) {
          tig_file_remove(path);
-@@ -1078,6 +1089,7 @@
+@@ -1078,6 +1091,7 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
@@ -2412,7 +2449,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_load = true;
  
      ui_progressbar_init(MODULE_COUNT + 2);
-@@ -1200,7 +1212,7 @@
+@@ -1200,7 +1214,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -2421,7 +2458,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1406,9 @@
+@@ -1394,13 +1408,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -2438,7 +2475,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1563,7 @@
+@@ -1555,7 +1565,7 @@
          } while (0);
      }
  
@@ -2447,7 +2484,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1760,81 @@
+@@ -1752,11 +1762,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -2530,7 +2567,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1878,7 @@
+@@ -1800,6 +1880,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -2538,7 +2575,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1896,7 @@
+@@ -1817,7 +1898,7 @@
  }
  
  // 0x404A20
@@ -2547,17 +2584,18 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1911,9 @@
+@@ -1832,6 +1913,10 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
 +    if (!modern_uap_load()) return false;
 +    modern_compat_load();
++    modern_house_load();
 +    return true;
  }
  
  // 0x404C10
-@@ -1874,6 +1956,7 @@
+@@ -1874,6 +1959,7 @@
      }
  
      path1[end] = '\0';
@@ -2565,7 +2603,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +1989,7 @@
+@@ -1906,6 +1992,7 @@
  void gamelib_unload_module_data(void)
  {
      int index;
@@ -3185,10 +3223,28 @@ diff --git a/src/game/object.c b/src/game/object.c
              scroll_set_center(loc);
          }
  
+@@ -5341,3 +5370,9 @@
+ 
+     object_invalidate_rect(NULL);
+ }
++
++/* Initialize a deserialized additive content object through the normal creation path. */
++bool object_install_loaded(int64_t obj)
++{
++    return sub_442260(obj, obj_field_int64_get(obj, OBJ_F_LOCATION));
++}
 diff --git a/src/game/object.h b/src/game/object.h
 --- a/src/game/object.h
 +++ b/src/game/object.h
-@@ -177,7 +177,8 @@
+@@ -107,6 +107,7 @@
+ void sub_43C690(GameDrawInfo* draw_info);
+ void object_invalidate_rect(TigRect* rect);
+ void object_flush(void);
++bool object_install_loaded(int64_t obj);
+ bool object_create(int64_t proto_obj, int64_t loc, int64_t* obj_ptr);
+ bool object_create_ex(int64_t proto_obj, int64_t loc, ObjectID oid, int64_t* obj_ptr);
+ bool object_duplicate(int64_t proto_obj, int64_t loc, int64_t* obj_ptr);
+@@ -177,7 +178,8 @@
  void object_set_gender_and_race(int64_t obj, int body_type, int gender, int race);
  bool object_is_lockable(int64_t obj);
  bool object_locked_get(int64_t obj);
@@ -3334,7 +3390,18 @@ diff --git a/src/game/roof.h b/src/game/roof.h
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
-@@ -281,6 +281,7 @@
+@@ -1,3 +1,4 @@
++#include "game/modern_house.h"
+ #include "game/script.h"
+ 
+ #include "game/ai.h"
+@@ -277,10 +278,13 @@
+ // 0x4449B0
+ bool script_execute(ScriptInvocation* invocation)
+ {
++    bool house_result;
++    if (modern_house_script(invocation, &house_result)) return house_result;
+     ScriptFlags flags;
      int attachee_type;
      bool script_num_changed;
      int saved_script_num;
@@ -3342,7 +3409,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      ScriptState state;
      ScriptFile* script_file;
      int iter;
-@@ -344,7 +345,8 @@
+@@ -344,7 +348,8 @@
      memset(state.lc_vars, 0, sizeof(state.lc_vars));
      memset(state.lc_objs, 0, sizeof(state.lc_objs));
  
@@ -3352,7 +3419,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      if (script_file != NULL) {
          line = invocation->line;
  
-@@ -380,7 +382,8 @@
+@@ -380,7 +385,8 @@
              }
          }
  
@@ -3362,7 +3429,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      } else {
          run_default = true;
      }
-@@ -972,14 +975,11 @@
+@@ -972,14 +978,11 @@
      case SCT_OBJ_HAS_MAX_FOLLOWERS: {
          // (obj) has maximum followers
  
@@ -3378,7 +3445,7 @@ diff --git a/src/game/script.c b/src/game/script.c
                      matched++;
                  }
              } else {
-@@ -1746,6 +1746,7 @@
+@@ -1746,6 +1749,7 @@
      case SAT_GET_STAT: {
          int stat = script_get_value(action->op_type[0], action->op_value[0], state);
          int64_t critter_obj = script_get_obj(action->op_type[1], action->op_value[1], state);
@@ -3386,7 +3453,7 @@ diff --git a/src/game/script.c b/src/game/script.c
          int value = stat_level_get(critter_obj, stat);
          if (stat == STAT_INTELLIGENCE
              && value > LOW_INTELLIGENCE
-@@ -1912,10 +1913,12 @@
+@@ -1912,10 +1916,12 @@
      case SAT_GET_SKILL: {
          int skill = script_get_value(action->op_type[0], action->op_value[0], state);
          int64_t obj = script_get_obj(action->op_type[1], action->op_value[1], state);
@@ -3399,7 +3466,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      }
      case SAT_CAST_SPELL: {
          int64_t source_obj = script_get_obj(action->op_type[0], action->op_value[0], state);
-@@ -3390,7 +3393,8 @@
+@@ -3390,7 +3396,8 @@
  {
      int cache_entry_id;
  
@@ -7409,7 +7476,8 @@ diff --git a/src/ui/tech_ui.c b/src/ui/tech_ui.c
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c
-@@ -1,12 +1,18 @@
+@@ -1,12 +1,19 @@
++#include "game/modern_house.h"
  #include "ui/wmap_ui.h"
  
 +#include "ui/modern_ui.h"
@@ -7428,7 +7496,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  #include "game/gamelib.h"
  #include "game/gsound.h"
  #include "game/hrp.h"
-@@ -15,6 +21,7 @@
+@@ -15,6 +22,7 @@
  #include "game/map.h"
  #include "game/mes.h"
  #include "game/obj.h"
@@ -7436,7 +7504,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  #include "game/path.h"
  #include "game/player.h"
  #include "game/sector.h"
-@@ -25,6 +32,8 @@
+@@ -25,6 +33,8 @@
  #include "ui/intgame.h"
  #include "ui/textedit_ui.h"
  #include "ui/types.h"
@@ -7445,7 +7513,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  typedef enum WmapUiMode {
      WMAP_UI_MODE_WORLD,
-@@ -170,7 +179,9 @@
+@@ -170,7 +180,9 @@
  } WmapRouteWaypoint;
  
  typedef struct WmapRoute {
@@ -7456,7 +7524,15 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      /* 03C0 */ int length;
      /* 03C4 */ int field_3C4;
      /* 03C8 */ int field_3C8;
-@@ -314,6 +325,12 @@
+@@ -212,6 +224,7 @@
+ static bool sub_5627B0(WmapCoords* coords);
+ static bool sub_5627F0(int64_t loc);
+ static void sub_562800(int id);
++static void modern_house_locations(void);
+ static void wmap_ui_draw_coords(WmapCoords* coords);
+ static void wmap_ui_navigate(int x, int y);
+ static void sub_562AF0(int x, int y);
+@@ -314,6 +327,12 @@
  
  // 0x5C9B00
  static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
@@ -7469,7 +7545,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x5C9B08
  static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
-@@ -435,6 +452,7 @@
+@@ -435,6 +454,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -7477,7 +7553,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +766,7 @@
+@@ -748,7 +768,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -7486,7 +7562,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -775,6 +793,8 @@
+@@ -775,6 +795,8 @@
      wmap_ui_compass_arrow_num_frames = art_anim_data.num_frames;
  
      for (index = 0; index < WMAP_ROUTE_TYPE_COUNT; index++) {
@@ -7495,7 +7571,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          wmap_ui_routes[index].length = 0;
          wmap_ui_routes[index].field_3C4 = 1;
          wmap_ui_routes[index].field_3C8 = 1;
-@@ -789,6 +809,16 @@
+@@ -789,6 +811,16 @@
  {
      int mode;
      int tile;
@@ -7512,7 +7588,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      wmap_ui_mode = WMAP_UI_MODE_WORLD;
      wmap_ui_state = WMAP_UI_STATE_NORMAL;
-@@ -911,6 +941,7 @@
+@@ -911,6 +943,7 @@
  // 0x560200
  void wmap_ui_reset(void)
  {
@@ -7520,7 +7596,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int index;
  
      if (wmap_ui_initialized) {
-@@ -1017,6 +1048,7 @@
+@@ -1017,6 +1050,7 @@
  // 0x5604B0
  bool wmap_ui_load(GameLoadInfo* load_info)
  {
@@ -7528,7 +7604,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int mode;
      int cnt;
      int note;
-@@ -1411,6 +1443,9 @@
+@@ -1411,6 +1445,9 @@
      if (!wmap_ui_created) {
          return;
      }
@@ -7538,7 +7614,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      pc_obj = player_get_local_pc_obj();
      if (pc_obj != OBJ_HANDLE_NULL
-@@ -1523,6 +1558,7 @@
+@@ -1523,6 +1560,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -7546,7 +7622,15 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -2188,18 +2224,7 @@
+@@ -1600,6 +1638,7 @@
+         }
+     }
+ 
++    modern_house_locations();
+     sub_561430(loc);
+     sub_563590(&(wmap_ui_mode_info[wmap_ui_mode].field_3C), false);
+ 
+@@ -2188,18 +2227,7 @@
                          }
                      } else {
                          if (wmap_ui_mode == WMAP_UI_MODE_TOWN && wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length > 0) {
@@ -7566,7 +7650,33 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
                          }
                      }
                      return true;
-@@ -3569,6 +3594,9 @@
+@@ -2395,6 +2423,25 @@
+         sub_561490(area_get_location(id), &(note.coords));
+         sub_563C60(&note);
+     }
++}
++
++/* Localized estate markers do not alter the campaign area table. */
++static void modern_house_locations(void)
++{
++    if (dword_66D87C == (map_list_info_find("Arcanum1-024-fixed") + 1)) {
++        WmapInfo* estate_info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++        for (int i=0; i<100; i++) {
++            int x,y;const char* name;
++            if(!modern_house_location(i,&x,&y,&name))continue;
++            int id=3000000+i,index;
++            for(index=0;index<*estate_info->num_notes;index++)if(estate_info->notes[index].id==id)break;
++            if(index<*estate_info->num_notes || index>=199)continue;
++            WmapNote note={0};note.id=id;note.flags=0x2;note.type=WMAP_NOTE_TYPE_LOC;
++            note.coords.x=2000-x;note.coords.y=y;SDL_strlcpy(note.str,name,sizeof(note.str));
++            sub_563D50(&note);estate_info->notes[(*estate_info->num_notes)++]=note;
++        }
++    }
++
+ }
+ 
+ // 0x562880
+@@ -3569,6 +3616,9 @@
      return false;
  }
  
@@ -7576,7 +7686,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  // 0x5643E0
  bool sub_5643E0(WmapCoords* coords)
  {
-@@ -3594,6 +3622,10 @@
+@@ -3594,6 +3644,10 @@
          route_type = WMAP_ROUTE_TYPE_TOWN;
      }
  
@@ -7587,7 +7697,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      wp_idx = wmap_ui_routes[route_type].length;
      if (wp_idx >= 30) {
          return false;
-@@ -3601,60 +3633,30 @@
+@@ -3601,60 +3655,30 @@
  
      wp = &(wmap_ui_routes[route_type].waypoints[wp_idx]);
  
@@ -7671,7 +7781,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      dword_5C9AD8 = wmap_ui_routes[route_type].length;
-@@ -4212,7 +4214,7 @@
+@@ -4212,7 +4236,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -7680,7 +7790,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4376,6 +4378,11 @@
+@@ -4376,6 +4400,11 @@
          }
      }
  
@@ -7692,7 +7802,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      art_blit_info.flags = 0;
      art_blit_info.src_rect = &src_rect;
      art_blit_info.dst_rect = &dst_rect;
-@@ -4390,8 +4397,10 @@
+@@ -4390,8 +4419,10 @@
          note = &(wmap_info->notes[idx]);
          if (wmap_note_type_info[note->type].enabled
              && sub_565CF0(note)) {
@@ -7705,7 +7815,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          }
      }
  
-@@ -4402,7 +4411,7 @@
+@@ -4402,7 +4433,7 @@
          WmapCoords coords;
  
          sub_561490(area_get_location(area), &coords);
@@ -7714,7 +7824,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      offset_x = wmap_info->field_3C.x - wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width / 2 - wmap_info->field_34;
-@@ -4413,7 +4422,7 @@
+@@ -4413,7 +4444,7 @@
      vb_dst_rect.width = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width;
      vb_dst_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].height;
  
@@ -7723,7 +7833,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          dst_rect = vb_dst_rect;
          vb_dst_rect.x -= tmp_rect.x + offset_x;
          vb_dst_rect.y -= tmp_rect.y + offset_y;
-@@ -4426,7 +4435,7 @@
+@@ -4426,7 +4457,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -7732,7 +7842,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4680,8 @@
+@@ -4671,7 +4702,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -7742,7 +7852,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4706,7 @@
+@@ -4696,7 +4728,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -7751,7 +7861,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4861,7 @@
+@@ -4851,7 +4883,7 @@
          object_list_destroy(&objects);
      }
  
@@ -7760,7 +7870,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4929,7 +4939,7 @@
+@@ -4929,7 +4961,7 @@
          src_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].height;
          art_blit_info.art_id = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].art_id;
  
@@ -7769,7 +7879,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
              dst_rect = src_rect;
  
              src_rect.x -= x2 - wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].width / 2;
-@@ -4984,3 +4994,311 @@
+@@ -4984,3 +5016,311 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }

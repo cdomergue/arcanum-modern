@@ -29,6 +29,12 @@ If one is available, choose **View update** to open its download page or **Ignor
 to continue playing. Ignoring dismisses the notice for this launch. An unavailable
 connection does not prevent the game from starting.
 
+### Player housing
+
+Edwin Harrow, in the office inside Tarant Town Hall, sells a furnished woodland house for 10,000
+coins. The house is on the main map and supports storage in existing saves.
+See [player housing](docs/housing.md) for the catalogue and content authoring.
+
 ### Local maps
 
 On first launch, Renaissance prepares detailed local maps from your game files.

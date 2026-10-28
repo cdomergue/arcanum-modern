@@ -50,6 +50,17 @@ def uap_files(platform):
         return builder.build(platform, Path(directory), ROOT/'build/uap-tools')
 
 
+def house_files():
+    spec = importlib.util.spec_from_file_location('house_builder', ROOT/'tools/house/build-content.py')
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    with tempfile.TemporaryDirectory(prefix='arcanum-house-') as directory:
+        target = Path(directory)
+        builder.build(json.loads((ROOT/'resources/house/catalog.json').read_text()), target)
+        return {'ArcanumModern/house/'+p.relative_to(target).as_posix(): p.read_bytes()
+                for p in target.rglob('*') if p.is_file()}
+
+
 def validate_pe_dependencies(files):
     bundled = {Path(name).name.lower() for name in files if name.lower().endswith('.dll')}
     for name, data in files.items():
@@ -178,6 +189,7 @@ def package(exe, build_dir, output, include_game=None):
              'ArcanumModern/licenses/aid.txt': (ROOT/'resources/aid/LICENSE.txt').read_bytes()}
     files.update(movie_files(build_dir, 'windows'))
     files.update(uap_files('windows'))
+    files.update(house_files())
     validate_pe_dependencies(files)
     for name in ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()

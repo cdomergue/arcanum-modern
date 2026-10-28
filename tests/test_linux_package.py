@@ -29,6 +29,21 @@ class LinuxPackageTests(unittest.TestCase):
             with self.subTest(data=data[:20]), self.assertRaises(ValueError):
                 self.p.validate_elf(data)
 
+    def test_sdl_dlopen_names_do_not_require_development_packages(self):
+        spec = importlib.util.spec_from_file_location('sdl_runtime', ROOT/'tools/check-sdl-runtime.py')
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        with tempfile.TemporaryDirectory() as temp:
+            config = Path(temp)/'_deps/sdl3-build/build_config/SDL_build_config.h'
+            config.parent.mkdir(parents=True)
+            config.write_text('#define SDL_VIDEO_DRIVER_X11_DYNAMIC "libX11.so.6"\n'
+                              '#define SDL_AUDIO_DRIVER_ALSA_DYNAMIC "libasound.so.2"\n')
+            checker.validate(temp)
+            for name in ('libX11.so', 'libasound.so'):
+                config.write_text(f'#define SDL_VIDEO_DRIVER_X11_DYNAMIC "{name}"\n')
+                with self.assertRaisesRegex(ValueError, 'development-only'):
+                    checker.validate(temp)
+
     def test_requires_only_system_libraries(self):
         valid = '0x1 (NEEDED) Shared library: [libm.so.6]\n0x1 (NEEDED) Shared library: [libc.so.6]\n'
         self.assertEqual(self.p.validate_dependencies(valid), ['libc.so.6', 'libm.so.6'])

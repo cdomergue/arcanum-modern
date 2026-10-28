@@ -68,6 +68,7 @@ def package(app, build_dir, output):
         if {p.name for p in frameworks.iterdir()} != set(resources.MOVIE_LIBRARIES['macos']):
             raise ValueError('Unexpected framework in app bundle')
         movies.update(resources.uap_files('macos'))
+        movies.update(resources.house_files())
         for name, data in movies.items():
             destination = stage/name
             destination.parent.mkdir(parents=True, exist_ok=True)

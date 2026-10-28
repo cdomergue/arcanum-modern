@@ -65,6 +65,7 @@ def package(exe, build_dir, output):
     minimum_glibc = max(glibc, key=lambda v: tuple(map(int, v.split('.'))))
     files.update(movies)
     files.update(resources.uap_files('linux'))
+    files.update(resources.house_files())
     for name in resources.ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
     cache = (build_dir/'CMakeCache.txt').read_text()
