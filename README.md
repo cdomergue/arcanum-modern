@@ -4,62 +4,6 @@ An unofficial interface and gameplay mod for **Arcanum: Of Steamworks and
 Magick Obscura**, based on
 [Arcanum Community Edition](https://github.com/alexbatalov/arcanum-ce).
 
-## Installation
-
-You need your own **Arcanum 1.0.7.4** installation. Downloads contain the mod;
-original game files are required separately. Close the game before installing
-or updating, and use a writable game folder.
-
-Download the package for your platform from
-[Releases](https://github.com/cdomergue/arcanum-modern/releases/latest).
-
-| Platform | Install and launch |
-| --- | --- |
-| Windows x64 | Run [the setup](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe) and select your Arcanum folder. Launch from the desktop or Start menu shortcut. For the ZIP, extract into the game folder and run **Play Arcanum Renaissance.bat**. |
-| macOS | Requires Apple Silicon and macOS 11 or later. Extract the ZIP into the game folder and open **Arcanum Modern.app**. |
-| Linux x64 | Extract the ZIP into the game folder and run **Play Arcanum Renaissance.sh**, or enter `./"Play Arcanum Renaissance.sh"` in a terminal there. |
-
-Installation preserves the original executable, saved games and personal settings.
-Back up your saves before changing engines or installing game patches.
-
-### Updates
-
-At startup, Renaissance checks for a newer published release in the background.
-If one is available, choose **View update** to open its download page or **Ignore**
-to continue playing. Ignoring dismisses the notice for this launch. An unavailable
-connection does not prevent the game from starting.
-
-### Player housing
-
-Edwin Harrow, in the office inside Tarant Town Hall, sells a furnished woodland house for 10,000
-coins. The house is on the main map and supports storage in existing saves.
-See [player housing](docs/housing.md) for the catalogue and content authoring.
-
-### Local maps
-
-On first launch, Renaissance prepares detailed local maps from your game files.
-Allow about **8 GB** for Arcanum and Vormantown, plus temporary working space.
-Choose **Play now** to use the original maps; preparation resumes next launch.
-Completed maps are reused.
-
-If preparation fails, check `modern-ui/.map-work/generation.log` in the game
-folder. **Play now** remains available.
-
-### Unofficial Arcanum Patch (UAP)
-
-- **French:** recognized original installations receive an optional startup
-  prompt to install **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0**. It downloads the patch,
-  prepares French text and backs up saves before activation. Existing campaigns
-  may be incompatible. See [installation and restoration](docs/uap-fr.md).
-- **English:** eligible original installations receive the same optional offer
-  for **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0**, using the original English text. An existing
-  UAP installation is detected and kept. Manual installation remains available
-  for additional components. See [installation and restoration](docs/uap.md).
-- Recognized existing UAP 2.0.2 installations receive a separate optional offer
-  for [Dergash’s UAP hotfixes](https://github.com/Dergash/arcanum-uap-hotfixes),
-  with original English text or a French adaptation. Conflicting game data is
-  kept unchanged; saves are backed up before activation.
-
 ## Features
 
 - Turn-based combat with direct companion control, switching between allies
@@ -91,6 +35,62 @@ folder. **Play now** remains available.
 
 Game text follows the installed game's language. Additional interface text has
 partial French and English support.
+
+### Player housing
+
+Edwin Harrow, in the office inside Tarant Town Hall, sells a furnished woodland house for 10,000
+coins. The house is on the main map and supports storage in existing saves.
+See [player housing](docs/housing.md) for the catalogue and content authoring.
+
+## Installation
+
+You need your own **Arcanum 1.0.7.4** installation. Downloads contain the mod;
+original game files are required separately. Close the game before installing
+or updating, and use a writable game folder.
+
+Download the package for your platform from
+[Releases](https://github.com/cdomergue/arcanum-modern/releases/latest).
+
+| Platform | Install and launch |
+| --- | --- |
+| Windows x64 | Run [the setup](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe) and select your Arcanum folder. Launch from the desktop or Start menu shortcut. For the ZIP, extract into the game folder and run **Play Arcanum Renaissance.bat**. |
+| macOS | Requires Apple Silicon and macOS 11 or later. Extract the ZIP into the game folder and open **Arcanum Modern.app**. |
+| Linux x64 | Extract the ZIP into the game folder and run **Play Arcanum Renaissance.sh**, or enter `./"Play Arcanum Renaissance.sh"` in a terminal there. |
+
+Installation preserves the original executable, saved games and personal settings.
+Back up your saves before changing engines or installing game patches.
+
+### Updates
+
+At startup, Renaissance checks for a newer published release in the background.
+If one is available, choose **View update** to open its download page or **Ignore**
+to continue playing. Ignoring dismisses the notice for this launch. An unavailable
+connection does not prevent the game from starting.
+
+### Local maps
+
+On first launch, Renaissance prepares detailed local maps from your game files.
+Allow about **8 GB** for Arcanum and Vormantown, plus temporary working space.
+Choose **Play now** to use the original maps; preparation resumes next launch.
+Completed maps are reused.
+
+If preparation fails, check `modern-ui/.map-work/generation.log` in the game
+folder. **Play now** remains available.
+
+### Unofficial Arcanum Patch (UAP)
+
+- **French:** recognized original installations receive an optional startup
+  prompt to install **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0**. It downloads the patch,
+  prepares French text and backs up saves before activation. Existing campaigns
+  may be incompatible. See [installation and restoration](docs/uap-fr.md).
+- **English:** eligible original installations receive the same optional offer
+  for **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0**, using the original English text. An existing
+  UAP installation is detected and kept. Manual installation remains available
+  for additional components. See [installation and restoration](docs/uap.md).
+- Recognized existing UAP 2.0.2 installations receive a separate optional offer
+  for [Dergash’s UAP hotfixes](https://github.com/Dergash/arcanum-uap-hotfixes),
+  with original English text or a French adaptation. Conflicting game data is
+  kept unchanged; saves are backed up before activation.
 
 ## Controls
 
