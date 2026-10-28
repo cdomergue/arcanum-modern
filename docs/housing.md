@@ -39,6 +39,10 @@ Each scene directory contains native object instances, a `scene.mes` manifest,
 removed by the authored scene. Point the catalogue entry's `scene` at this
 directory. Object GUIDs must be distinct from every other property. Scene data
 must be authored against the same campaign terrain used by the installation.
+An optional `vegetation.mes` defines clearance per local tile: entry ID is
+`y * 64 + x`, value is a scenery-type bitmask (30 for trees, 32 for plants,
+62 for both). These rules also hide vegetation variants already present in saves,
+including authored vegetation, without removing furniture or inventory items.
 
 Generate content with:
 

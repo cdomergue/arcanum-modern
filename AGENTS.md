@@ -4,7 +4,10 @@
 
 This repository contains the Arcanum Renaissance interface mod. The local `game/`
 installation and the upstream engine in `source/` are working copies, not content
-to import wholesale into Git. Never change the parent installation or its saves.
+to import wholesale into Git. Deploying validated builds and mod resources to the
+main game installation at `/mnt/sshd/Jeux/Arcanum/` is authorized. Never modify,
+overwrite, rename, or delete its saves. Any testing that writes saves must use an
+isolated game copy, not the main installation.
 
 ## Source Organization
 

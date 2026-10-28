@@ -44,6 +44,40 @@ static void capture(const char* label) {
     SDL_Surface* surface=SDL_RenderReadPixels(renderer,NULL);
     if(surface){char path[200];snprintf(path,sizeof(path),"/tmp/house-%s-%s.png",getenv("ARCANUM_HOUSE_LANGUAGE")?getenv("ARCANUM_HOUSE_LANGUAGE"):"en",label);SDL_SavePNG(surface,path);SDL_DestroySurface(surface);}
 }
+static int check_vegetation(bool inject)
+{
+    mes_file_handle_t rules;REQUIRE(mes_load("house/scene/vegetation.mes",&rules));
+    int64_t plant=0,obj;int iter;
+    if(obj_inst_first(&obj,&iter))do{
+        if(obj_field_int32_get(obj,OBJ_F_TYPE)==OBJ_TYPE_SCENERY
+          && tig_art_scenery_id_type_get(obj_field_int32_get(obj,OBJ_F_CURRENT_AID))==TIG_ART_SCENERY_TYPE_PLANTS){plant=obj;break;}
+    }while(obj_inst_next(&obj,&iter));
+    REQUIRE(plant);
+    if(inject){
+        /* Exercise a saved dynamic variant, not just the original static art. */
+        int tiles[]={20*64+25,10*64+15};
+        for(int i=0;i<2;i++){
+            MesFileEntry e={.num=tiles[i]};REQUIRE(mes_search(rules,&e));REQUIRE(strtoul(e.str,NULL,10)&32);
+            int64_t copy;REQUIRE(object_duplicate(plant,location_make(1346*64+tiles[i]%64,1024*64+tiles[i]/64),&copy));
+            object_flags_unset(copy,OF_OFF|OF_DONTDRAW);
+        }
+        int64_t gold=item_gold_create(19,location_make(1346*64+25,1024*64+20));REQUIRE(gold);
+        gamelib_ping_time+=1000;modern_house_tick();
+        REQUIRE(!(obj_field_int32_get(gold,OBJ_F_FLAGS)&OF_OFF));
+    }
+    int checked=0;
+    if(obj_inst_first(&obj,&iter))do{
+        if(obj_field_int32_get(obj,OBJ_F_TYPE)!=OBJ_TYPE_SCENERY)continue;
+        int64_t loc=obj_field_int64_get(obj,OBJ_F_LOCATION);
+        if(sector_id_from_loc(loc)!=SECTOR_MAKE(1346LL,1024LL))continue;
+        MesFileEntry e={.num=(LOCATION_GET_Y(loc)&63)*64+(LOCATION_GET_X(loc)&63)};
+        if(!mes_search(rules,&e))continue;
+        int kind=tig_art_scenery_id_type_get(obj_field_int32_get(obj,OBJ_F_CURRENT_AID));
+        if(strtoul(e.str,NULL,10)&(1u<<kind)){REQUIRE(obj_field_int32_get(obj,OBJ_F_FLAGS)&OF_OFF);checked++;}
+    }while(obj_inst_next(&obj,&iter));
+    REQUIRE(checked>0);mes_unload(rules);
+    printf("PASS: %d vegetation objects hidden in clearance tiles; items preserved\n",checked);return 0;
+}
 int main(int argc,char** argv) {
     setvbuf(stdout,NULL,_IOLBF,0);
     if((argc!=3 && argc!=4) || chdir(argv[1]) || access(".renaissance-house-test",R_OK)) return 2;
@@ -133,6 +167,7 @@ int main(int argc,char** argv) {
         if(!strcmp(role,"chest"))chest=o;
         if(!strcmp(role,"portal"))REQUIRE((obj_field_int32_get(o,OBJ_F_PORTAL_FLAGS)&0x15)==0x15);
     }
+    REQUIRE(check_vegetation(true)==0);
     REQUIRE(count==115 && guard && chest);puts("PASS: existing save migrated, 115 authored objects, all windows and doors locked");
     REQUIRE(obj_field_int32_get(guard,OBJ_F_CRITTER_INVENTORY_NUM)>=6);
     REQUIRE(script_global_var_get(1989)==0 && !sub_463370(pc,61003));
@@ -172,7 +207,10 @@ int main(int argc,char** argv) {
     REQUIRE(chest && stored);REQUIRE(obj_field_handle_get(stored,OBJ_F_ITEM_PARENT)==chest);REQUIRE(obj_field_int32_get(stored,OBJ_F_GOLD_QUANTITY)==77);
     int x,y;const char* title;REQUIRE(modern_house_location(0,&x,&y,&title));REQUIRE(x==1346 && y==1024);
     location_origin_set(jump.loc);
+    REQUIRE(check_vegetation(false)==0);
     capture("return");
+    location_origin_set(location_make(1346*64+15,1024*64+10));capture("pond");
+    location_origin_set(jump.loc);
     for(int pass=0;pass<2;pass++){
         wmap_ui_open();REQUIRE(wmap_ui_is_created());ModernMapLabel labels[200];int n=modern_map_travel_labels(labels,200),matches=0;
         for(int k=0;k<n;k++)if(labels[k].x==654 && labels[k].y==1024)matches++;

@@ -57,6 +57,7 @@ jobs:
           ARCANUM_BUILD_DIR: build/linux-x64
         run: |
           python3 tests/test_linux_package.py
+          python3 tests/test_house_catalog.py
           ./build.sh
           cmake --build build/linux-x64 --target check-name-input
           build/linux-x64/check-name-input

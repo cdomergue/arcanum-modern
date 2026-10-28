@@ -33,7 +33,7 @@ static int seller_x=61991,seller_y=65620,seller_dx,seller_dy,seller_rotation=3;
 typedef struct Property {
     int slot, price, global, discovered, key, x, y;
     char scene[64];
-    mes_file_handle_t objects, terrain, roofs, removed;
+    mes_file_handle_t objects, terrain, roofs, removed, vegetation;
 } Property;
 static Property properties[100];
 static int property_count;
@@ -131,7 +131,12 @@ void modern_house_load(void)
         const char* files[]={"scene","terrain","roofs","removed"};
         bool valid=true;
         for(int i=0;i<4;i++){char path[160];snprintf(path,sizeof(path),"house/%s/%s.mes",p.scene,files[i]);*handles[i]=MES_FILE_HANDLE_INVALID;if(!mes_load(path,handles[i]))valid=false;}
-        if(valid) properties[property_count++]=p;
+        p.vegetation=MES_FILE_HANDLE_INVALID;
+        if(valid){
+            char path[160];snprintf(path,sizeof(path),"house/%s/vegetation.mes",p.scene);
+            mes_load(path,&p.vegetation); /* Optional for older scene packs. */
+            properties[property_count++]=p;
+        }
         else for(int i=0;i<4;i++)if(*handles[i]!=MES_FILE_HANDLE_INVALID)mes_unload(*handles[i]);
     }
     mes_unload(catalog);
@@ -193,6 +198,26 @@ static void terrain(Property* p, Sector* sec)
         }
     }
 }
+/* Explicit per-tile scenery masks also cover saved/generated variants. Never
+ * remove items, containers, actors, or scenery outside the authored clearance. */
+static void clear_vegetation(Property* p, Sector* sec)
+{
+    if(p->vegetation==MES_FILE_HANDLE_INVALID)return;
+    MesFileEntry e;
+    for(bool more=mes_find_first(p->vegetation,&e);more;more=mes_find_next(p->vegetation,&e)){
+        if(e.num<0 || e.num>=4096)continue;
+        unsigned mask=(unsigned)strtoul(e.str,NULL,10) & 0x3Eu;
+        int64_t loc=location_make(p->x*64+e.num%64,p->y*64+e.num/64);
+        for(ObjectNode* n=sec->objects.heads[tile_id_from_loc(loc)];n;n=n->next){
+            int64_t obj=n->obj;
+            if(obj_field_int32_get(obj,OBJ_F_TYPE)!=OBJ_TYPE_SCENERY
+              || obj_field_int64_get(obj,OBJ_F_LOCATION)!=loc)continue;
+            int kind=tig_art_scenery_id_type_get(obj_field_int32_get(obj,OBJ_F_CURRENT_AID));
+            int flags=obj_field_int32_get(obj,OBJ_F_FLAGS);
+            if((mask & (1u<<kind)) && !(flags&OF_OFF))obj_field_int32_set(obj,OBJ_F_FLAGS,flags|OF_OFF);
+        }
+    }
+}
 void modern_house_tick(void)
 {
     static unsigned last;
@@ -216,6 +241,7 @@ void modern_house_tick(void)
             configure(obj,p,role,created);
             if(created)object_install_loaded(obj);
         }
+        if(sector_lock(sid,&sec)){clear_vegetation(p,sec);sector_unlock(sid);}
     }
     /* The existing sign identifies Town Hall; place the agent next to it.
      * The immutable GUID prevents duplication on revisits or save migration. */

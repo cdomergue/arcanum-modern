@@ -182,6 +182,10 @@ player and is saved between sessions.
 | --- | --- |
 | [![Companion control and turn order](docs/screenshots/tactical-combat.jpg)](docs/screenshots/tactical-combat.jpg) | [![Inventory search and equipment details](docs/screenshots/inventory.jpg)](docs/screenshots/inventory.jpg) |
 
+| Woodland House — exterior | Woodland House — interior |
+| --- | --- |
+| [![Woodland House on the main map](docs/screenshots/house-exterior.webp)](docs/screenshots/house-exterior.webp) | [![Furnished Woodland House with storage](docs/screenshots/house-interior.webp)](docs/screenshots/house-interior.webp) |
+
 Screenshots use French game files.
 
 ## Build and contribute
