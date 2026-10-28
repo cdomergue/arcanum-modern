@@ -67,8 +67,22 @@ class SetupPayloadTests(unittest.TestCase):
         for name in files:
             self.assertEqual((target/name).read_bytes(), b'uap fixture')
 
+    def test_includes_complete_house_content_and_requires_it(self):
+        house = self.p.package.house_files()
+        self.files.update(house)
+        target = self.work/'payload'
+        names = self.p.extract_payload(self.archive(), target)
+        self.assertTrue(house.keys() <= set(names))
+        for name, data in house.items():
+            self.assertEqual((target/name).read_bytes(), data)
+        del self.files['ArcanumModern/house/base/house/scene/vegetation.mes']
+        with self.assertRaisesRegex(ValueError, 'Missing required files: .*vegetation.mes'):
+            self.p.extract_payload(self.archive(), self.work/'missing-house')
+
     def test_refuses_game_data_preferences_and_unsafe_paths(self):
         for name in ['arcanum1.dat', 'modern-ui/settings.ini', 'modules/Arcanum.dat',
+                     'ArcanumModern/house/base/house/unexpected.mes',
+                     'ArcanumModern/house/../Save/Slot0001.tfaf',
                      '../escape', '/absolute', 'modern-ui\\Book.ttf',
                      'ArcanumModern/licenses/../../escape', 'ArcanumModern/licenses/$bad.txt']:
             with self.subTest(name=name):
