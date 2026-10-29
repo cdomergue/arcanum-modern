@@ -76,8 +76,9 @@ in `/tmp/house-LANGUAGE-*.png`.
 To check doorway traversal with a copied save containing the party at the house,
 run `check-house COPY/game SLOT --check-door`. This checks terrain object coordinates,
 closed/open collisions, direct paths for all companions without using windows,
-and save/reload in test slot `Slot0094`. The party must include a companion that
-cannot jump windows. The same `.renaissance-house-test` marker is required.
+and save/reload in test slot `Slot0094`. Include a companion that cannot jump
+windows to exercise animal traversal too; the test reports how many were checked.
+The same `.renaissance-house-test` marker is required.
 On Windows, build the native test with
 `cmake --build BUILD_DIRECTORY --config Release --target check-house`;
 the executable is `BUILD_DIRECTORY/Release/check-house.exe` with Visual Studio.

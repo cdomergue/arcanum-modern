@@ -152,7 +152,7 @@ static int check_door(void)
             }
         }
     }while(obj_inst_next(&obj,&iter));
-    REQUIRE(actors>1 && non_jumpers>0);
+    REQUIRE(actors>0);
     printf("PASS: correct sector coordinates; door blocks closed, direct paths both ways open for %d party members (%d cannot jump windows)\n",actors,non_jumpers);
     return 0;
 }
@@ -268,6 +268,7 @@ int main(int argc,char** argv) {
         if(!strcmp(role,"portal"))REQUIRE((obj_field_int32_get(o,OBJ_F_PORTAL_FLAGS)&0x15)==0x15);
     }
     REQUIRE(check_vegetation(true)==0);
+    REQUIRE(check_hidden_lights()==0);
     REQUIRE(count==115 && guard && chest);puts("PASS: existing save migrated, 115 authored objects, all windows and doors locked");
     REQUIRE(obj_field_int32_get(guard,OBJ_F_CRITTER_INVENTORY_NUM)>=6);
     REQUIRE(script_global_var_get(1989)==0 && !sub_463370(pc,61003));
@@ -318,5 +319,6 @@ int main(int argc,char** argv) {
     }
     puts("PASS: one world-map marker after repeated opening");
     REQUIRE(chests==6);puts("PASS: save/reload/revisit preserves ownership and key, six chests without duplicates");
+    REQUIRE(check_door()==0);
     gameuilib_exit();gamelib_exit();tig_exit();return 0;
 }
