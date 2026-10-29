@@ -3,9 +3,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#define chdir _chdir
+#define access _access
+#define R_OK 4
+#else
 #include <unistd.h>
+#endif
 #include <tig/tig.h>
 #include "game/gamelib.h"
+#include "game/critter.h"
 #include "game/gsound.h"
 #include "game/highres_config.h"
 #include "game/name.h"
@@ -13,6 +22,7 @@
 #include "game/obj.h"
 #include "game/object.h"
 #include "game/location.h"
+#include "game/light.h"
 #include "game/sector.h"
 #include "game/sector_object_list.h"
 #include "game/map.h"
@@ -42,7 +52,31 @@ static void capture(const char* label) {
     render();SDL_Renderer* renderer=NULL;
     if(tig_video_renderer_get(&renderer)!=TIG_OK || !renderer)return;
     SDL_Surface* surface=SDL_RenderReadPixels(renderer,NULL);
-    if(surface){char path[200];snprintf(path,sizeof(path),"/tmp/house-%s-%s.png",getenv("ARCANUM_HOUSE_LANGUAGE")?getenv("ARCANUM_HOUSE_LANGUAGE"):"en",label);SDL_SavePNG(surface,path);SDL_DestroySurface(surface);}
+    if(surface){char path[512];const char* dir=getenv("ARCANUM_HOUSE_CAPTURE_DIR");snprintf(path,sizeof(path),"%s/house-%s-%s.png",dir?dir:"/tmp",getenv("ARCANUM_HOUSE_LANGUAGE")?getenv("ARCANUM_HOUSE_LANGUAGE"):"en",label);SDL_SavePNG(surface,path);SDL_DestroySurface(surface);}
+}
+static int check_hidden_lights(void)
+{
+    int64_t obj;int iter,checked=0;
+    if(obj_inst_first(&obj,&iter))do{
+        if(obj_field_int32_get(obj,OBJ_F_TYPE)!=OBJ_TYPE_SCENERY
+          || !(obj_field_int32_get(obj,OBJ_F_FLAGS)&OF_OFF)
+          || sector_id_from_loc(obj_field_int64_get(obj,OBJ_F_LOCATION))!=SECTOR_MAKE(1346LL,1024LL))continue;
+        if((tig_art_id_t)obj_field_int32_get(obj,OBJ_F_LIGHT_AID)!=TIG_ART_ID_INVALID){
+            REQUIRE(obj_field_int32_get(obj,OBJ_F_LIGHT_FLAGS)&LF_OFF);checked++;
+        }
+        Light* light=obj_field_ptr_get(obj,OBJ_F_LIGHT_HANDLE);
+        if(light)REQUIRE(light_get_flags(light)&LF_OFF);
+        for(int i=0;i<4;i++){
+            if(obj_arrayfield_uint32_get(obj,OBJ_F_OVERLAY_LIGHT_AID,i)!=TIG_ART_ID_INVALID){
+                REQUIRE(obj_arrayfield_uint32_get(obj,OBJ_F_OVERLAY_LIGHT_FLAGS,i)&LF_OFF);checked++;
+            }
+            light=obj_arrayfield_ptr_get(obj,OBJ_F_OVERLAY_LIGHT_HANDLES,i);
+            if(light)REQUIRE(light_get_flags(light)&LF_OFF);
+        }
+    }while(obj_inst_next(&obj,&iter));
+    REQUIRE(checked>0);
+    printf("PASS: %d hidden scenery light/shade attachments disabled\n",checked);
+    return 0;
 }
 static int check_vegetation(bool inject)
 {
@@ -78,8 +112,53 @@ static int check_vegetation(bool inject)
     REQUIRE(checked>0);mes_unload(rules);
     printf("PASS: %d vegetation objects hidden in clearance tiles; items preserved\n",checked);return 0;
 }
+
+/* A generated terrain sector with saved DIFs must use world tile coordinates.
+ * Otherwise invisible scenery can occupy a door tile but evade house clearance. */
+static int check_door(void)
+{
+    int64_t sid=SECTOR_MAKE(1346LL,1024LL),loc=location_make(86175,65562);
+    Sector* sec;REQUIRE(sector_lock(sid,&sec));
+    for(int tile=0;tile<4096;tile++)for(ObjectNode* n=sec->objects.heads[tile];n;n=n->next){
+        REQUIRE(sector_id_from_loc(obj_field_int64_get(n->obj,OBJ_F_LOCATION))==sid);
+    }
+    sector_unlock(sid);
+    gamelib_ping_time+=1000;modern_house_tick();
+    int64_t pc=player_get_local_pc_obj(),door=0,obj;int iter;
+    ObjectList portals;object_list_location(loc,OBJ_TM_PORTAL,&portals);
+    REQUIRE(portals.head && !portals.head->next);door=portals.head->obj;
+    object_list_destroy(&portals);
+    int actors=0,non_jumpers=0;
+    if(obj_inst_first(&obj,&iter))do{
+        if(obj!=pc && (obj_field_int32_get(obj,OBJ_F_TYPE)!=OBJ_TYPE_NPC || critter_pc_leader_get(obj)!=pc))continue;
+        actors++;if(!critter_can_jump_window(obj))non_jumpers++;
+        for(int open=0;open<2;open++){
+            for(int step=0;step<16 && (open?portal_open(door):portal_close(door));step++){}
+            REQUIRE(portal_is_open(door)==(open!=0));
+            for(int dir=3;dir<=7;dir+=4){
+                int64_t from=dir==3?loc:location_make(86175,65563),to;
+                REQUIRE(location_in_dir(from,dir,&to));
+                int64_t block=0;int type=-1;bool window=false;
+                int cost=object_calc_traversal_cost(obj,from,dir,
+                    OBJ_TRAVERSAL_IGNORE_CRITTERS|OBJ_TRAVERSAL_WINDOW_BLOCKS|OBJ_TRAVERSAL_PORTAL_BLOCKS,
+                    &block,&type,&window);
+                REQUIRE(cost==0 && !window);
+                if(!open){REQUIRE(block==door && type==OBJ_TYPE_PORTAL);continue;}
+                REQUIRE(block==OBJ_HANDLE_NULL);
+                int8_t rotations[8];PathCreateInfo path={.obj=obj,.from=from,.to=to,
+                    .max_rotations=8,.rotations=rotations,
+                    .flags=PATH_FLAG_0x0002|PATH_FLAG_0x0004|PATH_FLAG_0x0010};
+                REQUIRE(path_make(&path)==1 && rotations[0]==dir);
+            }
+        }
+    }while(obj_inst_next(&obj,&iter));
+    REQUIRE(actors>1 && non_jumpers>0);
+    printf("PASS: correct sector coordinates; door blocks closed, direct paths both ways open for %d party members (%d cannot jump windows)\n",actors,non_jumpers);
+    return 0;
+}
+
 int main(int argc,char** argv) {
-    setvbuf(stdout,NULL,_IOLBF,0);
+    setvbuf(stdout,NULL,_IONBF,0);
     if((argc!=3 && argc!=4) || chdir(argv[1]) || access(".renaissance-house-test",R_OK)) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER,"software",SDL_HINT_OVERRIDE);
@@ -94,6 +173,27 @@ int main(int argc,char** argv) {
     REQUIRE(gamelib_mod_load("Arcanum"));REQUIRE(gameuilib_mod_load());gamelib_splash_clear();REQUIRE(modern_ui_init());
     puts("Load copied save");REQUIRE(gamelib_load(argv[2]));sub_5412D0();intgame_mode_set(INTGAME_MODE_MAIN);
 
+    if(argc==4 && !strcmp(argv[3],"--check-shadows")){
+        location_origin_set(location_make(86175,65557));
+        capture("shadows");
+        REQUIRE(check_hidden_lights()==0);
+        REQUIRE(gamelib_save("Slot0093","Vegetation shadows regression"));
+        REQUIRE(gamelib_load("Slot0093"));
+        location_origin_set(location_make(86175,65557));
+        capture("shadows-reloaded");
+        REQUIRE(check_hidden_lights()==0);
+        REQUIRE(check_door()==0);
+        gameuilib_exit();gamelib_exit();tig_exit();return 0;
+    }
+
+    if(argc==4 && !strcmp(argv[3],"--check-door")){
+        REQUIRE(check_door()==0);
+        REQUIRE(gamelib_save("Slot0094","Door regression"));
+        REQUIRE(gamelib_load("Slot0094"));
+        REQUIRE(check_door()==0);
+        puts("PASS: door regression after save/reload on isolated copy");
+        gameuilib_exit();gamelib_exit();tig_exit();return 0;
+    }
     if(argc==4 && !strcmp(argv[3],"--check-agent")){
         int64_t agent=0,previous=0;ObjectID expected={0};
         for(int pass=0;pass<4;pass++){

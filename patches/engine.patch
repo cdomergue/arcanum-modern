@@ -34,7 +34,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +352,31 @@
+@@ -333,7 +352,43 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -59,6 +59,18 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +target_link_libraries(check-utf8-files PRIVATE ${TIG_LIBRARY})
 +add_executable(check-name-input EXCLUDE_FROM_ALL "../tools/check-name-input.c")
 +target_link_libraries(check-name-input PRIVATE ${TIG_LIBRARY})
++# Native housing checks operate only on a marked disposable game copy.
++set(HOUSE_CHECK_SRCS ${SRCS})
++list(REMOVE_ITEM HOUSE_CHECK_SRCS "src/main.c")
++add_executable(check-house EXCLUDE_FROM_ALL "../tools/house/check-house.c" ${HOUSE_CHECK_SRCS})
++target_include_directories(check-house PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
++target_link_libraries(check-house PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
++if(WIN32)
++    add_custom_command(TARGET check-house POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:check-house>"
++        VERBATIM)
++endif()
++
 +add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
 +target_include_directories(check-movie PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 +target_link_libraries(check-movie PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
@@ -3535,7 +3547,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
 diff --git a/src/game/sector_object_list.c b/src/game/sector_object_list.c
 --- a/src/game/sector_object_list.c
 +++ b/src/game/sector_object_list.c
-@@ -186,120 +186,74 @@
+@@ -186,120 +186,75 @@
  }
  
  // 0x4F1590
@@ -3626,9 +3638,10 @@ diff --git a/src/game/sector_object_list.c b/src/game/sector_object_list.c
 +        objects[loaded++] = obj;
 +        if (sector_id != -1) {
 +            int tile = tile_id_from_loc(obj_field_int64_get(obj, OBJ_F_LOCATION));
++            // Terrain templates store local tiles; sector coordinates count 64-tile blocks.
 +            obj_field_int64_set(obj, OBJ_F_LOCATION,
-+                location_make(SECTOR_X(sector_id) + TILE_X(tile),
-+                    SECTOR_Y(sector_id) + TILE_Y(tile)));
++                location_make((SECTOR_X(sector_id) << 6) + TILE_X(tile),
++                    (SECTOR_Y(sector_id) << 6) + TILE_Y(tile)));
 +            sub_406B80(obj);
 +        }
 +        if (changed && !obj_dif_read_checked(dif_stream, obj, base_mismatch)) goto failed;

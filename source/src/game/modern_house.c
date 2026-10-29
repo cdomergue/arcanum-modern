@@ -9,6 +9,7 @@
 #include "game/mes.h"
 #include "game/map.h"
 #include "game/location.h"
+#include "game/light.h"
 #include "game/obj.h"
 #include "game/obj_flags.h"
 #include "game/obj_pool.h"
@@ -170,6 +171,20 @@ static void configure(int64_t obj, Property* p, const char* role, bool created)
         if(obj_arrayfield_length_get(obj,OBJ_F_CRITTER_INVENTORY_LIST_IDX)==0)obj_field_int32_set(obj,OBJ_F_CRITTER_INVENTORY_NUM,0);
     }
 }
+/* Vegetation shades are attached dark lights, separate from sprite visibility.
+ * Repair old saves whose OF_OFF was set without disabling those attachments. */
+static void hide_scenery(int64_t obj)
+{
+    if(!(obj_field_int32_get(obj,OBJ_F_FLAGS)&OF_OFF))object_flags_set(obj,OF_OFF);
+    bool active=(tig_art_id_t)obj_field_int32_get(obj,OBJ_F_LIGHT_AID)!=TIG_ART_ID_INVALID
+        && !(obj_field_int32_get(obj,OBJ_F_LIGHT_FLAGS)&LF_OFF);
+    for(int i=0;i<4;i++){
+        if(obj_arrayfield_uint32_get(obj,OBJ_F_OVERLAY_LIGHT_AID,i)!=TIG_ART_ID_INVALID
+          && !(obj_arrayfield_uint32_get(obj,OBJ_F_OVERLAY_LIGHT_FLAGS,i)&LF_OFF))active=true;
+    }
+    if(active)light_set_flags(obj,LF_OFF);
+    shadow_clear(obj);
+}
 static void terrain(Property* p, Sector* sec)
 {
     MesFileEntry e;
@@ -191,10 +206,10 @@ static void terrain(Property* p, Sector* sec)
         if(sscanf(e.str,"%lld %lld %d %d",&loc,&aid,&dx,&dy)!=4)continue;
         for(ObjectNode* n=sec->objects.heads[tile_id_from_loc(loc)];n;n=n->next){
             int64_t o=n->obj;int flags=obj_field_int32_get(o,OBJ_F_FLAGS);
-            if(!(flags&(OF_DYNAMIC|OF_OFF)) && obj_field_int64_get(o,OBJ_F_LOCATION)==loc
+            if(!(flags&OF_DYNAMIC) && obj_field_int64_get(o,OBJ_F_LOCATION)==loc
               && (uint32_t)obj_field_int32_get(o,OBJ_F_CURRENT_AID)==(uint32_t)aid
               && obj_field_int32_get(o,OBJ_F_OFFSET_X)==dx && obj_field_int32_get(o,OBJ_F_OFFSET_Y)==dy)
-                obj_field_int32_set(o,OBJ_F_FLAGS,flags|OF_OFF);
+                hide_scenery(o);
         }
     }
 }
@@ -213,8 +228,7 @@ static void clear_vegetation(Property* p, Sector* sec)
             if(obj_field_int32_get(obj,OBJ_F_TYPE)!=OBJ_TYPE_SCENERY
               || obj_field_int64_get(obj,OBJ_F_LOCATION)!=loc)continue;
             int kind=tig_art_scenery_id_type_get(obj_field_int32_get(obj,OBJ_F_CURRENT_AID));
-            int flags=obj_field_int32_get(obj,OBJ_F_FLAGS);
-            if((mask & (1u<<kind)) && !(flags&OF_OFF))obj_field_int32_set(obj,OBJ_F_FLAGS,flags|OF_OFF);
+            if(mask & (1u<<kind))hide_scenery(obj);
         }
     }
 }
