@@ -4436,7 +4436,15 @@ diff --git a/src/main.c b/src/main.c
  
  #include "game/ai.h"
  #include "game/anim.h"
-@@ -46,10 +48,14 @@
+@@ -39,6 +41,7 @@
+ #include "game/spell.h"
+ #include "game/stat.h"
+ #include "game/tech.h"
++#include "game/teleport.h"
+ #include "game/wallcheck.h"
+ #include "ui/charedit_ui.h"
+ #include "ui/dialog_ui.h"
+@@ -46,10 +49,14 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
@@ -4451,7 +4459,7 @@ diff --git a/src/main.c b/src/main.c
  
  static void main_loop(void);
  static void handle_mouse_scroll(void);
-@@ -65,6 +71,10 @@
+@@ -65,6 +72,33 @@
  // 0x401000
  int main(int argc, char** argv)
  {
@@ -4459,10 +4467,33 @@ diff --git a/src/main.c b/src/main.c
 +    if (argc >= 3 && strcmp(argv[1], "--modern-generate-maps") == 0)
 +        return modern_maps_generate(argv[2], argc > 3 ? atoi(argv[3]) : 0);
 +
++    /* Editor preview runs only inside a marked independent installation. */
++    bool worlded_test = argc == 5 && strcmp(argv[1], "--worlded-test") == 0;
++    int worlded_x = 0, worlded_y = 0;
++    if (worlded_test) {
++        FILE* marker = fopen(".worlded-playtest", "rb");
++        if (!marker) return EXIT_FAILURE;
++        bool marked = fgetc(marker) == '1' && fgetc(marker) == '\n' && fgetc(marker) == EOF;
++        fclose(marker);
++        if (!marked || strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)
++            || strspn(argv[2] + 4, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 4
++            || !*argv[3] || !*argv[4] || strspn(argv[3], "0123456789") != strlen(argv[3])
++            || strspn(argv[4], "0123456789") != strlen(argv[4]) || strlen(argv[3]) > 4 || strlen(argv[4]) > 4) return EXIT_FAILURE;
++        worlded_x = atoi(argv[3]); worlded_y = atoi(argv[4]);
++        if (worlded_x >= 2000 || worlded_y >= 2000) return EXIT_FAILURE;
++#ifdef SDL_PLATFORM_LINUX
++        // A predictable preview backend also avoids implicit EGL surface probes
++        // on XWayland systems with mixed GPU drivers. Normal launches keep their
++        // usual renderer selection.
++        SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
++        SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "0");
++#endif
++    }
++
      TigInitInfo init_info;
      TigVideoScreenshotSettings screenshotter;
      GameInitInfo game_init_info;
-@@ -205,11 +215,22 @@
+@@ -205,11 +239,22 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -4486,14 +4517,15 @@ diff --git a/src/main.c b/src/main.c
  
      screenshotter.key = SDL_SCANCODE_F12;
      screenshotter.field_4 = 0;
-@@ -290,9 +311,25 @@
+@@ -290,11 +335,47 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
+-    if (highres_config->intro) {
 +    gamelib_splash_clear();
 +    modern_ui_init();
 +    char* map_executable = modern_maps_executable(argv[0]);
-+    bool maps_continue = modern_ui_prepare_maps(map_executable);
++    bool maps_continue = worlded_test || modern_ui_prepare_maps(map_executable);
 +    SDL_free(map_executable);
 +    if (!maps_continue) {
 +        modern_ui_exit();
@@ -4503,16 +4535,39 @@ diff --git a/src/main.c b/src/main.c
 +        return EXIT_SUCCESS;
 +    }
 +
-     if (highres_config->intro) {
++    if (!worlded_test && highres_config->intro) {
          gmovie_play(8, GAME_MOVIE_NO_FINAL_FLIP, 0);
      }
-+
+ 
+-    if (!mainmenu_ui_handle()) {
 +    puts("Arcanum Modern: startup complete");
 +    fflush(stdout);
- 
-     if (!mainmenu_ui_handle()) {
++
++    bool entered_game;
++    if (worlded_test) {
++        entered_game = gamelib_load(argv[2]);
++        if (entered_game) {
++            sub_5412D0(); intgame_mode_set(INTGAME_MODE_MAIN);
++            TeleportData preview = {.obj = player_get_local_pc_obj(),
++                .map = (map_list_info_find("Arcanum1-024-fixed") + 1),
++                .loc = location_make(worlded_x * 64 + 32, worlded_y * 64 + 32)};
++            entered_game = preview.map > 0 && teleport_do(&preview);
++            if (entered_game) {
++                teleport_ping(0);
++                object_flags_unset(player_get_local_pc_obj(), OF_OFF);
++                location_origin_set(preview.loc);
++                // The usual load-menu exit restores the game cursor. Direct
++                // editor entry bypasses that menu, including its mouse_show.
++                intgame_refresh_cursor();
++                tig_mouse_show();
++            }
++        }
++    } else entered_game = mainmenu_ui_handle();
++    if (!entered_game) {
          gameuilib_exit();
-@@ -317,6 +354,7 @@
+         gamelib_exit();
+         tig_exit();
+@@ -317,6 +398,7 @@
  
      main_loop();
  
@@ -4520,7 +4575,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,8 +421,10 @@
+@@ -383,8 +465,10 @@
              output_profile_data = false;
          }
  
@@ -4531,7 +4586,7 @@ diff --git a/src/main.c b/src/main.c
          iso_redraw();
          tig_window_display();
  
-@@ -698,6 +738,7 @@
+@@ -698,6 +782,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -4539,7 +4594,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +784,26 @@
+@@ -743,25 +828,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
@@ -7537,15 +7592,16 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      /* 03C0 */ int length;
      /* 03C4 */ int field_3C4;
      /* 03C8 */ int field_3C8;
-@@ -212,6 +224,7 @@
+@@ -212,6 +224,8 @@
  static bool sub_5627B0(WmapCoords* coords);
  static bool sub_5627F0(int64_t loc);
  static void sub_562800(int id);
 +static void modern_house_locations(void);
++static void modern_worlded_locations(void);
  static void wmap_ui_draw_coords(WmapCoords* coords);
  static void wmap_ui_navigate(int x, int y);
  static void sub_562AF0(int x, int y);
-@@ -314,6 +327,12 @@
+@@ -314,6 +328,12 @@
  
  // 0x5C9B00
  static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
@@ -7558,7 +7614,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x5C9B08
  static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
-@@ -435,6 +454,7 @@
+@@ -435,6 +455,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -7566,7 +7622,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +768,7 @@
+@@ -748,7 +769,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -7575,7 +7631,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -775,6 +795,8 @@
+@@ -775,6 +796,8 @@
      wmap_ui_compass_arrow_num_frames = art_anim_data.num_frames;
  
      for (index = 0; index < WMAP_ROUTE_TYPE_COUNT; index++) {
@@ -7584,7 +7640,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          wmap_ui_routes[index].length = 0;
          wmap_ui_routes[index].field_3C4 = 1;
          wmap_ui_routes[index].field_3C8 = 1;
-@@ -789,6 +811,16 @@
+@@ -789,6 +812,16 @@
  {
      int mode;
      int tile;
@@ -7601,7 +7657,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      wmap_ui_mode = WMAP_UI_MODE_WORLD;
      wmap_ui_state = WMAP_UI_STATE_NORMAL;
-@@ -911,6 +943,7 @@
+@@ -911,6 +944,7 @@
  // 0x560200
  void wmap_ui_reset(void)
  {
@@ -7609,7 +7665,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int index;
  
      if (wmap_ui_initialized) {
-@@ -1017,6 +1050,7 @@
+@@ -1017,6 +1051,7 @@
  // 0x5604B0
  bool wmap_ui_load(GameLoadInfo* load_info)
  {
@@ -7617,7 +7673,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int mode;
      int cnt;
      int note;
-@@ -1411,6 +1445,9 @@
+@@ -1411,6 +1446,9 @@
      if (!wmap_ui_created) {
          return;
      }
@@ -7627,7 +7683,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      pc_obj = player_get_local_pc_obj();
      if (pc_obj != OBJ_HANDLE_NULL
-@@ -1523,6 +1560,7 @@
+@@ -1523,6 +1561,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -7635,15 +7691,16 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -1600,6 +1638,7 @@
+@@ -1600,6 +1639,8 @@
          }
      }
  
 +    modern_house_locations();
++    modern_worlded_locations();
      sub_561430(loc);
      sub_563590(&(wmap_ui_mode_info[wmap_ui_mode].field_3C), false);
  
-@@ -2188,18 +2227,7 @@
+@@ -2188,18 +2229,7 @@
                          }
                      } else {
                          if (wmap_ui_mode == WMAP_UI_MODE_TOWN && wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length > 0) {
@@ -7663,7 +7720,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
                          }
                      }
                      return true;
-@@ -2395,6 +2423,25 @@
+@@ -2395,6 +2425,57 @@
          sub_561490(area_get_location(id), &(note.coords));
          sub_563C60(&note);
      }
@@ -7686,10 +7743,42 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +        }
 +    }
 +
++}
++
++/* Optional editor locations are reconstructed from module resources, never
++ * appended to area arrays or serialized into saves. Existing games therefore
++ * retain their original area layout. Text comes from a separate localized MES. */
++static void modern_worlded_locations(void)
++{
++    mes_file_handle_t locations, names;
++    if (dword_66D87C != (map_list_info_find("Arcanum1-024-fixed") + 1)
++        || !mes_load("rules/worlded_locations.mes", &locations)) return;
++    if (!mes_load("mes/worlded_location_names.mes", &names)) { mes_unload(locations); return; }
++    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    MesFileEntry entry;
++    if (mes_find_first(locations, &entry)) do {
++        int x, y, name_id;
++        char extra;
++        if (entry.num < 0 || entry.num > 1000000
++            || sscanf(entry.str, "%d,%d,%d %c", &x, &y, &name_id, &extra) != 3
++            || x < 0 || y < 0 || x >= 2000 || y >= 2000) continue;
++        int id = 1000000 + entry.num, index;
++        for (index = 0; index < *info->num_notes; index++) if (info->notes[index].id == id) break;
++        if (index < *info->num_notes || index >= 199) continue;
++        MesFileEntry name = {.num = name_id};
++        if (!mes_search(names, &name)) continue;
++        WmapNote note = {0};
++        note.id = id; note.flags = 0x2; note.type = WMAP_NOTE_TYPE_LOC;
++        note.coords.x = 2000 - x; note.coords.y = y;
++        SDL_strlcpy(note.str, name.str, sizeof(note.str));
++        sub_563D50(&note);
++        info->notes[(*info->num_notes)++] = note;
++    } while (mes_find_next(locations, &entry));
++    mes_unload(names); mes_unload(locations);
  }
  
  // 0x562880
-@@ -3569,6 +3616,9 @@
+@@ -3569,6 +3650,9 @@
      return false;
  }
  
@@ -7699,7 +7788,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  // 0x5643E0
  bool sub_5643E0(WmapCoords* coords)
  {
-@@ -3594,6 +3644,10 @@
+@@ -3594,6 +3678,10 @@
          route_type = WMAP_ROUTE_TYPE_TOWN;
      }
  
@@ -7710,7 +7799,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      wp_idx = wmap_ui_routes[route_type].length;
      if (wp_idx >= 30) {
          return false;
-@@ -3601,60 +3655,30 @@
+@@ -3601,60 +3689,30 @@
  
      wp = &(wmap_ui_routes[route_type].waypoints[wp_idx]);
  
@@ -7794,7 +7883,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      dword_5C9AD8 = wmap_ui_routes[route_type].length;
-@@ -4212,7 +4236,7 @@
+@@ -4212,7 +4270,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -7803,7 +7892,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4376,6 +4400,11 @@
+@@ -4376,6 +4434,11 @@
          }
      }
  
@@ -7815,7 +7904,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      art_blit_info.flags = 0;
      art_blit_info.src_rect = &src_rect;
      art_blit_info.dst_rect = &dst_rect;
-@@ -4390,8 +4419,10 @@
+@@ -4390,8 +4453,10 @@
          note = &(wmap_info->notes[idx]);
          if (wmap_note_type_info[note->type].enabled
              && sub_565CF0(note)) {
@@ -7828,7 +7917,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          }
      }
  
-@@ -4402,7 +4433,7 @@
+@@ -4402,7 +4467,7 @@
          WmapCoords coords;
  
          sub_561490(area_get_location(area), &coords);
@@ -7837,7 +7926,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      offset_x = wmap_info->field_3C.x - wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width / 2 - wmap_info->field_34;
-@@ -4413,7 +4444,7 @@
+@@ -4413,7 +4478,7 @@
      vb_dst_rect.width = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width;
      vb_dst_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].height;
  
@@ -7846,7 +7935,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          dst_rect = vb_dst_rect;
          vb_dst_rect.x -= tmp_rect.x + offset_x;
          vb_dst_rect.y -= tmp_rect.y + offset_y;
-@@ -4426,7 +4457,7 @@
+@@ -4426,7 +4491,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -7855,7 +7944,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4702,8 @@
+@@ -4671,7 +4736,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -7865,7 +7954,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4728,7 @@
+@@ -4696,7 +4762,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -7874,7 +7963,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4883,7 @@
+@@ -4851,7 +4917,7 @@
          object_list_destroy(&objects);
      }
  
@@ -7883,7 +7972,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4929,7 +4961,7 @@
+@@ -4929,7 +4995,7 @@
          src_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].height;
          art_blit_info.art_id = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].art_id;
  
@@ -7892,7 +7981,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
              dst_rect = src_rect;
  
              src_rect.x -= x2 - wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].width / 2;
-@@ -4984,3 +5016,311 @@
+@@ -4984,3 +5050,311 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }

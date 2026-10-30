@@ -1,4 +1,6 @@
-/* Native housing regression: check-house COPY/game SLOT.
+/* Woodland House regression fixture: check-house COPY/game SLOT.
+ * Coordinates and contents below describe the shipped test fixture only.
+ * Property-independent authoring lives in export-scene.cpp and build-content.py.
  * This harness refuses any directory without the test-copy marker. */
 #include <stdio.h>
 #include <stdlib.h>

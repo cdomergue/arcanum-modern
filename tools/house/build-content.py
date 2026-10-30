@@ -5,6 +5,7 @@ The native modern_house module handles the guarded purchase/resupply commands.
 """
 import argparse
 import json
+import re
 import shutil
 import struct
 from pathlib import Path
@@ -22,7 +23,14 @@ def validate(catalog):
     globals_ = [p[f] for p in catalog['properties'] for f in ('ownership_global', 'discovery_global')]
     if len(set(globals_)) != len(globals_):
         raise ValueError('Ownership and discovery globals must not overlap')
+    sectors = [tuple(p['sector']) for p in catalog['properties']]
+    if len(set(sectors)) != len(sectors):
+        raise ValueError('Each property needs its own sector (guard and bed ownership use sectors)')
     for p in catalog['properties']:
+        if not re.fullmatch(r'[a-z][a-z0-9_-]{0,62}', p['scene']):
+            raise ValueError('Scene must be a simple folder name, at most 63 characters')
+        if len(p['sector']) != 2 or any(type(v) is not int or not 0 <= v < 2000 for v in p['sector']):
+            raise ValueError('Invalid property sector')
         if not isinstance(p['price'], int) or isinstance(p['price'], bool) or not 0 < p['price'] <= 2**31-1:
             raise ValueError('Price must be a positive 32-bit integer')
         if not 0 <= p['slot'] < 100 or not 0 <= p['ownership_global'] < 2000 or not 0 <= p['discovery_global'] < 2000:
@@ -45,7 +53,7 @@ def dialogue(catalog, lang):
     add = lambda *a, **k: rows.append(row(*a, **k))
     back = 'Revenir au catalogue.' if fr else 'Back to the catalogue.'
     bye = 'Au revoir.' if fr else 'Goodbye.'
-    add(1, "Edwin Harrow, agent immobilier. Je peux vous présenter nos propriétés ou vous aider avec une maison déjà achetée." if fr else "Edwin Harrow, estate agent. I can show you our properties or help you with a house you already own.")
+    add(1, f"{catalog['seller']['name']}, agent immobilier. Je peux vous présenter nos propriétés ou vous aider avec une maison déjà achetée." if fr else f"{catalog['seller']['name']}, estate agent. I can show you our properties or help you with a house you already own.")
     add(2, 'Voir les propriétés.' if fr else 'Show me your properties.', 1000, True)
     add(3, bye, 0, True)
     # Three listings + next page + exit: the engine allows five responses.
@@ -92,8 +100,68 @@ def placeholder_script():
     struct.pack_into('<ii', header, 52, 1, 1)
     return bytes(header)+op(0)+op(1)+op(0)
 
+def check_scenes(catalog, scenes):
+    """Fail before generation if any listing would load an incomplete scene."""
+    all_ids = set()
+    for p in catalog['properties']:
+        folder = scenes / p['scene']
+        for name in ('scene.mes', 'terrain.mes', 'roofs.mes', 'removed.mes'):
+            if not (folder / name).is_file():
+                raise ValueError(f"{p['id']}: missing {name}")
+        records = re.findall(r'\{(\d+)\}\{([^}]*)\}', (folder/'scene.mes').read_text(encoding='utf-8'))
+        entries = dict(records)
+        if len(entries) != len(records):
+            raise ValueError(f"{p['id']}: duplicate manifest entry")
+        if entries.get('0', '').split() != ['1', *map(str, p['sector'])]:
+            raise ValueError(f"{p['id']}: scene sector does not match catalogue")
+        count = 0
+        for index, entry in entries.items():
+            if int(index) < 100:
+                continue
+            parts = entry.split()
+            if len(parts) != 2 or not re.fullmatch(r'0200[0-9a-f]{32}', parts[1]):
+                raise ValueError(f"{p['id']}: invalid object entry")
+            role, guid = parts
+            if guid in all_ids:
+                raise ValueError(f'Duplicate scene object GUID: {guid}')
+            all_ids.add(guid)
+            data = (folder/'objects'/f'{guid}.mob').read_bytes()
+            if len(data) < 56 or (data[28:30]+data[36:52]).hex() != guid:
+                raise ValueError(f'{guid}: object file ID does not match manifest')
+            if role == 'guard' and int.from_bytes(data[52:56], 'little') != 16:
+                raise ValueError(f'{guid}: guard must be an NPC')
+            count += 1
+        if not count:
+            raise ValueError(f"{p['id']}: scene has no objects")
+
+
 def build(catalog, output, scenes=ROOT/'resources/house'):
     validate(catalog)
+    check_scenes(catalog, scenes)
+    resources = {}
+    native_ids = {48300, 48301, 48304}
+    for p in catalog['properties']:
+        extra = scenes / p['scene'] / 'resources'
+        if not extra.exists():
+            continue
+        for file in extra.rglob('*'):
+            if file.is_symlink():
+                raise ValueError('Linked scene resources are not supported')
+            if not file.is_file():
+                continue
+            relative = file.relative_to(extra)
+            if len(relative.parts) != 2 or relative.parts[0] not in ('scr', 'dlg', 'proto'):
+                raise ValueError(f'Invalid scene resource: {relative}')
+            match = re.match(r'(\d+)', file.name)
+            if not match:
+                raise ValueError(f'Resource needs a numeric ID: {relative}')
+            key = (relative.parts[0], int(match[1]))
+            if key[0] in ('scr', 'dlg') and key[1] in native_ids:
+                raise ValueError(f'Resource conflicts with the estate service: {relative}')
+            data = file.read_bytes()
+            if key in resources and resources[key] != (relative, data):
+                raise ValueError(f'Conflicting shared resource ID: {key}')
+            resources[key] = (relative, data)
     base = output/'base'; (base/'house').mkdir(parents=True, exist_ok=True)
     (base/'scr').mkdir(exist_ok=True)
     pos = catalog['seller']['position']
@@ -106,6 +174,9 @@ def build(catalog, output, scenes=ROOT/'resources/house'):
         if (scenes/p['scene']).is_dir():
             shutil.copytree(scenes/p['scene'], base/'house'/p['scene'], dirs_exist_ok=True)
     (base/'house/catalog.mes').write_text('\n'.join(lines)+'\n')
+    for relative, data in resources.values():
+        (base/relative).parent.mkdir(parents=True, exist_ok=True)
+        (base/relative).write_bytes(data)
     for lang in LANGUAGES:
         local = output/lang; (local/'dlg').mkdir(parents=True,exist_ok=True); (local/'house').mkdir(exist_ok=True)
         (local/'dlg/48301_estate_agent.dlg').write_bytes(dialogue(catalog,lang).encode('cp1252'))
@@ -127,4 +198,5 @@ if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--catalog',type=Path,default=ROOT/'resources/house/catalog.json')
     parser.add_argument('--output',type=Path,required=True)
-    args=parser.parse_args(); build(json.loads(args.catalog.read_text()),args.output)
+    parser.add_argument('--scenes',type=Path,default=ROOT/'resources/house')
+    args=parser.parse_args(); build(json.loads(args.catalog.read_text(encoding='utf-8')),args.output,args.scenes)

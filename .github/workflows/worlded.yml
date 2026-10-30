@@ -1,0 +1,67 @@
+name: WorldED explorer and formats
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/worlded/**'
+      - 'tools/house/**'
+      - 'resources/house/**'
+      - 'tests/test_house_catalog.py'
+      - 'tests/test_house_export.py'
+      - 'tests/test_worlded.py'
+      - 'tests/test_worlded_gui.py'
+      - '.github/workflows/worlded.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/worlded/**'
+      - 'tools/house/**'
+      - 'resources/house/**'
+      - 'tests/test_house_catalog.py'
+      - 'tests/test_house_export.py'
+      - 'tests/test_worlded.py'
+      - 'tests/test_worlded_gui.py'
+      - '.github/workflows/worlded.yml'
+permissions:
+  contents: read
+jobs:
+  explorer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          cache: true
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
+      - name: Windows dependencies
+        if: runner.os == 'Windows'
+        run: vcpkg install zlib:x64-windows
+      - name: Configure Windows
+        if: runner.os == 'Windows'
+        run: >-
+          cmake -S tools/worlded -B build/worlded
+          "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DWORLDED_BUILD_GUI=ON
+      - name: Configure Linux and macOS
+        if: runner.os != 'Windows'
+        run: cmake -S tools/worlded -B build/worlded -DCMAKE_BUILD_TYPE=Release -DWORLDED_BUILD_GUI=ON
+      - name: Build
+        run: cmake --build build/worlded --config Release --parallel 4
+      - name: Test
+        run: ctest --test-dir build/worlded -C Release --output-on-failure
+      - name: Test housing catalogue
+        env:
+          PYTHONUTF8: '1'
+        run: python tests/test_house_catalog.py

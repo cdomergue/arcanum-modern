@@ -42,6 +42,13 @@ Edwin Harrow, in the office inside Tarant Town Hall, sells a furnished woodland 
 coins. The house is on the main map and supports storage in existing saves.
 See [player housing](docs/housing.md) for the catalogue and content authoring.
 
+### WorldED
+
+WorldED is the English-language editor for sectors, buildings, objects, scripts
+and dialogues. See [the editor guide](docs/worlded.md),
+[Windows and Linux build instructions](docs/worlded-build.md), and
+[the house authoring workflow](docs/housing.md#creating-a-house).
+
 ## Installation
 
 You need your own **Arcanum 1.0.7.4** installation. Downloads contain the mod;
