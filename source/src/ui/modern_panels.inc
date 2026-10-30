@@ -395,7 +395,6 @@ static void draw_inventory(void)
         else inventory_grid((SDL_FRect){left,y+190,cw,0},8,inv.mode==INVEN_UI_MODE_BARTER?209:177,inv.rows,inv.scroll);
         menu_button((SDL_FRect){left+cw+8,y+195,42,46},735,"^",inv.scroll>0);
         menu_button((SDL_FRect){left+cw+8,y+250,42,46},736,"v",true);
-        if(inv.feedback && *inv.feedback)menu_paragraph(game_text(inv.feedback),(SDL_FRect){right,y+690,cw,48},0,GOLD);
         text_in_button((SDL_FRect){right,y+126,250,52},733,game_text(modern_intgame_text(inv.paperdoll?1006:1005)),false,true);
     }
     if(inv.paperdoll && !single)equipment_slots((SDL_FRect){right,y+190,cw,420},0,inv.mode);
@@ -463,7 +462,10 @@ static void draw_inventory(void)
     }
     if(mainmenu_ui_is_active())menu_button((SDL_FRect){left+140,y+footer,220,48},737,menu_text(7002),true);
     menu_button((SDL_FRect){x+w-275,y+footer,240,48},730,menu_text(260),true);
-    if(*message_text && SDL_GetTicks()-message_time<12000)
+    /* NPC service quotes share the engine feedback used by barter. */
+    if(inv.feedback && *inv.feedback)
+        menu_paragraph(game_text(inv.feedback),(SDL_FRect){left,y+688,790,54},0,GOLD);
+    else if(*message_text && SDL_GetTicks()-message_time<12000)
         text_compact(message_text,left,y+688,790,false,GOLD);
     int64_t drag=inven_ui_drag_item_obj_get();
     if(drag)draw_art_id(obj_field_int32_get(drag,OBJ_F_ITEM_INV_AID),(SDL_FRect){mouse_x+12,mouse_y+12,72,88},true);
