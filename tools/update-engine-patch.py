@@ -22,10 +22,10 @@ for relative in files:
         continue
     patch.append(f"diff --git a/{relative} b/{relative}\n")
     patch.extend(difflib.unified_diff(
-        before.decode("utf-8").splitlines(keepends=True),
-        after.decode("utf-8").splitlines(keepends=True),
+        before.decode("utf-8").replace("\r\n", "\n").splitlines(keepends=True),
+        after.decode("utf-8").replace("\r\n", "\n").splitlines(keepends=True),
         fromfile=f"a/{relative}", tofile=f"b/{relative}"))
 directory = project / "patches"
 directory.mkdir(exist_ok=True)
-(directory / "engine.patch").write_text("".join(patch))
+(directory / "engine.patch").write_bytes("".join(patch).encode("utf-8"))
 print(f"Recorded {sum(line.startswith('diff --git ') for line in patch)} modified engine files.")

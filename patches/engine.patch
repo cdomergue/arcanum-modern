@@ -7594,15 +7594,6 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -3669,7 +3808,7 @@
-         exit(EXIT_FAILURE);
-     }
- 
--    // CE: There's a bug in the original game — the name persists when
-+    // CE: There's a bug in the original game â€” the name persists when
-     // navigating back and forth to the "New Char" screen. Everything else
-     // (gender/race/background, just a moment above) resets, but not the name.
-     mes_file_entry.num = 500; // "Choose Name"
 @@ -4073,7 +4212,7 @@
              return false;
          }
@@ -9039,21 +9030,10 @@ diff --git a/src/game/quest.c b/src/game/quest.c
                      quests[quest_num_to_idx(num)].dumb_description = mes_file_entry.str;
                  }
              }
-@@ -260,7 +260,7 @@
-             // seven numbers in each bank is the dialog entry point for the
-             // quest in each of its seven states. The number refers to a PC
-             // dialog line which will be used in place of the Q: line based on
--            // the associated quest state. You can use a –1 to indicate no
-+            // the associated quest state. You can use a â€“1 to indicate no
-             // dialog line, meaning no message will be printed."
-             strcpy(temp, mes_file_entry.str);
- 
-@@ -388,6 +388,60 @@
-     }
- 
+@@ -390,6 +390,60 @@
      return quest_state_set_internal(pc_obj, num, state, npc_obj);
-+}
-+
+ }
+ 
 +/* Convert loaded state without granting rewards or replaying dialogue effects. */
 +bool quest_state_migrate(int64_t pc_obj, int num, int before, int after,
 +    bool authoritative, char* error, size_t size)
@@ -9106,9 +9086,11 @@ diff --git a/src/game/quest.c b/src/game/quest.c
 +            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_BOTCHED;
 +    }
 +    return true;
- }
- 
++}
++
  /**
+  * Internal function to set a quest state and handle side effects.
+  *
 diff --git a/src/game/map.c b/src/game/map.c
 --- a/src/game/map.c
 +++ b/src/game/map.c
