@@ -27,7 +27,7 @@ and the [editor guide](worlded.md) if you are starting from source.
    support a separate interior map or a house spanning several sectors.
 2. Save the project outside the game installation. Keep the source installation
    unchanged: the exporter compares your project against this baseline.
-3. Insert a room or build from the object library. Add floors, walls, a doorway,
+3. Build from the object library. Add floors, walls, a doorway,
    roof pieces and storage. Keep the doorway and its approaches clear. Windows
    are portals too; check them before and after purchase.
 4. Add furniture and any inhabitants. Create new instances in the project.

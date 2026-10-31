@@ -1,5 +1,7 @@
 # Using WorldED Renaissance
 
+For a complete offline tutorial, open [worlded-tutorial.html](../worlded-tutorial.html).
+
 WorldED edits Arcanum sectors, objects, scripts and dialogues in a separate
 project. It reads art and other resources from your own game installation.
 The interface is in English; names taken from the game keep the game's language.

@@ -100,7 +100,7 @@ jobs:
           docker run --rm \
             --mount "type=bind,source=$PWD,target=/work" --workdir /work \
             -e LLVM_MINGW=/opt/llvm-mingw \
-            mstorsjo/llvm-mingw:latest cmake --build build/windows-x64 --target check-utf8-files check-name-input
+            mstorsjo/llvm-mingw:latest cmake --build build/windows-x64 --target check-utf8-files check-name-input worlded-native-inventory
       - name: Build setup and verify ZIP
         run: |
           sudo apt-get update
@@ -108,6 +108,11 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" dist
           python3 tests/test_windows_package.py
           python3 tools/package-windows-setup.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worlded-native-runtime
+          path: build/windows-x64/worlded-native-inventory.exe
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: windows-checks
@@ -121,6 +126,54 @@ jobs:
           path: |
             dist/ArcanumModern-windows-x64.zip
             dist/ArcanumModern-windows-x64-setup.exe
+          if-no-files-found: error
+
+  worlded-windows:
+    needs: windows
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Install zlib
+        run: vcpkg install zlib:x64-windows
+      - name: Build and test WorldED
+        shell: pwsh
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          cmake -S tools/worlded -B build/worlded-release -DWORLDED_BUILD_GUI=ON "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+          if ($LASTEXITCODE) { throw 'WorldED configure failed' }
+          cmake --build build/worlded-release --config Release --parallel 4
+          if ($LASTEXITCODE) { throw 'WorldED build failed' }
+          ctest --test-dir build/worlded-release -C Release --output-on-failure
+          if ($LASTEXITCODE) { throw 'WorldED tests failed' }
+      - uses: actions/download-artifact@v4
+        with:
+          name: worlded-native-runtime
+          path: build/worlded-native-runtime
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: dist/engine
+      - name: Package editor and offline tutorial
+        shell: pwsh
+        run: |
+          python tests/test_worlded_windows_package.py
+          if ($LASTEXITCODE) { throw 'WorldED packaging tests failed' }
+          python tools/package-worlded-windows.py --build-dir build/worlded-release --inventory-helper build/worlded-native-runtime/worlded-native-inventory.exe --engine-package dist/engine/ArcanumModern-windows-x64.zip --qt-bin "$env:QT_ROOT_DIR/bin" --extra-dll "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/zlib1.dll" --smoke-test
+          if ($LASTEXITCODE) { throw 'WorldED package verification failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worlded-release
+          path: dist/worlded-renaissance-win.zip
           if-no-files-found: error
 
   windows-install:
@@ -186,7 +239,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-install, macos, linux]
+    needs: [windows-install, worlded-windows, macos, linux]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -203,7 +256,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd dist
-          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip ArcanumModern-linux-x64.zip)
+          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip ArcanumModern-linux-x64.zip worlded-renaissance-win.zip)
           sha256sum "${files[@]}" > SHA256SUMS.txt
           if gh release view "$RELEASE_TAG" --json isDraft > release.json; then
             test "$(jq -r .isDraft release.json)" = true || { echo 'Refusing to replace a published release.' >&2; exit 1; }

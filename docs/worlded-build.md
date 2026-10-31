@@ -63,26 +63,28 @@ Visual Studio places the programs under `build/worlded-windows/Release/`:
 tests and housing export tests. Keep the Qt DLL directory on PATH while running
 these executables from the build tree.
 
-### Make a portable editor folder
+### Package the Windows editor
 
-Copy the three user programs into a new folder, then run the deployment tool
-from the same Qt kit:
+Build the native inventory helper described below, then run:
 
 ```powershell
-$package = Join-Path $PWD 'dist/WorldED-Renaissance-windows-x64'
-New-Item -ItemType Directory -Force $package | Out-Null
-Copy-Item build/worlded-windows/Release/worlded.exe $package
-Copy-Item build/worlded-windows/Release/worlded-explorer.exe $package
-Copy-Item build/worlded-windows/Release/worlded-house-export.exe $package
-& "$qt/bin/windeployqt.exe" --release --no-translations "$package/worlded-explorer.exe"
+python tools/package-worlded-windows.py `
+  --build-dir build/worlded-windows `
+  --inventory-helper build/engine/Release/worlded-native-inventory.exe `
+  --qt-bin "$qt/bin" --smoke-test
 ```
 
-Keep the Qt DLLs and plugin folders together with the executables. In particular,
-`platforms/qwindows.dll` is required. The target computer also needs the x64
-Microsoft Visual C++ runtime; install the redistributable supplied with your
-Visual Studio toolchain if it is absent. Verify the package on a machine or
-terminal that does not get Qt DLLs from the SDK's PATH. Copying an `.exe` alone
-is not a portable package.
+This creates `dist/worlded-renaissance-win.zip` with the three editor programs,
+native helper, Qt plugins, Microsoft C++ runtime DLLs, FFmpeg DLLs, documentation
+and [offline tutorial](../worlded-tutorial.html). Keep Visual Studio C++ build tools
+installed so the packager can locate its redistributable DLLs. Use `--extra-dll`
+for a dynamically linked zlib. Use `--engine-package` with the matching engine ZIP
+to include its FFmpeg libraries and notices; otherwise the DLLs are read beside
+the helper.
+
+The packager checks the archive manifest and, with `--smoke-test`, extracts it
+and starts all four tools with the Qt SDK removed from PATH. The release workflow
+builds this archive on Windows and includes it with every tagged release.
 
 ## Linux
 
