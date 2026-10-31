@@ -1,4 +1,5 @@
 #pragma once
+#include "worlded/npc_routes.hpp"
 #include <charconv>
 #include "worlded/building.hpp"
 #include <QtCore>
@@ -77,6 +78,7 @@ inline Building load_project(const std::filesystem::path& path) {
         auto loc=object.number("LOCATION");
         if((std::uint32_t(loc)>>6)!=(id&0x3ffffff) || (loc>>38)!=(id>>26)) throw std::runtime_error("Project object outside its sector");
         set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32)); object.editor_id=clone_instance(object).id;
+        transform_npc_routes(object,id,false);
     }
     if(fs::exists(path/"location-names.json")) { auto names=project_json(path/"location-names.json");
         for(auto it=names.begin();it!=names.end();++it) result.location_names[it.key().toStdString()]=it.value().toString().toStdString();
@@ -141,6 +143,26 @@ inline void configure_test_process(QProcess& process,const std::filesystem::path
     process.setProcessEnvironment(environment);process.setProcessChannelMode(QProcess::MergedChannels);
     process.setStandardOutputFile(QString::fromStdString((root/"test-launch.log").u8string()));
 }
+inline void copy_test_tree(const std::filesystem::path& from,const std::filesystem::path& to) {
+    namespace fs=std::filesystem;
+    fs::create_directories(to);
+    // NTFS directories created by WSL may contain both Proto and proto. Merge
+    // them on every platform, in source enumeration order (the resource index
+    // uses that same order and its last loose-file entry wins).
+    std::map<QString,fs::path> children;
+    for(const auto& entry:fs::directory_iterator(to))children[QString::fromStdString(entry.path().filename().u8string()).toLower()]=entry.path();
+        for(const auto& entry:fs::directory_iterator(from)) {
+            auto filename=entry.path().filename(); auto lower=QString::fromStdString(filename.string()).toLower();
+            if(lower=="save" || lower=="tigcache" || lower=="screenshots" || lower=="local-maps" || lower.startsWith('.')) continue;
+            if(from.filename()=="ArcanumModern" && entry.is_directory() && !QStringList{"lib","licenses","uap","docs"}.contains(lower)) continue;
+            auto found=children.find(lower);auto target=found==children.end()?to/filename:found->second;
+            if(fs::is_symlink(target))throw std::runtime_error("Redirected test resource: "+target.string());
+            children[lower]=target;
+            if(entry.is_directory()) {if(entry.is_symlink()) throw std::runtime_error("Redirected source folder: "+entry.path().string());fs::create_directories(target);copy_test_tree(entry.path(),target);}
+            else if(entry.is_regular_file()) {fs::create_directories(to);fs::copy_file(entry.path(),target,fs::copy_options::overwrite_existing);}
+        }
+}
+
 inline PlaytestResult create_playtest(const Building& scene,const std::filesystem::path& source,
     const std::filesystem::path& saveIndex,const std::filesystem::path& executable,
     const std::filesystem::path& destination,const std::string& language) {
@@ -171,22 +193,19 @@ inline PlaytestResult create_playtest(const Building& scene,const std::filesyste
     fs::create_directory(result.game);
     // Independent copies, including configuration and runtime overlays. Never
     // redirect a writable game path to the source installation.
-    auto copyTree=[&](auto&& self,const fs::path& from,const fs::path& to)->void {
-        for(const auto& entry:fs::directory_iterator(from)) {
-            auto filename=entry.path().filename(); auto lower=QString::fromStdString(filename.string()).toLower();
-            if(lower=="save" || lower=="tigcache" || lower=="screenshots" || lower=="local-maps" || lower.startsWith('.')) continue;
-            if(from.filename()=="ArcanumModern" && entry.is_directory() && !QStringList{"lib","licenses","uap","docs"}.contains(lower)) continue;
-            auto target=to/filename;
-            if(entry.is_directory()) {if(entry.is_symlink()) throw std::runtime_error("Redirected source folder: "+entry.path().string());fs::create_directories(target);self(self,entry.path(),target);}
-            else if(entry.is_regular_file()) {fs::create_directories(to);fs::copy_file(entry.path(),target);}
-        }
-    };
     for(const auto& entry:fs::directory_iterator(source)) {
         auto lower=QString::fromStdString(entry.path().filename().string()).toLower();
         const QStringList folders={"data","modules","modern-ui","arcanummodern","art","proto","mes","rules","scr","dlg","maps","townmap","worldmap","sound","music","movies"};
-        if(entry.is_directory() && folders.contains(lower)) {auto to=result.game/entry.path().filename();fs::create_directories(to);copyTree(copyTree,entry.path(),to);}
-        else if(entry.is_regular_file() && (lower.endsWith(".dat") || lower.endsWith(".cfg") || lower.endsWith(".ini"))) fs::copy_file(entry.path(),result.game/entry.path().filename());
+        if(entry.is_directory() && folders.contains(lower)) {auto to=test_resource_path(result.game,entry.path().filename());fs::create_directories(to);copy_test_tree(entry.path(),to);}
+        else if(entry.is_regular_file() && (lower.endsWith(".dat") || lower.endsWith(".cfg") || lower.endsWith(".ini") || lower.endsWith(".dll"))) fs::copy_file(entry.path(),test_resource_path(result.game,entry.path().filename()),fs::copy_options::overwrite_existing);
     }
+    // A selected Windows engine may have its own FFmpeg/SDL runtime beside it.
+    // Copy these after the installation libraries so that its matching versions win.
+#ifdef Q_OS_WIN
+    for(const auto& entry:fs::directory_iterator(fs::absolute(executable).parent_path()))
+        if(entry.is_regular_file() && QString::fromStdString(entry.path().extension().string()).compare(".dll",Qt::CaseInsensitive)==0)
+            fs::copy_file(entry.path(),test_resource_path(result.game,entry.path().filename()),fs::copy_options::overwrite_existing);
+#endif
     result.executable=result.game/executable.filename();fs::copy_file(executable,result.executable,fs::copy_options::overwrite_existing);
     fs::permissions(result.executable,fs::status(executable).permissions());
     auto module=test_resource_path(result.game,"modules/Arcanum");

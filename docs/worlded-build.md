@@ -139,23 +139,33 @@ ctest --test-dir build/worlded-cli -C Release --output-on-failure
 zlib and a C++17 compiler are still required. Set `BUILD_TESTING=OFF` if you
 intentionally want a build without Python or tests.
 
-## Optional engine helpers
+## Native inventory helper
 
-The editor's normal build does not produce `worlded-native-inventory` or the
-real-engine regression programs. These link against a prepared Renaissance
-engine build. The helper script currently supports Linux Ninja builds.
-Follow the repository's [development guide](development.md) to build the engine
-first, then point `--build-dir` at that engine build, not the WorldED build:
+Tests containing NPCs with generated inventories require
+`worlded-native-inventory` beside `worlded-explorer`. Build it against the
+Renaissance engine, using the same compiler and architecture as that engine.
+The Qt editor build alone does not produce it.
+
+After configuring the engine as described in the [development guide](development.md):
 
 ```sh
-python3 tools/worlded/build_engine_check.py --build-dir build --inventory
+cmake --build build/engine --config Release --target worlded-native-inventory
+```
+
+Replace `build/engine` with your engine build directory. Visual Studio writes
+`Release/worlded-native-inventory.exe`; Ninja writes `worlded-native-inventory`
+directly in the build directory. Copy it beside the editor. On Windows, also
+copy the FFmpeg DLLs emitted beside the helper (`avformat-*.dll`,
+`avcodec-*.dll`, `avutil-*.dll`). Include these files in the distributed WorldED
+ZIP: placing the helper only in the development build is not enough.
+
+The native scene regression still uses the Linux Ninja helper script:
+
+```sh
 python3 tools/worlded/build_engine_check.py --build-dir build --scene
 ```
 
-The results are `build/worlded/worlded-native-inventory` and
-`build/worlded/check-worlded-scene`. Place the inventory helper beside
-`worlded-explorer` to use generated NPC inventories in test copies. This helper
-is not currently part of the standalone Windows CMake build.
+It produces `build/worlded/check-worlded-scene`.
 
 The scene regression accepts a test copy prepared by WorldED:
 

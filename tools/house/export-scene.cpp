@@ -1,3 +1,4 @@
+#include "../worlded/src/inventory.hpp"
 // Convert a saved WorldED project into additive housing resources.
 #include "worlded/world.hpp"
 #include "worlded/building.hpp"
@@ -45,7 +46,7 @@ int main(int argc, char** argv) {
         auto baseline = read_world_sector(game, map, sx, sy);
         auto input = project / "exports" / "maps" / map;
         Sector scene(read_file(input / (std::to_string(sector) + ".sec")));
-        if (!scene.scripts().empty()) throw std::runtime_error("Tile/sector scripts cannot be exported as housing; use object scripts.");
+        auto settings=scene.settings(),baseSettings=baseline.sector.settings();
         auto original = sector_objects(baseline.sector);
         for (auto& o : original) if (baseline.generated) {
             auto loc = o.number("LOCATION");
@@ -61,22 +62,60 @@ int main(int argc, char** argv) {
                 && a.number("CURRENT_AID") == b.number("CURRENT_AID") && a.number("OFFSET_X") == b.number("OFFSET_X")
                 && a.number("OFFSET_Y") == b.number("OFFSET_Y");
         };
+        auto baseLights=baseline.sector.lights(),newLights=scene.lights();
+        std::vector<Bytes> addedLights,removedLights;
+        for(auto light:newLights){auto found=std::find(baseLights.begin(),baseLights.end(),light);if(found==baseLights.end())addedLights.push_back(light);else baseLights.erase(found);}
+        removedLights=baseLights;
+        GameObject lightPrototype;
+        if(!addedLights.empty()){
+            bool found=false;for(const auto& [name,sources]:game.resources())if(name.rfind("proto/",0)==0 && fs::path(name).extension()==".pro"){auto candidates=read_objects(game.read(name));if(!candidates.empty() && candidates.front().type==3){lightPrototype=candidates.front();found=true;break;}}
+            if(!found)throw std::runtime_error("A scenery prototype is required for housing lights");
+        }
+        unsigned lightIndex=0;
+        for(const auto& light:addedLights){
+            auto get=[&](int offset){return std::uint32_t(light[offset])|(std::uint32_t(light[offset+1])<<8)|(std::uint32_t(light[offset+2])<<16)|(std::uint32_t(light[offset+3])<<24);};
+            if(get(0) || get(4))throw std::runtime_error("Only independent sector lights can be exported");
+            GameObject proxy;proxy.type=3;proxy.prototype_id=lightPrototype.prototype_id;
+            QByteArray key="WorldED housing light v1:"+QByteArray::number(sector)+":"+QByteArray::number(lightIndex++);key.append(reinterpret_cast<const char*>(light.data()),light.size());
+            proxy.id="0200"+QCryptographicHash::hash(key,QCryptographicHash::Sha256).left(16).toHex().toStdString();
+            auto loc=std::uint64_t(get(8))|(std::uint64_t(get(12))<<32);
+            set_number(proxy,"LOCATION",(sx*64ull+(loc&63))|((sy*64ull+((loc>>32)&63))<<32));
+            set_number(proxy,"FLAGS",0x2500);set_number(proxy,"SCENERY_FLAGS",0);set_number(proxy,"CURRENT_AID",0x40000000);set_number(proxy,"AID",0x40000000);
+            set_number(proxy,"OFFSET_X",get(16));set_number(proxy,"OFFSET_Y",get(20));set_number(proxy,"LIGHT_FLAGS",get(24)&~0x80u);set_number(proxy,"LIGHT_AID",get(28));
+            set_number(proxy,"LIGHT_COLOR",(unsigned(light[32])<<16)|(unsigned(light[34])<<8)|light[33]);
+            ObjectField scripts;scripts.name="SCRIPTS_IDX";scripts.kind="SCRIPT_ARRAY";scripts.present=true;proxy.fields.push_back(scripts);
+            ObjectField overlays;overlays.name="OVERLAY_LIGHT_AID";overlays.kind="UINT32_ARRAY";overlays.present=true;for(unsigned n=0;n<4;n++)overlays.elements.push_back({n,Bytes(4,255)});proxy.fields.push_back(overlays);
+            objects.push_back(std::move(proxy));
+        }
         std::map<std::string, Bytes> files;
-        std::ostringstream manifest, removed, tiles, roofs;
+        std::ostringstream manifest, removed, tiles, roofs, blocks, environment, scripts;
         manifest << "{0}{1 " << sx << ' ' << sy << "}\n";
         unsigned index = 100, removedIndex = 0;
+        std::ostringstream inventory;unsigned inventoryIndex=0;
         std::set<std::string> ids;
         for (auto o : objects) {
             auto loc = o.number("LOCATION");
             if ((std::uint32_t(loc) >> 6) != sx || (loc >> 38) != sy) throw std::runtime_error("Object outside the project sector");
             bool baseObject = false;
-            for (const auto& b : original) if (same(o, b) && o.id == b.id) {baseObject = true; break;}
+            for (const auto& b : original) if (same(o, b) && o.id == b.id) {
+                if(encode_instance(o)!=encode_instance(b))throw std::runtime_error("Changed campaign object must be duplicated before housing export; original properties cannot be replaced safely.");
+                baseObject = true; break;}
             if (baseObject) continue;
             if (o.id.size() != 36 || o.id.substr(0, 4) != "0200")
                 throw std::runtime_error("Changed base object needs a new instance: duplicate it in WorldED, then remove the original.");
             if (!ids.insert(o.id).second) throw std::runtime_error("Duplicate object GUID");
             for (const auto& b : original) if (o.id == b.id)
                 throw std::runtime_error("Existing campaign GUID cannot become a housing object; duplicate the object first.");
+            auto parent=inventory_parent(o);
+            if(o.number("FLAGS")&0x1000u){
+                if(parent.empty() || !inventory_item(o))throw std::runtime_error("Inventory object has no valid parent");
+                auto owner=std::find_if(objects.begin(),objects.end(),[&](const auto& candidate){return candidate.id==parent;});
+                if(owner==objects.end() || !inventory_owner(*owner))throw std::runtime_error("Inventory owner is missing from the project");
+                if(std::any_of(original.begin(),original.end(),[&](const auto& candidate){return candidate.id==parent;}))throw std::runtime_error("Housing cannot initialize inventory on an existing campaign owner");
+                auto children=inventory_ids(*owner);if(std::count(children.begin(),children.end(),o.id)!=1)throw std::runtime_error("Inventory parent does not reference its child exactly once");
+                inventory<<"{"<<inventoryIndex++<<"}{"<<o.id<<" "<<parent<<"}\n";
+            }else if(!parent.empty() && parent.substr(0,4)=="0200")throw std::runtime_error("Item parent requires the inventory flag");
+            if(inventory_owner(o) && o.number(o.type==2?"CONTAINER_INVENTORY_NUM":"CRITTER_INVENTORY_NUM"))inventory_contents(objects,o);
             std::string role = o.type == 1 ? "portal" : o.type == 2 ? "chest" : "object";
             if (guards.erase(o.id)) {
                 if (o.type != 16) throw std::runtime_error("A guard must be an NPC instance");
@@ -100,9 +139,26 @@ int main(int argc, char** argv) {
             if (scene.tile(x, y) != baseline.sector.tile(x, y)) tiles << '{' << y * 64 + x << "}{" << scene.tile(x, y) << "}\n";
         for (unsigned y = 0; y < 16; ++y) for (unsigned x = 0; x < 16; ++x)
             if (scene.roof(x, y) != baseline.sector.roof(x, y)) roofs << '{' << y * 16 + x << "}{" << scene.roof(x, y) << "}\n";
+        for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++)
+            if(scene.blocked(x,y)!=baseline.sector.blocked(x,y))blocks << '{' << y*64+x << "}{" << scene.blocked(x,y) << "}\n";
+        if(settings.aptitude!=baseSettings.aptitude)environment << "{0}{" << settings.aptitude << "}\n";
+        if(settings.light!=baseSettings.light)environment << "{1}{" << settings.light << "}\n";
+        if(settings.music!=baseSettings.music)environment << "{2}{" << settings.music << "}\n";
+        if(settings.ambient!=baseSettings.ambient)environment << "{3}{" << settings.ambient << "}\n";
+        std::map<std::uint32_t,SectorScript> beforeScripts,afterScripts;
+        for(auto s:baseline.sector.scripts())beforeScripts[s.tile]=s;
+        for(auto s:scene.scripts())afterScripts[s.tile]=s;
+        for(auto [tile,s]:beforeScripts)if(!afterScripts.count(tile))afterScripts[tile]={tile,0,0,0};
+        for(auto [tile,s]:afterScripts){auto old=beforeScripts.find(tile);
+            if(old!=beforeScripts.end() && old->second.number==s.number && old->second.flags==s.flags && old->second.counters==s.counters)continue;
+            scripts << '{' << (tile==UINT32_MAX?4096:tile) << "}{" << s.number << ' ' << s.flags << ' ' << s.counters << "}\n";
+        }
         auto add = [&](const char* name, const std::string& text) {files[name] = Bytes(text.begin(), text.end());};
         add("scene.mes", manifest.str()); add("removed.mes", removed.str());
         add("terrain.mes", tiles.str()); add("roofs.mes", roofs.str());
+        if(inventoryIndex){auto text=inventory.str();files["inventory.mes"]=Bytes(text.begin(),text.end());}
+        if(!removedLights.empty()){Bytes data(4,0);auto count=unsigned(removedLights.size());for(int b=0;b<4;b++)data[b]=count>>(8*b);for(const auto& light:removedLights)data.insert(data.end(),light.begin(),light.end());files["removed-lights.bin"]=std::move(data);}
+        add("blocking.mes",blocks.str());add("environment.mes",environment.str());add("scripts.mes",scripts.str());
         // Optional clearance rules belong to this project, not a particular property.
         if (fs::exists(project / "vegetation.mes")) files["vegetation.mes"] = read_file(project / "vegetation.mes");
         // Preserve project-owned scripts/dialogues; the content builder mounts these at the resource root.

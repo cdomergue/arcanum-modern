@@ -108,6 +108,45 @@ def check_scenes(catalog, scenes):
         for name in ('scene.mes', 'terrain.mes', 'roofs.mes', 'removed.mes'):
             if not (folder / name).is_file():
                 raise ValueError(f"{p['id']}: missing {name}")
+        # Optional overlays use explicit IDs; reject malformed/duplicate records
+        # before a content pack can be installed.
+        for name, limit, width in [('blocking',4095,1),('environment',3,1),('scripts',4096,3)]:
+            file = folder / (name + '.mes')
+            if not file.exists():
+                continue
+            text = file.read_text(encoding='utf-8')
+            pattern = r'\{(\d+)\}\{([^}]*)\}'
+            if re.sub(pattern, '', text).strip():
+                raise ValueError(f'{file}: invalid MES record')
+            seen = set()
+            for key, raw in re.findall(pattern, text):
+                key = int(key)
+                values = raw.split()
+                if key > limit or key in seen or len(values) != width:
+                    raise ValueError(f'{file}: invalid or duplicate overlay ID {key}')
+                seen.add(key)
+                try:
+                    values = [int(v) for v in values]
+                except ValueError as exc:
+                    raise ValueError(f'{file}: expected integer values') from exc
+                valid = (values[0] in (0,1) if name == 'blocking' else
+                         -2**31 <= values[0] < 2**31 if name == 'environment' else
+                         0 <= values[0] < 2**31 and all(0 <= v < 2**32 for v in values[1:]))
+                if not valid:
+                    raise ValueError(f'{file}: value out of range')
+        light_file = folder / 'removed-lights.bin'
+        if light_file.exists():
+            data = light_file.read_bytes()
+            if len(data) < 4:
+                raise ValueError(f'{light_file}: missing light count')
+            count, = struct.unpack_from('<I', data)
+            if count > 4096 or len(data) != 4 + count * 48:
+                raise ValueError(f'{light_file}: invalid light records')
+            for offset in range(4, len(data), 48):
+                owner, = struct.unpack_from('<Q', data, offset)
+                aid, = struct.unpack_from('<I', data, offset + 28)
+                if owner or aid >> 28 != 9:
+                    raise ValueError(f'{light_file}: expected an independent native light')
         records = re.findall(r'\{(\d+)\}\{([^}]*)\}', (folder/'scene.mes').read_text(encoding='utf-8'))
         entries = dict(records)
         if len(entries) != len(records):
@@ -131,6 +170,19 @@ def check_scenes(catalog, scenes):
             if role == 'guard' and int.from_bytes(data[52:56], 'little') != 16:
                 raise ValueError(f'{guid}: guard must be an NPC')
             count += 1
+        inventory_file = folder / 'inventory.mes'
+        if inventory_file.exists():
+            text = inventory_file.read_text(encoding='utf-8')
+            pattern = r'\{(\d+)\}\{(0200[0-9a-f]{32}) (0200[0-9a-f]{32})\}'
+            if re.sub(pattern, '', text).strip():
+                raise ValueError(f'{inventory_file}: invalid inventory record')
+            object_ids = {entry.split()[1] for key, entry in entries.items() if int(key) >= 100}
+            seen_keys, seen_children = set(), set()
+            for key, child, parent in re.findall(pattern, text):
+                if key in seen_keys or child in seen_children or child == parent or child not in object_ids or parent not in object_ids:
+                    raise ValueError(f'{inventory_file}: invalid or duplicate inventory reference')
+                seen_keys.add(key)
+                seen_children.add(child)
         if not count:
             raise ValueError(f"{p['id']}: scene has no objects")
 

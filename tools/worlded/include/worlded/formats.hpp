@@ -40,6 +40,7 @@ struct SectorInfo {
     std::size_t object_offset = 0, object_bytes = 0;
 };
 struct SectorScript {std::uint32_t tile,flags,counters,number;}; // tile == UINT32_MAX: sector attachment
+struct SectorSettings {std::int32_t aptitude=0, light=0, music=0, ambient=0;};
 // The sector envelope preserves object bytes. The separate object codec in
 // assets.hpp decodes fields; engine checks validate their runtime interpretation.
 class Sector {
@@ -48,16 +49,29 @@ public:
     const SectorInfo& info() const { return info_; }
     std::uint32_t tile(unsigned x, unsigned y) const;
     void set_tile(unsigned x, unsigned y, std::uint32_t art);
+    bool blocked(unsigned x, unsigned y) const;
+    void set_blocked(unsigned x, unsigned y, bool value);
+    std::vector<Bytes> lights() const;
+    void set_lights(const std::vector<Bytes>& lights);
+    SectorSettings settings() const {return settings_;}
+    void set_settings(SectorSettings value);
+    void set_townmap(std::uint32_t id);
     std::uint32_t roof(unsigned x,unsigned y) const; // 16 x 16, four ground tiles per cell
     void set_roof(unsigned x,unsigned y,std::uint32_t art);
     const std::vector<SectorScript>& scripts() const {return scripts_;}
+    void set_script(SectorScript script);
     void remove_script(std::size_t index); // Remove one tile/sector attachment; never deletes SCR files.
     Bytes encode() const;
 private:
+    void ensure_extended();
     Bytes original_;
     SectorInfo info_;
     std::size_t tile_offset_ = 0;
     std::size_t roof_offset_ = 0;
+    std::size_t version_offset_ = 0, blocks_offset_ = 0;
+    std::size_t settings_offset_ = 0;
+    SectorSettings settings_;
+    std::array<std::uint32_t,128> blocks_{};
     std::size_t tile_scripts_offset_ = 0, sector_script_offset_ = 0;
     std::array<std::uint32_t,256> roofs_{};
     std::vector<SectorScript> scripts_;

@@ -6,7 +6,10 @@
 #include "modern_script.hpp"
 #include "dialogue_editor.hpp"
 #include "terrain_brush.hpp"
+#include "facade.hpp"
 #include "actor_editor.hpp"
+#include "inventory_editor.hpp"
+#include "campaign_editor.hpp"
 #include <QtWidgets>
 #include <QtConcurrent>
 #include <algorithm>
@@ -70,6 +73,7 @@ std::string objectKey(const GameObject& object) { return object.editor_id.empty(
 class Explorer : public QMainWindow {
 public:
     QString installationPath, initialProject, initialReference;
+    bool rememberInstallation=false;
     std::function<QString(const QString&)> projectInstallationChooser;
     std::vector<QGraphicsItem*> locationDots;
     ResourceModel model;
@@ -139,6 +143,9 @@ public:
     QLabel* surfaceMaterialStatus=new QLabel("Choose a material from the library.");
     bool terrainTransitionsPreference=true;
     QSpinBox* brushSize=new QSpinBox;
+    QWidget* facadePanel=new QWidget;
+    QListWidget* facadePalette=new QListWidget;
+    QLineEdit* facadeSearch=new QLineEdit;
     QWidget* surfacePanel=new QWidget;
     QListWidget* surfacePalette=new QListWidget;
     QLineEdit* surfaceSearch=new QLineEdit;
@@ -149,6 +156,7 @@ public:
     QLabel* scriptDetails=new QLabel("Select a script to inspect its attachment.");
     QPushButton* locateScript=new QPushButton("Locate");
     QPushButton* openScript=new QPushButton("Open");
+    QPushButton* editScriptAttachment=new QPushButton("Edit attachment…");
     QPushButton* removeScript=new QPushButton("Remove attachment");
     QLabel* contextStatus=new QLabel;
     struct ContextActor {GameObject object;bool campaign;};
@@ -178,6 +186,7 @@ public:
     QLabel* selectionLabel = new QLabel("No selection");
     QAction* deleteHouse = new QAction("Delete",this);
     QAction* duplicateHouse = new QAction("Duplicate",this);
+    QAction* previewLights=new QAction("Light preview",this);
     QAction* gridAction = new QAction("Grid",this);
     bool refreshing = false;
     QTimer construction;
@@ -193,6 +202,10 @@ public:
     int missingSprites = 0;
     unsigned mountGeneration = 0;
 
+    ~Explorer() override {
+        scene->disconnect(this);referenceScene->disconnect(this);objectsList->disconnect(this);
+        scene->clear();referenceScene->clear();
+    }
     Explorer() {
         setWindowTitle("WorldED Renaissance — Zones"); resize(1680, 1000);
         canvas->setObjectName("activeZoneView");referenceCanvas->setObjectName("referenceZoneView");
@@ -211,47 +224,64 @@ public:
         openGame->setShortcut(QKeySequence::Open);
         auto openArchive = new QAction("Open archive…", this);
         auto openProject = new QAction("Open project…",this);
-        auto insertRoom = new QAction("Insert room…",this);
         auto locationAction = new QAction("Map location…",this);
         auto resumeTest = new QAction("Resume test…",this);
         auto testAction = new QAction("Test in a copy…",this);
         auto newHouse = new QAction("New zone…", this);
         auto openSector = new QAction("Open local sector…", this);
         auto fileMenu = menuBar()->addMenu("File");
+        auto editMenu = menuBar()->addMenu("Edit");
+        auto zoneMenu = menuBar()->addMenu("Zone");
+        auto resourcesMenu = menuBar()->addMenu("Resources");
+        auto viewMenu = menuBar()->addMenu("View");
+        auto testMenu = menuBar()->addMenu("Test");
         changeProjectInstallation->setEnabled(false);
-        fileMenu->addAction(openGame); fileMenu->addAction(openArchive); fileMenu->addAction(openSector); fileMenu->addAction(openProject); fileMenu->addAction(changeProjectInstallation); fileMenu->addSeparator();
-        fileMenu->addAction(newHouse);
-        fileMenu->addAction("New script…",this,[this]{createContent(false);});fileMenu->addAction("New dialogue…",this,[this]{createContent(true);}); fileMenu->addAction(returnHouse); fileMenu->addAction(saveAction);
-        auto saveAs=fileMenu->addAction("Save zone as…"); connect(saveAs,&QAction::triggered,this,[this]{saveActive({},true);}); fileMenu->addAction(exportHouse); fileMenu->addAction(testAction); fileMenu->addAction(resumeTest); fileMenu->addSeparator();
-        auto editMenu=menuBar()->addMenu("Edit");
-        undoHouse->setToolTip("Undo · Ctrl+Z / ⌘Z"); redoHouse->setToolTip("Redo · Ctrl+Shift+Z / ⌘Shift+Z");
-        deleteHouse->setToolTip("Delete selection · Del"); duplicateHouse->setToolTip("Duplicate selection · Ctrl+D");
-        editMenu->addAction(undoHouse); editMenu->addAction(redoHouse); editMenu->addSeparator();
-        editMenu->addAction(duplicateHouse); editMenu->addAction(deleteHouse); editMenu->addSeparator(); editMenu->addAction(insertRoom); editMenu->addAction(locationAction);editMenu->addAction("Scripts & dialogues…",this,[this]{contentLibrary();});
+        fileMenu->addAction(newHouse);fileMenu->addAction(openProject);fileMenu->addSeparator();
+        fileMenu->addAction(saveAction);
+        auto saveAs=fileMenu->addAction("Save zone as…");connect(saveAs,&QAction::triggered,this,[this]{saveActive({},true);});
+        fileMenu->addAction(exportHouse);fileMenu->addSeparator();
+        auto installationMenu=fileMenu->addMenu("Installation");installationMenu->addAction(openGame);installationMenu->addAction(changeProjectInstallation);
+        fileMenu->addSeparator();
+        undoHouse->setToolTip("Undo · Ctrl+Z / ⌘Z");redoHouse->setToolTip("Redo · Ctrl+Shift+Z / ⌘Shift+Z");
+        deleteHouse->setToolTip("Delete selection · Del");duplicateHouse->setToolTip("Duplicate selection · Ctrl+D");
+        editMenu->addAction(undoHouse);editMenu->addAction(redoHouse);editMenu->addSeparator();
+        editMenu->addAction("Inventory…",this,[this]{editInventory();});
+        editMenu->addAction(copyAction);editMenu->addAction(pasteAction);editMenu->addAction(duplicateHouse);editMenu->addAction(deleteHouse);
+        zoneMenu->addAction(openSector);zoneMenu->addSeparator();
+        zoneMenu->addAction("Sector properties…",this,[this]{configureSector();});zoneMenu->addAction("Lights…",this,[this]{configureLights();});zoneMenu->addAction(locationAction);
+        zoneMenu->addAction("Sector script…",this,[this]{editGroundScript(UINT32_MAX);});
+        resourcesMenu->addAction("Campaign…",this,[this]{if(installation){CampaignEditor dialog(*installation,this,installationPath);dialog.exec();}});
+        resourcesMenu->addAction("Scripts & dialogues…",this,[this]{contentLibrary();});resourcesMenu->addSeparator();
+        resourcesMenu->addAction("New script…",this,[this]{createContent(false);});resourcesMenu->addAction("New dialogue…",this,[this]{createContent(true);});
+        resourcesMenu->addSeparator();resourcesMenu->addAction(openArchive);
+        viewMenu->addAction(worldAction);viewMenu->addAction(returnHouse);viewMenu->addAction(sideAction);viewMenu->addSeparator();
+        testMenu->addAction(testAction);testMenu->addAction(resumeTest);
         saveAction->setShortcut(QKeySequence::Save);connect(saveAction,&QAction::triggered,this,[this]{saveActive();});
         exportHouse->setText("Export a copy of the zone…");
-        editMenu->insertAction(duplicateHouse,copyAction);editMenu->insertAction(duplicateHouse,pasteAction);
         connect(copyAction,&QAction::triggered,this,[this]{copySelection(referenceFocused);});
         connect(pasteAction,&QAction::triggered,this,[this]{beginPaste();});
         sideAction->setCheckable(true);connect(sideAction,&QAction::toggled,this,[this](bool on){if(on){cacheDraft();if(referenceDraft==UINT64_MAX){for(auto key:draftOrder)if(key!=activeDraft){referenceDraft=key;break;}if(referenceDraft==UINT64_MAX){openBeside();return;}}renderReference();}referencePanel->setVisible(on);});
         exportHouse->setEnabled(false); returnHouse->setEnabled(false); undoHouse->setEnabled(false); redoHouse->setEnabled(false);
         fileMenu->addAction("Quit", QKeySequence::Quit, this, &QWidget::close);
-        auto toolbar = addToolBar("Navigation"); toolbar->setMovable(false);
-        toolbar->addAction(openGame); toolbar->addAction(openProject); toolbar->addAction(newHouse); toolbar->addSeparator();
-        toolbar->addAction(saveAction);toolbar->addAction(exportHouse);toolbar->addSeparator();
+        auto toolbar = addToolBar("Project and view"); toolbar->setMovable(false);
+        toolbar->addAction(newHouse); toolbar->addAction(openProject); toolbar->addSeparator();
+        toolbar->addAction(saveAction);toolbar->addSeparator();
         toolbar->addAction(worldAction);toolbar->addAction(sideAction);connect(worldAction,&QAction::triggered,this,[this]{showWorld();});
         worldView->feedback=[this](const QString& value){statusBar()->showMessage(value);};
         worldView->openSector=[this](QPoint sector){openWorldSector(sector);};
-        toolbar->addAction("Fit view",this,[this]{if (preview->currentWidget()==worldView) worldView->fitInView(worldView->sceneRect(),Qt::KeepAspectRatio); else canvas->fit();});
-        toolbar->addAction("Fit objects", this, [this]{ fitObjects(); });
-        toolbar->addAction("100 %", this, [this]{ if(preview->currentWidget()==worldView) worldView->resetTransform(); else canvas->resetTransform(); });
+        auto fitView=toolbar->addAction("Fit view",this,[this]{if (preview->currentWidget()==worldView) worldView->fitInView(worldView->sceneRect(),Qt::KeepAspectRatio); else canvas->fit();});
+        auto fitObjectsAction=toolbar->addAction("Fit objects", this, [this]{ fitObjects(); });
+        auto actualSize=toolbar->addAction("100 %", this, [this]{ if(preview->currentWidget()==worldView) worldView->resetTransform(); else canvas->resetTransform(); });
+        viewMenu->addAction(fitView);viewMenu->addAction(fitObjectsAction);viewMenu->addAction(actualSize);viewMenu->addSeparator();
+        viewMenu->addAction(gridAction);previewLights->setCheckable(true);viewMenu->addAction(previewLights);connect(previewLights,&QAction::toggled,this,[this]{if(editing())showBuilding(false);if(sideAction->isChecked())renderReference();});auto roofsAction=viewMenu->addAction("Show roofs");roofsAction->setCheckable(true);roofsAction->setChecked(roofVisible->isChecked());
+        connect(roofsAction,&QAction::toggled,roofVisible,&QCheckBox::setChecked);connect(roofVisible,&QCheckBox::toggled,roofsAction,&QAction::setChecked);
+        toolbar->addSeparator();toolbar->addAction(testAction);
         addToolBarBreak(); auto editBar=addToolBar("Edit"); editBar->setMovable(false);
-        editLayer->addItems({"Objects","Ground","Roofs","Characters","Scripts"});editBar->addWidget(new QLabel("Mode "));editBar->addWidget(editLayer);editBar->addWidget(roofVisible);editBar->addSeparator();
+        editLayer->addItems({"Objects","Ground","Roofs","Characters","Scripts","Blocking"});editBar->addWidget(new QLabel("Mode "));editBar->addWidget(editLayer);editBar->addWidget(roofVisible);editBar->addSeparator();
         connect(editLayer,&QComboBox::currentIndexChanged,this,[this](int index){setLayer(index);});
         connect(roofVisible,&QCheckBox::toggled,this,[this]{if(editing())showBuilding(false);if(sideAction->isChecked())renderReference();});
         editBar->addAction(undoHouse); editBar->addAction(redoHouse); editBar->addSeparator();
         editBar->addAction(copyAction);editBar->addAction(pasteAction);editBar->addAction(duplicateHouse); editBar->addAction(deleteHouse); editBar->addSeparator();
-        editBar->addAction(insertRoom); editBar->addAction(locationAction); editBar->addAction(testAction); editBar->addSeparator();
         gridAction->setCheckable(true); editBar->addAction(gridAction); editBar->addSeparator(); editBar->addWidget(selectionLabel);
         connect(gridAction,&QAction::toggled,this,[this](bool checked){canvas->showGrid=checked;canvas->viewport()->update();});
         connect(deleteHouse,&QAction::triggered,this,[this]{deleteSelection();});
@@ -268,6 +298,7 @@ public:
         connect(referenceScene,&QGraphicsScene::selectionChanged,this,[this]{referenceState->setText(QString("Reference · %1 objects selected · no changes here").arg(referenceScene->selectedItems().size()));updateCopyActions();referenceCanvas->viewport()->update();});
         objectsList->installEventFilter(this);
         canvas->contextMenu=[this](QPoint point){showCanvasMenu(canvas,point,false);};
+        canvas->toggleBlock=[this](QPoint tile){if(!editing())return;auto ground=building->ground;bool blocked=ground.blocked(tile.x(),tile.y());ground.set_blocked(tile.x(),tile.y(),!blocked);commitEdit(blocked?"Clear manual blocking":"Block tile",building->objects,{},&ground);};
         referenceCanvas->contextMenu=[this](QPoint point){showCanvasMenu(referenceCanvas,point,true);};
         objectsList->setContextMenuPolicy(Qt::CustomContextMenu);connect(objectsList,&QWidget::customContextMenuRequested,this,[this](QPoint point){
             referenceFocused=false;if(auto item=objectsList->itemAt(point);item && !item->isSelected())objectsList->setCurrentItem(item);updateCopyActions();
@@ -282,7 +313,6 @@ public:
         connect(changeProjectInstallation,&QAction::triggered,this,[this]{if(savedPath.isEmpty())return;auto prompt="Choose the new project installation";auto path=projectInstallationChooser?projectInstallationChooser(prompt):QFileDialog::getExistingDirectory(this,prompt,installationPath);
             if(path.isEmpty())return;
             auto project=savedPath;if(QFileInfo(path).canonicalFilePath()==QFileInfo(installationPath).canonicalFilePath()){try{remember_project_installation(project,path);statusBar()->showMessage("Installation linked to the project.");}catch(const std::exception& e){statusBar()->showMessage("Cannot link installation: "+utf8(e.what()));}}else mount(path,project);});
-        connect(insertRoom,&QAction::triggered,this,[this]{configureRoom();});
         connect(locationAction,&QAction::triggered,this,[this]{configureLocation();});
         connect(resumeTest,&QAction::triggered,this,[this]{auto path=QFileDialog::getOpenFileName(this,"WorldED playable copy",{},"Test copy (playtest.json)");if(path.isEmpty())return;
             try {launchPlaytest(fs::u8path(QFileInfo(path).absolutePath().toStdString()));}
@@ -350,6 +380,14 @@ public:
         auto surfaceHint=new QLabel("Select: drag across cells.\nRight-click: sample a material.\nCtrl+C / Ctrl+V: copy only the active layer.");surfaceHint->setWordWrap(true);surfaceLayout->addWidget(surfaceHint);libraryTabs->addTab(surfacePanel,"Ground / Roofs");
         connect(surfaceSearch,&QLineEdit::textChanged,this,[this]{filterSurfaces();});connect(surfacePalette->verticalScrollBar(),&QScrollBar::valueChanged,this,[this]{loadSurfaceIcons();});
         connect(libraryTabs,&QTabWidget::currentChanged,this,[this]{QTimer::singleShot(0,this,[this]{loadSurfaceIcons();});});
+        auto facadeLayout=new QVBoxLayout(facadePanel);facadeSearch->setPlaceholderText("Search facades and rugs…");facadeLayout->addWidget(facadeSearch);
+        facadePalette->setViewMode(QListView::ListMode);facadePalette->setResizeMode(QListView::Adjust);facadePalette->setMovement(QListView::Static);
+        facadePalette->setIconSize({128,96});facadePalette->setUniformItemSizes(true);facadePalette->setSpacing(2);facadePalette->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);facadePalette->setWordWrap(true);facadeLayout->addWidget(facadePalette);
+        auto facadePlace=new QPushButton("Place facade");facadeLayout->addWidget(facadePlace);auto facadeHint=new QLabel("Choose the native orientation from the library (including flipped variants). Click Place, then click in the zone. Esc cancels.");facadeHint->setWordWrap(true);facadeLayout->addWidget(facadeHint);
+        libraryTabs->addTab(facadePanel,"Facades");connect(facadeSearch,&QLineEdit::textChanged,this,[this]{filterFacades();});
+        connect(facadePalette->verticalScrollBar(),&QScrollBar::valueChanged,this,[this]{loadFacadeIcons();});connect(facadePlace,&QPushButton::clicked,this,[this]{placeFacade();});
+        connect(facadePalette,&QListWidget::itemDoubleClicked,this,[this]{placeFacade();});
+        connect(libraryTabs,&QTabWidget::currentChanged,this,[this]{if(libraryTabs->currentWidget()==facadePanel){populateFacades();QTimer::singleShot(0,this,[this]{loadFacadeIcons();});}});
         splitter->addWidget(libraryTabs);
 
         auto center = new QWidget; auto centerLayout = new QVBoxLayout(center);
@@ -417,13 +455,14 @@ public:
         inspectorTabs->addTab(objectTab,"Objects");inspectorTabs->addTab(changesList,"Changes");inspectorTabs->addTab(peopleList,"NPCs");
         inspectorTabs->setTabToolTip(1,"Pending changes");inspectorTabs->setTabToolTip(2,"Zone characters");
         auto scriptsLayout=new QVBoxLayout(scriptsPanel);contextStatus->setWordWrap(true);scriptsLayout->addWidget(contextStatus);scriptsLayout->addWidget(scriptsList);
-        scriptDetails->setWordWrap(true);scriptsLayout->addWidget(scriptDetails);auto scriptActions=new QHBoxLayout;scriptActions->addWidget(locateScript);scriptActions->addWidget(openScript);scriptActions->addWidget(removeScript);scriptsLayout->addLayout(scriptActions);locateScript->setEnabled(false);openScript->setEnabled(false);removeScript->setEnabled(false);inspectorTabs->addTab(scriptsPanel,"Scripts");
+        scriptDetails->setWordWrap(true);scriptsLayout->addWidget(scriptDetails);auto scriptActions=new QHBoxLayout;scriptActions->addWidget(locateScript);scriptActions->addWidget(openScript);scriptActions->addWidget(editScriptAttachment);scriptActions->addWidget(removeScript);editScriptAttachment->setEnabled(false);scriptsLayout->addLayout(scriptActions);locateScript->setEnabled(false);openScript->setEnabled(false);removeScript->setEnabled(false);inspectorTabs->addTab(scriptsPanel,"Scripts");
         connect(peopleList,&QListWidget::currentRowChanged,this,[this](int index){if(index>=0)inspectContextObject(false,index);});
         connect(peopleList,&QListWidget::itemDoubleClicked,this,[this](QListWidgetItem* item){int index=peopleList->row(item);if(index>=0 && index<int(activeContext.actors.size())){if(!activeContext.actors[index].campaign){editActor();return;}auto loc=activeContext.actors[index].object.number("LOCATION");canvas->centerOn(Canvas::project({int(loc&63),int((loc>>32)&63)}));}});
         connect(scriptsList,&QListWidget::itemDoubleClicked,this,[this](QListWidgetItem* item){showScript(item->data(Qt::UserRole).toUInt());});
         connect(scriptsList,&QListWidget::currentRowChanged,this,[this](int index){selectScript(index,false);});
         connect(locateScript,&QPushButton::clicked,this,[this]{selectScript(scriptsList->currentRow(),true);});
         connect(openScript,&QPushButton::clicked,this,[this]{int i=scriptsList->currentRow();if(i>=0 && i<int(activeContext.scripts.size()))showScript(activeContext.scripts[i].id);});
+        connect(editScriptAttachment,&QPushButton::clicked,this,[this]{int i=scriptsList->currentRow();if(i>=0 && i<int(activeContext.scripts.size())){auto s=activeContext.scripts[i];if(s.origin>=2)editGroundScript(s.origin==3?UINT32_MAX:std::uint32_t(s.tile.y()*64+s.tile.x()));}});
         connect(removeScript,&QPushButton::clicked,this,[this]{removeSelectedScript();});
         auto removeScriptShortcut=new QShortcut(QKeySequence::Delete,scriptsList);connect(removeScriptShortcut,&QShortcut::activated,this,[this]{removeSelectedScript();});
         connect(properties,&QTreeWidget::itemDoubleClicked,this,[this](QTreeWidgetItem* item,int){if(item->data(0,Qt::UserRole).isValid())showScript(item->data(0,Qt::UserRole).toUInt());});objectLayout->addWidget(inspectorTabs);inspector->addWidget(objectPanel);
@@ -473,7 +512,7 @@ public:
         resources->setEnabled(false); animation.stop(); art.reset(); construction.stop(); canvas->cancelInteraction();
         paletteIcons.stop(); paletteReady=false; objectPalette->clear(); paletteObjects.clear(); paletteCount->clear();
         copied={};assets.reset(); installation.reset(); worldMapName.clear(); worldView->scene()->clear(); locationDots.clear(); worldDrafts.clear();draftOrder.clear();savedScene.reset();savedPath.clear();draftName.clear();activeDraft=referenceDraft=UINT64_MAX;referenceCanvas->cancelInteraction();referenceScene->clear();referenceItems.clear();sideAction->setChecked(false);{QSignalBlocker block(zoneTabs);while(zoneTabs->count())zoneTabs->removeTab(0);}zoneState->clear();changesList->clear();worldPlaces->clear(); worldView->storedSectors.clear(); worldView->provenance=QImage();
-        campaignCache.clear();activeContext={};referenceContext={};peopleList->clear();scriptsList->clear();surfacePalette->clear();
+        campaignCache.clear();activeContext={};referenceContext={};peopleList->clear();scriptsList->clear();surfacePalette->clear();facadePalette->clear();
         building.reset(); showingBuilding=false; undoObjects.clear(); redoObjects.clear(); updateBuildingActions();
         animationControls->hide(); objectsList->clear(); objects.clear(); effectiveObjects.clear(); objectItems.clear();
         scene->clear(); properties->clear(); origin->clear(); previewStatus->clear();
@@ -486,6 +525,9 @@ public:
                 installationPath=path;
                 installation = watcher->result(); assets = std::make_unique<SceneAssets>(installation);
                 model.setInstallation(installation); updateCount(); resources->setEnabled(true);
+                if(rememberInstallation && QFileInfo(path).isDir() && !installation->resources().empty()) {
+                    QSettings settings;settings.setValue("installation/lastPath",QFileInfo(path).canonicalFilePath());
+                }
                 title->setText("Select a resource");
                 document->setPlainText("Choose a sector, sprite, object or text from the list.\n\nUse search and categories to filter resources.");
                 origin->setText("Archives, loose files and Renaissance patches are active.");
@@ -558,7 +600,7 @@ public:
                 Sector sector(std::move(data)); objects = sector_objects(sector);
                 for (const auto& object : objects) effectiveObjects.push_back(assets->effective(object));
                 drawSector(sector);
-                for (const auto& object : effectiveObjects) objectsList->addItem(assets->description(object));
+                for (const auto& object : effectiveObjects) {auto row=new QListWidgetItem(assets->description(object),objectsList);if(object.number("FLAGS")&0x1000u){row->setFlags(row->flags()&~Qt::ItemIsSelectable);row->setToolTip("Edit this item through its owner’s Inventory dialog.");}}
                 previewStatus->setText(QString("64 × 64 tiles · %1 static objects · %2 unresolved sprites\nPreview without roofs, lighting, animations or mobile objects; orange markers indicate unavailable sprites.").arg(objects.size()).arg(missingSprites));
                 canvas->fit(); fitObjects();
                 if (!objects.empty()) objectsList->setCurrentRow(0);
@@ -566,7 +608,7 @@ public:
                 objects = read_objects(data);
                 for (const auto& object : objects) {
                     effectiveObjects.push_back(assets->effective(object));
-                    objectsList->addItem(assets->description(effectiveObjects.back()));
+                    objectsList->addItem(assets->description(effectiveObjects.back()));if(effectiveObjects.back().number("FLAGS")&0x1000u)objectsList->item(objectsList->count()-1)->setFlags(Qt::ItemIsEnabled);
                 }
                 if (!objects.empty()) {
                     objectsList->setCurrentRow(0);
@@ -753,7 +795,10 @@ public:
     #include "workspace_ui.inc"
     #include "layers_ui.inc"
     #include "context_ui.inc"
+    #include "lights_ui.inc"
+    #include "facade_ui.inc"
     #include "content_ui.inc"
+    #include "inventory_ui.inc"
     void showWorld() {
         if (!installation) return;
         try {
@@ -832,7 +877,7 @@ public:
             if(worldDrafts.count(id)){activateDraft(id);return;}
             auto source=read_world_sector(*installation,worldMapName,point.x(),point.y());
             auto objects=sector_objects(source.sector);
-            for(auto& object:objects){object.editor_id=clone_instance(object).id;auto loc=object.number("LOCATION");set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32));}
+            for(auto& object:objects){object.editor_id=clone_instance(object).id;auto loc=object.number("LOCATION");set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32));transform_npc_routes(object,id,false);}
             building=std::make_unique<Building>(Building{BuildingPlan{},std::move(source.sector),std::move(objects),{}});
             building->map_name=worldMapName;building->sector_id=id;building->existing_map=true;
             activeDraft=id;savedScene=std::make_shared<Building>(*building);savedPath.clear();draftName=QString("Sector %1, %2").arg(point.x()).arg(point.y());undoObjects.clear();redoObjects.clear();
@@ -877,19 +922,6 @@ public:
         auto next=insert_room(*installation,*building,plan,clear); std::set<std::string> added;
         for(const auto& object:next.objects) if(std::none_of(building->objects.begin(),building->objects.end(),[&](const auto& old){return objectKey(old)==objectKey(object);})) added.insert(objectKey(object));
         commitEdit("Insert room",next.objects,added,&next.ground,&next);showBuilding(true);
-    }
-    void configureRoom() {
-        if(!editing()) {error("Open a scene or sector to edit.");return;}
-        QDialog dialog(this);dialog.setWindowTitle("Insert room");QFormLayout layout(&dialog);
-        QSpinBox x,y,width,depth,chests;x.setRange(2,53);y.setRange(2,53);x.setValue(24);y.setValue(18);
-        width.setRange(8,24);width.setValue(12);depth.setRange(8,24);depth.setValue(10);chests.setRange(1,8);chests.setValue(4);
-        layout.addRow("Tile X",&x);layout.addRow("Tile Y",&y);layout.addRow("Width",&width);layout.addRow("Depth",&depth);layout.addRow("Chests",&chests);
-        QCheckBox clear("Clear terrain and objects within the footprint");clear.setChecked(true);layout.addRow(&clear);
-        QDialogButtonBox buttons(QDialogButtonBox::Ok|QDialogButtonBox::Cancel);layout.addRow(&buttons);
-        connect(&buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);connect(&buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
-        if(dialog.exec()!=QDialog::Accepted) return;
-        try {BuildingPlan p;p.x=x.value();p.y=y.value();p.width=width.value();p.depth=depth.value();p.chests=chests.value();addRoom(p,clear.isChecked());}
-        catch(const std::exception& e){QMessageBox::warning(this,"Cannot insert",utf8(e.what()));}
     }
     void configureLocation() {
         if(!editing() || !building->existing_map) {error("Open a sector from the world map.");return;}
@@ -1009,7 +1041,7 @@ public:
         objects=sector_objects(sector); objects.insert(objects.end(),mobiles.begin(),mobiles.end());
         for (const auto& object : objects) effectiveObjects.push_back(assets->effective(object));
         drawSector(sector);
-        for (const auto& object : effectiveObjects) objectsList->addItem(assets->description(object));
+        for (const auto& object : effectiveObjects) {auto row=new QListWidgetItem(assets->description(object),objectsList);if(object.number("FLAGS")&0x1000u){row->setFlags(row->flags()&~Qt::ItemIsSelectable);row->setToolTip("Edit this item through its owner’s Inventory dialog.");}}
         if (!objects.empty()) objectsList->setCurrentRow(0);
     }
     void showBuilding(bool frameScene=false, const std::set<std::string>* selection=nullptr) {
@@ -1035,12 +1067,13 @@ public:
         origin->setText(building->existing_map ? text(building->map_name)+" · "+(worldView->stored({int(building->sector_id&0x3ffffff),int(building->sector_id>>26)}) ? "stored sector" : "generated terrain template")+" · draft\nCampaign characters and scripts can be inspected in the tabs on the right." : "64 × 64 cells · draft · read-only game sources");
         previewStatus->setText(QString("%1 objects · %2 unresolved sprites\nDrag: move · Ctrl/box: multi-select · Del: delete · wheel: zoom · middle button: pan")
             .arg(objects.size()).arg(missingSprites));
-        statusBar()->showMessage(construction.isActive() ? "Creating scene…" : canvas->layer==0?"Drag objects from the palette into the scene":canvas->layer<3?"Choose a material · select cells or enable Paint · Ctrl+Z to undo":canvas->layer==4?"Select an attachment to inspect or remove it; double-click to open its script.":"Click a character to inspect it");
+        statusBar()->showMessage(construction.isActive() ? "Creating scene…" : canvas->layer==0?"Drag objects from the palette into the scene":canvas->layer<3?"Choose a material · select cells or enable Paint · Ctrl+Z to undo":canvas->layer==5?"Left-click to toggle manual blocking. Right-click for sector properties.":canvas->layer==4?"Select an attachment to inspect or remove it; double-click to open its script.":"Click a character to inspect it");
         activeContext={};try{activeContext=buildContext(*building);drawContext(scene,activeContext,false);}catch(const std::exception& e){peopleList->clear();scriptsList->clear();contextStatus->setText("Reading campaign: "+utf8(e.what()));}
         if(canvas->layer==1 || canvas->layer==2) {libraryTabs->setCurrentWidget(surfacePanel);if(!surfacePalette->count())populateSurfaces();}
         previewStatus->setText(canvas->layer==1?"GROUND · select ground cells · Ctrl+C / Ctrl+V · Paint to apply material":canvas->layer==2?"ROOFS · 4 × 4 pieces · select at roof height · Del to remove · Ctrl+Z to undo":previewStatus->text());
         if(canvas->layer==3)previewStatus->setText("CHARACTERS · drag from the library to add · move or delete project characters · campaign is read only");
         if(canvas->layer==4)previewStatus->setText("SCRIPTS · click a purple marker or double-click a list entry to open its instructions");
+        if(canvas->layer==5)previewStatus->setText("BLOCKING · left-click toggles manual blocking (bright red) · dark red: terrain or object blocking · Ctrl+Z to undo");
         updateBuildingActions();refreshWorkspace();
     }
     void showLocalSector(const QString& path) {
@@ -1089,11 +1122,13 @@ public:
         auto next=building->objects; std::set<std::string> selected;
         for (int index : indices) {
             if (index<0 || index>=int(next.size())) return;
+            if(next[index].number("FLAGS")&0x1000u){statusBar()->showMessage("Edit this item through its owner’s Inventory dialog.");return;}
             auto loc=next[index].number("LOCATION"); QPoint tile(int(std::uint32_t(loc)),int(loc>>32)); tile+=delta;
             if (!Canvas::valid(tile)) { statusBar()->showMessage("Outside the sector · move refused"); return; }
             auto destination=std::uint64_t(tile.x())|(std::uint64_t(tile.y())<<32);
             set_number(next[index],"LOCATION",destination);
             if(next[index].type==16)for(const char* field:{"CRITTER_TELEPORT_DEST","NPC_STANDPOINT_DAY","NPC_STANDPOINT_NIGHT"})if(next[index].field(field) && next[index].number(field)==loc)set_number(next[index],field,destination);
+            for(auto& item:next)if(inventory_parent(item)==next[index].id)set_number(item,"LOCATION",destination);
             selected.insert(objectKey(next[index]));
         }
         commitEdit("Move",std::move(next),std::move(selected));
@@ -1103,19 +1138,28 @@ public:
         if(canvas->layer==1 || canvas->layer==2){applySurface(true);return;}if(canvas->layer!=0 && canvas->layer!=3)return;
         if (!editing()) return;
         auto selected=selectedIds(); if (selected.empty()) return;
-        auto next=building->objects; next.erase(std::remove_if(next.begin(),next.end(),[&](const auto& object){return selected.count(objectKey(object));}),next.end());
+        for(const auto& object:building->objects)if(selected.count(objectKey(object)) && (object.number("FLAGS")&0x1000u)){statusBar()->showMessage("Edit this item through its owner’s Inventory dialog.");return;}
+        std::set<std::string> persistent;for(const auto& object:building->objects)if(selected.count(objectKey(object)))persistent.insert(object.id);
+        auto removed=inventory_descendants(building->objects,persistent);
+        auto next=building->objects; next.erase(std::remove_if(next.begin(),next.end(),[&](const auto& object){return selected.count(objectKey(object)) || (object.id.substr(0,4)=="0200" && removed.count(object.id));}),next.end());
         commitEdit("Delete",std::move(next),{});
     }
     void duplicateSelection() {
         if(canvas->layer!=0)return;
         if (!editing()) return;
         auto selected=selectedIds(); if (selected.empty()) return;
-        auto next=building->objects; std::set<std::string> copies;
-        for (const auto& object : building->objects) if (selected.count(objectKey(object))) {
-            auto copy=clone_instance(object); auto loc=object.number("LOCATION"); QPoint tile(int(std::uint32_t(loc)),int(loc>>32)); tile+=QPoint(1,1);
-            if (!Canvas::valid(tile)) { statusBar()->showMessage("No room to duplicate the selection here"); return; }
-            set_number(copy,"LOCATION",std::uint64_t(tile.x())|(std::uint64_t(tile.y())<<32)); copies.insert(copy.id); next.push_back(copy);
+        for(const auto& object:building->objects)if(selected.count(objectKey(object)) && (object.number("FLAGS")&0x1000u)){statusBar()->showMessage("Edit this item through its owner’s Inventory dialog.");return;}
+        std::set<std::string> persistent;for(const auto& o:building->objects)if(selected.count(objectKey(o)))persistent.insert(o.id);
+        auto expanded=inventory_descendants(building->objects,persistent);
+        auto next=building->objects;std::set<std::string> copies;std::map<std::string,std::string> remap;std::vector<GameObject> additions;
+        for(const auto& object:building->objects)if(selected.count(objectKey(object)) || (object.id.substr(0,4)=="0200" && expanded.count(object.id))){
+            auto copy=clone_instance(object);auto loc=object.number("LOCATION");QPoint tile(int(std::uint32_t(loc)),int(loc>>32));tile+=QPoint(1,1);
+            if(!Canvas::valid(tile)){statusBar()->showMessage("No room to duplicate the selection here");return;}
+            auto destination=std::uint64_t(tile.x())|(std::uint64_t(tile.y())<<32);set_number(copy,"LOCATION",destination);
+            if(copy.type==16)for(auto name:{"CRITTER_TELEPORT_DEST","NPC_STANDPOINT_DAY","NPC_STANDPOINT_NIGHT"})if(copy.field(name) && copy.number(name)==loc)set_number(copy,name,destination);
+            remap[object.id]=copy.id;if(!(copy.number("FLAGS")&0x1000))copies.insert(copy.id);additions.push_back(copy);
         }
+        for(auto& copy:additions){inventory_remap(copy,remap);next.push_back(std::move(copy));}
         commitEdit("Duplicate",std::move(next),std::move(copies));
     }
     void moveObject(unsigned x,unsigned y) {
@@ -1158,12 +1202,13 @@ public:
         for (unsigned y=0;y<64;++y) for (unsigned x=0;x<64;++x) {
             QPointF top((int(y)-int(x))*40-40,(x+y)*20);
             auto sprite = fetch(sector.tile(x,y));
-            if (sprite) { auto item=target->addPixmap(sprite->pixels); item->setPos(top); item->setZValue(-10000); }
+            if (sprite) { auto item=target->addPixmap(sprite->pixels); item->setPos(top+QPointF((sector.tile(x,y)>>28)==11?1:0,0)); item->setZValue(-10000); }
             else { QPolygonF diamond; diamond << top+QPointF(40,0) << top+QPointF(80,20) << top+QPointF(40,40) << top+QPointF(0,20);
                 auto item=target->addPolygon(diamond,QPen(QColor("#46505d")),QBrush(QColor("#303945"))); item->setZValue(-10000); ++missing; }
         }
         for (std::size_t i=0;i<rendered.size();++i) {
             const auto& object=rendered[i]; auto location=object.number("LOCATION");
+            if(object.number("FLAGS")&0x1000u){auto hidden=target->addRect(QRectF());hidden->hide();items.push_back(hidden);continue;}
             int x=location&63, y=(location>>32)&63;
             int ox=static_cast<std::int32_t>(object.number("OFFSET_X")), oy=static_cast<std::int32_t>(object.number("OFFSET_Y"));
             QPointF position((y-x)*40+ox,(x+y)*20+20+oy);
@@ -1175,6 +1220,21 @@ public:
             item->setData(0,int(i)); item->setData(1,QPoint(x,y)); item->setToolTip(assets->description(object)); items.push_back(item);
         }
         drawRoofs(target,sector);
+        if(previewLights->isChecked())drawLights(target,sector);
+        if(canvas->layer==5) {
+            std::array<bool,4096> generated{};
+            for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++)generated[y*64+x]=assets->terrainBlocked(sector.tile(x,y));
+            for(const auto& object:rendered)if(object.type!=0 && object.type!=1 && !(object.number("FLAGS")&(0x400u|2u|0x100u|0x1000u))) {
+                auto loc=object.number("LOCATION");generated[((loc>>32)&63)*64+(loc&63)]=true;
+            }
+            for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++)if(sector.blocked(x,y) || generated[y*64+x]) {
+                bool manual=sector.blocked(x,y);auto center=Canvas::project({int(x),int(y)});
+                QPolygonF diamond;diamond<<center+QPointF(0,-20)<<center+QPointF(40,0)<<center+QPointF(0,20)<<center+QPointF(-40,0);
+                QColor color=manual?QColor("#ff5050"):QColor("#941c28");
+                auto marker=target->addPolygon(diamond,QPen(color,0),QBrush(color,Qt::BDiagPattern));marker->setZValue(30000);
+                marker->setToolTip(manual?"Manual blocking: click to clear. Terrain or objects may still block this cell.":"Generated blocking: change the terrain or blocking object to clear it.");
+            }
+        }
         for(std::size_t i=0;i<items.size();i++){auto item=items[i];item->setFlag(QGraphicsItem::ItemIsSelectable,canvas->layer==0 || (canvas->layer==3 && (rendered[i].type==15 || rendered[i].type==16)));if(canvas->layer==1 || canvas->layer==2)item->setOpacity(.3);}
         target->setSceneRect(target->itemsBoundingRect().adjusted(-50,-50,50,50));
     }
@@ -1189,8 +1249,9 @@ public:
         auto ids=selectedIds();if(ids.size()!=1)return;
         for(std::size_t i=0;i<building->objects.size();i++)if(ids.count(objectKey(building->objects[i]))){
             auto instance=building->objects[i];
-            auto resolved=assets->effective(instance);ActorEditor dialog(instance,resolved,assets->description(resolved),this,installation.get());
+            auto resolved=assets->effective(instance);ActorEditor dialog(instance,resolved,assets->description(resolved),this,installation.get(),building->sector_id);
             dialog.openScript=[this](unsigned id){showScript(id);};
+            dialog.scriptDefaults=[this](unsigned id){for(auto path:contentPaths(".scr"))if(contentNumber(path)==id)return contentRead(path);throw std::runtime_error("Script resource not found");};
             if(dialog.exec()==QDialog::Accepted && encode_instance(dialog.result)!=encode_instance(instance)){
                 auto next=building->objects;next[i]=dialog.result;commitEdit("Configure object",std::move(next),ids);
             }
@@ -1244,7 +1305,7 @@ inline void applyExplorerStyle(QApplication& app) {
 #ifndef WORLDED_EXPLORER_NO_MAIN
 int main(int argc,char** argv) {
     QApplication app(argc,argv);
-    app.setApplicationName("WorldED Renaissance"); app.setStyle("Fusion");
+    app.setOrganizationName("Arcanum Renaissance");app.setApplicationName("WorldED Renaissance"); app.setStyle("Fusion");
     applyExplorerStyle(app);
     QCommandLineParser parser; parser.addHelpOption();
     parser.addOption({"game","Installation or archive to open","path"});
@@ -1258,10 +1319,15 @@ int main(int argc,char** argv) {
     parser.addOption({"sector","Local sector to display using installation resources","path"});
     parser.addOption({"snapshot","Capture the full window and exit (validation)","png"});
     parser.process(app);
-    Explorer window; window.initialReference=parser.value("reference-sector"); window.initialProject=parser.value("project"); window.initialResource=parser.value("resource"); window.snapshot=parser.value("snapshot"); window.initialSector=parser.value("sector"); window.demoHouse=parser.isSet("demo-house"); window.initialWorld=parser.isSet("world") || parser.isSet("world-sector"); window.initialWorldSector=parser.value("world-sector"); window.show();
+    Explorer window; window.rememberInstallation=true; window.initialReference=parser.value("reference-sector"); window.initialProject=parser.value("project"); window.initialResource=parser.value("resource"); window.snapshot=parser.value("snapshot"); window.initialSector=parser.value("sector"); window.demoHouse=parser.isSet("demo-house"); window.initialWorld=parser.isSet("world") || parser.isSet("world-sector"); window.initialWorldSector=parser.value("world-sector"); window.show();
     if (!parser.value("game").isEmpty()) window.mount(parser.value("game"));
     else if (!window.initialProject.isEmpty()) {auto project=window.initialProject;window.initialProject.clear();window.openProjectFolder(project);}
-    else if (!window.snapshot.isEmpty()) window.capture();
+    else if (!parser.isSet("resume-test")) {
+        QSettings settings;auto last=settings.value("installation/lastPath").toString();
+        if(!last.isEmpty() && QFileInfo(last).isDir())window.mount(last);
+        else {if(!last.isEmpty())window.statusBar()->showMessage("Last installation is unavailable. Choose File > Installation > Open installation…");if(!window.snapshot.isEmpty())window.capture();}
+    }
+    else if (!window.snapshot.isEmpty())window.capture();
     if(parser.isSet("resume-test"))try{window.launchPlaytest(fs::u8path(QFileInfo(parser.value("resume-test")).absolutePath().toStdString()));}
         catch(const std::exception& e){QMessageBox::warning(&window,"Cannot start test",utf8(e.what()));}
     return app.exec();

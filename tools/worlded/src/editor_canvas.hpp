@@ -31,7 +31,8 @@ class Canvas : public QGraphicsView {
 public:
     QBrush checkerBrush;
     bool editable=false, selectionOnly=false, showGrid=false;
-    int layer=0; // Objects, ground, roofs, characters, scripts.
+    int layer=0; // Objects, ground, roofs, characters, scripts, blocking.
+    std::function<void(QPoint)> toggleBlock;
     QRect cellSelection;
     bool brushEnabled=false;int brushSize=1;
     std::function<void(const std::set<std::pair<int,int>>&)> strokeFinished;
@@ -96,6 +97,11 @@ public:
         if(placementGhost && event->button()==Qt::LeftButton){auto tile=surfaceTile(event->pos());if(placementValid(tile)){cancelPlacement();if(placeSelection)placeSelection(tile);}else if(feedback)feedback("The selection extends beyond the sector. Choose another position.");event->accept();return;}
         if (event->button()==Qt::MiddleButton || (space && event->button()==Qt::LeftButton)) {
             panning=true; panPoint=event->pos(); setCursor(Qt::ClosedHandCursor); event->accept(); return;
+        }
+        if(layer==5 && event->button()==Qt::LeftButton) {
+            auto tile=surfaceTile(event->pos());
+            if(editable && valid(tile) && toggleBlock)toggleBlock(tile);
+            event->accept();return;
         }
         if((editable || selectionOnly) && event->button()==Qt::LeftButton && (layer==1 || layer==2)) {
             cellStart=surfaceTile(event->pos());if(valid(cellStart)){if(editable && brushEnabled){painting=true;stroke.clear();lastBrush=cellStart;addBrush(cellStart);}else{selectingCells=true;updateCells(event->pos());}}event->accept();return;

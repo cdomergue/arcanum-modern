@@ -10,7 +10,7 @@ inline QByteArray scene_fingerprint(const Building& scene) {
     hash.addData(QJsonDocument(names).toJson(QJsonDocument::Compact));
     for(const auto& [path,data]:scene.content){hash.addData(QByteArray::fromStdString(path));hash.addData(QByteArray::number(data.size()));hash.addData(QByteArrayView(reinterpret_cast<const char*>(data.data()),data.size()));}return hash.result();
 }
-struct SceneChanges {int added=0,removed=0,changed=0,tiles=0,roofs=0;bool names=false,scripts=false,content=false;};
+struct SceneChanges {int added=0,removed=0,changed=0,tiles=0,roofs=0,blocks=0;bool names=false,scripts=false,content=false,settings=false,lights=false;};
 inline SceneChanges scene_changes(const Building& scene,const Building& saved) {
     auto key=[](const GameObject& o){return o.editor_id.empty()?o.id:o.editor_id;};
     std::map<std::string,Bytes> before;for(const auto& o:saved.objects)before[key(o)]=encode_instance(o);
@@ -19,8 +19,11 @@ inline SceneChanges scene_changes(const Building& scene,const Building& saved) {
     result.removed=before.size();
     for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++)if(scene.ground.tile(x,y)!=saved.ground.tile(x,y))result.tiles++;
     for(unsigned y=0;y<16;y++)for(unsigned x=0;x<16;x++)if(scene.ground.roof(x,y)!=saved.ground.roof(x,y))result.roofs++;
+    for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++)if(scene.ground.blocked(x,y)!=saved.ground.blocked(x,y))result.blocks++;
     auto scripts=[](const Sector& s){std::vector<std::array<std::uint32_t,4>> result;for(const auto& x:s.scripts())result.push_back({x.tile,x.flags,x.counters,x.number});return result;};
+    result.lights=scene.ground.lights()!=saved.ground.lights();
     result.scripts=scripts(scene.ground)!=scripts(saved.ground);
+    auto a=scene.ground.settings(),b=saved.ground.settings();result.settings=a.aptitude!=b.aptitude || a.light!=b.light || a.music!=b.music || a.ambient!=b.ambient;
     result.content=scene.content!=saved.content;result.names=scene.location_names!=saved.location_names;return result;
 }
 // Save an owned scene project with rollback. Construct the entire next version
@@ -54,7 +57,7 @@ struct SceneFragment {
     std::map<std::pair<int,int>,std::uint32_t> roofs; // offsets in ground tiles, multiples of four
     std::map<std::string,Bytes> prototypes;
     int width=0,height=0;
-    QString source;
+    QString source,action;
     bool empty() const {return objects.empty() && tiles.empty() && roofs.empty();}
 };
 inline SceneFragment copy_fragment(const Installation& installation,const Building& scene,const std::set<std::string>& keys,bool withFloor) {

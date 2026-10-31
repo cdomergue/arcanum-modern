@@ -33,11 +33,21 @@ with tempfile.TemporaryDirectory(prefix='worlded-gui-') as temporary:
         ('mes/notes.mes', 'Commentaire\n{1}{Propriété à Tarante}\n'.encode('cp1252'), False),
     ]
     resources += building_prototypes()
+    # Facade frames share no rotation/palette bits with ordinary object AIDs.
+    # Mark a high frame so selecting frame zero cannot accidentally pass.
+    facade=bytearray(art_file(rotations=8,frames=1024,rle=False))
+    facade[132+2048+8*1024*28+715*8]=7
+    resources += [('art/facade/facadename.mes',b'{7}{rug-test}{263}{rug-high-test}',False),
+                  ('art/facade/rug-test.art',facade,False),
+                  ('art/facade/rug-high-test.art',facade,False)]
     resources += [
         ('art/roof/roofname.mes',b'{0}{roof}',False),
         ('art/roof/roof.art',art_file(frames=9),False),
         ('art/critter/hmm/hmmuwxaa.art',art_file(rotations=8,frames=1),False),
         ('scr/00042example.scr',script(),False),
+        ('sound/schemeindex.mes',b'{100}{M.Wilderness #100}{4100}{A.Moors #4100}',False),
+        ('rules/lighting schemes.mes',b'{7}{daylight.mes}',False),
+        ('art/tile/drtgrs6a.art',art_file(frames=1),False),
     ]
     # This prototype is absent from every sector and shares another prototype's
     # AID. A global catalogue must still expose both as distinct entries.
@@ -72,7 +82,7 @@ with tempfile.TemporaryDirectory(prefix='worlded-gui-') as temporary:
     ]
     # Extend the same MES entries instead of adding duplicate DAT keys.
     resources = [(name, b'{0}{int ext}{17}{wi1 wd1}' if name=='art/wall/structure.mes'
-                  else b'{0}{drt}{1}{grs}{2}{swr}{3}{dwr}{300}{tst}{304}{wd1}{400}{drtgrs}{401}{drtswr}{402}{swrdwr}' if name=='art/tile/tilename.mes'
+                  else b'{0}{drt}{1}{grs}{2}{swr/b}{3}{dwr/f}{300}{tst}{304}{wd1}{400}{drtgrs}{401}{drtswr}{402}{swrdwr}' if name=='art/tile/tilename.mes'
                   else data, compressed) for name,data,compressed in resources]
     for prefix in ('wi1','wd1'):
         for piece in ('bse','d3l','d3a','d3r'):

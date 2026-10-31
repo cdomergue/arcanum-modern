@@ -1,5 +1,6 @@
 #pragma once
 #include "worlded/building.hpp"
+#include "worlded/npc_routes.hpp"
 #include "script_inspector.hpp"
 #include <QtWidgets>
 #include <functional>
@@ -22,8 +23,9 @@ public:
     QSpinBox *x=new QSpinBox,*y=new QSpinBox;
     QComboBox* facing=new QComboBox;
     std::function<void(unsigned)> openScript;
+    std::function<worlded::Bytes(unsigned)> scriptDefaults;
     ActorEditor(const worlded::GameObject& instance,const worlded::GameObject& resolved,
-                const QString& title,QWidget* parent=nullptr,const worlded::Installation* installation=nullptr):QDialog(parent),original(instance),effective(resolved),result(instance) {
+                const QString& title,QWidget* parent=nullptr,const worlded::Installation* installation=nullptr,std::uint64_t sectorId=0):QDialog(parent),original(instance),effective(resolved),result(instance),routeSector(sectorId) {
         bool actor=instance.type==15 || instance.type==16;
         setWindowTitle((actor?"Configure character — ":"Configure object — ")+title);resize(860,690);setMinimumSize(650,480);
         auto layout=new QVBoxLayout(this);auto heading=new QLabel(title+QString(" · prototype #%1").arg(instance.prototype_id));heading->setObjectName("sectionTitle");layout->addWidget(heading);
@@ -52,6 +54,8 @@ public:
             for(const auto& entry:labels)if(effective.field(entry.first))scalar(specific,entry.first.c_str(),entry.second,entry.first.find("FLAGS")!=std::string::npos);
             scalar(specific,"HP_PTS","Hit points");scalar(specific,"HP_DAMAGE","Damage taken");
         }
+        if(actor) knowledge(installation);
+        if(instance.type==16){routes();generator();}
         effects();scripts();advanced();
         error->setWordWrap(true);error->setStyleSheet("color:#ffb080");layout->addWidget(error);
         auto buttons=new QDialogButtonBox(QDialogButtonBox::Save|QDialogButtonBox::Cancel);buttons->button(QDialogButtonBox::Save)->setText("Apply to object");layout->addWidget(buttons);
@@ -76,10 +80,12 @@ public:
         arrays.push_back({field,table,tableText(table)});tabs->addTab(panel,title);
     }
     QTableWidget* scriptTable=nullptr;QStringList initialScripts;worlded::ObjectField scriptField;
-    void scripts(){auto page=new QWidget;auto layout=new QVBoxLayout(page);auto hint=new QLabel("Set a script ID for each event. 0 detaches that event. Double-click an event to open its script.");hint->setWordWrap(true);layout->addWidget(hint);scriptTable=new QTableWidget;scriptTable->setColumnCount(2);scriptTable->setHorizontalHeaderLabels({"Event","Script ID"});scriptTable->setRowCount(std::size(worlded::attachmentNames));scriptTable->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);layout->addWidget(scriptTable);
+    void scripts(){auto page=new QWidget;auto layout=new QVBoxLayout(page);auto hint=new QLabel("Set a script ID for each event; 0 disables it. Flags accept decimal or 0x hexadecimal. Counters are four independent bytes (0–255). Double-click an event name to open its script.");hint->setWordWrap(true);layout->addWidget(hint);
+        scriptTable=new QTableWidget;scriptTable->setObjectName("objectScripts");scriptTable->setColumnCount(7);scriptTable->setHorizontalHeaderLabels({"Event","Script ID","Flags","Counter 1","Counter 2","Counter 3","Counter 4"});scriptTable->setRowCount(int(std::size(worlded::attachmentNames)));scriptTable->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);for(int col=1;col<7;col++)scriptTable->setColumnWidth(col,col==2?110:85);layout->addWidget(scriptTable);
         if(auto f=effective.field("SCRIPTS_IDX"))scriptField=*f;else {scriptField.name="SCRIPTS_IDX";scriptField.kind="SCRIPT_ARRAY";scriptField.present=true;}
-        for(int r=0;r<scriptTable->rowCount();r++){unsigned id=0;for(const auto& e:scriptField.elements)if(e.index==unsigned(r))id=worlded::word(e.data,8);auto event=new QTableWidgetItem(worlded::attachmentNames[r]);event->setFlags(event->flags()&~Qt::ItemIsEditable);scriptTable->setItem(r,0,event);scriptTable->setItem(r,1,new QTableWidgetItem(QString::number(id)));}
-        initialScripts=tableText(scriptTable);connect(scriptTable,&QTableWidget::cellDoubleClicked,this,[this](int r,int c){if(c==0 && openScript){bool ok;auto id=scriptTable->item(r,1)->text().toUInt(&ok);if(ok && id)openScript(id);}});tabs->addTab(page,"Scripts");
+        for(int r=0;r<scriptTable->rowCount();r++){unsigned id=0,flags=0,counters=0;for(const auto& e:scriptField.elements)if(e.index==unsigned(r)){flags=worlded::word(e.data,0);counters=worlded::word(e.data,4);id=worlded::word(e.data,8);}auto event=new QTableWidgetItem(worlded::attachmentNames[r]);event->setFlags(event->flags()&~Qt::ItemIsEditable);scriptTable->setItem(r,0,event);scriptTable->setItem(r,1,new QTableWidgetItem(QString::number(id)));scriptTable->setItem(r,2,new QTableWidgetItem(QString("0x%1").arg(flags,8,16,QChar('0'))));for(int c=0;c<4;c++)scriptTable->setItem(r,c+3,new QTableWidgetItem(QString::number((counters>>(8*c))&255)));}
+        initialScripts=tableText(scriptTable);connect(scriptTable,&QTableWidget::cellDoubleClicked,this,[this](int r,int c){if(c==0 && openScript){bool ok;auto id=scriptTable->item(r,1)->text().toUInt(&ok);if(ok && id)openScript(id);}});
+        auto defaults=new QPushButton("Load selected attachment defaults from SCR");layout->addWidget(defaults);connect(defaults,&QPushButton::clicked,this,[this]{try{int row=scriptTable->currentRow();if(row<0)throw std::runtime_error("Select an event first.");auto id=number(scriptTable->item(row,1)->text(),"Script ID");if(!id || !scriptDefaults)throw std::runtime_error("Choose an available script before loading defaults.");auto bytes=scriptDefaults(id);scriptTable->item(row,2)->setText(QString("0x%1").arg(worlded::word(bytes,0),8,16,QChar('0')));auto counters=worlded::word(bytes,4);for(int c=0;c<4;c++)scriptTable->item(row,c+3)->setText(QString::number((counters>>(8*c))&255));error->clear();}catch(const std::exception& e){error->setText(QString::fromUtf8(e.what()));}});tabs->addTab(page,"Scripts");
     }
     void effects(){
         auto page=form("Effects");auto hint=new QLabel("Additive blending removes the black background from flames and light halos. Each effect is configured independently.");hint->setWordWrap(true);page->addRow(hint);
@@ -108,18 +114,23 @@ public:
             }
         }
     }
+    #include "actor_routes_ui.inc"
     void advanced(){auto page=form("Advanced");auto hint=new QLabel("Additional engine fields. Object references and complex arrays are read only; campaign IDs are not copied.");hint->setWordWrap(true);page->addRow(hint);
-        for(const auto& field:effective.fields){if(field.name=="LOCATION" || field.name=="SCRIPTS_IDX")continue;if(std::any_of(numbers.begin(),numbers.end(),[&](auto& n){return n.name==field.name;}) || std::any_of(arrays.begin(),arrays.end(),[&](auto& a){return a.field.name==field.name;}))continue;
+        for(const auto& field:effective.fields){if(field.name=="LOCATION" || field.name=="SCRIPTS_IDX" || field.name=="NPC_WAYPOINTS_IDX" || field.name=="NPC_WAYPOINT_CURRENT" || field.name=="NPC_STANDPOINT_DAY" || field.name=="NPC_STANDPOINT_NIGHT" || field.name=="NPC_GENERATOR_DATA" || field.name=="CRITTER_SPELL_TECH_IDX")continue;if(std::any_of(numbers.begin(),numbers.end(),[&](auto& n){return n.name==field.name;}) || std::any_of(arrays.begin(),arrays.end(),[&](auto& a){return a.field.name==field.name;}))continue;
             if(field.kind=="INT32")scalar(page,field.name.c_str(),QString::fromStdString(field.name),field.name.find("FLAGS")!=std::string::npos);
             else if(!field.elements.empty()){auto view=new QPlainTextEdit;view->setReadOnly(true);view->setMaximumHeight(120);QStringList lines;for(const auto& element:field.elements){QByteArray bytes(reinterpret_cast<const char*>(element.data.data()),int(element.data.size()));lines<<QString("[%1]  %2").arg(element.index).arg(QString::fromLatin1(bytes.toHex(' ')));}view->setPlainText(lines.join('\n'));page->addRow(QString::fromStdString(field.name),view);}else {auto view=new QLineEdit(QString::fromStdString(worlded::object_field_text(field)));view->setReadOnly(true);view->setToolTip(view->text());page->addRow(QString::fromStdString(field.name),view);}}
     }
     static std::uint32_t number(const QString& text,const std::string& name){bool ok=false;auto value=text.trimmed();auto n=value.toLongLong(&ok,value.startsWith("0x",Qt::CaseInsensitive)?16:10);if(!ok || n<INT32_MIN || n>UINT32_MAX)throw std::runtime_error(name+": enter a 32-bit integer (decimal or 0x…).");return std::uint32_t(n);}
     static void put(worlded::GameObject& o,worlded::ObjectField field){for(auto& f:o.fields)if(f.name==field.name){f=std::move(field);return;}o.fields.push_back(std::move(field));}
     worlded::GameObject values(){auto o=original;for(auto& n:numbers)if(n.edit->text()!=n.initial)worlded::set_number(o,n.name,number(n.edit->text(),n.name));
-        auto old=original.number("LOCATION"),loc=std::uint64_t(x->value())|(std::uint64_t(y->value())<<32);if(old!=loc){worlded::set_number(o,"LOCATION",loc);if(o.type==16)for(auto name:{"CRITTER_TELEPORT_DEST","NPC_STANDPOINT_DAY","NPC_STANDPOINT_NIGHT"})if(o.field(name) && (o.number(name)&0x3f0000003full)==old)worlded::set_number(o,name,loc);}
+        auto old=original.number("LOCATION"),loc=std::uint64_t(x->value())|(std::uint64_t(y->value())<<32);if(old!=loc){worlded::set_number(o,"LOCATION",loc);if(o.type==16)for(auto name:{"CRITTER_TELEPORT_DEST","NPC_STANDPOINT_DAY","NPC_STANDPOINT_NIGHT"})if(o.field(name) && o.number(name)==old)worlded::set_number(o,name,loc);}
         auto aid=effective.number("CURRENT_AID");if(unsigned(facing->currentIndex())!=((aid>>11)&7)){auto rotated=(aid&~0x3800ull)|(std::uint64_t(facing->currentIndex())<<11);worlded::set_number(o,"CURRENT_AID",rotated);worlded::set_number(o,"AID",rotated);}
         for(auto& a:arrays)if(tableText(a.table)!=a.initial){auto field=a.field;field.present=true;field.elements.clear();for(int r=0;r<a.table->rowCount();r++){auto value=number(a.table->item(r,1)->text(),field.name);if(a.table->columnCount()==3){if(value>63)throw std::runtime_error("Skill points must be between 0 and 63.");unsigned previous=0;auto index=a.table->item(r,0)->data(Qt::UserRole).toUInt();for(auto& e:a.field.elements)if(e.index==index)previous=worlded::word(e.data,0);value|=(previous&~255u)|(unsigned(qobject_cast<QComboBox*>(a.table->cellWidget(r,2))->currentIndex())<<6);}worlded::Bytes bytes;for(int b=0;b<4;b++)bytes.push_back(value>>(8*b));field.elements.push_back({a.table->item(r,0)->data(Qt::UserRole).toUInt(),bytes});}std::sort(field.elements.begin(),field.elements.end(),[](auto& a,auto& b){return a.index<b.index;});put(o,std::move(field));}
-        if(tableText(scriptTable)!=initialScripts || (!scriptField.present && std::any_of(scriptField.elements.begin(),scriptField.elements.end(),[](const auto& e){return e.data.size()==12 && worlded::word(e.data,8)!=0;}))){auto field=scriptField;field.present=true;for(int r=0;r<scriptTable->rowCount();r++){auto id=number(scriptTable->item(r,1)->text(),"Script ID");if(id>999999)throw std::runtime_error("Script ID must be between 0 and 999999.");auto it=std::find_if(field.elements.begin(),field.elements.end(),[r](auto& e){return e.index==unsigned(r);});if(it==field.elements.end()){if(!id)continue;field.elements.push_back({unsigned(r),worlded::Bytes(12,0)});it=std::prev(field.elements.end());}for(int b=0;b<4;b++)it->data[8+b]=id>>(b*8);}std::sort(field.elements.begin(),field.elements.end(),[](auto& a,auto& b){return a.index<b.index;});put(o,std::move(field));}
+        if(tableText(scriptTable)!=initialScripts || (!scriptField.present && std::any_of(scriptField.elements.begin(),scriptField.elements.end(),[](const auto& e){return e.data.size()==12 && worlded::word(e.data,8)!=0;}))){auto field=scriptField;field.present=true;
+            for(int r=0;r<scriptTable->rowCount();r++){auto id=number(scriptTable->item(r,1)->text(),"Script ID"),flags=number(scriptTable->item(r,2)->text(),"Script flags");if(id>999999)throw std::runtime_error("Script ID must be between 0 and 999999.");unsigned counters=0;for(int c=0;c<4;c++){auto n=number(scriptTable->item(r,c+3)->text(),"Script counter");if(n>255)throw std::runtime_error("Script counters must be between 0 and 255.");counters|=n<<(8*c);}
+                auto it=std::find_if(field.elements.begin(),field.elements.end(),[r](auto& e){return e.index==unsigned(r);});if(it==field.elements.end()){if(!id && !flags && !counters)continue;field.elements.push_back({unsigned(r),worlded::Bytes(12,0)});it=std::prev(field.elements.end());}it->data.resize(12);for(int b=0;b<4;b++){it->data[b]=flags>>(b*8);it->data[4+b]=counters>>(b*8);it->data[8+b]=id>>(b*8);}}
+            std::sort(field.elements.begin(),field.elements.end(),[](auto& a,auto& b){return a.index<b.index;});put(o,std::move(field));}
+        applyRoutes(o);applyGenerator(o);applyKnowledge(o);
         applyEffectBlends(o);worlded::encode_instance(o);return o;
     }
 };

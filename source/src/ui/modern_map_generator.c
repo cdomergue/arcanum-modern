@@ -560,7 +560,7 @@ static bool mapgen_manifest(const char* folder, const char* module, MapGenTask* 
     return ok;
 }
 
-static int mapgen_run(const char* game_root, int tile_limit)
+static int mapgen_run(const char* game_root, int tile_limit, int town_id)
 {
     Uint64 signature;
     if (!mapgen_fingerprint(game_root, &signature)) return 10;
@@ -612,15 +612,17 @@ static int mapgen_run(const char* game_root, int tile_limit)
         }
     }
     for (size_t i = 0; i < count; i++)
+        if (!town_id || (tasks[i].id == town_id && !strcmp(tasks[i].module, "Arcanum")))
         mapgen_progress.total += (unsigned long long)((tasks[i].info.width + MAPGEN_TILE - 1) / MAPGEN_TILE)
             * ((tasks[i].info.height + MAPGEN_TILE - 1) / MAPGEN_TILE);
-    if (!count) return 19;
+    if (!count || !mapgen_progress.total) return 19;
     mapgen_report(1);
     SDL_Log("HD map catalog: %zu maps, %llu tiles", count, mapgen_progress.total);
     char previous_module[260] = "", previous_map[260] = "";
     int generated = 0;
     for (size_t i = 0; i < count; i++) {
         MapGenTask* task = &tasks[i];
+        if (town_id && (task->id != town_id || strcmp(task->module, "Arcanum"))) continue;
         char* module_folder = mapgen_join(cache, task->module);
         char* folder;
         SDL_asprintf(&folder, "%s/%d", module_folder, task->id);
@@ -686,6 +688,8 @@ static int mapgen_run(const char* game_root, int tile_limit)
     }
     SDL_free(modules.names); SDL_free(tasks);
     gamelib_exit(); tig_exit();
+    /* A partial editor generation must not certify the full installed cache. */
+    if (town_id) { SDL_free(cache); SDL_free(sandbox); return 0; }
     MapGenWalk files = {NULL, 0, false, false};
     if (!SDL_EnumerateDirectory(cache, mapgen_walk, &files)) return 28;
     char text[100]; SDL_snprintf(text, sizeof(text), "%d %llx %llx\n", MAPGEN_VERSION,
@@ -696,9 +700,15 @@ static int mapgen_run(const char* game_root, int tile_limit)
     return ok ? 0 : 29;
 }
 
-int modern_maps_generate(const char* game_root, int tile_limit)
+int modern_maps_generate(const char* game_root, int tile_limit, int town_id)
 {
     if (!mapgen_chdir(game_root)) return 2;
+    if (town_id) {
+        char* marker = SDL_LoadFile("../.worlded-campaign-test", NULL);
+        bool independent = marker && strstr(marker, "worlded-campaign-test");
+        SDL_free(marker);
+        if (town_id < 0 || !independent) return 30;
+    }
     if (!SDL_CreateDirectory("modern-ui/.map-work")) return 3;
 #ifdef SDL_PLATFORM_WINDOWS
     HANDLE lock = CreateFileW(L"modern-ui/.map-work/lock", GENERIC_READ | GENERIC_WRITE, 0,
@@ -717,7 +727,7 @@ int modern_maps_generate(const char* game_root, int tile_limit)
     SDL_Log("HD map preparation: %s", game_root);
     mapgen_status_path = mapgen_join(game_root, "modern-ui/.map-work/progress");
     mapgen_report(0);
-    int result = modern_maps_ready() ? 0 : mapgen_run(game_root, tile_limit);
+    int result = !town_id && modern_maps_ready() ? 0 : mapgen_run(game_root, tile_limit, town_id);
     if (result) SDL_Log("HD map preparation stopped: code %d (%s)", result, SDL_GetError());
     mapgen_report(result ? 3 : 2);
     SDL_free(mapgen_status_path); mapgen_status_path = NULL;

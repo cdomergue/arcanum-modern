@@ -1,3 +1,4 @@
+#include "worlded/npc_routes.hpp"
 #include "worlded/building.hpp"
 #include <algorithm>
 #include <charconv>
@@ -141,7 +142,7 @@ std::filesystem::path export_building(const Building& building,const std::filesy
     auto originX=(building.sector_id&0x3ffffff)*64, originY=(building.sector_id>>26)*64;
     auto globalize=[&](GameObject object) { auto loc=object.number("LOCATION");
         set_number(object,"LOCATION",(originX+std::uint32_t(loc))|((originY+(loc>>32))<<32));
-        if(object.type==16) for(const char* name : {"CRITTER_TELEPORT_DEST","NPC_STANDPOINT_DAY","NPC_STANDPOINT_NIGHT"}) set_number(object,name,object.number("LOCATION"));
+        transform_npc_routes(object,building.sector_id,true);
         return object; };
     for (auto& object : statics.objects) object=globalize(object);
     auto sector=statics.sector().encode();

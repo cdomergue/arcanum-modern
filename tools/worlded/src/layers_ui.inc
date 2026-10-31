@@ -7,7 +7,7 @@
         terrainTransitions->setVisible(layer==1);brushSize->setSuffix(layer==2?" pieces":" cells");
         roofVisible->setEnabled(layer!=2);
         if(surface){libraryTabs->setCurrentWidget(surfacePanel);populateSurfaces();updateSurfaceMaterial();}
-        else {libraryTabs->setCurrentIndex(0);if(layer==3 && previous!=3)paletteCategory->setCurrentIndex(paletteCategory->findData(16));if(layer>=3)inspectorTabs->setCurrentWidget(layer==3?peopleList:scriptsPanel);}
+        else {libraryTabs->setCurrentIndex(0);if(layer==3 && previous!=3)paletteCategory->setCurrentIndex(paletteCategory->findData(16));if(layer==3 || layer==4)inspectorTabs->setCurrentWidget(layer==3?peopleList:scriptsPanel);}
         if(editing())showBuilding(false);
         if(sideAction->isChecked())renderReference();
         updateBuildingActions();
@@ -15,6 +15,7 @@
     void populateSurfaces() {
         if(!assets || (canvas->layer!=1 && canvas->layer!=2))return;
         QSignalBlocker block(surfacePalette);surfacePalette->clear();auto entries=assets->surfaces(canvas->layer==2);
+        if(canvas->layer==1)for(unsigned i=0;i<paletteObjects.size();i++)if(paletteObjects[i].type==100){auto aid=std::uint32_t(paletteObjects[i].number("CURRENT_AID"));if(!entries.count(aid))entries[aid]="Exact tile · "+objectPalette->item(i)->text();}
         auto collect=[&](const Building& b){if(canvas->layer==2){for(unsigned y=0;y<16;y++)for(unsigned x=0;x<16;x++){auto id=b.ground.roof(x,y);if(id!=0xffffffff && !entries.count(id))entries[id]=QString("Existing roof · %1").arg(id,8,16,QChar('0'));}}
             else for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++){auto id=b.ground.tile(x,y);if(!entries.count(id))entries[id]=QString("Existing ground · %1").arg(id,8,16,QChar('0'));}};
         if(building)collect(*building);
@@ -24,14 +25,37 @@
         for(const auto& [aid,label]:sorted){auto item=new QListWidgetItem(label,surfacePalette);item->setData(Qt::UserRole,aid);item->setToolTip(label+QString("\nART 0x%1").arg(aid,8,16,QChar('0')));}
         filterSurfaces();loadSurfaceIcons();
     }
+    void configureSector() {
+        if(!editing())return;
+        QDialog dialog(this);dialog.setWindowTitle("Sector properties");QFormLayout form(&dialog);
+        auto original=building->ground.settings();QSpinBox aptitude;aptitude.setObjectName("sectorAptitude");aptitude.setRange(INT_MIN,INT_MAX);aptitude.setValue(original.aptitude);
+        QComboBox music,ambient,light;music.setObjectName("sectorMusic");ambient.setObjectName("sectorAmbient");light.setObjectName("sectorLight");
+        auto populate=[&](QComboBox& box,const char* path,int current){
+            box.addItem("None / default · #0",0);
+            if(installation->contains(path))for(const auto& entry:read_messages(installation->read(path)))if(entry.id && entry.id<=INT_MAX)
+                box.addItem(QString::fromStdString(cp1252_utf8(entry.text)).section('#',0,0).trimmed()+QString(" · #%1").arg(entry.id),int(entry.id));
+            if(box.findData(current)<0)box.addItem(QString("Unlisted scheme · #%1").arg(current),current);
+            box.setCurrentIndex(box.findData(current));box.setMinimumContentsLength(32);box.setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        };
+        try{populate(music,"sound/schemeindex.mes",original.music);populate(ambient,"sound/schemeindex.mes",original.ambient);populate(light,"rules/lighting schemes.mes",original.light);}
+        catch(const std::exception& e){QMessageBox::warning(this,"Cannot read sector schemes",utf8(e.what()));return;}
+        form.addRow("Music scheme",&music);form.addRow("Ambient scheme",&ambient);form.addRow("Lighting scheme",&light);form.addRow("Magic / technology adjustment",&aptitude);
+        QLabel note("Changes affect this sector. Sound playback and lighting are evaluated in the game.");note.setWordWrap(true);form.addRow(&note);
+        QDialogButtonBox buttons(QDialogButtonBox::Save|QDialogButtonBox::Cancel);form.addRow(&buttons);
+        connect(&buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);connect(&buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+        if(dialog.exec()!=QDialog::Accepted)return;
+        auto ground=building->ground;ground.set_settings({aptitude.value(),light.currentData().toInt(),music.currentData().toInt(),ambient.currentData().toInt()});
+        if(ground.encode()!=building->ground.encode())commitEdit("Change sector properties",building->objects,{},&ground);
+    }
     void filterSurfaces(){for(int i=0;i<surfacePalette->count();i++)surfacePalette->item(i)->setHidden(!surfacePalette->item(i)->text().contains(surfaceSearch->text(),Qt::CaseInsensitive));loadSurfaceIcons();}
     void updateSurfaceMaterial() {
         auto item=surfacePalette->currentItem();
         if(canvas->layer==2){surfaceMaterialStatus->setText(item?"Roof piece selected.":"Choose a roof piece.");return;}
         bool indoor=item && TerrainBrush::material(item->data(Qt::UserRole).toUInt(),true)>=200;
-        {QSignalBlocker block(terrainTransitions);terrainTransitions->setEnabled(!indoor);terrainTransitions->setChecked(!indoor && terrainTransitionsPreference);}
-        terrainTransitions->setToolTip(indoor?"This indoor floor has no automatic transitions.":"Connect outdoor terrain using the game's rules.");
-        surfaceMaterialStatus->setText(!item?"Choose a material from the library.":indoor?"Indoor floor: automatic transitions are unavailable. Tiles will be placed directly.":"Outdoor terrain: enable automatic transitions to blend edges.");
+        bool exact=item && (item->text().startsWith("Exact tile") || (item->data(Qt::UserRole).toUInt()>>28)==11);
+        {QSignalBlocker block(terrainTransitions);terrainTransitions->setEnabled(!indoor && !exact);terrainTransitions->setChecked(!indoor && !exact && terrainTransitionsPreference);}
+        terrainTransitions->setToolTip(exact?"This tile is placed exactly as selected.":indoor?"This indoor floor has no automatic transitions.":"Connect outdoor terrain using the game's rules.");
+        surfaceMaterialStatus->setText(!item?"Choose a material from the library.":exact?"Exact tile: place this shape directly, without automatic transitions.":indoor?"Indoor floor: automatic transitions are unavailable. Tiles will be placed directly.":"Outdoor terrain: enable automatic transitions to blend edges.");
     }
     void loadSurfaceIcons(){if(!assets)return;for(int i=0;i<surfacePalette->count();i++){auto item=surfacePalette->item(i);if(item->isHidden() || !item->icon().isNull() || !surfacePalette->visualItemRect(item).intersects(surfacePalette->viewport()->rect()))continue;
             try{item->setIcon(QIcon(assets->sprite(item->data(Qt::UserRole).toUInt()).pixels));}catch(const std::exception& e){item->setToolTip(item->toolTip()+"\n"+utf8(e.what()));}}}

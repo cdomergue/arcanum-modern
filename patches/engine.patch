@@ -34,7 +34,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +352,43 @@
+@@ -333,7 +352,52 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -62,6 +62,15 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +# Native housing checks operate only on a marked disposable game copy.
 +set(HOUSE_CHECK_SRCS ${SRCS})
 +list(REMOVE_ITEM HOUSE_CHECK_SRCS "src/main.c")
++# WorldED test copies need native inventory generation for authored NPCs.
++add_executable(worlded-native-inventory EXCLUDE_FROM_ALL "../tools/worlded/prepare_inventory.c" ${HOUSE_CHECK_SRCS})
++target_include_directories(worlded-native-inventory PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
++target_link_libraries(worlded-native-inventory PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
++if(WIN32)
++    add_custom_command(TARGET worlded-native-inventory POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:worlded-native-inventory>"
++        VERBATIM)
++endif()
 +add_executable(check-house EXCLUDE_FROM_ALL "../tools/house/check-house.c" ${HOUSE_CHECK_SRCS})
 +target_include_directories(check-house PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 +target_link_libraries(check-house PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
@@ -3491,13 +3500,14 @@ diff --git a/src/game/script.c b/src/game/script.c
 diff --git a/src/game/sector.c b/src/game/sector.c
 --- a/src/game/sector.c
 +++ b/src/game/sector.c
-@@ -1,4 +1,5 @@
+@@ -1,4 +1,6 @@
  #include "game/sector.h"
++#include "game/modern_house.h"
 +#include "game/modern_uap.h"
  
  #include <inttypes.h>
  #include <stdio.h>
-@@ -1450,7 +1451,22 @@
+@@ -1450,7 +1452,22 @@
  // FIXME: There are many cleanup errors (mosty leaking `dif_stream`).
  //
  // 0x4D1A30
@@ -3520,7 +3530,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  {
      bool generated = false;
      DifferenceFileFlags dif_flags = 0;
-@@ -1493,9 +1509,10 @@
+@@ -1493,9 +1510,10 @@
      sector_validate_game("sector pre-load");
      if (!generated) {
          li_update();
@@ -3532,7 +3542,169 @@ diff --git a/src/game/sector.c b/src/game/sector.c
          }
  
          strcpy(dif_path, sector_save_path);
-@@ -1692,8 +1709,9 @@
+@@ -1581,119 +1599,63 @@
+             return false;
+         }
+ 
+-        if (placeholder != 0xAA0000) {
+-            li_update();
+-            if (!tile_script_list_load(&(sector->tile_scripts), sec_stream)) {
+-                tig_debug_printf("Error loading tile scripts from sector file %s\n", sec_path);
+-                tig_file_fclose(sec_stream);
+-                return false;
+-            }
+-            if ((dif_flags & DIF_HAVE_TILE_SCRIPT_LIST) != 0) {
+-                if (!tile_script_list_load_with_dif(&(sector->tile_scripts), dif_stream)) {
+-                    tig_debug_printf("Error loading tile scripts from differences file %s\n", dif_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-            }
+-
+-            if (placeholder >= 0xAA0002) {
+-                li_update();
+-                if (!sector_script_list_load(&(sector->sector_scripts), sec_stream)) {
+-                    tig_debug_printf("Error loading sector scripts from sector file %s\n", sec_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-                if ((dif_flags & DIF_HAVE_SECTOR_SCRIPT_LIST) != 0) {
+-                    if (!sector_script_list_load_with_dif(&(sector->sector_scripts), dif_stream)) {
+-                        tig_debug_printf("Error loading sector scripts from differences file %s\n", dif_path);
+-                        tig_file_fclose(sec_stream);
+-                        return false;
+-                    }
+-                }
+-            }
+-
+-            if (placeholder >= 0xAA0003) {
+-                li_update();
+-                if (tig_file_fread(&(sector->townmap_info), sizeof(sector->townmap_info), 1, sec_stream) != 1) {
+-                    tig_debug_printf("Error loading townmap info from sector file %s\n", sec_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-                if ((dif_flags & DIF_HAVE_TOWNMAP) != 0) {
+-                    if (tig_file_fread(&(sector->townmap_info), sizeof(sector->townmap_info), 1, dif_stream) != 1) {
+-                        // FIXME: Wrong message.
+-                        tig_debug_printf("Error loading sound list from differences file %s\n", dif_path);
+-                        tig_file_fclose(sec_stream);
+-                        return false;
+-                    }
+-                }
+-
+-                li_update();
+-                if (tig_file_fread(&(sector->aptitude_adj), sizeof(sector->aptitude_adj), 1, sec_stream) != 1) {
+-                    tig_debug_printf("Error loading aptitude adjustment from sector file %s\n", sec_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-                if ((dif_flags & DIF_HAVE_APTITUDE_ADJ) != 0) {
+-                    if (tig_file_fread(&(sector->aptitude_adj), sizeof(sector->aptitude_adj), 1, dif_stream) != 1) {
+-                        tig_debug_printf("Error loading aptitude adjustment from differences file %s\n", dif_path);
+-                        tig_file_fclose(sec_stream);
+-                        return false;
+-                    }
+-                }
+-
+-                li_update();
+-                if (tig_file_fread(&(sector->light_scheme), sizeof(sector->light_scheme), 1, sec_stream) != 1) {
+-                    tig_debug_printf("Error loading light scheme from sector file %s\n", sec_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-                if ((dif_flags & DIF_HAVE_LIGHT_SCHEME) != 0) {
+-                    if (tig_file_fread(&(sector->light_scheme), sizeof(sector->light_scheme), 1, dif_stream) != 1) {
+-                        tig_debug_printf("Error loading light scheme from differences file %s\n", dif_path);
+-                        tig_file_fclose(sec_stream);
+-                        return false;
+-                    }
+-                }
+-
+-                li_update();
+-                if (!sector_sound_list_load(&(sector->sounds), sec_stream)) {
+-                    tig_debug_printf("Error loading sound list from sector file %s\n", sec_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-                if ((dif_flags & DIF_HAVE_SOUND_LIST) != 0) {
+-                    if (!sector_sound_list_load_with_dif(&(sector->sounds), dif_stream)) {
+-                        tig_debug_printf("Error loading sound list from differences file %s\n", dif_path);
+-                        tig_file_fclose(sec_stream);
+-                        return false;
+-                    }
+-                }
+-
+-                sector->flags &= ~SECTOR_CHANGED_MASK;
+-            }
+-
+-            if (placeholder >= 0xAA0004) {
+-                li_update();
+-                if (!sector_block_list_load(&(sector->blocks), sec_stream)) {
+-                    tig_debug_printf("Error loading tile blocking info from sector file %s\n", sec_path);
+-                    tig_file_fclose(sec_stream);
+-                    return false;
+-                }
+-                if ((dif_flags & DIF_HAVE_BLOCK_LIST) != 0) {
+-                    if (!sector_block_list_load_with_dif(&(sector->blocks), dif_stream)) {
+-                        tig_debug_printf("Error loading tile blocking info from differences file %s\n", dif_path);
+-                        tig_file_fclose(sec_stream);
+-                        return false;
+-                    }
+-                }
+-            }
+-        }
++        /* DIF extensions may exist even when absent from the original SEC. */
++        if ((placeholder >= 0xAA0001 && !(tile_script_list_load(&(sector->tile_scripts), sec_stream)))
++            || ((dif_flags & DIF_HAVE_TILE_SCRIPT_LIST) && !(tile_script_list_load_with_dif(&(sector->tile_scripts), dif_stream)))) {
++            tig_debug_printf("Error loading TILE_SCRIPT_LIST from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        if ((placeholder >= 0xAA0002 && !(sector_script_list_load(&(sector->sector_scripts), sec_stream)))
++            || ((dif_flags & DIF_HAVE_SECTOR_SCRIPT_LIST) && !(sector_script_list_load_with_dif(&(sector->sector_scripts), dif_stream)))) {
++            tig_debug_printf("Error loading SECTOR_SCRIPT_LIST from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        if ((placeholder >= 0xAA0003 && !(tig_file_fread(&sector->townmap_info, sizeof(sector->townmap_info), 1, sec_stream) == 1))
++            || ((dif_flags & DIF_HAVE_TOWNMAP) && !(tig_file_fread(&sector->townmap_info, sizeof(sector->townmap_info), 1, dif_stream) == 1))) {
++            tig_debug_printf("Error loading TOWNMAP from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        if ((placeholder >= 0xAA0003 && !(tig_file_fread(&sector->aptitude_adj, sizeof(sector->aptitude_adj), 1, sec_stream) == 1))
++            || ((dif_flags & DIF_HAVE_APTITUDE_ADJ) && !(tig_file_fread(&sector->aptitude_adj, sizeof(sector->aptitude_adj), 1, dif_stream) == 1))) {
++            tig_debug_printf("Error loading APTITUDE_ADJ from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        if ((placeholder >= 0xAA0003 && !(tig_file_fread(&sector->light_scheme, sizeof(sector->light_scheme), 1, sec_stream) == 1))
++            || ((dif_flags & DIF_HAVE_LIGHT_SCHEME) && !(tig_file_fread(&sector->light_scheme, sizeof(sector->light_scheme), 1, dif_stream) == 1))) {
++            tig_debug_printf("Error loading LIGHT_SCHEME from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        if ((placeholder >= 0xAA0003 && !(sector_sound_list_load(&(sector->sounds), sec_stream)))
++            || ((dif_flags & DIF_HAVE_SOUND_LIST) && !(sector_sound_list_load_with_dif(&(sector->sounds), dif_stream)))) {
++            tig_debug_printf("Error loading SOUND_LIST from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        if ((placeholder >= 0xAA0004 && !(sector_block_list_load(&(sector->blocks), sec_stream)))
++            || ((dif_flags & DIF_HAVE_BLOCK_LIST) && !(sector_block_list_load_with_dif(&(sector->blocks), dif_stream)))) {
++            tig_debug_printf("Error loading BLOCK_LIST from sector %s or differences %s\n", sec_path, dif_path);
++            tig_file_fclose(sec_stream);
++            if (dif_stream != NULL) tig_file_fclose(dif_stream);
++            return false;
++        }
++        sector->flags &= ~SECTOR_CHANGED_MASK;
  
          li_update();
          if ((dif_flags & DIF_HAVE_OBJ_LIST) != 0) {
@@ -3544,6 +3716,14 @@ diff --git a/src/game/sector.c b/src/game/sector.c
                  tig_file_fclose(sec_stream);
                  tig_file_fclose(dif_stream);
                  return false;
+@@ -1712,6 +1674,7 @@
+         }
+     }
+ 
++    modern_house_sector_loaded(id, sector);
+     sector_validate_game("sector post-load (pre-fold)");
+     li_update();
+     objlist_fold(&(sector->objects), id, sub_45A9B0(&(sector->datetime), 3000));
 diff --git a/src/game/sector_object_list.c b/src/game/sector_object_list.c
 --- a/src/game/sector_object_list.c
 +++ b/src/game/sector_object_list.c
@@ -4465,7 +4645,7 @@ diff --git a/src/main.c b/src/main.c
  {
 +    if (argc == 2 && strcmp(argv[1], "--check-movies") == 0) return modern_movie_check();
 +    if (argc >= 3 && strcmp(argv[1], "--modern-generate-maps") == 0)
-+        return modern_maps_generate(argv[2], argc > 3 ? atoi(argv[3]) : 0);
++        return modern_maps_generate(argv[2], argc > 3 ? atoi(argv[3]) : 0, argc > 4 ? atoi(argv[4]) : 0);
 +
 +    /* Editor preview runs only inside a marked independent installation. */
 +    bool worlded_test = argc == 5 && strcmp(argv[1], "--worlded-test") == 0;
@@ -8436,3 +8616,15 @@ diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
 +    if(modern && !hidden)tig_window_hide(written_ui_window);
 +    else if(!modern && hidden)tig_window_show(written_ui_window);
 +}
+diff --git a/src/game/quest.c b/src/game/quest.c
+--- a/src/game/quest.c
++++ b/src/game/quest.c
+@@ -165,7 +165,7 @@
+         if (mes_load("mes\\gamequestlogdumb.mes", &quest_log_dumb_mes_file)) {
+             for (num = 1000; num < 2000; num++) {
+                 mes_file_entry.num = num;
+-                if (mes_search(quest_log_mes_file, &mes_file_entry)) {
++                if (mes_search(quest_log_dumb_mes_file, &mes_file_entry)) {
+                     quests[quest_num_to_idx(num)].dumb_description = mes_file_entry.str;
+                 }
+             }

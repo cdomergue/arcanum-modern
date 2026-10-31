@@ -101,6 +101,13 @@ std::string SceneAssets::resolve(std::uint32_t aid) {
         return "art/item/"+message(std::string("art/item/")+tables[(aid>>12)&3]+".mes",key);
     }
     if(type==10)return "art/roof/"+message("art/roof/roofname.mes",num)+".art";
+    if(type==11) {
+        // Facade IDs split their asset number across bits 17..24 and 27.
+        // Rugs use this category too; the low bits select a ground-cell frame.
+        unsigned facade=((aid>>17)&255)|(((aid>>27)&1)<<8);
+        return "art/facade/"+message("art/facade/facadename.mes",facade)+".art";
+    }
+    if(type==9)return "art/light/"+message("art/light/light.mes",(aid>>19)&511)+((aid&1)?"_s"+std::to_string(((aid>>4)&31)/8):"")+".art";
     if(type==2 || type==12 || type==13) {
         const char* bodies[]={"HM","DF","GH","HG","EF"};
         const char* armors[]={"UW","V1","LA","CM","PM","RB","PC","BN","CD"};
@@ -127,14 +134,15 @@ Sprite SceneAssets::sprite(std::uint32_t aid) {
     result.path = resource_name(resolve(aid));
     Art art(installation_->read(result.path));
     unsigned type = aid >> 28;
-    unsigned rotation = type == 0 || type == 5 || type == 6 || type==10 ? 0 : ((aid >> 11) & 7);
+    unsigned rotation = type == 0 || type == 5 || type == 6 || type==10 || type==11 ? 0 : type==9 ? ((aid>>9)&7) : ((aid >> 11) & 7);
     const unsigned direction = rotation;
     bool mirroredCharacter=(type==2 || type==12 || type==13) && rotation>0 && rotation<4;
     if(mirroredCharacter)rotation=8-rotation;
     if (art.rotations() == 1) rotation = 0;
-    unsigned frame = type == 0 || type == 1 || type == 6 ? 0 : type == 5 ? ((aid >> 8) & 255) : ((aid >> 14) & 31);
+    unsigned frame = type==9 ? ((aid>>12)&127) : type==11 ? ((aid>>1)&1023) : type == 0 || type == 1 || type == 6 ? 0 : type == 5 ? ((aid >> 8) & 255) : ((aid >> 14) & 31);
+    if(type==11 && frame>=art.frames())throw std::runtime_error("Facade frame outside ART: "+result.path);
     if (frame >= art.frames()) frame = 0;
-    unsigned palette = (aid >> 4) & 3;
+    unsigned palette = type==9 || type==11 ? 0 : (aid >> 4) & 3;
     if (!art.palette_available(palette)) palette = 0;
     auto bytes = art.rgba(rotation, frame, palette);
     const auto& info = art.frame(rotation, frame);
@@ -165,6 +173,16 @@ std::map<std::uint32_t,QString> SceneAssets::surfaces(bool roofs) {
             try{auto path=resolve(aid);if(installation_->contains(path))result[aid]=QString(id<200?"Outdoor · ":"Indoor · ")+display(name)+QString(" · %1").arg(variant+1);}catch(const std::exception&){} }
     }
     return result;
+}
+bool SceneAssets::terrainBlocked(std::uint32_t aid) {
+    if(aid==0xffffffff)return false;
+    if((aid>>28)==11)return !(aid&1); // Facade walkability is stored in the AID.
+    if(aid>>28)return false;
+    unsigned id=((aid&256)?0:200)+((aid&128)?0:100)+((aid>>22)&63);
+    const auto& names=table("art/tile/tilename.mes");auto found=names.find(id);if(found==names.end())return false;
+    auto slash=found->second.find('/');if(slash==std::string::npos)return false;
+    auto flags=found->second.substr(slash+1);flags=flags.substr(0,flags.find(' '));
+    return flags.find_first_of("bf")!=std::string::npos;
 }
 GameObject SceneAssets::effective(const GameObject& object) {
     if (object.prototype) return object;

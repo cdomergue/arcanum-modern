@@ -33,8 +33,8 @@ and the [editor guide](worlded.md) if you are starting from source.
 4. Add furniture and any inhabitants. Create new instances in the project.
    To change an existing campaign object for housing, duplicate it and remove
    the original. Housing must not take over an existing campaign object's GUID.
-5. Add object scripts or dialogues if needed, then save. Tile and sector scripts
-   are not supported by the housing exporter. The estate runtime controls the
+5. Add object, tile or sector scripts and dialogues if needed, then save.
+   The estate runtime controls the
    guard's dialogue event and bed use event; use other objects for custom events.
 6. Test the layout in a WorldED copy with an unvisited sector. Walk through the
    doorway in both directions with every companion, including a dog or another
@@ -92,10 +92,10 @@ instance ID beginning with `0200`, not the numeric prototype ID. You can repeat
 `--guard` for multiple NPCs. Omitting it gives no NPC the guard role; creature
 species and prototype numbers do not imply a role.
 
-The exporter writes only new objects and terrain/roof differences, plus records
-of removed baseline scenery. It rejects reused campaign GUIDs, missing guard
-IDs, guards that are not NPCs, objects outside the sector and tile/sector
-scripts. Existing object scripts are retained in the exported instances.
+The exporter writes new objects, changes to ground and roofs, manual blockers,
+sector settings, script attachments and records of removed baseline scenery.
+It rejects reused campaign GUIDs, missing guard IDs, guards that are not NPCs,
+and objects outside the sector. Object scripts remain in their instances.
 Project-owned files from `exports/scr`, `exports/dlg` and `exports/proto` are
 copied under the scene's `resources` folder.
 
@@ -230,6 +230,31 @@ installation, and the Windows, Linux and macOS packaging scripts include it.
 The native transaction lives in `modern_house.c`. The small generated SCR files
 are entry points to that code; editing them does not change the purchase logic.
 
+## Sector settings and script state
+
+Housing export includes changed manual blocking cells, music and ambient
+schemes, the lighting scheme, and the magic/technology adjustment. Rugs and
+other existing facade pieces travel with the ground cells. These features need
+the matching Renaissance engine build; older engines ignore the new optional
+files. They do not require replacing the original campaign sector.
+
+Environment settings affect the whole 64 × 64 sector, including land outside
+the house. Use them only when that scope fits the property. Blocking changes
+apply only to the cells you edited. The engine reapplies these authored settings
+when loading the sector; it does not change the world travel map.
+
+Tile and sector scripts include their initial flags and four counters. Once an
+attachment has saved state, that state takes priority: returning to the house
+or loading a save must not reset a counter or revive a disabled script. This
+also means changing an already used attachment in a later content pack is not
+a save migration. Test new defaults with a fresh discovery.
+
+Unchanged campaign attachments are omitted from the export. Removing one in
+the project produces a zero-script record. A changed campaign object must be
+duplicated and the original removed; the exporter refuses to discard its
+edited properties silently. Object scripts and their SCR/DLG resources retain
+the existing object export workflow.
+
 ## How the runtime applies a house
 
 Each object is added once by persistent GUID. The original sector's static
@@ -265,18 +290,38 @@ Property dialogue blocks start at `3000 + slot * 100`.
 | --- | --- |
 | `scene.mes` | Header `{0}{1 sectorX sectorY}`; entries 100 and above contain `role GUID` |
 | `objects/GUID.mob` | Native version 119 object instance with the matching persistent GUID |
+| `blocking.mes` | Optional changed cell records, key `y * 64 + x`, value `0` or `1` |
+| `environment.mes` | Optional signed values: key `0` aptitude, `1` lighting scheme, `2` music, `3` ambient |
+| `scripts.mes` | Optional `scriptID flags packedCounters`; key `0`–`4095` for cells, `4096` for the sector; script ID `0` detaches |
 | `terrain.mes` | Changed ground cells: key `y * 64 + x`, value unsigned decimal tile art ID |
 | `roofs.mes` | Changed roof cells: key `y * 16 + x`, value unsigned decimal roof art ID |
 | `removed.mes` | Packed location, current art ID, signed pixel offset X and Y for removed baseline scenery |
 | `vegetation.mes` | Optional local-cell clearance masks, described above |
+| `inventory.mes` | Optional `childGUID parentGUID` records for authored inventory; contents initialize only with a new owner |
+| `removed-lights.bin` | Optional 32-bit count followed by native 48-byte independent light records to disable |
 | `resources/` | Optional project SCR, DLG and PRO files |
 
-The first four MES files are required even when a difference file is empty.
+`scene.mes`, `terrain.mes`, `roofs.mes` and `removed.mes` are required even when a difference file is empty.
 Object GUIDs are 36 hexadecimal characters beginning with `0200` and must be
 unique across all properties. The exporter uses roles `portal`, `chest`,
 `object` and explicit `guard`; lock behavior also follows the native object type.
 Sector IDs in WorldED filenames are `sectorX | (sectorY << 26)`. Global ground
 coordinates are `sectorX * 64 + localX` and `sectorY * 64 + localY`.
+
+### Authored inventories and lights
+
+Use [the inventory editor](worlded-inventory.md) to give a new house container
+or NPC its initial items. All owners and items load before their references are
+resolved. Initial contents are installed once with the new owner. Taking,
+consuming or destroying an item does not refill the container on the next
+housing update. Adding stock to a container that a player already owns requires
+an explicit migration; changing the initial inventory alone does not restock it.
+
+New lights use invisible scenery objects with stable GUIDs. Original sector
+lights removed in WorldED are disabled in place, so their saved record order
+stays intact. Check new and removed lights after a save/reload as well as on
+first discovery. An exported light's identity derives from its authored data;
+changing a previously distributed light requires a migration of the old proxy.
 
 ## Test before distribution
 

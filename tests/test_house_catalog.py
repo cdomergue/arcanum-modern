@@ -14,6 +14,18 @@ house=importlib.util.module_from_spec(spec);spec.loader.exec_module(house)
 
 class Catalogue(unittest.TestCase):
     def setUp(self):self.catalog=json.loads((ROOT/'resources/house/catalog.json').read_text())
+    def test_optional_overlay_validation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            scenes=Path(folder)/'scenes'
+            shutil.copytree(ROOT/'resources/house',scenes)
+            scene=scenes/self.catalog['properties'][0]['scene']
+            for name,valid,invalid in [('blocking','{0}{1}\n','{4096}{1}\n'),('environment','{0}{-42}\n','{0}{2147483648}\n'),('scripts','{4096}{42 4294967295 4278387201}\n','{0}{42 -1 0}\n')]:
+                file=scene/(name+'.mes');file.write_text(valid);house.check_scenes(self.catalog,scenes)
+                for text in [invalid,valid+valid,'garbage']:
+                    file.write_text(text)
+                    with self.assertRaises(ValueError):house.check_scenes(self.catalog,scenes)
+                file.write_text(valid)
+
     def test_current_property(self):
         p=self.catalog['properties'][0]
         self.assertEqual(p['price'],10000);self.assertEqual(p['text']['fr']['standing'],'Bon standing')

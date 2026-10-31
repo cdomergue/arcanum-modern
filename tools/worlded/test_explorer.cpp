@@ -2,13 +2,14 @@
 #include "src/explorer.cpp"
 #include <QtTest>
 #include "test_authoring.hpp"
+#include "test_inventory_explorer.inc"
 
 namespace {
 void check(bool condition, const char* message) { if (!condition) throw std::runtime_error(message); }
 }
 int main(int argc, char** argv) {
     QApplication app(argc,argv); app.setStyle("Fusion"); applyExplorerStyle(app);
-    if (argc!=7 && argc!=5 && argc!=6 && argc!=3 && !(argc==4 && std::string(argv[3])=="--real-sector")) return 2;
+    if (argc!=7 && argc!=5 && argc!=6 && argc!=3 && !(argc==4 && (std::string(argv[3])=="--real-sector" || std::string(argv[3])=="--carpets" || std::string(argv[3])=="--facades" || std::string(argv[3])=="--lights"))) return 2;
     try {
         checkAuthoring();
         Explorer window; window.show(); window.mount(QString::fromUtf8(argv[1]));
@@ -22,6 +23,19 @@ int main(int argc, char** argv) {
 #endif
         }
         {QGraphicsScene scene;Canvas canvas(&scene);canvas.editable=true;canvas.layer=0;auto item=scene.addRect(0,0,80,80);item->setData(0,42);item->setFlag(QGraphicsItem::ItemIsSelectable);canvas.resize(300,300);canvas.show();int activated=-1;canvas.activateObject=[&](int i){activated=i;};QTest::qWait(30);QTest::mouseDClick(canvas.viewport(),Qt::LeftButton,Qt::NoModifier,canvas.mapFromScene(QPointF(40,40)));check(activated==42,"World object double-click event was not dispatched");}
+        {QTemporaryDir copyFixture;auto root=fs::u8path(copyFixture.path().toStdString());
+            write_bytes(root/"first/Proto/001020 - Wall.pro",{1});write_bytes(root/"first/Proto/unique.pro",{7});
+            write_bytes(root/"second/proto/001020 - Wall.pro",{2});write_bytes(root/"second/proto/other.pro",{8});
+            copy_test_tree(root/"first",root/"copy");copy_test_tree(root/"second",root/"copy");
+            check(read_file(root/"copy/Proto/001020 - Wall.pro")==Bytes{2},"Case-colliding prototype did not use last source");
+            check(read_file(root/"copy/Proto/unique.pro")==Bytes{7} && read_file(root/"copy/Proto/other.pro")==Bytes{8},"Directory merge lost unique resources");
+            check(std::distance(fs::directory_iterator(root/"copy"),fs::directory_iterator{})==1,"Case aliases created duplicate test directories");
+            check(read_file(root/"first/Proto/001020 - Wall.pro")==Bytes{1},"Copy modified source prototype");
+        }
+        {Bytes data;std::string magic="FacWalk V101  ";data.insert(data.end(),magic.begin(),magic.end());auto word=[&](unsigned v){for(int b=0;b<4;b++)data.push_back(v>>(8*b));};
+            for(unsigned v:{5,1,1,3,2,2,0,0,1,2,1,0})word(v);auto f=read_facade(data,263);
+            check(f.width==3 && f.height==2 && f.tiles.size()==2,"Sparse facade footprint lost");check(f.tiles.at({0,0})==(0xb0000000u|(1u<<27)|(1u<<26)|(1u<<25)|(7u<<17)|(5u<<11)|1u),"Facade AID encoding incorrect");
+            check((f.tiles.at({2,1})&2047)==2,"Facade frame/walkable bits confused");data.pop_back();bool rejected=false;try{read_facade(data,263);}catch(...){rejected=true;}check(rejected,"Truncated facade accepted");}
         QTemporaryDir engineFixtures;auto fixture=engineFixtures.filePath("engine");
         {QFile file(fixture);check(file.open(QIODevice::WriteOnly),"Cannot create engine fixture");file.write("#!/bin/sh\n# --worlded-test .worlded-playtest\n");}
         check(!supports_worlded_test(fixture),"Shell launcher accepted as compatible engine");
@@ -52,7 +66,8 @@ int main(int argc, char** argv) {
             window.objectItems[index]->setSelected(true);check(window.configureActor->isVisible(),"Actor configuration button missing");
             QTimer::singleShot(150,[&]{auto dialog=dynamic_cast<ActorEditor*>(QApplication::activeModalWidget());check(dialog!=nullptr,"Actor editor missing");
                 for(int tab=0;tab<dialog->tabs->count();tab++){dialog->tabs->setCurrentIndex(tab);QTest::qWait(50);dialog->grab().save(QString::fromUtf8(argv[2])+QString("-actor-%1.png").arg(tab));}dialog->reject();});window.editActor();
-            std::cout<<"PASS: actor configuration pages rendered\n";return 0;
+            checkInventoryExplorer(window);
+            std::cout<<"PASS: actor configuration pages rendered; inventory ownership, duplication, deletion, movement and undo/redo\n";return 0;
         }
         if(argc==5 && std::string(argv[3])=="--association-visual") {
             window.openProjectFolder(QString::fromUtf8(argv[4]));check(window.editing() && window.changeProjectInstallation->isEnabled(),"Project association command unavailable");
@@ -135,18 +150,25 @@ int main(int argc, char** argv) {
                 check(dialog->grab().save(QString::fromUtf8(argv[2])),"Cannot capture test dialog");dialog->reject();});
             window.configurePlaytest();std::cout<<"PASS: test configuration opens and cancels without creating a copy\n";return 0;
         }
-        if(argc==7 && std::string(argv[3])=="--project-playtest") {
+        if(argc==7 && (std::string(argv[3])=="--project-playtest" || std::string(argv[3])=="--inventory-playtest")) {
             window.openProjectFolder(QString::fromUtf8(argv[6]));check(window.editing(),"Project not editable");
+            bool inventoryCheck=std::string(argv[3])=="--inventory-playtest";
+            if(inventoryCheck){int npc=-1;for(int i=0;i<int(window.paletteObjects.size());i++)if(window.paletteObjects[i].type==16 && window.assets->effective(window.paletteObjects[i]).number("CRITTER_INVENTORY_SOURCE")){npc=i;break;}
+                check(npc>=0,"No inventory-bearing NPC prototype");auto object=clone_instance(window.paletteObjects[npc]);set_number(object,"LOCATION",30ull|(30ull<<32));
+                for(const char* field:{"CRITTER_TELEPORT_DEST","NPC_STANDPOINT_DAY","NPC_STANDPOINT_NIGHT"})set_number(object,field,object.number("LOCATION"));
+                auto path=window.assets->prototypePath(object.prototype_id);window.building->prototypes[path]=window.installation->read(path);window.building->objects.push_back(object);
+                std::cerr<<"Inventory fixture NPC "<<object.prototype_id<<std::endl;}
             check(supports_worlded_test(QString::fromUtf8(argv[4])),"Test engine lacks support");
             QTimer::singleShot(250,[&]{auto dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(dialog!=nullptr,"Test dialog missing");check(dialog->grab().save(QString::fromUtf8(argv[2])+"-dialog.png"),"Cannot capture test dialog");dialog->reject();});
             window.configurePlaytest();
             auto result=create_playtest(*window.building,fs::u8path(argv[1]),fs::u8path(argv[5]),fs::u8path(argv[4]),fs::u8path(argv[2]),"fr");
+            if(inventoryCheck){auto log=read_file(result.root/"inventory-generation.log");check(std::string(log.begin(),log.end()).find("Prepared NPC ")!=std::string::npos,"No NPC inventory was generated");}
             QProcess process;configure_test_process(process,result.root);
-            check(process.arguments()==QStringList({"--worlded-test","Slot0002","1346","1024"}),"Incorrect test launch arguments");
+            check(process.arguments()==QStringList({"--worlded-test",QFileInfo(argv[5]).baseName(),QString::number(window.building->sector_id&0x3ffffff),QString::number(window.building->sector_id>>26)}),"Incorrect test launch arguments");
             check(process.workingDirectory()==utf8(result.game.u8string()),"Test cwd must be the copied game");
             auto restored=load_project(result.project);auto contents=[](const Building& b){std::map<std::string,Bytes> result;for(auto& o:b.objects)result[o.id]=encode_instance(o);return result;};check(contents(restored)==contents(*window.building) && restored.location_names==window.building->location_names,"Test differs from user project");
             for(const auto& [name,data]:window.building->content)if(name.rfind("scr/",0)==0)check(read_file(result.game/"data"/name)==data,"New script absent from initial engine index");
-            check(read_file(result.game/"modules/Arcanum/Save/Slot0002.tfaf")==read_file(fs::u8path(argv[5]).replace_extension(".tfaf")),"Copied save differs");
+            check(read_file(result.game/"modules/Arcanum/Save"/fs::u8path(QFileInfo(argv[5]).baseName().toStdString()+".tfaf"))==read_file(fs::u8path(argv[5]).replace_extension(".tfaf")),"Copied save differs");
             window.grab().save(utf8((result.root/"editor.png").u8string()));
             std::cout<<"PASS: actual project preserved, compatible engine, independent Elias save, test arguments and working directory\n";return 0;
         }
@@ -176,6 +198,45 @@ int main(int argc, char** argv) {
             window.openProjectFolder(utf8(result.project.string()));QTest::qWait(200);
             check(window.grab().save(utf8((result.root/"editor.png").string())),"Cannot save house view");
             std::cout<<"PASS: insert/undo/redo, localized names, independent save copy, mobile merge, project reopen\n"<<result.game<<std::endl;return 0;
+        }
+        if(argc>=4 && std::string(argv[3])=="--lights") {
+            window.showWorld();window.openWorldSector({1346,1024});auto before=window.building->ground;Bytes light(48,0);light[31]=0x90;light[32]=210;light[33]=30;light[34]=90;
+            QTimer::singleShot(100,[&]{auto dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(dialog!=nullptr,"Light editor missing");
+                dialog->findChild<QSpinBox*>("lightX")->setValue(30);dialog->findChild<QSpinBox*>("lightY")->setValue(30);
+                dialog->grab().save(QString::fromUtf8(argv[2])+"-dialog.png");dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Save)->click();});
+            check(window.editLight(light),"Light edit cancelled");check(word(light,8)==1346*64+30 && word(light,12)==1024*64+30,"Light coordinates not global");
+            auto lights=before.lights();lights.push_back(light);auto ground=before;ground.set_lights(lights);window.commitEdit("Add light",window.building->objects,{},&ground);
+            window.history(false);check(window.building->ground.encode()==before.encode(),"Light undo failed");window.history(true);check(window.building->ground.lights()==lights,"Light redo failed");
+            window.previewLights->setChecked(true);window.canvas->resetTransform();window.canvas->scale(1,1);window.canvas->centerOn(Canvas::project({30,30}));QTest::qWait(100);window.grab().save(QString::fromUtf8(argv[2]));
+            QTemporaryDir temporary;auto path=argc==5?fs::u8path(argv[4]):fs::u8path(temporary.path().toStdString())/"project";
+            export_building(*window.building,path);check(load_project(path).ground.lights()==lights,"Saved light lost");
+            std::cout<<"PASS: native light edit, undo/redo, preview, save/reopen"<<std::endl;return 0;
+        }
+        if(argc==4 && std::string(argv[3])=="--facades") {
+            window.showWorld();window.openWorldSector({970,1027});window.libraryTabs->setCurrentWidget(window.facadePanel);window.populateFacades();
+            check(window.facadePalette->count()>100,"Facade library incomplete");int rug=-1;for(int i=0;i<window.facadePalette->count();i++)if(window.facadePalette->item(i)->text().compare("rug4-flip",Qt::CaseInsensitive)==0)rug=i;
+            check(rug>=0,"Native flipped rug missing");window.facadeSearch->setText("rug");window.facadePalette->setCurrentRow(rug);window.facadePalette->scrollToItem(window.facadePalette->item(rug));window.loadFacadeIcons();
+            auto before=window.building->ground.encode();window.placeFacade();auto footprint=window.copied;check(footprint.tiles.size()==15,"Rug footprint differs from native walkmask");
+            check(!window.pasteAt({63,63}),"Out-of-bounds facade partially placed");check(window.building->ground.encode()==before,"Rejected facade changed ground");
+            check(window.pasteAt({20,20}),"Facade placement failed");window.canvas->cancelInteraction();
+            for(auto [cell,aid]:footprint.tiles)check(window.building->ground.tile(20+cell.first,20+cell.second)==aid,"Facade frame or walkability lost");
+            auto placed=window.building->ground.encode();window.history(false);check(window.building->ground.encode()==before,"Facade undo failed");window.history(true);check(window.building->ground.encode()==placed,"Facade redo failed");
+            window.libraryTabs->setCurrentWidget(window.facadePanel);window.canvas->resetTransform();window.canvas->scale(1.5,1.5);window.canvas->centerOn(Canvas::project({22,22}));QTest::qWait(150);window.grab().save(QString::fromUtf8(argv[2]));
+            {QTemporaryDir dir;auto path=fs::u8path(dir.path().toStdString())/"project";export_building(*window.building,path);auto reopened=load_project(path);for(auto [cell,aid]:footprint.tiles)check(reopened.ground.tile(20+cell.first,20+cell.second)==aid,"Facade lost on save");}
+            std::cout<<"PASS: native facade library, 15-piece flipped rug, boundary rejection, undo/redo and save/reopen"<<std::endl;return 0;
+        }
+        if(argc==4 && std::string(argv[3])=="--carpets") {
+            window.showWorld();window.openWorldSector({970,1027});check(window.editing(),"Reported carpet sector did not open");
+            unsigned carpets=0,facades=0;auto original=window.building->ground.encode();
+            for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++) {
+                auto aid=window.building->ground.tile(x,y);if((aid>>28)!=11)continue;
+                auto sprite=window.assets->sprite(aid);facades++;
+                if(x>=3 && x<=7 && y>=34 && y<=36){check(sprite.path=="art/facade/rug4-flip.art","Reported carpet resolved to wrong asset");carpets++;}
+            }
+            check(carpets==15,"Reported carpet pieces missing");check(window.building->ground.encode()==original,"Preview modified source tiles");
+            window.canvas->resetTransform();window.canvas->scale(1.5,1.5);window.canvas->centerOn(Canvas::project({5,35}));
+            QTest::qWait(150);check(window.grab().save(QString::fromUtf8(argv[2])),"Cannot capture carpet sector");
+            std::cout<<"PASS: sector 970,1027; "<<carpets<<" rug pieces, "<<facades<<" facade tiles rendered\n";return 0;
         }
         if(argc==4) {
             // Opt-in regression on the user's reported exterior sector. Reads
@@ -226,6 +287,13 @@ int main(int argc, char** argv) {
             check(pixels.pixelColor(mirrored ? 2 : 1,0).alpha()==0, "Mirrored transparency displaced");
         }
         check(window.assets->sprite(0x30080200).path=="art/portal/paned0.art","Damaged window resolves to the wrong asset");
+        for(unsigned high:{0u,1u})for(unsigned walkable:{0u,1u}) {
+            unsigned aid=0xb0000000u|(high<<27)|(7u<<17)|(5u<<11)|(715u<<1)|walkable;
+            auto sprite=window.assets->sprite(aid);
+            check(sprite.path==(high?"art/facade/rug-high-test.art":"art/facade/rug-test.art"),"Facade number decoded incorrectly");
+            auto pixels=sprite.pixels.toImage();check(pixels.pixelColor(0,0)==QColor(7,14,21),"Facade frame, rotation, palette or mirror decoded incorrectly");
+            check(pixels.pixelColor(1,0).alpha()==0,"Facade transparency changed");
+        }
         window.search->setFocus(); QTest::keyClicks(window.search,"art/sprite.art");
         window.category->setCurrentIndex(2);
         check(window.filter.rowCount()==1,"Search and category did not combine");
@@ -250,6 +318,45 @@ int main(int argc, char** argv) {
         check(!window.failed && window.objects.size()==1,"Sector objects did not load");
         auto originalSector=Sector(window.installation->read("maps/test/0.sec"));
         const auto stream=originalSector.encode(); const auto info=originalSector.info();
+        check(window.assets->terrainBlocked((2u<<22)|256|128),"Material /b flag ignored");
+        check(window.assets->terrainBlocked((3u<<22)|256|128),"Material /f flag ignored");
+        check(!window.assets->terrainBlocked((1u<<22)|256|128),"Grass marked as blocked");
+        check(window.assets->terrainBlocked(0xb0000000) && !window.assets->terrainBlocked(0xb0000001),"Facade walkability bit inverted");
+        {
+            auto changed=originalSector;bool before=changed.blocked(31,0);
+            changed.set_blocked(31,0,!before);check(Sector(changed.encode()).blocked(31,0)!=before,"Blocking bit did not persist");
+            changed.set_blocked(31,0,before);check(changed.encode()==stream,"Blocking round trip changed unrelated bytes");
+            auto settings=changed.settings();changed.set_settings({-42,7,100,4100});auto reread=Sector(changed.encode()).settings();
+            check(reread.aptitude==-42 && reread.light==7 && reread.music==100 && reread.ambient==4100,"Sector settings did not persist");
+            changed.set_settings(settings);check(changed.encode()==stream,"Sector settings changed sound flags or other bytes");
+            for(unsigned version=0;version<4;version++) {
+                Bytes bytes(4+4096*4,0);
+                auto append=[&](unsigned value){for(int i=0;i<4;i++)bytes.push_back((value>>(8*i))&255);};
+                append(1);append(0xaa0000+version);
+                if(version>=1)append(0);
+                if(version>=2)for(int i=0;i<3;i++)append(0);
+                if(version>=3)for(int i=0;i<6;i++)append(0);
+                bytes.insert(bytes.end(),stream.begin()+info.object_offset,stream.end());
+                Sector old(bytes);old.set_blocked(63,63,true);old.set_roof(1,1,0xa0000000);
+                auto encoded=old.encode();Sector roundtrip(encoded);
+                check(roundtrip.info().version==0xaa0004 && roundtrip.blocked(63,63),"Old SEC blocking upgrade failed");
+                check(roundtrip.roof(1,1)==0xa0000000,"Roof insertion lost upgraded blocking");
+                check(Bytes(encoded.begin()+roundtrip.info().object_offset,encoded.end())==Bytes(stream.begin()+info.object_offset,stream.end()),"SEC upgrade changed object bytes");
+                roundtrip.set_blocked(63,63,false);check(!Sector(roundtrip.encode()).blocked(63,63),"Last blocking bit did not clear");
+                Sector attachments(bytes);attachments.set_script({4095,0x80000001u,0xff807f01u,42});attachments.set_script({7,3,4,43});attachments.set_script({UINT32_MAX,5,6,42});
+                auto attached=Sector(attachments.encode());check(attached.scripts().size()==3 && attached.scripts()[0].tile==7 && attached.scripts()[1].counters==0xff807f01u,"Script insertion/order/header lost");
+                attached.set_script({7,9,10,42});check(attached.scripts().size()==3 && attached.scripts()[0].flags==9,"Script edit duplicated attachment");
+                attached.set_roof(1,1,0xa0000000);attached.remove_script(0);check(Sector(attached.encode()).scripts().size()==2,"Roof insertion invalidated script offsets");
+                auto encodedScripts=attached.encode();check(Bytes(encodedScripts.begin()+attached.info().object_offset,encodedScripts.end())==Bytes(stream.begin()+info.object_offset,stream.end()),"Script edits damaged objects");
+                Sector illuminated(bytes);auto beforeLight=illuminated.encode();Bytes lamp(48,0);lamp[31]=0x90;lamp[32]=255;
+                illuminated.set_lights({lamp});check(illuminated.lights()==std::vector<Bytes>{lamp},"Light record not preserved");
+                illuminated.set_blocked(2,3,true);illuminated.set_roof(1,1,0xa0000000);check(Sector(illuminated.encode()).lights()==std::vector<Bytes>{lamp},"Sector edits lost lights");
+                illuminated.set_lights({});check(illuminated.lights().empty() && illuminated.blocked(2,3),"Light removal damaged sector");
+                auto lightEncoded=illuminated.encode();check(Bytes(lightEncoded.begin()+illuminated.info().object_offset,lightEncoded.end())==Bytes(stream.begin()+info.object_offset,stream.end()),"Light edit damaged objects");
+                Sector oldSettings(bytes);oldSettings.set_settings({-42,7,100,4100});oldSettings.set_roof(1,1,0xa0000000);
+                auto persisted=Sector(oldSettings.encode()).settings();check(persisted.aptitude==-42 && persisted.ambient==4100,"Settings lost in old SEC upgrade or roof insertion");
+            }
+        }
         check(encode_instance(window.objects[0])==Bytes(stream.begin()+info.object_offset,stream.begin()+info.object_offset+info.object_bytes),
             "Instance writer changed independent sparse-array fixture");
         auto invalid=window.objects[0]; invalid.fields.push_back(invalid.fields.front());
@@ -373,6 +480,49 @@ int main(int argc, char** argv) {
         auto tileBefore=window.building->ground.tile(30,30); drop(soil,{30,30});
         check(window.building->ground.tile(30,30)==window.paletteObjects[soil].number("CURRENT_AID"),"Tile drop failed");
         if(window.building->ground.tile(30,30)!=tileBefore) { window.history(false); check(window.building->ground.tile(30,30)==tileBefore,"Tile undo failed"); }
+        {
+            window.editLayer->setCurrentIndex(5);window.canvas->centerOn(Canvas::project({30,30}));
+            auto before=window.building->ground.encode();bool blocked=window.building->ground.blocked(30,30);
+            auto point=window.canvas->mapFromScene(Canvas::project({30,30}));
+            QTest::mouseClick(window.canvas->viewport(),Qt::LeftButton,Qt::NoModifier,point);
+            check(window.building->ground.blocked(30,30)!=blocked,"Blocking click not applied");
+            window.history(false);check(window.building->ground.encode()==before,"Blocking undo changed sector bytes");
+            window.history(true);check(window.building->ground.blocked(30,30)!=blocked,"Blocking redo failed");
+            point=window.canvas->mapFromScene(Canvas::project({30,30}));
+            QTest::mouseClick(window.canvas->viewport(),Qt::LeftButton,Qt::NoModifier,point);
+            check(window.building->ground.blocked(30,30)==blocked,"Second blocking click did not clear tile");
+            window.grab().save(QString::fromUtf8(argv[2])+"-blocking.png");window.editLayer->setCurrentIndex(0);
+        }
+        {
+            auto before=window.building->ground.encode();
+            QTimer::singleShot(50,[&]{auto dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(dialog!=nullptr,"Sector dialog missing");dialog->reject();});window.configureSector();
+            check(window.building->ground.encode()==before,"Cancelling sector dialog changed data");
+            QTimer::singleShot(50,[&]{auto dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(dialog!=nullptr,"Sector dialog missing");
+                for(auto pair:{std::pair<const char*,int>{"sectorMusic",100},{"sectorAmbient",4100},{"sectorLight",7}}){auto box=dialog->findChild<QComboBox*>(pair.first);check(box && box->findData(pair.second)>=0,"Scheme names missing");box->setCurrentIndex(box->findData(pair.second));}
+                dialog->findChild<QSpinBox*>("sectorAptitude")->setValue(-42);dialog->grab().save(QString::fromUtf8(argv[2])+"-sector-properties.png");dialog->accept();});window.configureSector();
+            auto result=window.building->ground.settings();check(result.ambient==4100 && result.music==100 && result.light==7 && result.aptitude==-42,"Sector dialog values not applied");
+            {QTemporaryDir output;auto path=fs::u8path(output.path().toStdString())/"project";export_building(*window.building,path);auto reopened=load_project(path);
+                auto saved=reopened.ground.settings();check(saved.aptitude==result.aptitude && saved.light==result.light && saved.music==result.music && saved.ambient==result.ambient,"Sector settings changed during project save/reopen");
+                // A saved project's SEC also contains its static objects; the
+                // in-memory ground template does not. Compare the edited layers.
+                for(unsigned y=0;y<64;y++)for(unsigned x=0;x<64;x++)check(reopened.ground.blocked(x,y)==window.building->ground.blocked(x,y),"Blockers changed during project save/reopen");}
+            window.history(false);check(window.building->ground.encode()==before,"Sector properties undo changed data");
+            window.editLayer->setCurrentIndex(1);int exact=-1;for(int i=0;i<window.surfacePalette->count();i++)if(window.surfacePalette->item(i)->text().contains("drtgrs6a"))exact=i;
+            check(exact>=0,"Exact terrain transition missing from Ground / Roofs");window.surfacePalette->setCurrentRow(exact);
+            check(!window.terrainTransitions->isEnabled() && !window.terrainTransitions->isChecked(),"Exact tile still uses automatic transitions");
+            window.editLayer->setCurrentIndex(0);
+        }
+        {
+            auto before=window.building->ground.encode();
+            QTimer::singleShot(100,[&]{auto d=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(d!=nullptr,"Attachment dialog missing");d->reject();});window.editGroundScript(1100);
+            check(window.building->ground.encode()==before,"Cancelled attachment changed project");
+            auto attach=[&](unsigned tile){QTimer::singleShot(100,[&]{auto d=qobject_cast<QDialog*>(QApplication::activeModalWidget());auto list=d->findChild<QComboBox*>("attachmentResource");auto index=list->findData(42u);check(index>=0,"Fixture script missing");list->setCurrentIndex(index);
+                d->findChild<QLineEdit*>("attachmentFlags")->setText("0x80000001");for(int i=0;i<4;i++)d->findChild<QSpinBox*>(QString("attachmentCounter%1").arg(i))->setValue(i==3?255:i+1);
+                d->grab().save(QString::fromUtf8(argv[2])+"-attachment.png");auto b=d->findChild<QDialogButtonBox*>();b->button(QDialogButtonBox::Save)->click();});window.editGroundScript(tile);};
+            attach(1100);attach(UINT32_MAX);window.editLayer->setCurrentIndex(4);window.inspectorTabs->setCurrentWidget(window.scriptsPanel);window.grab().save(QString::fromUtf8(argv[2])+"-attachments-window.png");window.editLayer->setCurrentIndex(0);bool found=false;for(auto a:window.building->ground.scripts())if(a.tile==1100)found=a.number==42 && a.flags==0x80000001u && a.counters==0xff030201u;check(found,"Attachment controls lost state");
+            {QTemporaryDir output;auto path=fs::u8path(output.path().toStdString())/"project";export_building(*window.building,path);auto reopened=load_project(path);check(reopened.ground.scripts().size()==window.building->ground.scripts().size(),"Attachments lost on project save");}
+            window.history(false);window.history(false);check(window.building->ground.encode()==before,"Attachment undo changed unrelated bytes");window.history(true);window.history(false);
+        }
         window.showWorld(); check(window.preview->currentWidget()==window.worldView,"World map not visible");
         check(window.worldView->stored({2,1}) && !window.worldView->stored({1,2}),"Provenance confused stored sector and terrain template");
         check(window.worldView->provenance.pixelColor(2,1)==QColor("#008cff") && window.worldView->provenance.pixelColor(3,2).alpha()==0,"Provenance overlay has wrong coordinates");
@@ -551,6 +701,7 @@ int main(int argc, char** argv) {
             auto& npc=window.building->objects[oldCount];auto loc=npc.number("LOCATION");check(npc.number("NPC_STANDPOINT_DAY")==loc && npc.number("NPC_STANDPOINT_NIGHT")==loc && npc.number("CRITTER_TELEPORT_DEST")==loc,"Character start positions not initialized");
             check(window.objectItems[oldCount]->flags()&QGraphicsItem::ItemIsSelectable,"Project character not selectable");window.translateSelection({int(oldCount)},{1,0});auto moved=window.building->objects[oldCount];check(moved.number("NPC_STANDPOINT_DAY")==moved.number("LOCATION"),"Moving a character left its start point behind");window.history(false);
             auto instance=window.building->objects[oldCount];auto resolved=window.assets->effective(instance);
+#include "test_actor_routes.inc"
             {auto inherited=resolved;ObjectField skill;skill.name="CRITTER_BASIC_SKILL_IDX";skill.kind="INT32_ARRAY";skill.elements={{0,{0x83,0,1,0}}};ActorEditor::put(inherited,skill);ActorEditor skills(instance,inherited,"Skill fixture");auto table=skills.findChild<QTableWidget*>("CRITTER_BASIC_SKILL_IDX");check(table->item(0,1)->text()=="3" && qobject_cast<QComboBox*>(table->cellWidget(0,2))->currentIndex()==2,"Skill points and training decoded incorrectly");table->item(0,1)->setText("7");auto modified=skills.values();check(word(modified.field("CRITTER_BASIC_SKILL_IDX")->elements[0].data,0)==0x10087,"Skill edit lost training/unknown bits");}
             ActorEditor editor(instance,resolved,"Fixture");check(encode_instance(editor.values())==encode_instance(instance),"Unchanged actor editor materialized inherited fields");
             editor.findChild<QLineEdit*>("NPC_FACTION")->setText("42");editor.findChild<QLineEdit*>("HP_PTS")->setText("75");editor.x->setValue(35);editor.scriptTable->item(0,1)->setText("123");

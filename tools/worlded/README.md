@@ -11,6 +11,8 @@ The interface is in English; game resource names keep the installation's languag
 - [Creating and selling houses](../../docs/housing.md): export a scene, add a
   catalogue entry and verify purchases and existing saves.
 - [Terrain format reference](TERRAIN.md): material pairs and brush rules.
+- [Feature coverage](../../docs/worlded-coverage.md): supported workflows and
+  remaining work compared with the original editor.
 
 ## Programs
 
@@ -19,11 +21,13 @@ The interface is in English; game resource names keep the installation's languag
 | `worlded-explorer` | Graphical editor and asset browser |
 | `worlded` | Resource inspection and format utilities |
 | `worlded-house-export` | Convert a saved project to additive housing content |
+| `worlded-native-inventory` | Generate native NPC inventories in isolated playtests |
 
 The GUI and housing exporter require `WORLDED_BUILD_GUI=ON` when configuring
 CMake. The default build produces only the `worlded` CLI. These programs do not
 require compiling the game engine. Playing a test scene requires a compatible
-Renaissance executable.
+Renaissance executable. The inventory helper is built with the engine and ships
+beside the editor in the Windows package.
 
 ## CLI examples
 

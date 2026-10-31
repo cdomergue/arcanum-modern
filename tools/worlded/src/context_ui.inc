@@ -8,7 +8,7 @@
                 for(auto& object:read_objects(installation->read(path)))byId[object.id]=std::move(object);
             std::map<std::uint64_t,std::vector<GameObject>> sectors;
             for(auto& [id,object]:byId){auto loc=object.number("LOCATION");auto sector=(std::uint64_t(std::uint32_t(loc)>>6))|((loc>>38)<<26);
-                set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32));sectors[sector].push_back(std::move(object));}
+                set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32));transform_npc_routes(object,sector,false);sectors[sector].push_back(std::move(object));}
             found=campaignCache.emplace(b.map_name,std::move(sectors)).first;
         }
         return found->second[b.sector_id];
@@ -46,7 +46,7 @@
             for(const auto& script:context.scripts){auto item=new QListWidgetItem(script.label+QString(" → %1").arg(script.id),scriptsList);item->setData(Qt::UserRole,script.id);item->setToolTip(item->text());}
             auto summary=QString("%1 characters · %2 attached scripts\nInitial campaign positions; double-click to open.").arg(context.actors.size()).arg(context.scripts.size());
             if(!context.warnings.isEmpty())summary+=QString("\n%1 incomplete resources (hover for details).").arg(context.warnings.size());
-            contextStatus->setText(summary);contextStatus->setToolTip(context.warnings.join('\n'));scriptDetails->setText("Select a script to inspect its attachment.");locateScript->setEnabled(false);openScript->setEnabled(false);removeScript->setEnabled(false);}
+            contextStatus->setText(summary);contextStatus->setToolTip(context.warnings.join('\n'));scriptDetails->setText("Select a script to inspect its attachment.");locateScript->setEnabled(false);openScript->setEnabled(false);removeScript->setEnabled(false);editScriptAttachment->setEnabled(false);}
         target->setSceneRect(target->itemsBoundingRect().adjusted(-50,-50,50,50));
     }
     void inspectContextObject(bool reference,int index) {
@@ -67,14 +67,14 @@
         placementControls->setEnabled(false);statusBar()->showMessage("Character inspected · double-click a script in properties to open it.");
     }
     void selectScript(int index,bool center) {
-        if(index<0 || index>=int(activeContext.scripts.size())){locateScript->setEnabled(false);openScript->setEnabled(false);removeScript->setEnabled(false);if(canvas->layer==4)deleteHouse->setEnabled(false);return;}
+        if(index<0 || index>=int(activeContext.scripts.size())){locateScript->setEnabled(false);openScript->setEnabled(false);removeScript->setEnabled(false);editScriptAttachment->setEnabled(false);if(canvas->layer==4)deleteHouse->setEnabled(false);return;}
         const auto& script=activeContext.scripts[index];QString scope=script.origin==3?"Sector-wide; no single position.":script.origin==2?"Tile attachment.":script.origin==1?"Campaign mobile object; read only.":script.inherited?"Project object; inherited from its prototype.":"Project object attachment.";
         if(Canvas::valid(script.tile))scope+=QString(" Position: %1, %2.").arg(script.tile.x()).arg(script.tile.y());
         QString path;for(const auto& [name,sources]:installation->resources())if(name.rfind("scr/",0)==0 && fs::path(name).extension()==".scr"){
             auto filename=QString::fromStdString(name).mid(4);auto digits=QRegularExpression("^([0-9]+)").match(filename);if(digits.hasMatch() && digits.captured(1).toUInt()==script.id){path=filename;break;}}
         scriptDetails->setText(scope);
         properties->clear();addProperty("Script",QString::number(script.id));addProperty("Attachment",script.label);addProperty("Scope",scope);addProperty("File",path.isEmpty()?"SCR file not found":path);
-        locateScript->setEnabled(Canvas::valid(script.tile));openScript->setEnabled(true);removeScript->setEnabled(editing() && script.origin!=1);
+        locateScript->setEnabled(Canvas::valid(script.tile));openScript->setEnabled(true);removeScript->setEnabled(editing() && script.origin!=1);editScriptAttachment->setEnabled(editing() && script.origin>=2);
         if(canvas->layer==4)deleteHouse->setEnabled(removeScript->isEnabled());
         removeScript->setToolTip(script.origin==1?"Campaign mobile objects cannot yet be edited in this project.":"Remove only this attachment; the SCR file remains unchanged. Undo restores it.");
         if(center && Canvas::valid(script.tile))canvas->centerOn(Canvas::project(script.tile));

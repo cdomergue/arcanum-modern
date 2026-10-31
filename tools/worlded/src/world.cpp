@@ -3,14 +3,16 @@
 #include <zlib.h>
 #include <stdexcept>
 namespace worlded {
-WorldSector read_world_sector(const Installation& installation,const std::string& map,unsigned x,unsigned y) {
+WorldSector read_world_sector(const Installation& installation,const std::string& map,unsigned x,unsigned y,const std::map<std::string,Bytes>* overrides) {
+    auto read=[&](const std::string& name){if(overrides){auto it=overrides->find(name);if(it!=overrides->end())return it->second;}return installation.read(name);};
+    auto contains=[&](const std::string& name){return (overrides && overrides->count(name)) || installation.contains(name);};
     auto base="maps/"+resource_name(map)+"/";
-    auto properties=installation.read(base+"map.prp"); BinaryReader pr(properties); pr.skip(8);
+    auto properties=read(base+"map.prp"); BinaryReader pr(properties); pr.skip(8);
     auto width=pr.u64()/64,height=pr.u64()/64;
     if (x>=width || y>=height || width>16384 || height>16384) throw std::runtime_error("World sector outside map limits");
     auto name=base+std::to_string(std::uint64_t(x)|(std::uint64_t(y)<<26))+".sec";
-    if (installation.contains(name)) return {Sector(installation.read(name)),name,false};
-    auto data=installation.read(base+"terrain.tdf"); BinaryReader in(data);
+    if (contains(name)) return {Sector(read(name)),name,false};
+    auto data=read(base+"terrain.tdf"); BinaryReader in(data);
     if (in.u32()!=0x3f99999a) throw std::runtime_error("Unsupported terrain version");
     auto flags=in.u32(); if (in.u64()!=width || in.u64()!=height) throw std::runtime_error("Terrain dimensions disagree with map"); in.skip(8);
     Bytes row;
@@ -25,7 +27,7 @@ WorldSector read_world_sector(const Installation& installation,const std::string
     unsigned tid=row[x*2]|(unsigned(row[x*2+1])<<8),from=(tid>>11)&31,to=(tid>>6)&31,shape=(tid>>2)&15;
     if (tid==65535) throw std::runtime_error("No terrain at this world location");
     std::map<unsigned,std::string> names;
-    for (auto message : read_messages(installation.read("terrain/terrain.mes"))) if (message.id<32) {
+    for (auto message : read_messages(read("terrain/terrain.mes"))) if (message.id<32) {
         auto flag=message.text.find("/b"); if (flag!=std::string::npos) message.text.resize(flag);
         while (!message.text.empty() && message.text.back()==' ') message.text.pop_back();
         names[message.id]=message.text;
@@ -40,7 +42,7 @@ WorldSector read_world_sector(const Installation& installation,const std::string
         folder=names.at(from)+" to "+names.at(to);
     }
     auto source="terrain/"+folder+"/"+std::to_string(variant)+".sec";
-    if (!installation.contains(source)) throw std::runtime_error("Missing terrain template: "+source);
-    return {Sector(installation.read(source)),source,true};
+    if (!contains(source)) throw std::runtime_error("Missing terrain template: "+source);
+    return {Sector(read(source)),source,true};
 }
 }

@@ -21,6 +21,7 @@ public:
     QString description(const worlded::GameObject& object);
     std::vector<CatalogEntry> catalog();
     std::map<std::uint32_t,QString> surfaces(bool roofs);
+    bool terrainBlocked(std::uint32_t aid);
     bool available(std::uint32_t aid) {try{return installation_->contains(worlded::resource_name(resolve(aid)));}catch(const std::exception&){return false;}}
     const std::string& prototypePath(unsigned id) const { return prototype_paths_.at(id); }
     QStringList catalogErrors;

@@ -27,6 +27,7 @@
 #include "game/light.h"
 #include "game/sector.h"
 #include "game/sector_object_list.h"
+#include "game/sector_light_list.h"
 #include "game/map.h"
 #include "game/teleport.h"
 #include "game/obj_pool.h"
@@ -159,6 +160,93 @@ static int check_door(void)
     return 0;
 }
 
+static ObjectID inventory_fixture_id(unsigned index)
+{
+    ObjectID id={0};unsigned char* raw=(unsigned char*)&id;raw[0]=2;
+    for(unsigned n=8;n<24;n++)raw[n]=(unsigned char)(index*16+n-8);
+    return id;
+}
+static int check_independent_light_removal(void)
+{
+    /* Synthetic nodes are removed before saving: the original SEC/DIF light
+     * count must stay unchanged in this copy of an existing campaign save. */
+    int64_t sid=SECTOR_MAKE(1346LL,1024LL);Sector* sec;REQUIRE(sector_lock(sid,&sec));
+    SectorBlockListNode* previous[4096];int count=0;
+    for(SectorBlockListNode* node=sec->lights.head;node;node=node->next){REQUIRE(count<4096);previous[count++]=node;}
+    bool was_modified=sec->lights.modified;
+    TigFile* stream=tig_file_fopen("house/scene/test-native-lights.bin","rb");REQUIRE(stream);
+    Light *target=NULL,*neighbor=NULL,*color_neighbor=NULL,*duplicate=NULL;REQUIRE(light_read(stream,&target));REQUIRE(light_read(stream,&neighbor));REQUIRE(light_read(stream,&color_neighbor));REQUIRE(light_read(stream,&duplicate));tig_file_fclose(stream);
+    REQUIRE(target && neighbor && color_neighbor && duplicate && !(target->flags&LF_OFF) && !(neighbor->flags&LF_OFF));
+    REQUIRE(sector_light_list_add(&sec->lights,target));REQUIRE(sector_light_list_add(&sec->lights,neighbor));REQUIRE(sector_light_list_add(&sec->lights,color_neighbor));REQUIRE(sector_light_list_add(&sec->lights,duplicate));
+    SectorBlockListNode* order[4100];int augmented=0;for(SectorBlockListNode* node=sec->lights.head;node;node=node->next)order[augmented++]=node;
+    modern_house_sector_loaded(sid,sec);
+    REQUIRE(((target->flags&LF_OFF)!=0) != ((duplicate->flags&LF_OFF)!=0));
+    REQUIRE(!(neighbor->flags&LF_OFF) && !(color_neighbor->flags&LF_OFF));
+    REQUIRE(target->r==210 && target->g==90 && target->b==30);
+    REQUIRE(target->loc==neighbor->loc && target->offset_x==123 && neighbor->offset_x==124 && target->offset_y==-87);
+    int seen=0;for(SectorBlockListNode* node=sec->lights.head;node;node=node->next){REQUIRE(seen<augmented && order[seen++]==node);}REQUIRE(seen==count+4);
+    unsigned target_flags=target->flags,duplicate_flags=duplicate->flags;
+    modern_house_sector_loaded(sid,sec);REQUIRE(target->flags==target_flags && duplicate->flags==duplicate_flags && !(neighbor->flags&LF_OFF) && !(color_neighbor->flags&LF_OFF));
+    REQUIRE(sector_light_list_remove(&sec->lights,target));REQUIRE(sector_light_list_remove(&sec->lights,neighbor));REQUIRE(sector_light_list_remove(&sec->lights,color_neighbor));REQUIRE(sector_light_list_remove(&sec->lights,duplicate));sub_4D9570(target);sub_4D9570(neighbor);sub_4D9570(color_neighbor);sub_4D9570(duplicate);sec->lights.modified=was_modified;
+    seen=0;for(SectorBlockListNode* node=sec->lights.head;node;node=node->next){REQUIRE(seen<count && previous[seen++]==node);}REQUIRE(seen==count);sector_unlock(sid);
+    puts("PASS: independent-light removal matches location/art/offset/color, disables one exact duplicate, leaves neighbors active and preserves native node count/order");return 0;
+}
+static int check_authored_inventory(void)
+{
+    int world=map_list_info_find("Arcanum1-024-fixed")+1;
+    int64_t pc=player_get_local_pc_obj();int player_gold=item_gold_get(pc);
+    TeleportData jump={.obj=pc,.map=world,.loc=location_make(1346*64+30,1024*64+23)};
+    REQUIRE(teleport_do(&jump));teleport_ping(0);
+    gamelib_ping_time+=1000;modern_house_tick();
+    REQUIRE(check_independent_light_removal()==0);
+    int64_t chest=obj_pool_perm_lookup(inventory_fixture_id(2));
+    int64_t coins=obj_pool_perm_lookup(inventory_fixture_id(3));
+    int64_t dagger=obj_pool_perm_lookup(inventory_fixture_id(4));
+    int64_t npc=obj_pool_perm_lookup(inventory_fixture_id(5));
+    int64_t wielded=obj_pool_perm_lookup(inventory_fixture_id(6));
+    REQUIRE(chest && coins && dagger && npc && wielded);
+    int64_t proxy=obj_pool_perm_lookup(inventory_fixture_id(7));REQUIRE(proxy);
+    Light* authored=obj_field_ptr_get(proxy,OBJ_F_LIGHT_HANDLE);REQUIRE(authored && authored->obj==proxy);
+    REQUIRE(authored->r==210 && authored->g==90 && authored->b==30 && !(authored->flags&LF_OFF));
+    REQUIRE((obj_field_int32_get(proxy,OBJ_F_FLAGS)&(OF_DONTDRAW|OF_NO_BLOCK))==(OF_DONTDRAW|OF_NO_BLOCK));
+    REQUIRE(obj_field_int32_get(chest,OBJ_F_CONTAINER_INVENTORY_NUM)==2);
+    REQUIRE(obj_arrayfield_handle_get(chest,OBJ_F_CONTAINER_INVENTORY_LIST_IDX,0)==coins);
+    REQUIRE(obj_arrayfield_handle_get(chest,OBJ_F_CONTAINER_INVENTORY_LIST_IDX,1)==dagger);
+    REQUIRE(obj_field_handle_get(coins,OBJ_F_ITEM_PARENT)==chest);
+    REQUIRE(obj_field_handle_get(dagger,OBJ_F_ITEM_PARENT)==chest);
+    REQUIRE(obj_field_int32_get(coins,OBJ_F_GOLD_QUANTITY)==54321);
+    REQUIRE(item_wield_get(npc,ITEM_INV_LOC_WEAPON)==wielded);
+    REQUIRE(obj_field_handle_get(wielded,OBJ_F_ITEM_PARENT)==npc);
+    REQUIRE(sub_464D20(wielded,ITEM_INV_LOC_WEAPON,npc)==ITEM_CANNOT_OK);
+    puts("PASS: fresh housing inventory resolves both owners, items, gold quantity and equipped weapon");
+    REQUIRE(item_transfer(dagger,pc));
+    object_destroy(coins);
+    REQUIRE(obj_field_int32_get(chest,OBJ_F_CONTAINER_INVENTORY_NUM)==0);
+    for(int pass=0;pass<3;pass++){
+        for(int tick=0;tick<3;tick++){gamelib_ping_time+=1000;modern_house_tick();}
+        REQUIRE(gamelib_save("Slot0091","Authored inventory regression"));
+        REQUIRE(gamelib_load("Slot0091"));pc=player_get_local_pc_obj();
+        jump.obj=pc;jump.loc=location_make(61996,65628);REQUIRE(teleport_do(&jump));teleport_ping(0);
+        jump.loc=location_make(1346*64+30,1024*64+23);REQUIRE(teleport_do(&jump));teleport_ping(0);
+        gamelib_ping_time+=1000;modern_house_tick();
+        chest=obj_pool_perm_lookup(inventory_fixture_id(2));dagger=obj_pool_perm_lookup(inventory_fixture_id(4));
+        coins=obj_pool_perm_lookup(inventory_fixture_id(3));npc=obj_pool_perm_lookup(inventory_fixture_id(5));wielded=obj_pool_perm_lookup(inventory_fixture_id(6));
+        REQUIRE(chest && dagger && npc && wielded);
+        REQUIRE(obj_field_int32_get(chest,OBJ_F_CONTAINER_INVENTORY_NUM)==0);
+        REQUIRE(!coins || (obj_field_int32_get(coins,OBJ_F_FLAGS)&OF_DESTROYED));
+        REQUIRE(obj_field_handle_get(dagger,OBJ_F_ITEM_PARENT)==pc);
+        REQUIRE(item_wield_get(npc,ITEM_INV_LOC_WEAPON)==wielded);
+        REQUIRE(item_gold_get(pc)==player_gold);
+        proxy=obj_pool_perm_lookup(inventory_fixture_id(7));REQUIRE(proxy);authored=obj_field_ptr_get(proxy,OBJ_F_LIGHT_HANDLE);
+        REQUIRE(authored && authored->obj==proxy && authored->r==210 && authored->g==90 && authored->b==30 && !(authored->flags&LF_OFF));
+        int64_t obj;int iterator;int counts[7]={0};
+        if(obj_inst_first(&obj,&iterator))do{for(unsigned i=2;i<=6;i++)if(objid_is_equal(obj_get_id(obj),inventory_fixture_id(i)))counts[i]++;}while(obj_inst_next(&obj,&iterator));
+        for(unsigned i=2;i<=6;i++)REQUIRE(counts[i]<=1);
+    }
+    puts("PASS: consumed gold stays consumed, transferred item stays with player, equipment, attached light color and GUIDs survive repeated ticks and three save/reload/revisits");
+    return 0;
+}
+
 int main(int argc,char** argv) {
     setvbuf(stdout,NULL,_IONBF,0);
     if((argc!=3 && argc!=4) || chdir(argv[1]) || access(".renaissance-house-test",R_OK)) return 2;
@@ -174,6 +262,33 @@ int main(int argc,char** argv) {
     REQUIRE(intgame_create_iso_window(&game.iso_window_handle));REQUIRE(gamelib_init(&game));puts("Initialize UI");REQUIRE(gameuilib_init(&game));puts("Load module");
     REQUIRE(gamelib_mod_load("Arcanum"));REQUIRE(gameuilib_mod_load());gamelib_splash_clear();REQUIRE(modern_ui_init());
     puts("Load copied save");REQUIRE(gamelib_load(argv[2]));sub_5412D0();intgame_mode_set(INTGAME_MODE_MAIN);
+
+    if(argc==4 && !strcmp(argv[3],"--check-inventory")){
+        REQUIRE(check_authored_inventory()==0);
+        gameuilib_exit();gamelib_exit();tig_exit();return 0;
+    }
+    if(argc==4 && !strcmp(argv[3],"--check-overlays")){
+        int64_t sid=SECTOR_MAKE(1346LL,1024LL),pc=player_get_local_pc_obj();Sector* sec;Script tile;
+        TeleportData jump={.obj=pc,.map=map_current_map(),.loc=location_make(1346*64+30,1024*64+30)};
+        REQUIRE(teleport_do(&jump));teleport_ping(0);
+        REQUIRE(sector_lock(sid,&sec));
+        REQUIRE(sec->blocks.mask[0]&1u);REQUIRE(sec->aptitude_adj==-42);
+        REQUIRE(sec->light_scheme==7 && sec->sounds.music_scheme_idx==100 && sec->sounds.ambient_scheme_idx==4100);
+        REQUIRE(tile_script_list_get(&sec->tile_scripts,0,&tile));REQUIRE(tile.num==48301 && tile.hdr.counters==0xff030201u);
+        REQUIRE(sec->sector_scripts.scr.num==48301);
+        tile.hdr.counters=0x01020304u;REQUIRE(tile_script_list_set(&sec->tile_scripts,0,&tile));
+        Script saved=sec->sector_scripts.scr;saved.hdr.counters=77;REQUIRE(sector_script_list_set(&sec->sector_scripts,&saved));sector_unlock(sid);
+        REQUIRE(gamelib_save("Slot0092","Housing overlays test"));REQUIRE(gamelib_load("Slot0092"));
+        REQUIRE(sector_lock(sid,&sec));REQUIRE(sec->blocks.mask[0]&1u);REQUIRE(sec->aptitude_adj==-42);
+        REQUIRE(sec->light_scheme==7 && sec->sounds.music_scheme_idx==100 && sec->sounds.ambient_scheme_idx==4100);
+        REQUIRE(tile_script_list_get(&sec->tile_scripts,0,&tile));REQUIRE(tile.hdr.counters==0x01020304u);
+        REQUIRE(sec->sector_scripts.scr.hdr.counters==77);
+        tile.num=0;REQUIRE(tile_script_list_set(&sec->tile_scripts,0,&tile));REQUIRE(sector_script_list_remove(&sec->sector_scripts));sector_unlock(sid);
+        REQUIRE(gamelib_save("Slot0092","Housing disabled scripts test"));REQUIRE(gamelib_load("Slot0092"));
+        REQUIRE(sector_lock(sid,&sec));REQUIRE(tile_script_list_get(&sec->tile_scripts,0,&tile));REQUIRE(tile.num==0);REQUIRE(sec->sector_scripts.scr.num==0);sector_unlock(sid);
+        puts("PASS: housing blockers/environment, script counters and disabled scripts survive two save/reloads");
+        gameuilib_exit();gamelib_exit();tig_exit();return 0;
+    }
 
     if(argc==4 && !strcmp(argv[3],"--check-shadows")){
         location_origin_set(location_make(86175,65557));

@@ -18,6 +18,9 @@
         if(delta.changed)parts<<QString("%1 objects modified").arg(delta.changed);
         if(delta.tiles)parts<<QString("%1 ground cells").arg(delta.tiles);
         if(delta.roofs)parts<<QString("%1 roof pieces").arg(delta.roofs);
+        if(delta.blocks)parts<<QString("%1 blocking cells").arg(delta.blocks);
+        if(delta.settings)parts<<"Sector properties modified";
+        if(delta.lights)parts<<"Lights modified";
         if(delta.scripts)parts<<"Script attachments modified";
         if(delta.names)parts<<"Location name modified";
         if(delta.content)parts<<"Project scripts / dialogues modified";
@@ -141,7 +144,7 @@
         if(!copied.roofs.empty())editLayer->setCurrentIndex(2);else if(copied.objects.empty())editLayer->setCurrentIndex(1);else editLayer->setCurrentIndex(0);
         canvas->cancelInteraction();auto group=new QGraphicsItemGroup;scene->addItem(group);
         auto addSprite=[&](unsigned aid,QPointF position,bool floor){try{auto sprite=assets->sprite(aid);auto item=new QGraphicsPixmapItem(sprite.pixels,group);item->setPos(position-(floor?QPointF{}:sprite.hotspot));item->setZValue(floor?-10000:position.y());}catch(const std::exception&){auto item=new QGraphicsEllipseItem(-4,-4,8,8,group);item->setBrush(QColor("#e9a25a"));item->setPos(position);}};
-        for(const auto& [xy,aid]:copied.tiles)addSprite(aid,QPointF((xy.second-xy.first)*40-40,(xy.first+xy.second)*20),true);
+        for(const auto& [xy,aid]:copied.tiles)addSprite(aid,QPointF((xy.second-xy.first)*40-40+((aid>>28)==11?1:0),(xy.first+xy.second)*20),true);
         for(const auto& [xy,aid]:copied.roofs)if(aid!=0xffffffff)addSprite(aid,Canvas::project({xy.first+2,xy.second+2})-QPointF(160,220),false);
         for(const auto& o:copied.objects){auto e=assets->effective(o);auto loc=e.number("LOCATION");QPoint tile(loc&63,(loc>>32)&63);addSprite(unsigned(e.number("CURRENT_AID",e.number("AID"))),Canvas::project(tile)+QPointF(std::int32_t(e.number("OFFSET_X")),std::int32_t(e.number("OFFSET_Y"))),false);}
         canvas->beginPlacement(group,{copied.width,copied.height});statusBar()->showMessage(QString("Place %1 objects · click in the active zone · Esc: cancel").arg(copied.objects.size()));
@@ -153,7 +156,7 @@
         for(const auto& source:copied.objects){auto object=clone_instance(source);auto loc=object.number("LOCATION");set_number(object,"LOCATION",std::uint64_t((loc&63)+tile.x())|(std::uint64_t(((loc>>32)&63)+tile.y())<<32));selected.insert(object.id);next.push_back(std::move(object));}
         for(const auto& [xy,aid]:copied.tiles)ground.set_tile(xy.first+tile.x(),xy.second+tile.y(),aid);
         for(const auto& [xy,aid]:copied.roofs)ground.set_roof((xy.first+tile.x())/4,(xy.second+tile.y())/4,aid);
-        building->prototypes.insert(copied.prototypes.begin(),copied.prototypes.end());commitEdit(!copied.roofs.empty()?"Paste roofs":copied.objects.empty()?"Paste ground":"Paste building",std::move(next),selected,&ground);return true;
+        building->prototypes.insert(copied.prototypes.begin(),copied.prototypes.end());commitEdit(!copied.action.isEmpty()?copied.action:!copied.roofs.empty()?"Paste roofs":copied.objects.empty()?"Paste ground":"Paste building",std::move(next),selected,&ground);if(copied.action=="Place facade")libraryTabs->setCurrentWidget(facadePanel);return true;
     }
 
     void showCanvasMenu(Canvas* view,QPoint point,bool reference) {
@@ -162,6 +165,7 @@
             if(!item->isSelected()){view->scene()->clearSelection();item->setSelected(true);}break;
         }
         updateCopyActions();QMenu menu(this);
+        if(!reference && editing()){menu.addAction("Sector properties…",this,[this]{configureSector();});menu.addAction("Sector script…",this,[this]{editGroundScript(UINT32_MAX);});auto cell=view->surfaceTile(point);if(Canvas::valid(cell))menu.addAction("Tile script…",this,[this,cell]{editGroundScript(cell.y()*64+cell.x());});menu.addSeparator();}
         if(view->layer==1 || view->layer==2){menu.addAction("Sample this cell",this,[this,view,point,reference]{sampleSurface(reference,view->surfaceTile(point));});if(!reference)menu.addAction("Apply selected material",this,[this]{applySurface(false);});menu.addSeparator();}
         if(reference){menu.addAction("Copy selection",this,[this]{copySelection(true);})->setEnabled(!referenceScene->selectedItems().empty() || !referenceCanvas->cellSelection.isEmpty());menu.addAction("Edit this zone",this,[this]{activateDraft(referenceDraft);});}
         else if(editing()){menu.addAction(undoHouse);menu.addAction(redoHouse);menu.addSeparator();menu.addAction(copyAction);menu.addAction(pasteAction);menu.addAction(duplicateHouse);menu.addAction(deleteHouse);menu.addSeparator();menu.addAction(saveAction);}

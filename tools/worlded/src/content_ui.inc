@@ -1,3 +1,28 @@
+    void editGroundScript(std::uint32_t tile) {
+        if(!editing())return;
+        SectorScript value{tile,0,0,1};bool existing=false;
+        for(auto s:building->ground.scripts())if(s.tile==tile){value=s;existing=true;break;}
+        QDialog dialog(this);dialog.setWindowTitle(tile==UINT32_MAX?"Sector script attachment":QString("Tile script · %1, %2").arg(tile%64).arg(tile/64));
+        auto form=new QFormLayout(&dialog);QComboBox resource;resource.setObjectName("attachmentResource");
+        for(auto path:contentPaths(".scr"))resource.addItem(path,contentNumber(path));
+        int current=resource.findData(value.number);if(existing && current<0){resource.addItem(QString("%1 · missing SCR").arg(value.number),value.number);current=resource.count()-1;}
+        if(current>=0)resource.setCurrentIndex(current);form->addRow("Script",&resource);
+        QLineEdit flags;flags.setObjectName("attachmentFlags");form->addRow("Flags (decimal or 0x hex)",&flags);
+        QSpinBox counters[4];for(int i=0;i<4;i++){counters[i].setRange(0,255);counters[i].setObjectName(QString("attachmentCounter%1").arg(i));form->addRow(QString("Counter %1").arg(i+1),&counters[i]);}
+        auto fill=[&](std::uint32_t f,std::uint32_t c){flags.setText(QString("0x%1").arg(f,8,16,QChar('0')));for(int i=0;i<4;i++)counters[i].setValue((c>>(8*i))&255);};
+        QLabel error;error.setWordWrap(true);QPushButton defaults("Load defaults from SCR");form->addRow(&defaults);
+        auto loadDefaults=[&]{try{auto bytes=contentRead(resource.currentText());if(bytes.size()<8)throw std::runtime_error("SCR header is incomplete");fill(word(bytes,0),word(bytes,4));error.clear();}catch(const std::exception& e){error.setText(e.what());}};
+        fill(value.flags,value.counters);if(!existing && resource.count())loadDefaults();
+        connect(&defaults,&QPushButton::clicked,&dialog,loadDefaults);
+        connect(&resource,&QComboBox::currentIndexChanged,&dialog,[&]{if(!existing)loadDefaults();});
+        form->addRow(&error);QDialogButtonBox buttons(QDialogButtonBox::Save|QDialogButtonBox::Cancel);form->addRow(&buttons);
+        connect(&buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+        connect(&buttons,&QDialogButtonBox::accepted,&dialog,[&]{bool valid=false;auto f=flags.text().trimmed().toULongLong(&valid,0);if(!valid || f>UINT32_MAX || !resource.currentData().toUInt()){error.setText("Choose a script and enter unsigned 32-bit flags.");return;}
+            value.number=resource.currentData().toUInt();value.flags=std::uint32_t(f);value.counters=0;for(int i=0;i<4;i++)value.counters|=std::uint32_t(counters[i].value())<<(8*i);dialog.accept();});
+        if(dialog.exec()!=QDialog::Accepted)return;
+        try{auto ground=building->ground;ground.set_script(value);commitEdit("Edit script attachment",building->objects,{},&ground);}
+        catch(const std::exception& e){QMessageBox::warning(this,"Cannot attach script",utf8(e.what()));}
+    }
     bool selectedActor()const {if(!building)return false;auto ids=selectedIds();for(auto& o:building->objects)if(ids.count(objectKey(o)))return o.type==15 || o.type==16;return false;}
     QStringList contentPaths(const QString& suffix) const {
         QSet<QString> paths;
@@ -26,7 +51,7 @@
         QHBoxLayout actions;QPushButton script("New script…"),dlg("New dialogue…"),edit("Open"),close("Close");actions.addWidget(&script);actions.addWidget(&dlg);actions.addStretch();actions.addWidget(&edit);actions.addWidget(&close);layout->addLayout(&actions);
         connect(&script,&QPushButton::clicked,&dialog,[&]{createContent(false);refresh();});connect(&dlg,&QPushButton::clicked,&dialog,[&]{createContent(true);refresh();});auto open=[&]{if(list.currentItem()){editContent(list.currentItem()->data(Qt::UserRole).toString());refresh();}};connect(&edit,&QPushButton::clicked,&dialog,open);connect(&list,&QListWidget::itemDoubleClicked,&dialog,[&]{open();});connect(&close,&QPushButton::clicked,&dialog,&QDialog::accept);dialog.exec();
     }
-    void showScript(unsigned id){for(auto path:contentPaths(".scr"))if(contentNumber(path)==id){editContent(path);return;}QMessageBox::information(this,"Script not found",QString("No script matches ID %1. Use File → New script to create one.").arg(id));}
+    void showScript(unsigned id){for(auto path:contentPaths(".scr"))if(contentNumber(path)==id){editContent(path);return;}QMessageBox::information(this,"Script not found",QString("No script matches ID %1. Use Resources → New script to create one.").arg(id));}
     void editContent(const QString& path,bool fresh=false){
         if(!installation)return;
         bool nestedObject=dynamic_cast<ActorEditor*>(QApplication::activeModalWidget())!=nullptr;

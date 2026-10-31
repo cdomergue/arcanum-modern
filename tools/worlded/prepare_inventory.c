@@ -4,7 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#define chdir _chdir
+#define access _access
+#define R_OK 4
+#else
 #include <unistd.h>
+#endif
 #include <tig/tig.h>
 #include "game/gamelib.h"
 #include "game/gsound.h"
@@ -37,7 +45,7 @@ static void render(void) {
     for(int i=0;i<3;i++) {modern_ui_tick();tig_ping();gamelib_ping();iso_invalidate_rect(NULL);iso_redraw();tig_window_display();TigMessage msg;while(tig_message_dequeue(&msg)==TIG_OK){}}
 }
 int main(int argc,char** argv) {
-    setvbuf(stdout,NULL,_IOLBF,0);
+    setvbuf(stdout,NULL,_IONBF,0);
     if(argc!=7 || chdir(argv[1]) || access(".worlded-playtest",R_OK)) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER,"software",SDL_HINT_OVERRIDE);

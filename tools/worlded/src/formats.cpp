@@ -240,6 +240,7 @@ Sector::Sector(Bytes data) : original_(std::move(data)) {
     roof_offset_=in.pos;info_.roofs = in.u32() == 0;
     roofs_.fill(0xffffffff);
     if (info_.roofs) for(auto& roof:roofs_)roof=in.u32();
+    version_offset_=in.pos;
     info_.version = in.u32();
     if (info_.version < 0xaa0000 || info_.version > 0xaa0004) fail("Unsupported SEC version");
     if (info_.version >= 0xaa0001) {
@@ -250,9 +251,12 @@ Sector::Sector(Bytes data) : original_(std::move(data)) {
     if (info_.version >= 0xaa0002) {sector_script_offset_=in.pos;auto flags=in.u32(),counters=in.u32(),number=in.u32();if(number)scripts_.push_back({UINT32_MAX,flags,counters,number});}
     if (info_.version >= 0xaa0003) {
         info_.townmap = in.u32();
-        in.skip(8 + 12); // Aptitude, light scheme, sound list.
+        settings_offset_=in.pos;
+        settings_.aptitude=std::int32_t(in.u32());settings_.light=std::int32_t(in.u32());
+        in.u32(); // Sound flags are preserved verbatim.
+        settings_.music=std::int32_t(in.u32());settings_.ambient=std::int32_t(in.u32());
     }
-    if (info_.version >= 0xaa0004) in.skip(128 * 4);
+    if (info_.version >= 0xaa0004) {blocks_offset_=in.pos;for(auto& block:blocks_)block=in.u32();}
     info_.object_offset = in.pos;
     if (in.left() < 4) fail("Missing SEC object count");
     info_.object_bytes = in.left() - 4;
@@ -276,7 +280,72 @@ Bytes Sector::encode() const {
     Bytes result = original_;
     for (std::size_t i = 0; i < tiles_.size(); ++i) put32(result, tile_offset_ + i * 4, tiles_[i]);
     if(info_.roofs)for(std::size_t i=0;i<roofs_.size();++i)put32(result,roof_offset_+4+i*4,roofs_[i]);
+    if(blocks_offset_)for(std::size_t i=0;i<blocks_.size();++i)put32(result,blocks_offset_+i*4,blocks_[i]);
+    if(settings_offset_) {
+        put32(result,settings_offset_,settings_.aptitude);put32(result,settings_offset_+4,settings_.light);
+        put32(result,settings_offset_+12,settings_.music);put32(result,settings_offset_+16,settings_.ambient);
+    }
     return result;
+}
+bool Sector::blocked(unsigned x,unsigned y) const {
+    tile(x,y);
+    unsigned index=y*64+x;
+    return (blocks_[index/32] & (1u<<(index%32)))!=0;
+}
+void Sector::set_blocked(unsigned x,unsigned y,bool value) {
+    if(blocked(x,y)==value)return;
+    ensure_extended();
+    unsigned index=y*64+x,mask=1u<<(index%32);
+    if(value)blocks_[index/32]|=mask;else blocks_[index/32]&=~mask;
+}
+void Sector::set_townmap(std::uint32_t id) {
+    if(info_.townmap==id)return;
+    ensure_extended();put32(original_,settings_offset_-4,id);info_.townmap=id;
+}
+void Sector::set_settings(SectorSettings value) {
+    if(settings_.aptitude==value.aptitude && settings_.light==value.light && settings_.music==value.music && settings_.ambient==value.ambient)return;
+    ensure_extended();settings_=value;
+}
+void Sector::ensure_extended() {
+    if(info_.version<0xaa0004) {
+        // Add only the headers absent from this SEC generation. Reparse to
+        // update all offsets while retaining object bytes and existing scripts.
+        auto data=encode();std::size_t size=512;
+        if(info_.version<0xaa0001)size+=4;
+        if(info_.version<0xaa0002)size+=12;
+        if(info_.version<0xaa0003)size+=24;
+        data.insert(data.begin()+info_.object_offset,size,0);
+        put32(data,version_offset_,0xaa0004);
+        *this=Sector(std::move(data));
+    }
+}
+std::vector<Bytes> Sector::lights() const {
+    std::vector<Bytes> result;for(unsigned i=0;i<info_.lights;i++)result.emplace_back(original_.begin()+4+i*48,original_.begin()+4+(i+1)*48);return result;
+}
+void Sector::set_lights(const std::vector<Bytes>& lights) {
+    if(lights.size()>4096)fail("Too many lights");auto data=encode();Bytes header(4,0);put32(header,0,std::uint32_t(lights.size()));
+    for(const auto& light:lights){if(light.size()!=48)fail("Invalid light record");header.insert(header.end(),light.begin(),light.end());}
+    header.insert(header.end(),data.begin()+4+info_.lights*48,data.end());*this=Sector(std::move(header));
+}
+void Sector::set_script(SectorScript script) {
+    if(script.tile!=UINT32_MAX && script.tile>=4096)fail("Invalid script tile");
+    if(!script.number || script.number>INT32_MAX)fail("Invalid script number");
+    ensure_extended();
+    auto data=encode();std::size_t offset=sector_script_offset_;
+    if(script.tile!=UINT32_MAX) {
+        std::size_t index=0;
+        while(index<info_.tile_scripts && scripts_[index].tile<script.tile)++index;
+        offset=tile_scripts_offset_+4+index*24;
+        if(index==info_.tile_scripts || scripts_[index].tile!=script.tile) {
+            data.insert(data.begin()+offset,24,0);
+            put32(data,tile_scripts_offset_,info_.tile_scripts+1);
+            put32(data,offset+4,script.tile);
+        }
+        // Preserve the node flags and serialized next word of existing records.
+        offset+=8;
+    }
+    put32(data,offset,script.flags);put32(data,offset+4,script.counters);put32(data,offset+8,script.number);
+    *this=Sector(std::move(data));
 }
 void Sector::remove_script(std::size_t index) {
     if(index>=scripts_.size())fail("Invalid sector script index");
@@ -302,6 +371,8 @@ void Sector::set_roof(unsigned x,unsigned y,std::uint32_t art) {
     if(!info_.roofs && art!=0xffffffff) {
         original_.insert(original_.begin()+roof_offset_+4,1024,255);
         put32(original_,roof_offset_,0);info_.roofs=true;info_.object_offset+=1024;
+        version_offset_+=1024;if(blocks_offset_)blocks_offset_+=1024;
+        if(settings_offset_)settings_offset_+=1024;
         if(tile_scripts_offset_)tile_scripts_offset_+=1024;
         if(sector_script_offset_)sector_script_offset_+=1024;
     }

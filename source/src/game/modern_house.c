@@ -34,7 +34,7 @@ static int seller_x=61991,seller_y=65620,seller_dx,seller_dy,seller_rotation=3;
 typedef struct Property {
     int slot, price, global, discovered, key, x, y;
     char scene[64];
-    mes_file_handle_t objects, terrain, roofs, removed, vegetation;
+    mes_file_handle_t objects, terrain, roofs, removed, vegetation, blocking, environment, scripts;
 } Property;
 static Property properties[100];
 static int property_count;
@@ -136,6 +136,9 @@ void modern_house_load(void)
         if(valid){
             char path[160];snprintf(path,sizeof(path),"house/%s/vegetation.mes",p.scene);
             mes_load(path,&p.vegetation); /* Optional for older scene packs. */
+            mes_file_handle_t* optional[]={&p.blocking,&p.environment,&p.scripts};
+            const char* names[]={"blocking","environment","scripts"};
+            for(int j=0;j<3;j++){*optional[j]=MES_FILE_HANDLE_INVALID;snprintf(path,sizeof(path),"house/%s/%s.mes",p.scene,names[j]);mes_load(path,optional[j]);}
             properties[property_count++]=p;
         }
         else for(int i=0;i<4;i++)if(*handles[i]!=MES_FILE_HANDLE_INVALID)mes_unload(*handles[i]);
@@ -232,6 +235,50 @@ static void clear_vegetation(Property* p, Sector* sec)
         }
     }
 }
+/* Called after SEC/DIF loading, before lighting and objects are folded. Script
+ * DIF records win over author defaults, including disabled (number zero) scripts.
+ * Do not run this from the periodic tick: counters belong to the saved game. */
+void modern_house_sector_loaded(int64_t id, Sector* sec)
+{
+    const char* module=gamelib_current_module_name_get();char* map_name=NULL;
+    if(!ready || !module || SDL_strcasecmp(module,"Arcanum")
+       || !map_get_name(map_current_map(),&map_name) || !map_name || SDL_strcasecmp(map_name,"Arcanum1-024-fixed"))return;
+    for(int i=0;i<property_count;i++){
+        Property* p=&properties[i];if(id!=SECTOR_MAKE((int64_t)p->x,(int64_t)p->y))continue;
+        /* Keep the original light list order for saved DIFs. Removed authored
+         * lights are disabled; added lights use persistent mobile objects. */
+        char light_path[160];snprintf(light_path,sizeof(light_path),"house/%s/removed-lights.bin",p->scene);
+        TigFile* removed_lights=tig_file_fopen(light_path,"rb");
+        if(removed_lights){Light* chosen[4096];unsigned used=0,count=0;if(tig_file_fread(&count,4,1,removed_lights)==1 && count<=4096)for(unsigned j=0;j<count;j++){
+            unsigned char record[48];if(tig_file_fread(record,48,1,removed_lights)!=1)break;
+            int64_t loc;int dx,dy;unsigned aid,flags;memcpy(&flags,record+24,4);memcpy(&loc,record+8,8);memcpy(&dx,record+16,4);memcpy(&dy,record+20,4);memcpy(&aid,record+28,4);
+            loc=location_make(p->x*64+((unsigned)loc&63),p->y*64+((unsigned)(loc>>32)&63));
+            for(SectorBlockListNode* node=sec->lights.head;node;node=node->next){Light* light=node->data;
+                bool already=false;for(unsigned k=0;k<used;k++)if(chosen[k]==light){already=true;break;}
+                unsigned art_mask=(flags&LF_ANIMATING)?~(127u<<12):~0u;
+                bool color_matches=(flags&(LF_INDOOR|LF_OUTDOOR)) || (light->r==record[32] && light->b==record[33] && light->g==record[34]);
+                if(!already && !light->obj && light->loc==loc && light->offset_x==dx && light->offset_y==dy && (light->art_id&art_mask)==(aid&art_mask)
+                    && (light->flags&(LF_INDOOR|LF_OUTDOOR|LF_DARK))==(flags&(LF_INDOOR|LF_OUTDOOR|LF_DARK)) && color_matches){
+                    chosen[used++]=light;if(!(light->flags&LF_OFF))light_set_flags_internal(light,LF_OFF);break;}}
+        }tig_file_fclose(removed_lights);}
+        MesFileEntry e;
+        if(p->blocking!=MES_FILE_HANDLE_INVALID)for(bool more=mes_find_first(p->blocking,&e);more;more=mes_find_next(p->blocking,&e)){
+            int blocked;if(e.num<0 || e.num>=4096 || sscanf(e.str,"%d",&blocked)!=1 || (blocked!=0 && blocked!=1))continue;
+            uint32_t mask=1u<<(e.num%32);if(blocked)sec->blocks.mask[e.num/32]|=mask;else sec->blocks.mask[e.num/32]&=~mask;
+        }
+        if(p->environment!=MES_FILE_HANDLE_INVALID)for(bool more=mes_find_first(p->environment,&e);more;more=mes_find_next(p->environment,&e)){
+            int value;if(sscanf(e.str,"%d",&value)!=1)continue;
+            switch(e.num){case 0:sec->aptitude_adj=value;break;case 1:sec->light_scheme=value;break;
+                case 2:sec->sounds.music_scheme_idx=value;break;case 3:sec->sounds.ambient_scheme_idx=value;break;}
+        }
+        if(p->scripts!=MES_FILE_HANDLE_INVALID)for(bool more=mes_find_first(p->scripts,&e);more;more=mes_find_next(p->scripts,&e)){
+            Script scr={0};if(e.num<0 || e.num>4096 || sscanf(e.str,"%d %u %u",&scr.num,&scr.hdr.flags,&scr.hdr.counters)!=3 || scr.num<0)continue;
+            if(e.num==4096){if(!(sec->sector_scripts.flags&SECTOR_SCRIPT_LIST_MODIFIED))sector_script_list_set(&sec->sector_scripts,&scr);}
+            else {TileScriptListNode* node=sec->tile_scripts.head;while(node && node->id!=(unsigned)e.num)node=node->next;
+                if(!node || !(node->flags&TILE_SCRIPT_LIST_NODE_MODIFIED))tile_script_list_set(&sec->tile_scripts,e.num,&scr);}
+        }
+    }
+}
 void modern_house_tick(void)
 {
     static unsigned last;
@@ -242,19 +289,48 @@ void modern_house_tick(void)
         if(!sector_loaded(sid))continue;
         Sector* sec;if(!sector_lock(sid,&sec))continue;
         terrain(p,sec); sector_unlock(sid);
-        MesFileEntry e;
+        /* Resolve references only after all new MOBs are in the object pool.
+         * Inventory content belongs to the initial owner installation: an item
+         * consumed or removed by the player must never be recreated by a tick. */
+        typedef struct Pending { int64_t obj; bool created, skip; char role[20], id[40]; } Pending;
+        MesFileEntry e;size_t count=0;
+        for(bool more=mes_find_first(p->objects,&e);more;more=mes_find_next(p->objects,&e))if(e.num>=100)count++;
+        Pending* pending=calloc(count?count:1,sizeof(*pending));
+        if(!pending)continue;
+        char inventory_path[180];snprintf(inventory_path,sizeof(inventory_path),"house/%s/inventory.mes",p->scene);
+        mes_file_handle_t inventory=MES_FILE_HANDLE_INVALID;mes_load(inventory_path,&inventory);
+        size_t n=0;
         for(bool more=mes_find_first(p->objects,&e);more;more=mes_find_next(p->objects,&e)){
             if(e.num<100)continue;
-            char role[20],id[40];if(sscanf(e.str,"%19s %39s",role,id)!=2)continue;
-            int64_t obj=lookup(id);bool created=obj==OBJ_HANDLE_NULL;
-            if(created){
-                char path[180];snprintf(path,sizeof(path),"house/%s/objects/%s.mob",p->scene,id);
-                if(!objf_solitary_read(&obj,path))continue;
-                obj_load_postprocess(obj);
+            Pending* entry=&pending[n++];
+            if(sscanf(e.str,"%19s %39s",entry->role,entry->id)!=2){entry->skip=true;continue;}
+            entry->obj=lookup(entry->id);entry->created=entry->obj==OBJ_HANDLE_NULL;
+            if(entry->created && inventory!=MES_FILE_HANDLE_INVALID){
+                MesFileEntry item;for(bool next=mes_find_first(inventory,&item);next;next=mes_find_next(inventory,&item)){
+                    char child[40],parent[40];if(sscanf(item.str,"%39s %39s",child,parent)==2 && !strcmp(child,entry->id) && lookup(parent))entry->skip=true;
+                }
             }
-            configure(obj,p,role,created);
-            if(created)object_install_loaded(obj);
         }
+        if(inventory!=MES_FILE_HANDLE_INVALID)mes_unload(inventory);
+        bool failed=false;
+        for(size_t j=0;j<n;j++)if(pending[j].created && !pending[j].skip){
+            char path[180];snprintf(path,sizeof(path),"house/%s/objects/%s.mob",p->scene,pending[j].id);
+            if(!objf_solitary_read(&pending[j].obj,path)){pending[j].skip=true;failed=true;}
+        }
+        if(failed){for(size_t j=0;j<n;j++)if(pending[j].created && pending[j].obj)obj_deallocate(pending[j].obj);free(pending);tig_debug_printf("Housing: incomplete object batch for %s; installation deferred\n",p->scene);continue;}
+        for(size_t j=0;j<n;j++)if(pending[j].created && !pending[j].skip)obj_load_postprocess(pending[j].obj);
+        for(size_t j=0;j<n;j++)if(!pending[j].skip){
+            configure(pending[j].obj,p,pending[j].role,pending[j].created);
+            if(pending[j].created)object_install_loaded(pending[j].obj);
+        }
+        for(size_t j=0;j<n;j++)if(pending[j].created && !pending[j].skip){
+            int64_t obj=pending[j].obj;int type=obj_field_int32_get(obj,OBJ_F_TYPE);
+            if(type>=OBJ_TYPE_WEAPON && type<=OBJ_TYPE_GENERIC && (obj_field_int32_get(obj,OBJ_F_FLAGS)&OF_INVENTORY)){
+                int slot=obj_field_int32_get(obj,OBJ_F_ITEM_INV_LOCATION);
+                if(slot>=1000 && slot<=1008 && obj_field_handle_get(obj,OBJ_F_ITEM_PARENT))item_location_set(obj,slot);
+            }
+        }
+        free(pending);
         if(sector_lock(sid,&sec)){clear_vegetation(p,sec);sector_unlock(sid);}
     }
     /* The existing sign identifies Town Hall; place the agent next to it.
