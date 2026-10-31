@@ -23,7 +23,9 @@ static char gamelib_mod_dir_path[64]="modules/Time",byte_5D0B58[64]="module-extr
 static char gamelib_mod_dat_path[64]="modules/Time.dat",byte_5D0EA4[64]="Time";
 static char gamelib_mod_patch_paths[3][64]={"modules/Time.patch0","","modules/Time.patch9"};
 static unsigned char gamelib_mod_guid[16]={1};
-static int calls,removed;
+static int calls,removed,world_resets,sector_resets;
+static void modern_world_updates_reset(void){assert(!removed);world_resets++;}
+static void sector_save_error_reset(void){assert(!removed);sector_resets++;}
 static void modern_uap_module_unload(void){assert(calls==2 && !removed);}
 static void unload_last(void){assert(!removed);assert(calls++==0);}
 static void unload_first(void){assert(!removed);assert(calls++==1);}
@@ -39,6 +41,7 @@ int main(void){
  for(int i=0;i<3;i++)assert(!gamelib_mod_patch_paths[i][0]);
  for(int i=0;i<16;i++)assert(!gamelib_mod_guid[i]);
  gamelib_mod_unload();assert(removed==5 && calls==2);
+ assert(world_resets==1 && sector_resets==1);
  puts("PASS: module consumers unload before repositories; all module paths reset; repeated unload is harmless");
 }
 '''
