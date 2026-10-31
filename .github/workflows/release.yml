@@ -168,7 +168,11 @@ jobs:
         run: |
           python tests/test_worlded_windows_package.py
           if ($LASTEXITCODE) { throw 'WorldED packaging tests failed' }
-          python tools/package-worlded-windows.py --build-dir build/worlded-release --inventory-helper build/worlded-native-runtime/worlded-native-inventory.exe --engine-package dist/engine/ArcanumModern-windows-x64.zip --qt-bin "$env:QT_ROOT_DIR/bin" --extra-dll "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/zlib1.dll" --smoke-test
+          $runtimeDlls = @(Get-ChildItem "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin" -Filter '*.dll')
+          if (!$runtimeDlls.Count) { throw 'No Release runtime DLLs found in the vcpkg installation' }
+          $runtimeArgs = @()
+          foreach ($dll in $runtimeDlls) { $runtimeArgs += @('--extra-dll', $dll.FullName) }
+          python tools/package-worlded-windows.py --build-dir build/worlded-release --inventory-helper build/worlded-native-runtime/worlded-native-inventory.exe --engine-package dist/engine/ArcanumModern-windows-x64.zip --qt-bin "$env:QT_ROOT_DIR/bin" @runtimeArgs --smoke-test
           if ($LASTEXITCODE) { throw 'WorldED package verification failed' }
       - uses: actions/upload-artifact@v4
         with:
