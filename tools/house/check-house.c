@@ -36,6 +36,7 @@
 #include "game/path.h"
 #include "game/script.h"
 #include "game/modern_house.h"
+#include "game/modern_world_updates_internal.h"
 #include "game/mes.h"
 #include "game/obj_flags.h"
 #include "game/script_name.h"
@@ -247,6 +248,40 @@ static int check_authored_inventory(void)
     return 0;
 }
 
+static ObjectID update_guid(const char* text){ObjectID id={0};unsigned char* raw=(unsigned char*)&id;for(int i=0;i<18;i++){unsigned v=0;sscanf(text+2*i,"%2x",&v);raw[i<2?i:i+6]=(unsigned char)v;}return id;}
+static int check_housing_update(const char* mode){
+    bool prepare=!strcmp(mode,"--prepare-update-legacy"),legacy=!strcmp(mode,"--check-update-legacy");
+    const RwPackage* package=NULL;for(unsigned i=0;i<rw_package_count;i++)if(!strcmp(rw_packages[i].id,"housing.0"))package=&rw_packages[i];
+    REQUIRE(prepare?!package:package!=NULL);
+    int64_t pc=player_get_local_pc_obj();int world=map_list_info_find("Arcanum1-024-fixed")+1;
+    TeleportData jump={.obj=pc,.map=world,.loc=location_make(1346*64+30,1024*64+23)};REQUIRE(teleport_do(&jump));teleport_ping(0);gamelib_ping_time+=1000;modern_house_tick();
+    char removed[40]={0};unsigned tile=0,art=0;int64_t victim=0,guard=0;
+    if(legacy){FILE* marker=fopen("housing-update.marker","rb");REQUIRE(marker);REQUIRE(fscanf(marker,"%39s %u %u",removed,&tile,&art)==3);fclose(marker);}
+    mes_file_handle_t scene;REQUIRE(mes_load("house/scene/scene.mes",&scene));MesFileEntry e;unsigned present=0;
+    for(bool more=mes_find_first(scene,&e);more;more=mes_find_next(scene,&e)){char role[20],id[40];if(e.num<100||sscanf(e.str,"%19s %39s",role,id)!=2)continue;int64_t obj=obj_pool_perm_lookup(update_guid(id));
+        if(obj&&!(obj_field_int32_get(obj,OBJ_F_FLAGS)&OF_DESTROYED))present++;
+        if(!strcmp(role,"guard"))guard=obj;
+        if(!legacy&&!victim&&obj&&obj_field_int32_get(obj,OBJ_F_TYPE)==OBJ_TYPE_SCENERY){victim=obj;strcpy(removed,id);}
+    }mes_unload(scene);REQUIRE(guard);REQUIRE(present>100);
+    Sector* sector;int64_t sid=SECTOR_MAKE(1346LL,1024LL);REQUIRE(sector_lock(sid,&sector));
+    if(legacy){REQUIRE(sector->tiles.art_ids[tile]==art);victim=obj_pool_perm_lookup(update_guid(removed));REQUIRE(!victim||(obj_field_int32_get(victim,OBJ_F_FLAGS)&OF_DESTROYED));}
+    else {mes_file_handle_t terrain;REQUIRE(mes_load("house/scene/terrain.mes",&terrain));REQUIRE(mes_find_first(terrain,&e));tile=(unsigned)e.num;mes_unload(terrain);unsigned original=sector->tiles.art_ids[tile];for(unsigned i=0;i<4096;i++)if(sector->tiles.art_ids[i]!=original){art=sector->tiles.art_ids[i];break;}REQUIRE(art&&art!=original);rw_scene_ground(sector,tile,art);}
+    sector_unlock(sid);
+    if(!legacy){REQUIRE(victim);object_destroy(victim);FILE* marker=fopen("housing-update.marker","wb");REQUIRE(marker);fprintf(marker,"%s %u %u\n",removed,tile,art);REQUIRE(fclose(marker)==0);}
+    if(prepare){REQUIRE(gamelib_save("Slot0090","Legacy house before shared ledger"));puts("PASS: legacy house installed; missing authored GUID and edited floor saved without package ledger");return 0;}
+    /* Transfer and consume existing guard inventory; neither may return to its owner. */
+    int64_t moved=0,consumed=0;ObjectID moved_id={0},consumed_id={0};int inventory=obj_arrayfield_length_get(guard,OBJ_F_CRITTER_INVENTORY_LIST_IDX);
+    for(int i=0;i<inventory;i++){int64_t item=obj_arrayfield_handle_get(guard,OBJ_F_CRITTER_INVENTORY_LIST_IDX,i);if(!item||obj_field_int32_get(item,OBJ_F_TYPE)==OBJ_TYPE_GOLD)continue;if(!moved)moved=item;else if(!consumed){consumed=item;break;}}
+    REQUIRE(moved&&consumed);moved_id=obj_get_id(moved);consumed_id=obj_get_id(consumed);REQUIRE(item_transfer(moved,pc));REQUIRE(obj_field_handle_get(moved,OBJ_F_ITEM_PARENT)==pc);object_destroy(consumed);
+    for(int pass=0;pass<2;pass++){
+        gamelib_ping_time+=1000;modern_house_tick();REQUIRE(gamelib_save("Slot0091","Shared housing migration regression"));REQUIRE(gamelib_load("Slot0091"));pc=player_get_local_pc_obj();
+        jump.obj=pc;jump.loc=location_make(61996,65628);REQUIRE(teleport_do(&jump));teleport_ping(0);jump.loc=location_make(1346*64+30,1024*64+23);REQUIRE(teleport_do(&jump));teleport_ping(0);gamelib_ping_time+=1000;modern_house_tick();
+        victim=obj_pool_perm_lookup(update_guid(removed));REQUIRE(!victim||(obj_field_int32_get(victim,OBJ_F_FLAGS)&OF_DESTROYED));REQUIRE(sector_lock(sid,&sector));REQUIRE(sector->tiles.art_ids[tile]==art);sector_unlock(sid);
+        moved=obj_pool_perm_lookup(moved_id);consumed=obj_pool_perm_lookup(consumed_id);REQUIRE(moved&&obj_field_handle_get(moved,OBJ_F_ITEM_PARENT)==pc);REQUIRE(!consumed||(obj_field_int32_get(consumed,OBJ_F_FLAGS)&OF_DESTROYED));
+    }
+    printf("PASS: %s housing package preserves missing GUID, edited floor, consumed inventory and player transfer across two save/reload/revisits\n",legacy?"legacy-adopted":"fresh");return 0;
+}
+
 int main(int argc,char** argv) {
     setvbuf(stdout,NULL,_IONBF,0);
     if((argc!=3 && argc!=4) || chdir(argv[1]) || access(".renaissance-house-test",R_OK)) return 2;
@@ -263,6 +298,7 @@ int main(int argc,char** argv) {
     REQUIRE(gamelib_mod_load("Arcanum"));REQUIRE(gameuilib_mod_load());gamelib_splash_clear();REQUIRE(modern_ui_init());
     puts("Load copied save");REQUIRE(gamelib_load(argv[2]));sub_5412D0();intgame_mode_set(INTGAME_MODE_MAIN);
 
+    if(argc==4 && (!strcmp(argv[3],"--check-update")||!strcmp(argv[3],"--prepare-update-legacy")||!strcmp(argv[3],"--check-update-legacy"))){REQUIRE(check_housing_update(argv[3])==0);gameuilib_exit();gamelib_exit();tig_exit();return 0;}
     if(argc==4 && !strcmp(argv[3],"--check-inventory")){
         REQUIRE(check_authored_inventory()==0);
         gameuilib_exit();gamelib_exit();tig_exit();return 0;

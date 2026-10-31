@@ -9,6 +9,8 @@ To sell a finished house through the estate agent, follow
 [Creating and selling houses](housing.md#creating-a-house).
 For world terrain, map connections and campaign tables, see
 [Campaign projects](worlded-campaign.md).
+To distribute changes to existing saves, see
+[Exporting world updates](worlded-updates.md).
 For the remaining differences from the original editor, see
 [feature coverage](worlded-coverage.md).
 

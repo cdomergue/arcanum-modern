@@ -57,3 +57,14 @@ a way to refill a player's existing chest or reset an NPC's equipment.
 For a housing test, check the first installation, move an item into the player's
 inventory, save, reload, and revisit the property. Confirm that the transferred
 item stays with the player and does not reappear in the original container.
+
+## Put a ground item into an inventory
+
+Hold **Shift**, drag a ground item onto a project character or container, then
+release the mouse button while still holding Shift. WorldED finds a free backpack
+position and keeps the item's identity and properties. Select several items first
+to transfer them together. The whole transfer is refused if an item cannot fit.
+
+Use **Edit > Inventory** to inspect the result, or **Ctrl+Z** to return the item
+to its previous ground position. **Escape** cancels a drag. Objects from the
+read-only campaign context cannot receive items until they belong to the project.

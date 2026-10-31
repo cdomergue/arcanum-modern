@@ -104,6 +104,51 @@ as `resources/house/riverside_house` in the repository. Do not install the raw
 WorldED SEC file over the campaign sector; the housing pack is applied additively
 so existing save differences keep referring to the correct original objects.
 
+### Updates for existing saves
+
+New exports include `update-template.json`. The content builder assigns the
+catalogue slot's permanent package ID (`housing.0`, `housing.1`, and so on),
+compiles `runtime.rwp`, and registers it with the shared world-update engine.
+Object GUIDs, seller slots, ownership globals and key IDs stay unchanged.
+The game distribution lists these packages in `bundled.mes`; it leaves the
+manual installer's `index.mes` intact. An explicitly installed package takes
+precedence over the bundled package with the same ID.
+
+For the next version of a published house, append
+`--previous-update /path/to/previous-house-export` to the export command. Keep
+the complete previous export, including its template and object files. The new
+template retains published operations and resources, then appends changes with
+the next revision number. Unchanged exports keep their revision. Ground, roof
+and blocking corrections use the last published value as their precondition.
+Changing an already published MOB or removing an added object requires an
+explicit migration; the housing exporter rejects those changes.
+
+The shared engine installs new objects, changes terrain/roofs/blocking, hides
+original scenery and records which operations have already run. The housing
+service still handles the seller, purchase, keys, guard dialogue and object
+roles. Sector environment, script attachments and independent-light removal
+remain in its compatibility hook because update ABI 1 has no such operations.
+They are not silently converted into general migrations.
+
+Older custom scenes without a template continue through the legacy loader until
+they are re-exported. To capture a template for an existing pack without changing
+its MOBs, use the original target installation:
+
+```sh
+worlded-house-export --legacy-template /path/to/Arcanum /path/to/house-scene /path/to/house-scene/update-template.json
+```
+
+The command refuses ambiguous or missing original removal selectors. It hashes
+the original source and records the original static-object ordinals. Keep that
+installation as the reference for later revisions.
+
+When adopting an already installed house, the engine preserves missing objects
+that may have been consumed or removed by the player. It also preserves the
+player's current terrain for the initial revision. Later revisions are separate,
+guarded operations. Install packages with the world-update installer so its
+registry is merged with other installed updates; see
+[World updates](world-updates.md).
+
 ## Add the house to the seller
 
 Edit [resources/house/catalog.json](../resources/house/catalog.json). Append a

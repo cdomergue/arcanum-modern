@@ -26,6 +26,23 @@ class Catalogue(unittest.TestCase):
                     with self.assertRaises(ValueError):house.check_scenes(self.catalog,scenes)
                 file.write_text(valid)
 
+    def test_bundled_package_preserves_manual_registry_path(self):
+        spec=importlib.util.spec_from_file_location('packaging',ROOT/'tools/package-windows.py')
+        packaging=importlib.util.module_from_spec(spec);spec.loader.exec_module(packaging)
+        files=packaging.house_files()
+        self.assertIn('ArcanumModern/world-updates/bundled.mes',files)
+        self.assertNotIn('ArcanumModern/world-updates/index.mes',files)
+        self.assertIn('ArcanumModern/world-updates/housing.0/1/runtime.rwp',files)
+        self.assertFalse(any(path.startswith('ArcanumModern/house/base/world-updates/') for path in files))
+
+    def test_stale_housing_template_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            scenes=Path(folder)/'scenes';shutil.copytree(ROOT/'resources/house',scenes)
+            scene=scenes/self.catalog['properties'][0]['scene']
+            (scene/'terrain.mes').write_text((scene/'terrain.mes').read_text()+'\n')
+            with self.assertRaisesRegex(ValueError,'authoring source changed'):
+                house.build(self.catalog,Path(folder)/'out',scenes)
+
     def test_current_property(self):
         p=self.catalog['properties'][0]
         self.assertEqual(p['price'],10000);self.assertEqual(p['text']['fr']['standing'],'Bon standing')

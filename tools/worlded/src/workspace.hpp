@@ -8,9 +8,11 @@ inline QByteArray scene_fingerprint(const Building& scene) {
     hash.addData(QByteArrayView(reinterpret_cast<const char*>(bytes.data()),bytes.size()));
     QJsonObject names;for(const auto& [lang,name]:scene.location_names)names[QString::fromStdString(lang)]=QString::fromStdString(name);
     hash.addData(QJsonDocument(names).toJson(QJsonDocument::Compact));
+    if(scene.reference){hash.addData(QByteArray::fromStdString(scene.reference->id));hash.addData(QByteArray::number(scene.reference->origins.size()));}
+    hash.addData(QByteArrayView(reinterpret_cast<const char*>(scene.update_history.data()),scene.update_history.size()));
     for(const auto& [path,data]:scene.content){hash.addData(QByteArray::fromStdString(path));hash.addData(QByteArray::number(data.size()));hash.addData(QByteArrayView(reinterpret_cast<const char*>(data.data()),data.size()));}return hash.result();
 }
-struct SceneChanges {int added=0,removed=0,changed=0,tiles=0,roofs=0,blocks=0;bool names=false,scripts=false,content=false,settings=false,lights=false;};
+struct SceneChanges {int added=0,removed=0,changed=0,tiles=0,roofs=0,blocks=0;bool names=false,scripts=false,content=false,settings=false,lights=false,updates=false;};
 inline SceneChanges scene_changes(const Building& scene,const Building& saved) {
     auto key=[](const GameObject& o){return o.editor_id.empty()?o.id:o.editor_id;};
     std::map<std::string,Bytes> before;for(const auto& o:saved.objects)before[key(o)]=encode_instance(o);
@@ -24,6 +26,7 @@ inline SceneChanges scene_changes(const Building& scene,const Building& saved) {
     result.lights=scene.ground.lights()!=saved.ground.lights();
     result.scripts=scripts(scene.ground)!=scripts(saved.ground);
     auto a=scene.ground.settings(),b=saved.ground.settings();result.settings=a.aptitude!=b.aptitude || a.light!=b.light || a.music!=b.music || a.ambient!=b.ambient;
+    result.updates=scene.update_history!=saved.update_history || bool(scene.reference)!=bool(saved.reference) || (scene.reference && saved.reference && (scene.reference->id!=saved.reference->id || scene.reference->origins.size()!=saved.reference->origins.size()));
     result.content=scene.content!=saved.content;result.names=scene.location_names!=saved.location_names;return result;
 }
 // Save an owned scene project with rollback. Construct the entire next version

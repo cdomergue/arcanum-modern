@@ -1,5 +1,6 @@
 #include "worlded/npc_routes.hpp"
 #include "worlded/building.hpp"
+#include "scene_reference_codec.hpp"
 #include <algorithm>
 #include <charconv>
 #include <iomanip>
@@ -190,6 +191,11 @@ std::filesystem::path export_building(const Building& building,const std::filesy
         if((group!="scr" && group!="dlg" && group!="script-sources") || name.empty() || name=="." || name==".." || name.find_first_of("/\\")!=std::string::npos || resource_name(path)!=path)throw std::runtime_error("Invalid project content path");
         files[(group=="script-sources"?"":"exports/")+path]=data;
     }
+    if(building.reference)files["reference.bin"]=encode_scene_reference(*building.reference);
+    if(!building.update_history.empty())files["world-update.json"]=building.update_history;
+    std::vector<GameObject> selectionObjects=statics.objects;
+    for(const auto& object:building.objects)if(mobile(object))selectionObjects.push_back(globalize(object));
+    files["selections.bin"]=encode_scene_selections(selectionObjects);
     files["location-names.json"]=bytes(translations.str());
     files["building.json"]=bytes(manifest.str());
     files["README.txt"]=bytes("WorldED scene export for isolated testing. Original installation unchanged. Existing-map exports contain sector overrides only; campaign/save compatibility must be validated separately. Resources from your installation are for local use.\n");

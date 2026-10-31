@@ -26,6 +26,18 @@ int main(int argc,char** argv){
         auto missing=edited;missing.pop_back();rejects([&]{inventory_contents(missing,missing[0]);},"Missing inventory MOB silently dropped");
         auto chest=object(2,3000);rejects([&]{inventory_apply({chest},chest.id,{sword},resolve,size);},"Chest equipped a weapon");
         auto shield=object(7,7000);set_number(shield,"ITEM_INV_AID",0x60004002);set_number(shield,"ITEM_INV_LOCATION",1005);set_number(sword,"WEAPON_FLAGS",12);rejects([&]{inventory_apply({owner},owner.id,{sword,shield},resolve,size);},"Fixed two-handed weapon accepted alongside shield");
+        auto ground=object(5,6000);set_number(ground,"HP_PTS",17);set_number(ground,"OFFSET_X",3);
+        auto world=edited;world.push_back(ground);auto moved=inventory_transfer(world,owner.id,{ground.id},resolve,size);
+        auto movedContents=inventory_contents(moved,moved[0]);check(moved.size()==world.size() && movedContents.size()==3,"Transfer cloned or lost an object");
+        auto stored=std::find_if(movedContents.begin(),movedContents.end(),[&](const auto& o){return o.id==ground.id;});
+        check(stored!=movedContents.end() && stored->number("ITEM_INV_LOCATION")==1 && stored->number("HP_PTS")==17,"Transfer lost properties or overwrote occupied/equipped slots");
+        check(inventory_parent(*stored)==owner.id && stored->number("LOCATION")==owner.number("LOCATION"),"Transfer did not attach existing GUID to owner");
+        auto packed=read_objects(encode_instance(*stored))[0];check(packed.id==ground.id && inventory_parent(packed)==owner.id,"Transferred references lost on native roundtrip");
+        auto chestMove=inventory_transfer({chest,ground},chest.id,{ground.id},resolve,size);check(inventory_contents(chestMove,chestMove[0]).size()==1,"Chest transfer failed");
+        auto snapshot=encode_instance(world.back());rejects([&]{inventory_transfer(world,owner.id,{ground.id},resolve,[](const auto&){return std::pair<unsigned,unsigned>{10,12};});},"Full backpack accepted an extra item");
+        check(encode_instance(world.back())==snapshot,"Failed transfer changed ground item");
+        rejects([&]{inventory_transfer(world,owner.id,{ground.id,untouched.id},resolve,size);},"Mixed non-item selection accepted");
+        rejects([&]{inventory_transfer(moved,owner.id,{ground.id},resolve,size);},"Already owned item transferred twice");
         if(argc==4 && std::string(argv[1])=="--housing-fixture"){
             auto installation=std::make_shared<Installation>(std::filesystem::u8path(argv[2]));SceneAssets assets(installation);auto catalog=assets.catalog();auto make=[&](unsigned type,unsigned proto,unsigned index){
                 auto entry=std::find_if(catalog.begin(),catalog.end(),[&](const auto& e){return e.object.type==type && (!proto || e.object.prototype_id==proto);});check(entry!=catalog.end(),"Native inventory fixture prototype missing");auto obj=clone_instance(entry->object);

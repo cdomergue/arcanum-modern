@@ -9,12 +9,22 @@ void check(bool condition, const char* message) { if (!condition) throw std::run
 }
 int main(int argc, char** argv) {
     QApplication app(argc,argv); app.setStyle("Fusion"); applyExplorerStyle(app);
-    if (argc!=7 && argc!=5 && argc!=6 && argc!=3 && !(argc==4 && (std::string(argv[3])=="--real-sector" || std::string(argv[3])=="--carpets" || std::string(argv[3])=="--facades" || std::string(argv[3])=="--lights"))) return 2;
+    if (argc!=7 && argc!=5 && argc!=6 && argc!=3 && !(argc==4 && (std::string(argv[3])=="--updates" || std::string(argv[3])=="--real-sector" || std::string(argv[3])=="--carpets" || std::string(argv[3])=="--facades" || std::string(argv[3])=="--lights"))) return 2;
     try {
         checkAuthoring();
         Explorer window; window.show(); window.mount(QString::fromUtf8(argv[1]));
         check(QTest::qWaitFor([&]{return window.installation != nullptr || window.failed;},20000), "Indexing timed out");
         check(!window.failed, "Installation failed");
+        if(argc==4 && std::string(argv[3])=="--updates"){
+            window.resize(1280,800);window.showWorld();window.openWorldSector({1346,1024});check(window.building && window.building->reference,"Update reference not captured");
+            for(unsigned n=0;n<30;n++)window.building->ground.set_blocked(n,0,!window.building->ground.blocked(n,0));
+            for(unsigned n=0;n<std::min<std::size_t>(12,window.building->objects.size());n++)set_number(window.building->objects[n],"CURRENT_AID",window.building->objects[n].number("CURRENT_AID")^0x40);
+            QTemporaryDir project;check(window.saveActive(project.filePath("review-scene")),"Cannot save review fixture");
+            bool captured=false;QTimer::singleShot(150,[&]{auto settings=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(settings && settings->windowTitle()=="Renaissance update package","Update settings missing");check(settings->grab().save(QString::fromUtf8(argv[2])+"-settings.png"),"Settings capture failed");settings->accept();
+                QTimer::singleShot(200,[&]{auto review=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(review && review->windowTitle()=="Review Renaissance update","Update review missing");auto buttons=review->findChild<QDialogButtonBox*>();check(buttons && !buttons->button(QDialogButtonBox::Save)->isEnabled(),"Unsupported changes did not disable export");check(review->grab().save(QString::fromUtf8(argv[2])),"Review capture failed");auto text=review->findChild<QTextBrowser*>();check(text && text->toPlainText().contains("Unsupported field change CURRENT_AID"),"Detailed unsupported changes missing");text->verticalScrollBar()->setValue(text->verticalScrollBar()->maximum());QTest::qWait(40);check(review->grab().save(QString::fromUtf8(argv[2])+"-errors.png"),"Error capture failed");captured=true;review->reject();});});
+            window.exportUpdatePackage();check(captured,"Update review did not execute");std::cout<<"PASS: update settings and review rendered; unsupported export disabled; complete footer and error rows captured\n";return 0;
+        }
+
         check(!supports_worlded_test(QString::fromUtf8(argv[1])+"/missing-engine"),"Missing engine accepted");
         {QTemporaryDir resources;auto root=fs::u8path(resources.path().toStdString());write_bytes(root/"Maps/PopulationN",{1});
             auto selected=test_resource_path(root,"maps/populationn");check(selected.filename()=="PopulationN","Existing resource spelling lost");write_bytes(selected,{2});check(read_file(root/"Maps/PopulationN")==Bytes{2},"Case-insensitive overwrite failed");
@@ -23,6 +33,23 @@ int main(int argc, char** argv) {
 #endif
         }
         {QGraphicsScene scene;Canvas canvas(&scene);canvas.editable=true;canvas.layer=0;auto item=scene.addRect(0,0,80,80);item->setData(0,42);item->setFlag(QGraphicsItem::ItemIsSelectable);canvas.resize(300,300);canvas.show();int activated=-1;canvas.activateObject=[&](int i){activated=i;};QTest::qWait(30);QTest::mouseDClick(canvas.viewport(),Qt::LeftButton,Qt::NoModifier,canvas.mapFromScene(QPointF(40,40)));check(activated==42,"World object double-click event was not dispatched");}
+        {QGraphicsScene scene;Canvas canvas(&scene);canvas.editable=true;canvas.layer=0;canvas.resize(400,240);scene.setSceneRect(0,0,350,180);
+            auto item=scene.addRect(20,30,40,40),owner=scene.addRect(220,30,40,40);item->setData(0,0);owner->setData(0,1);item->setData(1,QPoint(10,10));
+            item->setFlag(QGraphicsItem::ItemIsSelectable);owner->setFlag(QGraphicsItem::ItemIsSelectable);item->setSelected(true);
+            canvas.inventoryItem=[](int i){return i==0;};canvas.inventoryOwner=[](int i){return i==1;};int transfers=0,moves=0;
+            canvas.dropInventory=[&](const auto& indices,int target){check(indices==std::vector<int>{0} && target==1,"Shift-drop selected wrong objects");transfers++;};canvas.moveObjects=[&](const auto&,QPoint){moves++;};
+            canvas.show();QTest::qWait(30);auto start=canvas.mapFromScene(QPointF(40,50)),end=canvas.mapFromScene(QPointF(240,50));
+            QTest::keyPress(&canvas,Qt::Key_Shift);QTest::mousePress(canvas.viewport(),Qt::LeftButton,Qt::ShiftModifier,start);QTest::qWait(30);
+            QMouseEvent move(QEvent::MouseMove,QPointF(end),QPointF(canvas.viewport()->mapToGlobal(end)),Qt::NoButton,Qt::LeftButton,Qt::ShiftModifier);QApplication::sendEvent(canvas.viewport(),&move);QTest::qWait(30);
+            QTest::mouseRelease(canvas.viewport(),Qt::LeftButton,Qt::ShiftModifier,end);QTest::keyRelease(&canvas,Qt::Key_Shift);
+            check(transfers==1 && moves==0 && item->isSelected(),"Held Shift-drag did not transfer preselected item");
+            QTest::mousePress(canvas.viewport(),Qt::LeftButton,Qt::ShiftModifier,start);QApplication::sendEvent(canvas.viewport(),&move);QTest::keyClick(&canvas,Qt::Key_Escape);QTest::mouseRelease(canvas.viewport(),Qt::LeftButton,Qt::ShiftModifier,end);
+            check(transfers==1 && moves==0,"Escape failed to cancel inventory drag");
+            canvas.inventoryOwner=[](int){return false;};QTest::mousePress(canvas.viewport(),Qt::LeftButton,Qt::ShiftModifier,start);QApplication::sendEvent(canvas.viewport(),&move);QTest::mouseRelease(canvas.viewport(),Qt::LeftButton,Qt::ShiftModifier,end);
+            check(transfers==1 && moves==0,"Invalid inventory target moved the ground item");canvas.inventoryOwner=[](int i){return i==1;};
+            QTest::mousePress(canvas.viewport(),Qt::LeftButton,Qt::NoModifier,start);QApplication::sendEvent(canvas.viewport(),&move);QTest::mouseRelease(canvas.viewport(),Qt::LeftButton,Qt::NoModifier,end);
+            check(moves==1 && transfers==1,"Releasing Shift did not restore ordinary movement");
+        }
         {QTemporaryDir copyFixture;auto root=fs::u8path(copyFixture.path().toStdString());
             write_bytes(root/"first/Proto/001020 - Wall.pro",{1});write_bytes(root/"first/Proto/unique.pro",{7});
             write_bytes(root/"second/proto/001020 - Wall.pro",{2});write_bytes(root/"second/proto/other.pro",{8});

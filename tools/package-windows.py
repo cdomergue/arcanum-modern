@@ -57,8 +57,17 @@ def house_files():
     with tempfile.TemporaryDirectory(prefix='arcanum-house-') as directory:
         target = Path(directory)
         builder.build(json.loads((ROOT/'resources/house/catalog.json').read_text()), target)
-        return {'ArcanumModern/house/'+p.relative_to(target).as_posix(): p.read_bytes()
-                for p in target.rglob('*') if p.is_file()}
+        files = {}
+        for path in target.rglob('*'):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(target).as_posix()
+            destination = ('ArcanumModern/'+relative[5:] if relative.startswith('base/world-updates/')
+                           else 'ArcanumModern/house/'+relative)
+            if destination == 'ArcanumModern/world-updates/index.mes':
+                destination = 'ArcanumModern/world-updates/bundled.mes'
+            files[destination] = path.read_bytes()
+        return files
 
 
 def validate_pe_dependencies(files):

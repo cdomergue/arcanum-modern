@@ -93,6 +93,28 @@ inline std::vector<GameObject> inventory_apply(const std::vector<GameObject>& ob
     std::vector<GameObject> result;for(const auto& object:objects){if(object.id==owner.id)result.push_back(owner);else if(!oldIds.count(object.id))result.push_back(object);}
     result.insert(result.end(),contents.begin(),contents.end());return result;
 }
+// Transfer existing ground instances without cloning GUIDs or changing unrelated contents.
+inline std::vector<GameObject> inventory_transfer(const std::vector<GameObject>& objects,const std::string& ownerId,const std::set<std::string>& ids,const InventoryResolve& resolve,const InventorySize& size) {
+    auto owner=std::find_if(objects.begin(),objects.end(),[&](const auto& o){return o.id==ownerId;});
+    if(owner==objects.end() || !inventory_owner(*owner) || ownerId.substr(0,4)!="0200")throw std::runtime_error("Choose a project container or character with a persistent identity.");
+    if(ids.empty() || ids.count(ownerId))throw std::runtime_error("Select ground items to transfer.");
+    auto contents=inventory_contents(objects,*owner);
+    inventory_validate_slots(*owner,contents,resolve,size);
+    std::set<std::string> found;
+    for(const auto& object:objects)if(ids.count(object.id)){
+        if(!found.insert(object.id).second || !inventory_item(object) || object.id.substr(0,4)!="0200" || (resolve(object).number("FLAGS")&0x1000u))throw std::runtime_error("Only ground items with unique identities can be transferred.");
+        auto item=object;bool placed=false;unsigned capacity=owner->type==2?960:120;
+        for(unsigned slot=0;slot<capacity;slot++){
+            set_number(item,"ITEM_INV_LOCATION",slot);auto trial=contents;trial.push_back(item);
+            try{inventory_validate_slots(*owner,trial,resolve,size);placed=true;break;}catch(const std::exception&){}
+        }
+        if(!placed)throw std::runtime_error("No room in this inventory. The items have not been moved.");
+        contents.push_back(std::move(item));
+    }
+    if(found!=ids)throw std::runtime_error("A selected item is missing from the project.");
+    auto remaining=objects;remaining.erase(std::remove_if(remaining.begin(),remaining.end(),[&](const auto& o){return ids.count(o.id);}),remaining.end());
+    return inventory_apply(remaining,ownerId,std::move(contents),resolve,size);
+}
 // Expand before copy/delete, then remap copied identities in one transaction.
 inline std::set<std::string> inventory_descendants(const std::vector<GameObject>& objects,std::set<std::string> ids) {
     bool changed;do{changed=false;for(const auto& object:objects)if(inventory_item(object) && ids.count(inventory_parent(object)))changed|=ids.insert(object.id).second;}while(changed);return ids;

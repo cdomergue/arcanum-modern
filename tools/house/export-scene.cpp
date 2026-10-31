@@ -1,4 +1,5 @@
 #include "../worlded/src/inventory.hpp"
+#include "update-template.hpp"
 // Convert a saved WorldED project into additive housing resources.
 #include "worlded/world.hpp"
 #include "worlded/building.hpp"
@@ -14,6 +15,9 @@ int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     try {
         const auto args = app.arguments();
+        if(args.size()==5 && args[1]=="--legacy-template"){
+            Installation game(fs::u8path(args[2].toStdString()));auto folder=fs::u8path(args[3].toStdString()),output=fs::u8path(args[4].toStdString());if(fs::exists(output))throw std::runtime_error("Template output already exists");std::map<std::string,Bytes> files;for(const auto& entry:fs::recursive_directory_iterator(folder)){if(entry.is_symlink())throw std::runtime_error("Linked scene files are unsupported");if(entry.is_regular_file())files[entry.path().lexically_relative(folder).generic_u8string()]=read_file(entry.path());}unsigned version=0,sx=2000,sy=2000;for(const auto& row:read_messages(files.at("scene.mes")))if(row.id==0){std::istringstream input(row.text);input>>version>>sx>>sy;}if(version!=1 || sx>=2000 || sy>=2000)throw std::runtime_error("Invalid scene sector");auto bytes=housing_update_template(game,"arcanum1-024-fixed",sx,sy,files);write_bytes(output,bytes);std::cout<<"Housing update template written without changing scene resources\n";return 0;
+        }
         if (args.size() < 4) {
             std::cerr << "Usage: worlded-house-export GAME PROJECT NEW_OUTPUT [--guard GUID]...\n";
             return 2;
@@ -22,8 +26,10 @@ int main(int argc, char** argv) {
         const auto project = path(args[2]), output = path(args[3]);
         if (fs::exists(output)) throw std::runtime_error("Output already exists; choose a new directory.");
         std::set<std::string> guards;
+        fs::path previousUpdate;
         for (int i = 4; i < args.size(); i += 2) {
-            if (args[i] != "--guard" || i + 1 >= args.size()) throw std::runtime_error("Expected --guard GUID");
+            if(i+1<args.size() && args[i]=="--previous-update"){previousUpdate=path(args[i+1]);continue;}
+            if (args[i] != "--guard" || i + 1 >= args.size()) throw std::runtime_error("Expected --guard GUID or --previous-update SCENE_FOLDER");
             guards.insert(args[i + 1].toLower().toStdString());
         }
         QFile file(QString::fromStdString((project / "building.json").u8string()));
@@ -170,6 +176,9 @@ int main(int argc, char** argv) {
                 files[std::string("resources/") + group + "/" + entry.path().filename().u8string()] = read_file(entry.path());
             }
         }
+        auto updateTemplate=housing_update_template(game,map,sx,sy,files);
+        if(!previousUpdate.empty())updateTemplate=housing_update_revision(updateTemplate,files,previousUpdate);
+        files["update-template.json"]=std::move(updateTemplate);
         for (const auto& [name, data] : files) {
             fs::create_directories((output / name).parent_path());
             std::ofstream f(output / name, std::ios::binary);

@@ -10,6 +10,7 @@
 #include "actor_editor.hpp"
 #include "inventory_editor.hpp"
 #include "campaign_editor.hpp"
+#include "world_update_export.hpp"
 #include <QtWidgets>
 #include <QtConcurrent>
 #include <algorithm>
@@ -108,7 +109,7 @@ public:
     QString initialWorldSector;
     std::unique_ptr<Building> building;
     bool showingBuilding = false;
-    struct EditState { std::vector<GameObject> objects; std::set<std::string> selected; Sector ground; BuildingPlan plan; std::map<std::string,std::string> names; std::map<std::string,Bytes> content; };
+    struct EditState { std::vector<GameObject> objects; std::set<std::string> selected; Sector ground; BuildingPlan plan; std::map<std::string,std::string> names; std::map<std::string,Bytes> content; std::shared_ptr<const SceneReference> reference; };
     struct EditRecord { EditState before, after; QString label; };
     std::vector<EditRecord> undoObjects, redoObjects;
     struct CachedDraft { Building building; std::vector<EditRecord> undo,redo;
@@ -239,7 +240,7 @@ public:
         fileMenu->addAction(newHouse);fileMenu->addAction(openProject);fileMenu->addSeparator();
         fileMenu->addAction(saveAction);
         auto saveAs=fileMenu->addAction("Save zone as…");connect(saveAs,&QAction::triggered,this,[this]{saveActive({},true);});
-        fileMenu->addAction(exportHouse);fileMenu->addSeparator();
+        fileMenu->addAction(exportHouse);fileMenu->addAction("Export Renaissance update package…",this,[this]{exportUpdatePackage();});fileMenu->addSeparator();
         auto installationMenu=fileMenu->addMenu("Installation");installationMenu->addAction(openGame);installationMenu->addAction(changeProjectInstallation);
         fileMenu->addSeparator();
         undoHouse->setToolTip("Undo · Ctrl+Z / ⌘Z");redoHouse->setToolTip("Redo · Ctrl+Shift+Z / ⌘Shift+Z");
@@ -250,6 +251,7 @@ public:
         zoneMenu->addAction(openSector);zoneMenu->addSeparator();
         zoneMenu->addAction("Sector properties…",this,[this]{configureSector();});zoneMenu->addAction("Lights…",this,[this]{configureLights();});zoneMenu->addAction(locationAction);
         zoneMenu->addAction("Sector script…",this,[this]{editGroundScript(UINT32_MAX);});
+        zoneMenu->addSeparator();zoneMenu->addAction("Update reference…",this,[this]{adoptUpdateReference();});zoneMenu->addAction("Import campaign object for update…",this,[this]{importUpdateObject();});
         resourcesMenu->addAction("Campaign…",this,[this]{if(installation){CampaignEditor dialog(*installation,this,installationPath);dialog.exec();}});
         resourcesMenu->addAction("Scripts & dialogues…",this,[this]{contentLibrary();});resourcesMenu->addSeparator();
         resourcesMenu->addAction("New script…",this,[this]{createContent(false);});resourcesMenu->addAction("New dialogue…",this,[this]{createContent(true);});
@@ -287,6 +289,9 @@ public:
         connect(deleteHouse,&QAction::triggered,this,[this]{deleteSelection();});
         connect(duplicateHouse,&QAction::triggered,this,[this]{duplicateSelection();});
         canvas->moveObjects=[this](const auto& indices,QPoint delta){translateSelection(indices,delta);};
+        canvas->inventoryItem=[this](int i){return editing() && i>=0 && i<int(building->objects.size()) && inventory_item(building->objects[i]);};
+        canvas->inventoryOwner=[this](int i){return editing() && i>=0 && i<int(building->objects.size()) && inventory_owner(building->objects[i]);};
+        canvas->dropInventory=[this](const auto& indices,int owner){transferToInventory(indices,owner);};
         canvas->addObject=[this](int index,QPoint tile){dropObject(index,tile);};
         canvas->paletteSprite=[this](int index){return paletteSpriteAt(index);};
         canvas->canDropObject=[this](int index){return index>=0 && index<int(paletteObjects.size()) && (canvas->layer==0 || (canvas->layer==3 && (paletteObjects[index].type==15 || paletteObjects[index].type==16)));};
@@ -792,6 +797,7 @@ public:
         objectPalette->scrollToItem(item,QAbstractItemView::PositionAtCenter);
         paletteIcons.start();
     }
+    #include "world_update_ui.inc"
     #include "workspace_ui.inc"
     #include "layers_ui.inc"
     #include "context_ui.inc"
@@ -880,6 +886,7 @@ public:
             for(auto& object:objects){object.editor_id=clone_instance(object).id;auto loc=object.number("LOCATION");set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32));transform_npc_routes(object,id,false);}
             building=std::make_unique<Building>(Building{BuildingPlan{},std::move(source.sector),std::move(objects),{}});
             building->map_name=worldMapName;building->sector_id=id;building->existing_map=true;
+            capture_scene_reference(*building,*installation,source.source,source.generated);
             activeDraft=id;savedScene=std::make_shared<Building>(*building);savedPath.clear();draftName=QString("Sector %1, %2").arg(point.x()).arg(point.y());undoObjects.clear();redoObjects.clear();
             construction.stop();canvas->cellSelection={};visibleObjects=building->objects.size();populatePalette();libraryTabs->setCurrentIndex(0);showBuilding(true);
         }catch(const std::exception& e){error(utf8(e.what()));}
@@ -1098,9 +1105,9 @@ public:
     }
     void commitEdit(const QString& label,std::vector<GameObject> next,std::set<std::string> selected, const Sector* ground=nullptr,const Building* metadata=nullptr) {
         if (!editing()) return;
-        EditRecord record{{building->objects,selectedIds(),building->ground,building->plan,building->location_names,building->content},{std::move(next),std::move(selected),ground ? *ground : building->ground,metadata ? metadata->plan : building->plan,metadata ? metadata->location_names : building->location_names,metadata ? metadata->content : building->content},label};
+        EditRecord record{{building->objects,selectedIds(),building->ground,building->plan,building->location_names,building->content,building->reference},{std::move(next),std::move(selected),ground ? *ground : building->ground,metadata ? metadata->plan : building->plan,metadata ? metadata->location_names : building->location_names,metadata ? metadata->content : building->content,metadata ? metadata->reference : building->reference},label};
         undoObjects.push_back(record); redoObjects.clear();
-        building->content=record.after.content; building->plan=record.after.plan; building->location_names=record.after.names; building->ground=record.after.ground; building->objects=record.after.objects; visibleObjects=building->objects.size(); showBuilding(false,&record.after.selected);
+        building->reference=record.after.reference; building->content=record.after.content; building->plan=record.after.plan; building->location_names=record.after.names; building->ground=record.after.ground; building->objects=record.after.objects; visibleObjects=building->objects.size(); showBuilding(false,&record.after.selected);
     }
     void dropObject(int index,QPoint tile) {
         if (!editing() || index<0 || index>=int(paletteObjects.size()) || !Canvas::valid(tile)) return;
@@ -1171,7 +1178,7 @@ public:
         canvas->cancelInteraction();
         auto& from=redo ? redoObjects : undoObjects; auto& to=redo ? undoObjects : redoObjects; if (from.empty()) return;
         auto record=from.back(); from.pop_back(); const auto& state=redo ? record.after : record.before;
-        building->content=state.content; building->plan=state.plan; building->location_names=state.names; building->ground=state.ground; building->objects=state.objects; visibleObjects=building->objects.size(); to.push_back(record); showBuilding(false,&state.selected);
+        building->reference=state.reference; building->content=state.content; building->plan=state.plan; building->location_names=state.names; building->ground=state.ground; building->objects=state.objects; visibleObjects=building->objects.size(); to.push_back(record); showBuilding(false,&state.selected);
     }
     void updateFrame() {
         if (!art || rotation->currentIndex()<0 || palette->currentIndex()<0) return;

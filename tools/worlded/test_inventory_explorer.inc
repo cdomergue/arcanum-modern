@@ -17,5 +17,16 @@ static void checkInventoryExplorer(Explorer& window) {
     window.history(false);require(window.building->objects.size()==2,"Undo did not restore inventory object count");window.history(true);require(window.building->objects.size()==4,"Redo omitted inventory object");
     window.deleteSelection();require(window.building->objects.size()==2,"Deleting owner left an orphan item");window.history(false);require(window.building->objects.size()==4,"Undo deletion lost the owned item");
     window.translateSelection({0},{2,3});require(window.building->objects[0].number("LOCATION")==window.building->objects[1].number("LOCATION"),"Moving owner left item in another location");
+    auto ground=worlded::clone_instance(item);worlded::set_number(ground,"LOCATION",15ull|(15ull<<32));
+    window.building->objects={owner,ground};window.showBuilding(false);
+    window.transferToInventory({1},0);require(worlded::inventory_contents(window.building->objects,window.building->objects[0]).size()==1,"Ground transfer failed");
+    require(!window.objectItems[1]->isVisible(),"Transferred item remains visible on ground");
+    require(window.building->objects[1].id==ground.id,"Ground transfer cloned item identity");
+    if(auto capture=qEnvironmentVariable("WORLDED_INVENTORY_CAPTURE");!capture.isEmpty()){
+        QApplication::processEvents();require(window.grab().save(capture),"Inventory transfer window capture failed");
+        InventoryEditor dialog(window.building->objects,window.building->objects[0],window.paletteObjects,*window.assets,&window);dialog.show();QApplication::processEvents();require(dialog.grab().save(capture+"-inventory.png"),"Transferred inventory capture failed");dialog.close();
+    }
+    window.history(false);require(window.objectItems[1]->isVisible() && !(window.building->objects[1].number("FLAGS")&0x1000u),"Undo did not return transferred item to ground");
+    window.history(true);require(!window.objectItems[1]->isVisible() && worlded::inventory_parent(window.building->objects[1])==owner.id,"Redo lost transfer ownership");
     *window.building=previous;window.undoObjects=std::move(undo);window.redoObjects=std::move(redo);window.showBuilding(false);
 }

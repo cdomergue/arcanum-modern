@@ -9,10 +9,14 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # ------------------------------------------------------------------------------
  # ARCANUM
-@@ -24,6 +25,24 @@
+@@ -24,6 +25,28 @@
  
  # Keep alphabetically sorted.
  set(SRCS
++    "../shared/world_updates_codec.c"
++    "src/game/modern_world_updates.c"
++    "src/game/modern_world_state.c"
++    "src/game/modern_world_operations.c"
 +    "src/game/modern_uap.c"
 +    "src/game/modern_uap.h"
 +    "src/game/modern_house.c"
@@ -34,7 +38,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +352,52 @@
+@@ -333,7 +356,60 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -78,6 +82,14 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +    add_custom_command(TARGET check-house POST_BUILD
 +        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:check-house>"
 +        VERBATIM)
++endif()
++
++add_executable(probe-world-updates EXCLUDE_FROM_ALL "../tools/world-updates/check-world-updates.c" ${HOUSE_CHECK_SRCS})
++target_include_directories(probe-world-updates PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
++target_link_libraries(probe-world-updates PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
++if(WIN32)
++    add_custom_command(TARGET probe-world-updates POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:probe-world-updates>" VERBATIM)
 +endif()
 +
 +add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
@@ -366,7 +378,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
  
              if (SDL_RenamePath(old_path, new_path)) {
                  return 0;
-@@ -1312,6 +1318,27 @@
+@@ -1312,6 +1318,40 @@
      }
  
      return stream;
@@ -381,8 +393,21 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
 +    compat_windows_path_to_native(native_repository);
 +    compat_windows_path_to_native(native_path);
 +    for (TigFileRepository* repo = tig_file_repositories_head; repo; repo = repo->next) {
-+        if ((repo->type & TIG_FILE_REPOSITORY_DATABASE) == 0
-+            || SDL_strcasecmp(repo->path, native_repository)) continue;
++        if (SDL_strcasecmp(repo->path, native_repository)) continue;
++        if ((repo->type & TIG_FILE_REPOSITORY_DIRECTORY) != 0) {
++            /* Explicit repository reads must never fall through to another mod. */
++            if (!native_path[0] || native_path[0] == '/' || native_path[0] == '\\'
++                || strchr(native_path, ':') || strstr(native_path, "..")) return NULL;
++            char full[TIG_MAX_PATH];
++            if (snprintf(full, sizeof(full), "%s/%s", repo->path, native_path) >= (int)sizeof(full)) return NULL;
++            FILE* handle = compat_fopen(full, "rb");
++            if (!handle) return NULL;
++            TigFile* stream = tig_file_create();
++            stream->flags = TIG_FILE_PLAIN;
++            stream->impl.plain_file_stream = handle;
++            return stream;
++        }
++        if ((repo->type & TIG_FILE_REPOSITORY_DATABASE) == 0) continue;
 +        TigDatabaseFileHandle* handle = tig_database_fopen(repo->database, native_path, "rb");
 +        if (!handle) return NULL;
 +        TigFile* stream = tig_file_create();
@@ -394,7 +419,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
  }
  
  // 0x5303D0
-@@ -1602,7 +1629,7 @@
+@@ -1602,7 +1642,7 @@
          SDL_snprintf(path, sizeof(path), "%s\\%s", repo->path, filename);
      }
  
@@ -403,7 +428,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
      if (stream == NULL) {
          return false;
      }
-@@ -1737,7 +1764,7 @@
+@@ -1737,7 +1777,7 @@
      stream->flags &= ~(TIG_FILE_DATABASE | TIG_FILE_PLAIN);
  
      if (path[0] == '.' || path[0] == '\\' || path[1] == ':' || path[0] == '/') {
@@ -412,7 +437,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
          if (stream->impl.plain_file_stream == NULL) {
              return 0;
          }
-@@ -1759,7 +1786,7 @@
+@@ -1759,7 +1799,7 @@
                              compat_join_path(mutable_path, sizeof(mutable_path), writeable_repo->path, path);
                              compat_resolve_path(mutable_path);
  
@@ -421,7 +446,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                              if (stream->impl.plain_file_stream != NULL) {
                                  stream->flags |= TIG_FILE_PLAIN;
                                  database_entry->flags &= ~TIG_DATABASE_ENTRY_0x100;
-@@ -1789,7 +1816,7 @@
+@@ -1789,7 +1829,7 @@
                      compat_join_path(mutable_path, sizeof(mutable_path), repo->path, path);
                      compat_resolve_path(mutable_path);
  
@@ -430,7 +455,7 @@ diff --git a/first_party/tig/src/file.c b/first_party/tig/src/file.c
                      if (stream->impl.plain_file_stream != NULL) {
                          stream->flags |= TIG_FILE_PLAIN;
                          break;
-@@ -1852,7 +1879,7 @@
+@@ -1852,7 +1892,7 @@
      FILE* stream;
      uint8_t file_owner[1024];
  
@@ -2379,8 +2404,9 @@ diff --git a/src/game/effect.c b/src/game/effect.c
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -1,4 +1,9 @@
+@@ -1,4 +1,10 @@
 +#include "game/modern_house.h"
++#include "game/modern_world_updates_internal.h"
 +#include "game/modern_compat.h"
 +#include "game/modern_uap.h"
 +#include "game/modern_autosave.h"
@@ -2389,7 +2415,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
  #include <stdio.h>
  
-@@ -121,7 +126,7 @@
+@@ -121,7 +127,7 @@
  static void gamelib_draw_editor(GameDrawInfo* draw_info);
  static void gamelib_logo(void);
  static void gamelib_splash(tig_window_handle_t window_handle);
@@ -2398,7 +2424,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  static bool gamelib_load_module_data(const char* module_name);
  static void gamelib_unload_module_data(void);
  
-@@ -324,10 +329,12 @@
+@@ -324,10 +330,12 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -2412,15 +2438,25 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (!init_info->editor) {
          if (highres_config_get()->logos) {
-@@ -410,6 +417,7 @@
+@@ -410,6 +418,9 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
 +    modern_autosave_reset();
++    modern_world_updates_reset();
++    sector_save_error_reset();
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -456,6 +464,7 @@
+@@ -448,6 +459,7 @@
+ 
+     sector_art_cache_enable();
+     in_reset = false;
++    modern_world_updates_new_game();
+ 
+     duration = tig_timer_elapsed(reset_started_at);
+     tig_debug_printf("gamelib_reset(): Done.  Total time: %d ms.\n", duration);
+@@ -456,6 +468,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2428,15 +2464,34 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -501,6 +510,7 @@
+@@ -501,6 +514,8 @@
              gamelib_modules[index].ping_func(gamelib_ping_time);
          }
      }
++    modern_world_updates_tick();
 +    modern_house_tick();
  }
  
  // 0x4025C0
-@@ -755,6 +765,7 @@
+@@ -671,6 +686,17 @@
+         return false;
+     }
+ 
++    rw_state_set_directory(gamelib_mod_dir_path);
++    sector_save_error_reset();
++    if (!rw_save_recover() || !modern_world_updates_module_load(path)) {
++        char update_error[512];
++        snprintf(update_error, sizeof(update_error), "%s", modern_world_updates_error());
++        gamelib_unload_module_data();
++        if (*update_error) rw_error("%s", update_error);
++        modern_world_updates_abort_load();
++        return false;
++    }
++
+     if (gamelib_mod_dat_path[0] != '\0') {
+         tig_file_repository_guid(gamelib_mod_dat_path, &gamelib_mod_guid);
+     }
+@@ -755,6 +781,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -2444,16 +2499,42 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -940,6 +951,8 @@
+@@ -939,6 +966,10 @@
+     unsigned int sentinel = 0xBEEFCAFE;
      int version;
      GameSaveInfo save_info;
- 
-+    if (modern_autosave_is_slot(name)) return false;
++    char stage[9] = "";
 +
++    if (modern_autosave_is_slot(name) || sector_save_failed()) return false;
++    if (!rw_save_stage(stage)) return false;
+ 
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
+@@ -949,6 +980,7 @@
  
-@@ -1004,7 +1017,7 @@
+     if (!tig_file_is_directory("Save\\Current")) {
+         tig_debug_printf("gamelib_save(): Error finding folder %s\n", "Save\\Current");
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+@@ -959,6 +991,7 @@
+     stream = tig_file_fopen(path, "wb");
+     if (stream == NULL) {
+         tig_debug_printf("gamelib_save(): Error creating %s\n", path);
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+@@ -968,6 +1001,7 @@
+         tig_debug_printf("gamelib_save(): Error writing version\n");
+         tig_file_fclose(stream);
+         tig_file_remove(path);
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+@@ -1004,10 +1038,11 @@
          }
      }
  
@@ -2462,15 +2543,155 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (index < MODULE_COUNT) {
          tig_file_remove(path);
-@@ -1078,6 +1091,7 @@
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+@@ -1017,6 +1052,7 @@
+         tig_timer_now(&time);
+         if (!gamelib_extra_save_func()) {
+             tig_file_remove(path);
++            rw_save_discard(stage);
+             in_save = false;
+             return false;
+         }
+@@ -1024,8 +1060,15 @@
+         tig_debug_printf("done. Time (ms): %d\n", duration);
+     }
+ 
+-    if (!gamelib_saveinfo_init(name, description, &save_info)) {
++    if (!modern_world_updates_save() || sector_save_failed()) {
++        rw_save_discard(stage);
++        in_save = false;
++        return false;
++    }
++
++    if (!gamelib_saveinfo_init(stage, description, &save_info)) {
+         tig_debug_printf("gamelib_save(): error creating saveinfo\n");
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+@@ -1033,23 +1076,31 @@
+     if (!gamelib_saveinfo_save(&save_info)) {
+         tig_debug_printf("gamelib_save(): error saving saveinfo\n");
+         gamelib_saveinfo_exit(&save_info);
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+ 
+     gamelib_saveinfo_exit(&save_info);
+ 
+-    snprintf(path, sizeof(path), "save\\%s", name);
++    snprintf(path, sizeof(path), "save\\%s", stage);
+     tig_debug_printf("gamelib_save: creating folder archive...");
+ 
+     tig_timer_now(&time);
+     if (!tig_file_archive(path, "Save\\Current")) {
+         tig_debug_printf("gamelib_save(): error archiving folder to %s\n", path);
++        rw_save_discard(stage);
+         in_save = false;
+         return false;
+     }
+     duration = tig_timer_elapsed(time);
+     tig_debug_printf("done. Time (ms): %d\n", duration);
++
++    if (!rw_save_publish(stage, name, description)) {
++        rw_save_discard(stage);
++        in_save = false;
++        return false;
++    }
+ 
+     ui_progressbar_update(MODULE_COUNT + 2);
+ 
+@@ -1078,12 +1129,16 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
 +    modern_autosave_reset();
++    modern_world_updates_reset();
++    sector_save_error_reset();
      in_load = true;
  
      ui_progressbar_init(MODULE_COUNT + 2);
-@@ -1200,7 +1214,7 @@
+ 
+     if (!tig_file_is_directory("Save\\Current")) {
+         tig_debug_printf("gamelib_load(): Error finding folder %s\n", "Save\\Current");
++        modern_world_updates_abort_load();
+         in_load = false;
+         return false;
+     }
+@@ -1094,6 +1149,7 @@
+     tig_timer_now(&time);
+     if (!tig_file_empty_directory("Save\\Current")) {
+         tig_debug_printf("gamelib_load(): Error clearing folder %s\n", "Save\\Current");
++        modern_world_updates_abort_load();
+         in_load = false;
+         return false;
+     }
+@@ -1104,21 +1160,31 @@
+     tig_timer_now(&time);
+     if (!tig_file_unarchive(path, "Save\\Current")) {
+         tig_debug_printf("gamelib_load(): error restoring archive %s to save\\test\n", path);
++        modern_world_updates_abort_load();
+         in_load = false;
+         return false;
+     }
+     duration = tig_timer_elapsed(time);
+     tig_debug_printf("done.  Time (ms): %d\n", duration);
++
++    if (!modern_world_updates_load(name)) {
++        modern_world_updates_abort_load();
++        in_load = false;
++        return false;
++    }
+ 
+     stream = tig_file_fopen("Save\\Current\\data.sav", "rb");
+     if (stream == NULL) {
+         tig_debug_printf("gamelib_load(): Error reading data.sav\n");
++        modern_world_updates_abort_load();
+         in_load = false;
+         return false;
+     }
+ 
+     if (tig_file_fread(&(load_info.version), sizeof(load_info.version), 1, stream) != 1) {
+         tig_debug_printf("gamelib_load(): Error reading version\n");
++        tig_file_fclose(stream);
++        modern_world_updates_abort_load();
+         in_load = false;
+         return false;
+     }
+@@ -1165,6 +1231,7 @@
+     tig_file_fclose(stream);
+ 
+     if (index < MODULE_COUNT) {
++        modern_world_updates_abort_load();
+         in_load = false;
+         return false;
+     }
+@@ -1173,6 +1240,7 @@
+         tig_debug_printf("gamelib_load: Begin gamelib_extra_load_func()...");
+         tig_timer_now(&time);
+         if (!gamelib_extra_load_func()) {
++            modern_world_updates_abort_load();
+             in_load = false;
+             return false;
+         }
+@@ -1180,6 +1248,12 @@
+         tig_debug_printf("done. Time (ms): %d\n", duration);
+     }
+ 
++    if (!modern_world_updates_finish_load()) {
++        modern_world_updates_abort_load();
++        in_load = false;
++        return false;
++    }
++
+     ui_progressbar_update(MODULE_COUNT + 2);
+ 
+     in_load = false;
+@@ -1200,7 +1274,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -2479,7 +2700,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1408,9 @@
+@@ -1394,13 +1468,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -2496,7 +2717,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1565,7 @@
+@@ -1555,7 +1625,7 @@
          } while (0);
      }
  
@@ -2505,7 +2726,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1762,81 @@
+@@ -1752,11 +1822,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -2588,7 +2809,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1880,7 @@
+@@ -1800,6 +1940,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -2596,7 +2817,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1898,7 @@
+@@ -1817,7 +1958,7 @@
  }
  
  // 0x404A20
@@ -2605,18 +2826,19 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1913,10 @@
+@@ -1832,6 +1973,11 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
 +    if (!modern_uap_load()) return false;
 +    modern_compat_load();
 +    modern_house_load();
++    if (!modern_world_updates_resources_init()) return false;
 +    return true;
  }
  
  // 0x404C10
-@@ -1874,6 +1959,7 @@
+@@ -1874,6 +2020,7 @@
      }
  
      path1[end] = '\0';
@@ -2624,10 +2846,12 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +1992,7 @@
+@@ -1906,6 +2053,9 @@
  void gamelib_unload_module_data(void)
  {
      int index;
++    modern_world_updates_reset();
++    sector_save_error_reset();
 +    modern_uap_module_unload();
  
      tig_file_repository_remove(gamelib_mod_dir_path);
@@ -3500,14 +3724,124 @@ diff --git a/src/game/script.c b/src/game/script.c
 diff --git a/src/game/sector.c b/src/game/sector.c
 --- a/src/game/sector.c
 +++ b/src/game/sector.c
-@@ -1,4 +1,6 @@
+@@ -1,4 +1,7 @@
  #include "game/sector.h"
 +#include "game/modern_house.h"
 +#include "game/modern_uap.h"
++#include "game/modern_world_updates_internal.h"
  
  #include <inttypes.h>
  #include <stdio.h>
-@@ -1450,7 +1452,22 @@
+@@ -91,6 +94,9 @@
+ 
+ // 0x60178C
+ static bool in_sector_lock;
++static bool sector_save_error;
++bool sector_save_failed(void) { return sector_save_error; }
++void sector_save_error_reset(void) { sector_save_error = false; }
+ 
+ // 0x601790
+ static int sector_blocked_sectors_cnt;
+@@ -495,7 +501,7 @@
+         return false;
+     }
+ 
+-    sector_flush(0);
++    if (!sector_flush(0)) return false;
+ 
+     if (capacity < 8) {
+         capacity = 8;
+@@ -863,6 +869,7 @@
+     unsigned int index;
+     unsigned int oldest = -1;
+     DateTime datetime;
++    bool published = false;
+ 
+     if (in_sector_lock) {
+         tig_debug_printf("Warning: recursive sector lock detected\n");
+@@ -915,7 +922,12 @@
+             tig_debug_printf("Sector cache full, removing oldest (%I64u)...\n",
+                 sector_cache_entries[sector_cache_indexes[oldest]].sector.id);
+ 
+-            sector_save_func(&(sector_cache_entries[sector_cache_indexes[oldest]].sector));
++            modern_world_updates_capture_sector(&(sector_cache_entries[sector_cache_indexes[oldest]].sector));
++            if (!sector_save_func(&(sector_cache_entries[sector_cache_indexes[oldest]].sector))) {
++                sector_save_error = true;
++                in_sector_lock = false;
++                return false;
++            }
+             sector_cache_evict(&(sector_cache_entries[sector_cache_indexes[oldest]].sector));
+             sector_cache_entries[sector_cache_indexes[oldest]].used = false;
+ 
+@@ -964,12 +976,14 @@
+         cache_entry->refcount = 1;
+         cache_entry->timestamp = dword_6017BC;
+         cache_entry->sector.id = id;
++        published = true;
+     }
+ 
+     *sector_ptr = &(cache_entry->sector);
+ 
+     in_sector_lock = false;
+     sector_refcount++;
++    if (published) modern_world_updates_sector_ready(id, *sector_ptr);
+ 
+     return true;
+ }
+@@ -1003,28 +1017,33 @@
+ }
+ 
+ // 0x4D0BC0
+-void sector_flush(unsigned int flags)
++bool sector_flush(unsigned int flags)
+ {
+     unsigned int index;
+-    SectorCacheEntry* cache_entry;
+-
++    bool success = true;
+     for (index = 0; index < sector_cache_size; index++) {
+-        cache_entry = &(sector_cache_entries[sector_cache_indexes[index]]);
+-        if (cache_entry->refcount == 0) {
+-            sector_save_func(&(cache_entry->sector));
+-            if ((flags & 0x1) == 0) {
+-                sector_cache_evict(&(cache_entry->sector));
+-                cache_entry->used = false;
+-                memmove(&(sector_cache_indexes[index]),
+-                    &(sector_cache_indexes[index + 1]),
+-                    sizeof(*sector_cache_indexes) * (sector_cache_size - 1));
+-                index--;
+-                sector_cache_size--;
+-            }
+-        }
+-    }
+-
+-    sector_block_save_internal();
++        SectorCacheEntry* entry = &(sector_cache_entries[sector_cache_indexes[index]]);
++        if (entry->refcount != 0) {
++            tig_debug_printf("sector_flush: sector %llu still has %u references\n", (unsigned long long)entry->sector.id, entry->refcount);
++            success = false; continue;
++        }
++        modern_world_updates_capture_sector(&(entry->sector));
++        if (!sector_save_func(&(entry->sector))) {
++            success = false;
++            continue; /* Dirty sector remains available for a retry. */
++        }
++        if ((flags & 1) == 0) {
++            sector_cache_evict(&(entry->sector));
++            entry->used = false;
++            memmove(&(sector_cache_indexes[index]), &(sector_cache_indexes[index + 1]),
++                sizeof(*sector_cache_indexes) * (sector_cache_size - index - 1));
++            index--;
++            sector_cache_size--;
++        }
++    }
++    if (!sector_block_save_internal()) success = false;
++    if (!success) sector_save_error = true;
++    return success;
+ }
+ 
+ // 0x4D0DE0
+@@ -1450,7 +1469,22 @@
  // FIXME: There are many cleanup errors (mosty leaking `dif_stream`).
  //
  // 0x4D1A30
@@ -3530,7 +3864,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  {
      bool generated = false;
      DifferenceFileFlags dif_flags = 0;
-@@ -1493,9 +1510,10 @@
+@@ -1493,9 +1527,19 @@
      sector_validate_game("sector pre-load");
      if (!generated) {
          li_update();
@@ -3539,10 +3873,19 @@ diff --git a/src/game/sector.c b/src/game/sector.c
          if (sec_stream == NULL) {
              tig_debug_printf("Error opening sector file %s\n", sec_path);
 +            return false;
++        }
++
++        if (rw_package_count != 0) {
++            uint8_t source_digest[32];
++            if (!rw_hash_stream(sec_stream, source_digest)) {
++                tig_file_fclose(sec_stream);
++                return false;
++            }
++            modern_world_updates_sector_source_digest(id, sec_path, source_digest);
          }
  
          strcpy(dif_path, sector_save_path);
-@@ -1581,119 +1599,63 @@
+@@ -1581,119 +1625,63 @@
              return false;
          }
  
@@ -3716,7 +4059,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
                  tig_file_fclose(sec_stream);
                  tig_file_fclose(dif_stream);
                  return false;
-@@ -1712,6 +1674,7 @@
+@@ -1712,6 +1700,7 @@
          }
      }
  
@@ -3724,6 +4067,46 @@ diff --git a/src/game/sector.c b/src/game/sector.c
      sector_validate_game("sector post-load (pre-fold)");
      li_update();
      objlist_fold(&(sector->objects), id, sub_45A9B0(&(sector->datetime), 3000));
+@@ -1981,7 +1970,6 @@
+     stream = tig_file_fopen(path, "wb");
+     if (stream == NULL) {
+         tig_debug_printf("Error creating differences file %s\n", path);
+-        tig_file_fclose(stream); // FIXME: Crash!
+         return false;
+     }
+ 
+@@ -2082,7 +2070,10 @@
+         return false;
+     }
+ 
+-    tig_file_fclose(stream);
++    if (tig_file_fclose(stream) != 0) {
++        tig_file_remove(path);
++        return false;
++    }
+     sector_validate_game("sector post-save");
+ 
+     return true;
+@@ -2310,7 +2301,7 @@
+                 return false;
+             }
+ 
+-            tig_file_fclose(stream);
++            if (tig_file_fclose(stream) != 0) return false;
+         } else {
+             snprintf(path, sizeof(path), "%s\\null.sbf", sector_save_path);
+ 
+@@ -2319,8 +2310,8 @@
+                 return false;
+             }
+ 
+-            tig_file_fputc(1, stream);
+-            tig_file_fclose(stream);
++            bool wrote = tig_file_fputc(1, stream) != EOF;
++            if (tig_file_fclose(stream) != 0 || !wrote) return false;
+         }
+ 
+         sector_blocked_sectors_changed = false;
 diff --git a/src/game/sector_object_list.c b/src/game/sector_object_list.c
 --- a/src/game/sector_object_list.c
 +++ b/src/game/sector_object_list.c
@@ -6881,15 +7264,16 @@ diff --git a/src/ui/logbook_ui.c b/src/ui/logbook_ui.c
 diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
 --- a/src/ui/mainmenu_ui.c
 +++ b/src/ui/mainmenu_ui.c
-@@ -1,4 +1,7 @@
+@@ -1,4 +1,8 @@
 +#include "game/modern_compat.h"
 +#include "game/modern_autosave.h"
++#include "game/modern_world_updates.h"
  #include "ui/mainmenu_ui.h"
 +#include "ui/modern_ui.h"
  
  #include <stdio.h>
  
-@@ -1109,6 +1112,9 @@
+@@ -1109,6 +1113,9 @@
      /*  RACE_HALFLING */ { TIG_ART_CRITTER_BODY_TYPE_HALFLING, false },
      /*  RACE_HALF_ORC */ { TIG_ART_CRITTER_BODY_TYPE_HUMAN, true },
      /* RACE_HALF_OGRE */ { TIG_ART_CRITTER_BODY_TYPE_HALF_OGRE, false },
@@ -6899,7 +7283,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  };
  
  // 0x5C51B0
-@@ -1740,6 +1746,8 @@
+@@ -1740,6 +1747,8 @@
      broadcast_ui_close();
  
      while (mainmenu_ui_active) {
@@ -6908,7 +7292,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          tig_ping();
          tig_timer_now(&timestamp);
          timeevent_ping(timestamp);
-@@ -1781,6 +1789,151 @@
+@@ -1781,6 +1790,151 @@
      return mainmenu_ui_active;
  }
  
@@ -7060,7 +7444,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  // 0x541690
  TigWindowModalDialogChoice mainmenu_ui_confirm_quit(void)
  {
-@@ -1796,6 +1949,11 @@
+@@ -1796,6 +1950,11 @@
  
      mes_file_entry.num = num;
      mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
@@ -7072,7 +7456,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      modal_info.type = TIG_WINDOW_MODAL_DIALOG_TYPE_OK_CANCEL;
      modal_info.x = 237;
-@@ -1806,7 +1964,9 @@
+@@ -1806,7 +1965,9 @@
      modal_info.process = NULL;
      modal_info.redraw = gamelib_redraw;
      hrp_center(&(modal_info.x), &(modal_info.y));
@@ -7082,7 +7466,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      return choice;
  }
-@@ -2022,7 +2182,7 @@
+@@ -2022,7 +2183,7 @@
      MainMenuWindowInfo* window;
  
      window = main_menu_window_info[mainmenu_ui_window_type];
@@ -7091,7 +7475,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (mainmenu_ui_confirm_quit() != TIG_WINDOW_MODAL_DIALOG_CHOICE_OK) {
              return false;
          }
-@@ -2032,7 +2192,7 @@
+@@ -2032,7 +2193,7 @@
          return sub_549310(button_handle);
      }
  
@@ -7100,7 +7484,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stru_5C36B0[mainmenu_ui_type][0]) {
              sub_5412D0();
              return false;
-@@ -2851,7 +3011,7 @@
+@@ -2851,7 +3012,7 @@
  
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -7109,7 +7493,16 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -3032,53 +3192,31 @@
+@@ -2921,7 +3082,7 @@
+     mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
+ 
+     ui_message.type = UI_MSG_TYPE_EXCLAMATION;
+-    ui_message.str = mes_file_entry.str;
++    ui_message.str = modern_world_updates_error()[0] ? modern_world_updates_error() : mes_file_entry.str;
+     ui_display_msg(&ui_message);
+ 
+     return false;
+@@ -3032,53 +3193,31 @@
          return false;
      }
  
@@ -7183,7 +7576,16 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      }
  
      sub_542200();
-@@ -3533,7 +3671,7 @@
+@@ -3103,7 +3242,7 @@
+         mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
+ 
+         ui_message.type = UI_MSG_TYPE_EXCLAMATION;
+-        ui_message.str = mes_file_entry.str;
++        ui_message.str = modern_world_updates_error()[0] ? modern_world_updates_error() : mes_file_entry.str;
+         ui_display_msg(&ui_message);
+ 
+         return false;
+@@ -3533,7 +3672,7 @@
      gamelib_savelist_create(&mainmenu_ui_gsl);
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -7192,7 +7594,16 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -4073,7 +4211,7 @@
+@@ -3669,7 +3808,7 @@
+         exit(EXIT_FAILURE);
+     }
+ 
+-    // CE: There's a bug in the original game — the name persists when
++    // CE: There's a bug in the original game â€” the name persists when
+     // navigating back and forth to the "New Char" screen. Everything else
+     // (gender/race/background, just a moment above) resets, but not the name.
+     mes_file_entry.num = 500; // "Choose Name"
+@@ -4073,7 +4212,7 @@
              return false;
          }
      } else {
@@ -7201,7 +7612,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stat_level_get(obj, STAT_GENDER) == GENDER_FEMALE) {
              while (race >= 0 && !stru_5C5170[race].available_for_female) {
                  race--;
-@@ -4122,13 +4260,13 @@
+@@ -4122,13 +4261,13 @@
      int race;
  
      race = stat_level_get(obj, STAT_RACE);
@@ -7219,7 +7630,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4146,7 +4284,7 @@
+@@ -4146,7 +4285,7 @@
                  race++;
              }
  
@@ -7228,7 +7639,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4157,7 +4295,7 @@
+@@ -4157,7 +4296,7 @@
          }
      }
  
@@ -7237,7 +7648,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          background_clear(obj);
          mainmenu_ui_new_char_set_race(obj, race);
          return true;
-@@ -4602,7 +4740,7 @@
+@@ -4602,7 +4741,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -7246,7 +7657,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_window_rect.x;
              src_rect.y = 0;
-@@ -4645,7 +4783,7 @@
+@@ -4645,7 +4784,7 @@
                  window_data.rect.y = mainmenu_ui_bottom_bar_cover_rects[idx].y;
                  window_data.rect.width = mainmenu_ui_bottom_bar_cover_rects[idx].width;
                  window_data.rect.height = mainmenu_ui_bottom_bar_cover_rects[idx].height;
@@ -7255,7 +7666,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
                  src_rect.x = mainmenu_ui_bottom_bar_cover_rects[idx].x;
                  src_rect.y = 0;
-@@ -4681,7 +4819,7 @@
+@@ -4681,7 +4820,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -7264,7 +7675,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_top_bar_cover_rect.x;
              src_rect.y = 0;
-@@ -6046,10 +6184,22 @@
+@@ -6046,10 +6185,22 @@
          if (obj != OBJ_HANDLE_NULL
              && tig_art_exists(obj_field_int32_get(obj, OBJ_F_CURRENT_AID)) == TIG_OK) {
              dword_5C3620 = false;
@@ -8628,3 +9039,261 @@ diff --git a/src/game/quest.c b/src/game/quest.c
                      quests[quest_num_to_idx(num)].dumb_description = mes_file_entry.str;
                  }
              }
+@@ -260,7 +260,7 @@
+             // seven numbers in each bank is the dialog entry point for the
+             // quest in each of its seven states. The number refers to a PC
+             // dialog line which will be used in place of the Q: line based on
+-            // the associated quest state. You can use a –1 to indicate no
++            // the associated quest state. You can use a â€“1 to indicate no
+             // dialog line, meaning no message will be printed."
+             strcpy(temp, mes_file_entry.str);
+ 
+@@ -388,6 +388,60 @@
+     }
+ 
+     return quest_state_set_internal(pc_obj, num, state, npc_obj);
++}
++
++/* Convert loaded state without granting rewards or replaying dialogue effects. */
++bool quest_state_migrate(int64_t pc_obj, int num, int before, int after,
++    bool authoritative, char* error, size_t size)
++{
++    const char* reason = NULL;
++    if (size != 0) error[0] = '\0';
++    if (authoritative) reason = "Quest migrations require an explicit old-state guard";
++    else if (!pc_obj || obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC)
++        reason = "Quest migration requires the loaded player character";
++    else if (!quests || !quest_gstate || num < 1000 || num >= 2000
++        || before < 0 || before >= QUEST_STATE_COUNT || after < 0 || after >= QUEST_STATE_COUNT)
++        reason = "Invalid quest migration target or state";
++    if (reason == NULL) {
++        Quest* definition = &quests[quest_num_to_idx(num)];
++        bool defined = definition->normal_description != NULL || definition->dumb_description != NULL;
++        for (int i = 0; i < QUEST_STATE_COUNT; i++) {
++            if (definition->normal_dialog[i] != -1 || definition->dumb_dialog[i] != -1
++                || definition->bad_reaction_dialog[i] != -1) defined = true;
++        }
++        if (!defined) reason = "Quest definition is absent from this module";
++    }
++    if (reason != NULL) {
++        if (size != 0) snprintf(error, size, "%s", reason);
++        return false;
++    }
++    int current = quest_state_get(pc_obj, num);
++    if (current == after) return true;
++    int global = quest_gstate[quest_num_to_idx(num)];
++    if (current >= QUEST_STATE_COMPLETED)
++        reason = "Completed, externally completed and botched quests cannot be reset";
++    else if (current != before)
++        reason = "Player quest state differs from the declared precondition";
++    else if (global == QUEST_STATE_BOTCHED && after != QUEST_STATE_BOTCHED)
++        reason = "The global quest outcome is already botched";
++    else if (global == QUEST_STATE_COMPLETED && after != QUEST_STATE_OTHER_COMPLETED)
++        reason = "The global quest outcome was completed by another character";
++    if (reason != NULL) {
++        if (size != 0) snprintf(error, size, "%s", reason);
++        return false;
++    }
++    PcQuestState state;
++    obj_arrayfield_pc_quest_get(pc_obj, OBJ_F_PC_QUEST_IDX, num, &state);
++    state.state = after == QUEST_STATE_BOTCHED ? state.state | QUEST_BOTCHED_MODIFIER : after;
++    /* Keep the original journal date and padding; no XP, sound, alignment or reaction. */
++    obj_arrayfield_pc_quest_set(pc_obj, OBJ_F_PC_QUEST_IDX, num, &state);
++    if (global == QUEST_STATE_ACCEPTED) {
++        if (after == QUEST_STATE_COMPLETED || after == QUEST_STATE_OTHER_COMPLETED)
++            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_COMPLETED;
++        else if (after == QUEST_STATE_BOTCHED)
++            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_BOTCHED;
++    }
++    return true;
+ }
+ 
+ /**
+diff --git a/src/game/map.c b/src/game/map.c
+--- a/src/game/map.c
++++ b/src/game/map.c
+@@ -361,7 +361,7 @@
+ 
+     tig_debug_printf("map_save: flushing map...");
+     tig_timer_now(&start);
+-    map_flush(1);
++    if (!map_flush(1)) return false;
+     tig_debug_printf("done.  Time (ms): %d\n", tig_timer_elapsed(start));
+ 
+     tig_debug_printf("map_save: saving map names...");
+@@ -399,7 +399,7 @@
+ 
+             if (!map_modules[index].save_func(stream)) {
+                 tig_debug_printf("map_save: save function %d (%s) failed\n", index, map_modules[index].name);
+-                break;
++                return false;
+             }
+ 
+             int pos;
+@@ -412,7 +412,7 @@
+ 
+             if (tig_file_fwrite(&sentinel, sizeof(sentinel), 1, stream) != 1) {
+                 tig_debug_printf("map_save(): ERROR: Sentinel Failed to Save!");
+-                break;
++                return false;
+             }
+         }
+     }
+@@ -805,7 +805,7 @@
+ 
+     info = &(map_list_info[map - 1]);
+     if (map_valid && !a3) {
+-        map_flush(0);
++        if (!map_flush(0)) return false;
+     }
+ 
+     if (!obj_validate_system(1)) {
+@@ -949,53 +949,36 @@
+ }
+ 
+ // 0x410070
+-void map_flush(unsigned int flags)
+-{
++bool map_flush(unsigned int flags)
++{
++    bool ok = true;
+     char path[TIG_MAX_PATH];
+     TigFile* stream;
+-
++    if (sector_save_failed()) return false;
+     wallcheck_flush();
+-
+-    if (!map_save_preprocess()) {
+-        tig_debug_println("Error: map_save_preprocess failed in map_flush.");
+-    }
+-
++    if (!map_save_preprocess()) return false;
+     if (map_editor) {
+-        if (!map_save_objects()) {
+-            tig_debug_println("Error: map_save_objects failed in map_flush.");
+-        }
++        ok = map_save_objects();
+     } else {
+-        if (!map_save_difs()) {
+-            tig_debug_println("Error: map_save_difs failed in map_flush.");
+-        }
+-
+-        if (!map_save_dynamic()) {
+-            tig_debug_println("Error: map_save_dynamic failed in map_flush.");
+-        }
+-    }
+-
++        ok = map_save_difs();
++        if (ok) ok = map_save_dynamic();
++    }
++    // Restore runtime handles even when persistence failed.
+     map_load_postprocess();
+-    sector_flush(flags);
+-    jumppoint_flush();
+-    terrain_flush();
++    if (!ok) return false;
++    if (!sector_flush(flags) || !jumppoint_flush() || (map_editor && !terrain_flush())) return false;
+     townmap_flush();
+-
+     if (map_editor) {
+         snprintf(path, sizeof(path), "%s\\startloc.txt", map_save_path);
+         if (map_starting_loc != 0) {
+             stream = tig_file_fopen(path, "wt");
+-            if (stream != NULL) {
+-                tig_file_fprintf(stream,
+-                    "%I64d\n%I64d\n",
+-                    LOCATION_GET_X(map_starting_loc),
+-                    LOCATION_GET_Y(map_starting_loc));
+-            } else {
+-                tig_debug_printf("Error could not open map start location file for writing %s\n", path);
+-            }
+-        } else {
+-            tig_file_remove(path);
+-        }
+-    }
++            if (stream == NULL) return false;
++            ok = tig_file_fprintf(stream, "%I64d\n%I64d\n",
++                LOCATION_GET_X(map_starting_loc), LOCATION_GET_Y(map_starting_loc)) >= 0;
++            if (tig_file_fclose(stream) != 0) ok = false;
++        } else if (tig_file_exists(path, NULL) && tig_file_remove(path) != 0) ok = false;
++    }
++    return ok && !sector_save_failed();
+ }
+ 
+ // 0x4101D0
+@@ -1271,19 +1254,19 @@
+         } while (obj_inst_next(&obj, &iter));
+     }
+ 
+-    tig_file_fclose(stream2);
++    bool closed2 = tig_file_fclose(stream2) == 0;
+ 
+     if (size < sizeof(oid)) {
+         tig_file_remove(path2);
+     }
+ 
+-    tig_file_fclose(stream1);
++    bool closed1 = tig_file_fclose(stream1) == 0;
+ 
+     if (cnt == 0) {
+         tig_file_remove(path1);
+     }
+ 
+-    return true;
++    return closed1 && closed2;
+ }
+ 
+ // 0x410B20
+@@ -1320,13 +1303,13 @@
+         } while (obj_inst_next(&obj, &iter));
+     }
+ 
+-    tig_file_fclose(stream);
++    bool closed = tig_file_fclose(stream) == 0;
+ 
+     if (cnt == 0) {
+         tig_file_remove(path);
+     }
+ 
+-    return true;
++    return closed;
+ }
+ 
+ // 0x410C50
+diff --git a/src/game/map.h b/src/game/map.h
+--- a/src/game/map.h
++++ b/src/game/map.h
+@@ -32,7 +32,7 @@
+ bool map_get_area(int map, int* area);
+ bool map_get_worldmap(int map, int* worldmap);
+ bool map_is_clearing_objects(void);
+-void map_flush(unsigned int flags);
++bool map_flush(unsigned int flags);
+ void map_process_jumppoint(int64_t loc, int64_t obj);
+ bool map_is_valid(void);
+ void map_starting_loc_get(int64_t* loc_ptr);
+diff --git a/src/game/quest.h b/src/game/quest.h
+--- a/src/game/quest.h
++++ b/src/game/quest.h
+@@ -41,6 +41,7 @@
+ int quest_dialog_line(int64_t pc_obj, int64_t npc_obj, int num);
+ int quest_state_get(int64_t pc_obj, int num);
+ int quest_state_set(int64_t pc_obj, int num, int state, int64_t npc_obj);
++bool quest_state_migrate(int64_t pc_obj, int num, int before, int after, bool authoritative, char* error, size_t size);
+ int quest_unbotch(int64_t obj, int num);
+ int quest_global_state_get(int num);
+ int quest_global_state_set(int num, int state);
+diff --git a/src/game/sector.h b/src/game/sector.h
+--- a/src/game/sector.h
++++ b/src/game/sector.h
+@@ -65,7 +65,9 @@
+ bool sector_lock(int64_t id, Sector** sector_ptr);
+ bool sector_unlock(int64_t id);
+ void sector_cache_reset(void);
+-void sector_flush(unsigned int flags);
++bool sector_flush(unsigned int flags);
++bool sector_save_failed(void);
++void sector_save_error_reset(void);
+ bool sector_check_demo_limits(int64_t id);
+ void sector_art_cache_register(tig_art_id_t art_id);
+ bool sector_is_blocked(int64_t sec);

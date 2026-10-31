@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(WorldUpdateStateTests LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+add_executable(world-update-state-check main.cpp ../../source/src/game/modern_world_state.c)
+target_include_directories(world-update-state-check PRIVATE . ../../shared)
+enable_testing()
+add_test(NAME world_update_state COMMAND world-update-state-check)

@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(WorldUpdateCodecTests LANGUAGES C)
+add_executable(world-update-codec-check main.c ../../shared/world_updates_codec.c)
+target_include_directories(world-update-codec-check PRIVATE ../../shared)
+enable_testing()
+add_test(NAME world_update_codec COMMAND world-update-codec-check)

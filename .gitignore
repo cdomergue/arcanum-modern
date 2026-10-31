@@ -87,3 +87,10 @@ worlded.local.json
 
 !/source/src/game/modern_house.c
 !/source/src/game/modern_house.h
+
+# Save-compatible world update modules.
+!/source/src/game/modern_world_updates.c
+!/source/src/game/modern_world_updates.h
+!/source/src/game/modern_world_updates_internal.h
+!/source/src/game/modern_world_state.c
+!/source/src/game/modern_world_operations.c

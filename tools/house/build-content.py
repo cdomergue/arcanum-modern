@@ -4,6 +4,8 @@ Slots, ownership globals and key IDs are save-game identities: never renumber th
 The native modern_house module handles the guarded purchase/resupply commands.
 """
 import argparse
+import importlib.util
+import hashlib
 import json
 import re
 import shutil
@@ -187,6 +189,52 @@ def check_scenes(catalog, scenes):
             raise ValueError(f"{p['id']}: scene has no objects")
 
 
+def build_update_package(property_, source, base):
+    """Compile a reference-backed template; old scenes keep the legacy loader."""
+    template = source / 'update-template.json'
+    if not template.exists():
+        return None
+    spec = importlib.util.spec_from_file_location('housing_world_updates', ROOT/'tools/world-updates/package.py')
+    compiler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(compiler)
+    manifest = json.loads(template.read_text(encoding='utf-8'))
+    for path, expected in manifest.get('housing_source_hashes', {}).items():
+        file = compiler.resource_file(source, path)
+        if hashlib.sha256(file.read_bytes()).hexdigest() != expected:
+            raise ValueError(f'Housing authoring source changed; re-export the update template: {path}')
+    scene_guids = {value.split()[1] for key, value in re.findall(r'\{(\d+)\}\{([^}]*)\}', (source/'scene.mes').read_text()) if int(key) >= 100}
+    update_guids = {op['selector']['guid'] for op in manifest['operations'] if op['kind'] == 'add_object'}
+    if scene_guids != update_guids:
+        raise ValueError('Housing template object IDs differ from scene.mes; re-export the template')
+    manifest['package_id'] = f"housing.{property_['slot']}"
+    identity = manifest['package_id']
+    revision = int(manifest['revision'])
+    destination = base/'world-updates'/identity/str(revision)
+    destination.mkdir(parents=True, exist_ok=True)
+    for resource in manifest['resources']:
+        path = compiler.relative(resource['path'])
+        file = source/path if path.startswith('objects/') else source/'resources'/path
+        data = compiler.resource_file(file.parent, file.name).read_bytes()
+        if hashlib.sha256(data).hexdigest() != resource['sha256']:
+            raise ValueError(f'Housing template resource changed; re-export it: {path}')
+        target = destination/path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists() and target.read_bytes() != data:
+            raise ValueError(f'Published housing resource is immutable: {path}')
+        target.write_bytes(data)
+    registry = compiler.registry_read(base/'world-updates')
+    if identity in registry:
+        old_manifest, _ = compiler.load_package(base/'world-updates'/registry[identity])
+        compiler.validate_upgrade(old_manifest, manifest)
+    runtime = compiler.compile_manifest(manifest, destination)
+    prior = destination/'runtime.rwp'
+    if prior.exists() and prior.read_bytes() != runtime:
+        raise ValueError('Housing package changed without a new cumulative revision')
+    prior.write_bytes(runtime)
+    (destination/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
+    return identity, f'{identity}/{revision}'
+
+
 def build(catalog, output, scenes=ROOT/'resources/house'):
     validate(catalog)
     check_scenes(catalog, scenes)
@@ -226,6 +274,18 @@ def build(catalog, output, scenes=ROOT/'resources/house'):
         if (scenes/p['scene']).is_dir():
             shutil.copytree(scenes/p['scene'], base/'house'/p['scene'], dirs_exist_ok=True)
     (base/'house/catalog.mes').write_text('\n'.join(lines)+'\n')
+    update_entries = {}
+    registry = base/'world-updates/index.mes'
+    if registry.exists():
+        update_entries = {value.split('/')[0]: value for _, value in re.findall(r'\{(\d+)\}\{([^}]*)\}', registry.read_text(encoding='utf-8'))}
+    for property_ in catalog['properties']:
+        entry = build_update_package(property_, scenes/property_['scene'], base)
+        if entry:
+            update_entries[entry[0]] = entry[1]
+    if update_entries:
+        registry.parent.mkdir(parents=True, exist_ok=True)
+        registry.write_text(''.join(f'{{{i}}}{{{value}}}\n' for i, value in enumerate(sorted(update_entries.values()))), encoding='utf-8')
+
     for relative, data in resources.values():
         (base/relative).parent.mkdir(parents=True, exist_ok=True)
         (base/relative).write_bytes(data)

@@ -74,10 +74,13 @@ inline Building load_project(const std::filesystem::path& path) {
     for(const auto& entry:fs::directory_iterator(folder)) if(entry.path().extension()==".mob") {
         auto objects=read_objects(read_file(entry.path()));result.objects.insert(result.objects.end(),objects.begin(),objects.end());
     }
+    if(fs::exists(path/"selections.bin"))restore_scene_selections(result.objects,read_file(path/"selections.bin"));
+    if(fs::exists(path/"reference.bin")){result.reference=decode_scene_reference(read_file(path/"reference.bin"));if(result.reference->map!=map || result.reference->sector!=id)throw std::runtime_error("Reference belongs to another map or sector");}
+    if(fs::exists(path/"world-update.json"))result.update_history=read_file(path/"world-update.json");
     for(auto& object:result.objects) {
         auto loc=object.number("LOCATION");
         if((std::uint32_t(loc)>>6)!=(id&0x3ffffff) || (loc>>38)!=(id>>26)) throw std::runtime_error("Project object outside its sector");
-        set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32)); object.editor_id=clone_instance(object).id;
+        set_number(object,"LOCATION",(loc&63)|(((loc>>32)&63)<<32)); if(object.editor_id.empty())object.editor_id=clone_instance(object).id;
         transform_npc_routes(object,id,false);
     }
     if(fs::exists(path/"location-names.json")) { auto names=project_json(path/"location-names.json");

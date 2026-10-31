@@ -24,6 +24,7 @@
         if(delta.scripts)parts<<"Script attachments modified";
         if(delta.names)parts<<"Location name modified";
         if(delta.content)parts<<"Project scripts / dialogues modified";
+        if(delta.updates)parts<<"Update reference / publication history modified";
         return parts.isEmpty()?"No pending changes":parts.join(" · ");
     }
     void refreshWorkspace() {

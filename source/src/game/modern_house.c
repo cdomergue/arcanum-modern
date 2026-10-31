@@ -1,6 +1,7 @@
 /* Additive estate content. Stable object GUIDs and ownership globals are save ABI.
  * Never replace a base SEC: its object ordering belongs to existing save DIFs. */
 #include "game/modern_house.h"
+#include "game/modern_world_updates_internal.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -40,6 +41,9 @@ static Property properties[100];
 static int property_count;
 static mes_file_handle_t descriptions = MES_FILE_HANDLE_INVALID;
 static bool ready;
+static bool prepare_update(const RwPackage* package,Sector* sector,void* context);
+static void configure_update(const RwPackage* package,const RwOperation* operation,int64_t obj,bool created,void* context);
+static const RwPackage* property_package(const Property* p){char id[64];snprintf(id,sizeof(id),"housing.%d",p->slot);for(unsigned i=0;i<rw_package_count;i++)if(!strcmp(rw_packages[i].id,id))return &rw_packages[i];return NULL;}
 
 static ObjectID guid(const char* str)
 {
@@ -145,6 +149,7 @@ void modern_house_load(void)
     }
     mes_unload(catalog);
     ready = property_count > 0 && mes_load("house/descriptions.mes", &descriptions);
+    if(ready)rw_operations_set_observers(prepare_update,configure_update,NULL);
 }
 const char* modern_house_description(int num)
 {
@@ -174,34 +179,46 @@ static void configure(int64_t obj, Property* p, const char* role, bool created)
         if(obj_arrayfield_length_get(obj,OBJ_F_CRITTER_INVENTORY_LIST_IDX)==0)obj_field_int32_set(obj,OBJ_F_CRITTER_INVENTORY_NUM,0);
     }
 }
+/* Normal housing packages share the general ledger and executor. Legacy packs
+ * without a package retain their original installer until they are re-exported. */
+static Property* update_property(const RwPackage* package){for(int i=0;i<property_count;i++)if(property_package(&properties[i])==package)return &properties[i];return NULL;}
+static void configure_update(const RwPackage* package,const RwOperation* operation,int64_t obj,bool created,void* context){
+    (void)context;Property* p=update_property(package);if(!p)return;MesFileEntry e;
+    for(bool more=mes_find_first(p->objects,&e);more;more=mes_find_next(p->objects,&e)){char role[20],id[40];if(e.num>=100&&sscanf(e.str,"%19s %39s",role,id)==2&&!strcmp(id,operation->guid)){configure(obj,p,role,created);return;}}
+}
+static bool prepare_update(const RwPackage* package,Sector* sector,void* context){
+    (void)context;if(!on_main_map())return true;Property* p=update_property(package);if(!p||sector->id!=SECTOR_MAKE((int64_t)p->x,(int64_t)p->y))return true;
+    /* A pre-ledger house can contain consumed items and edited floor cells.
+     * Existing ownership/discovery or an authored GUID proves prior installation.
+     * Never infer a fresh installation merely from a missing item. */
+    for(unsigned i=0;i<package->operation_count;i++)if(rw_state_outcome(package,&package->operations[i])==RW_APPLIED)return true;
+    bool installed=owned(p)||script_global_var_get(p->discovered)!=0;MesFileEntry e;
+    for(bool more=mes_find_first(p->objects,&e);more&&!installed;more=mes_find_next(p->objects,&e)){char role[20],id[40];if(e.num>=100&&sscanf(e.str,"%19s %39s",role,id)==2&&lookup(id))installed=true;}
+    if(!installed)return true;
+    for(unsigned i=0;i<package->operation_count;i++){const RwOperation* op=&package->operations[i];if(op->revision!=1||op->sector!=(uint64_t)sector->id)continue;
+        bool preserve=op->kind==RW_GROUND||op->kind==RW_ROOF||op->kind==RW_BLOCK||(op->kind==RW_ADD&&!lookup(op->guid));
+        if(preserve){if(op->kind==RW_ROOF&&!rw_state_roof_put(op->map,op->sector,op->index,sector->roofs.art_ids[op->index]))return false;
+            if(!rw_state_record(package,op,RW_APPLIED,"Adopted legacy housing state; absent objects and current terrain preserved"))return false;}
+    }
+    return true;
+}
 /* Vegetation shades are attached dark lights, separate from sprite visibility.
  * Repair old saves whose OF_OFF was set without disabling those attachments. */
-static void hide_scenery(int64_t obj)
-{
-    if(!(obj_field_int32_get(obj,OBJ_F_FLAGS)&OF_OFF))object_flags_set(obj,OF_OFF);
-    bool active=(tig_art_id_t)obj_field_int32_get(obj,OBJ_F_LIGHT_AID)!=TIG_ART_ID_INVALID
-        && !(obj_field_int32_get(obj,OBJ_F_LIGHT_FLAGS)&LF_OFF);
-    for(int i=0;i<4;i++){
-        if(obj_arrayfield_uint32_get(obj,OBJ_F_OVERLAY_LIGHT_AID,i)!=TIG_ART_ID_INVALID
-          && !(obj_arrayfield_uint32_get(obj,OBJ_F_OVERLAY_LIGHT_FLAGS,i)&LF_OFF))active=true;
-    }
-    if(active)light_set_flags(obj,LF_OFF);
-    shadow_clear(obj);
-}
+static void hide_scenery(int64_t obj){rw_scene_hide(obj);}
 static void terrain(Property* p, Sector* sec)
 {
     MesFileEntry e;
     for(bool more=mes_find_first(p->terrain,&e);more;more=mes_find_next(p->terrain,&e)){
         if(e.num<0 || e.num>=4096)continue;
         uint32_t aid=(uint32_t)strtoul(e.str,NULL,10);
-        if(sec->tiles.art_ids[e.num]!=aid){sec->tiles.art_ids[e.num]=aid;sec->tiles.difmask[e.num/32]|=1u<<(e.num%32);sec->tiles.dif=1;}
+        if(sec->tiles.art_ids[e.num]!=aid)rw_scene_ground(sec,(unsigned)e.num,aid);
     }
     for(bool more=mes_find_first(p->roofs,&e);more;more=mes_find_next(p->roofs,&e)){
         if(e.num>=0 && e.num<256){
             uint32_t current=sec->roofs.art_ids[e.num],aid=(uint32_t)strtoul(e.str,NULL,10);
             uint32_t normalized=tig_art_roof_id_fade_set(tig_art_roof_id_fill_set(current,0),0);
             uint32_t expected=tig_art_roof_id_fade_set(tig_art_roof_id_fill_set(aid,0),0);
-            if(normalized!=expected){sec->roofs.art_ids[e.num]=aid;sec->roofs.empty=0;wallcheck_recalc(obj_field_int64_get(player_get_local_pc_obj(),OBJ_F_LOCATION));}
+            if(normalized!=expected)rw_scene_roof(sec,(unsigned)e.num,aid);
         }
     }
     for(bool more=mes_find_first(p->removed,&e);more;more=mes_find_next(p->removed,&e)){
@@ -262,9 +279,9 @@ void modern_house_sector_loaded(int64_t id, Sector* sec)
                     chosen[used++]=light;if(!(light->flags&LF_OFF))light_set_flags_internal(light,LF_OFF);break;}}
         }tig_file_fclose(removed_lights);}
         MesFileEntry e;
-        if(p->blocking!=MES_FILE_HANDLE_INVALID)for(bool more=mes_find_first(p->blocking,&e);more;more=mes_find_next(p->blocking,&e)){
+        if(!property_package(p)&&p->blocking!=MES_FILE_HANDLE_INVALID)for(bool more=mes_find_first(p->blocking,&e);more;more=mes_find_next(p->blocking,&e)){
             int blocked;if(e.num<0 || e.num>=4096 || sscanf(e.str,"%d",&blocked)!=1 || (blocked!=0 && blocked!=1))continue;
-            uint32_t mask=1u<<(e.num%32);if(blocked)sec->blocks.mask[e.num/32]|=mask;else sec->blocks.mask[e.num/32]&=~mask;
+            rw_scene_block(sec,(unsigned)e.num,blocked!=0);
         }
         if(p->environment!=MES_FILE_HANDLE_INVALID)for(bool more=mes_find_first(p->environment,&e);more;more=mes_find_next(p->environment,&e)){
             int value;if(sscanf(e.str,"%d",&value)!=1)continue;
@@ -288,6 +305,11 @@ void modern_house_tick(void)
         Property* p=&properties[i];int64_t sid=SECTOR_MAKE((int64_t)p->x,(int64_t)p->y);
         if(!sector_loaded(sid))continue;
         Sector* sec;if(!sector_lock(sid,&sec))continue;
+        if(property_package(p)){
+            sector_unlock(sid);
+            MesFileEntry entry;for(bool more=mes_find_first(p->objects,&entry);more;more=mes_find_next(p->objects,&entry)){char role[20],id[40];if(entry.num>=100&&sscanf(entry.str,"%19s %39s",role,id)==2){int64_t obj=lookup(id);if(obj)configure(obj,p,role,false);}}
+            continue;
+        }
         terrain(p,sec); sector_unlock(sid);
         /* Resolve references only after all new MOBs are in the object pool.
          * Inventory content belongs to the initial owner installation: an item

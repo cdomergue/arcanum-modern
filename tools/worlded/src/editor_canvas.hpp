@@ -51,6 +51,14 @@ public:
     std::function<bool(int)> canDropObject;
     std::function<void(int,QPoint)> addObject;
     std::function<void(const std::vector<int>&,QPoint)> moveObjects;
+    std::function<bool(int)> inventoryItem,inventoryOwner;
+    std::function<void(const std::vector<int>&,int)> dropInventory;
+    int inventoryTarget(QPoint point) const {
+        for(auto item:items(point))if(item->data(0).isValid()){
+            int index=item->data(0).toInt();bool moving=false;for(const auto& entry:dragged)if(entry.index==index)moving=true;
+            if(!moving && inventoryOwner && inventoryOwner(index))return index;
+        }return -1;
+    }
     std::function<void(const QString&)> feedback;
     std::function<void()> deleteObjects, duplicateObjects, undoEdit, redoEdit;
     explicit Canvas(QGraphicsScene* scene) : QGraphicsView(scene) {
@@ -114,7 +122,8 @@ public:
             QGraphicsItem* hit=nullptr;
             for (auto item : items(event->pos())) if (item->data(0).isValid() && (item->flags()&QGraphicsItem::ItemIsSelectable)) { hit=item; break; }
             if (hit) {
-                bool multi=event->modifiers()&(Qt::ControlModifier|Qt::ShiftModifier);
+                bool inventoryGesture=editable && (event->modifiers()&Qt::ShiftModifier) && inventoryItem && inventoryItem(hit->data(0).toInt());
+                bool multi=(event->modifiers()&Qt::ControlModifier) || ((event->modifiers()&Qt::ShiftModifier) && !inventoryGesture);
                 if (multi && hit->isSelected()) { hit->setSelected(false); event->accept(); return; }
                 if (!hit->isSelected()) { if (!multi) scene()->clearSelection(); hit->setSelected(true); }
                 if(selectionOnly){event->accept();return;}
@@ -146,7 +155,10 @@ public:
                 entry.item->setPos(entry.position+(dragValid ? displacement : QPointF{}));
                 entry.item->setZValue(entry.z+(dragValid ? displacement.y() : 0));
             }
-            if (feedback) feedback(dragValid ? QString("Move %1 object(s) · release to place · Esc to cancel").arg(dragged.size()) : "Outside the sector · move refused");
+            if((event->modifiers()&Qt::ShiftModifier) && inventoryItem && std::any_of(dragged.begin(),dragged.end(),[&](const auto& entry){return inventoryItem(entry.index);})){
+                bool target=inventoryTarget(event->pos())>=0;setCursor(target?Qt::DragMoveCursor:Qt::ForbiddenCursor);
+                if(feedback)feedback(target?"Release Shift-drag to put items in this inventory":"Shift-drag: drop onto a project character or container · Esc to cancel");
+            }else if (feedback) feedback(dragValid ? QString("Move %1 object(s) · release to place · Esc to cancel").arg(dragged.size()) : "Outside the sector · move refused");
             viewport()->update(); event->accept(); return;
         }
         QGraphicsView::mouseMoveEvent(event);
@@ -156,10 +168,13 @@ public:
         if(selectingCells && event->button()==Qt::LeftButton){updateCells(event->pos());selectingCells=false;if(cellsSelected)cellsSelected(cellSelection);event->accept();return;}
         if(painting && event->button()==Qt::LeftButton){addBrush(surfaceTile(event->pos()));painting=false;auto cells=std::move(stroke);stroke.clear();if(strokeFinished)strokeFinished(cells);viewport()->update();event->accept();return;}
         if (!dragged.empty() && event->button()==Qt::LeftButton) {
+            bool transfer=dragging && (event->modifiers()&Qt::ShiftModifier) && inventoryItem && std::any_of(dragged.begin(),dragged.end(),[&](const auto& entry){return inventoryItem(entry.index);});
+            int owner=transfer?inventoryTarget(event->pos()):-1;
             std::vector<int> indices; for (const auto& entry : dragged) { indices.push_back(entry.index); entry.item->setPos(entry.position); entry.item->setZValue(entry.z); }
             auto move=delta; bool commit=dragging && dragValid && !move.isNull();
             dragged.clear(); delta={}; unsetCursor(); viewport()->update();
-            if (commit && moveObjects) moveObjects(indices,move);
+            if(transfer){if(owner>=0 && dropInventory)dropInventory(indices,owner);else if(feedback)feedback("No project character or container under the pointer. Items have not been moved.");}
+            else if (commit && moveObjects) moveObjects(indices,move);
             event->accept(); return;
         }
         QGraphicsView::mouseReleaseEvent(event);
