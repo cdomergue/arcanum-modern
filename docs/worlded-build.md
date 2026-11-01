@@ -4,7 +4,7 @@ Run these commands from the `arcanum-modern-source` repository root. WorldED
 has its own CMake project in `tools/worlded`; you do not need to prepare or
 compile the Renaissance engine to build the editor.
 
-You need CMake 3.20 or newer, a C++17 compiler, zlib and Python 3 for the tests.
+You need CMake 3.21 or newer, a C++17 compiler, zlib and Python 3 for the tests.
 The graphical editor and housing exporter also need Qt 6.4 or newer with
 Widgets and Concurrent. GUI tests use Qt Test, supplied with the Qt base package.
 Original Arcanum files are needed to use the editor, but not for the synthetic
@@ -58,7 +58,8 @@ If CMake selects the wrong Python, add `-DPython3_EXECUTABLE=C:/path/to/python.e
 to the configure command.
 
 Visual Studio places the programs under `build/worlded-windows/Release/`:
-`worlded-explorer.exe`, `worlded.exe` and `worlded-house-export.exe`.
+`worlded-explorer.exe`, `worlded.exe`, `worlded-house-export.exe` and
+`script-editor.exe`. See [Script editing](script-editor.md) for standalone use.
 `worlded-gui-check.exe` is the test program. CTest runs the format tests, GUI
 tests and housing export tests. Keep the Qt DLL directory on PATH while running
 these executables from the build tree.
@@ -74,7 +75,7 @@ python tools/package-worlded-windows.py `
   --qt-bin "$qt/bin" --smoke-test
 ```
 
-This creates `dist/worlded-renaissance-win.zip` with the three editor programs,
+This creates `dist/worlded-renaissance-win.zip` with the four editor programs,
 native helper, Qt plugins, Microsoft C++ runtime DLLs, FFmpeg DLLs, documentation
 and [offline tutorial](../worlded-tutorial.html). Keep Visual Studio C++ build tools
 installed so the packager can locate its redistributable DLLs. Use `--extra-dll`
@@ -83,7 +84,7 @@ to include its FFmpeg libraries and notices; otherwise the DLLs are read beside
 the helper.
 
 The packager checks the archive manifest and, with `--smoke-test`, extracts it
-and starts all four tools with the Qt SDK removed from PATH. The release workflow
+and starts all five tools with the Qt SDK removed from PATH. The release workflow
 builds this archive on Windows and includes it with every tagged release.
 
 ## Linux

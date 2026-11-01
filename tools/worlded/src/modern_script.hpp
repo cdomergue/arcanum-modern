@@ -77,6 +77,8 @@ class ModernCompiler {
             int r=allocate(e.at);action({e.op=="+"?11u:e.op=="*"?13u:e.op=="/"?14u:12u,{{2,r},a,b}},e.at);release(a);release(b);return {2,r,false,true};}
         if(e.op.startsWith("call:")){auto name=e.op.mid(5);static const QMap<QString,std::pair<int,int>> access={{"global",{1,2000}},{"flag",{4,3200}},{"counter",{0,4}},{"local",{2,10}}};
             if(access.contains(name)){if(e.args.size()!=1)fail(e.at,"Expected one index");auto n=literal(e.args[0]);auto spec=access[name];if(n<0 || n>=spec.second)fail(e.at,"Index outside the engine's range");if(name=="local")fail(e.at,"Use a named 'let' variable instead of a raw local slot");return {spec.first,std::int32_t(n)};}
+            if(name=="object"){if(e.args.size()!=2)fail(e.at,"object(focus, index) requires two constants");auto focus=literal(e.args[0]),index=literal(e.args[1]);if(focus<0 || focus>23 || index<0 || index>INT32_MAX || (focus==11 && index>=10))fail(e.at,"Invalid object focus or local-object index");return {int(focus),std::int32_t(index),true};}
+            if(name=="pc_var" || name=="pc_flag"){if(e.args.size()!=2)fail(e.at,"pc_var/pc_flag require an object focus and an index");auto focus=value(e.args[0]);auto index=literal(e.args[1]);if(!focus.object || index<0 || index>65535 || (focus.type==11 && focus.value!=0))fail(e.at,"Invalid PC focus or 16-bit variable index");return {name=="pc_var"?5:6,std::int32_t((unsigned(focus.type)<<16)|unsigned(index))};}
             if(name=="raw"){if(e.args.size()!=2)fail(e.at,"raw(type, value) requires two constants");auto type=literal(e.args[0]),n=literal(e.args[1]);if(type<0 || type>255 || n<INT32_MIN || n>INT32_MAX)fail(e.at,"Invalid raw operand");return {int(type),std::int32_t(n)};}
             fail(e.at,"Expected a value; actions are statements and conditions belong in if/while");}
         if(QRegularExpression("^(0[xX][0-9a-fA-F]+|[0-9]+)$").match(e.op).hasMatch()){auto n=literal(e);if(n>INT32_MAX)fail(e.at,"Integer outside signed 32-bit range");return {3,std::int32_t(n)};}
@@ -95,7 +97,7 @@ class ModernCompiler {
             if(e.op==">=" || e.op=="<")std::swap(a,b);
             if(e.op=="!=" || e.op=="<" || e.op==">")std::swap(yes,no);
             cond.args={a,b};
-        }else if(e.op.startsWith("call:") && e.op!="call:flag" && e.op!="call:global" && e.op!="call:counter")cond=call(e,true);
+        }else if(e.op.startsWith("call:") && e.op!="call:flag" && e.op!="call:global" && e.op!="call:counter" && e.op!="call:pc_var" && e.op!="call:pc_flag")cond=call(e,true);
         else {cond={4,{value(e),{3,0}}};std::swap(yes,no);}
         int row=rows.size();fixups.push_back({row,true,yes});fixups.push_back({row,false,no});rows.push_back({cond,jumpOp(),jumpOp(),e.at.line});for(auto v:cond.args)release(v);
     }
@@ -108,7 +110,7 @@ class ModernCompiler {
         else if(s.kind=="return" || s.kind=="default")action({s.kind=="default"?2u:1u,{}},s.at);
         else if(s.kind=="goto" || s.kind=="label"){if(!namedLabels.contains(s.name))namedLabels[s.name]=label();auto target=namedLabels[s.name];if(s.kind=="goto")jump(target,s.at);else {if(labels.contains(target))fail(s.at,"Duplicate label: "+s.name);mark(target);}}
         else if(s.kind=="call"){auto op=call(s.expressions[0],false);if(op.id==14)fail(s.at,"Division is unavailable in the original runtime.");if(op.id==3 || (op.id>=18 && op.id<=20))fail(s.at,"Use structured loops or goto labels instead of native control-flow opcodes");action(op,s.at);for(auto v:op.args)release(v);}
-        else {auto lhs=value(s.expressions[0]);if(lhs.object || lhs.temp || (lhs.type!=0 && lhs.type!=1 && lhs.type!=2 && lhs.type!=4))fail(s.at,"Assignment needs a variable, global(), flag() or counter()");Value rhs=(s.kind=="++" || s.kind=="--")?Value{3,1}:value(s.expressions[1]);if(rhs.object)fail(s.at,"Assignment requires a number");if(s.kind=="/=" && rhs.type==3 && rhs.value==0)fail(s.at,"Division by zero");
+        else {if(s.kind=="/=")fail(s.at,"Division is unavailable in the original runtime.");auto lhs=value(s.expressions[0]);if(lhs.object || lhs.temp || (lhs.type!=0 && lhs.type!=1 && lhs.type!=2 && lhs.type!=4 && lhs.type!=5 && lhs.type!=6))fail(s.at,"Assignment needs a variable, global(), flag() or counter()");Value rhs=(s.kind=="++" || s.kind=="--")?Value{3,1}:value(s.expressions[1]);if(rhs.object)fail(s.at,"Assignment requires a number");if(s.kind=="/=" && rhs.type==3 && rhs.value==0)fail(s.at,"Division by zero");
             if(s.kind=="=")action({10,{lhs,rhs}},s.at);else action({s.kind=="+=" || s.kind=="++"?11u:s.kind=="*="?13u:s.kind=="/="?14u:12u,{lhs,lhs,rhs}},s.at);release(rhs);}
     }
 public:

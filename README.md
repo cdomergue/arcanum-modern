@@ -48,6 +48,9 @@ WorldED is the English-language editor for sectors, buildings, objects, scripts
 and dialogues. See [the editor guide](docs/worlded.md),
 [Windows and Linux build instructions](docs/worlded-build.md), and
 [the house authoring workflow](docs/housing.md#creating-a-house).
+[Script Editor Renaissance](docs/script-editor.md) provides standalone script and
+dialogue editing on Windows and Linux, with the same structured language and
+native instruction editor used by WorldED.
 
 ## Installation
 

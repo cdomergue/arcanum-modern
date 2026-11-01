@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Script Editor Renaissance — Guide</title>
+<style>
+:root{color-scheme:light dark}body{font:17px/1.65 system-ui,sans-serif;max-width:960px;margin:3rem auto;padding:0 1.5rem}
+h1,h2{line-height:1.2}h2{margin-top:2.5rem}a{color:light-dark(#12599b,#86bfff)}
+code{font-size:.92em}pre{overflow:auto;padding:1.2rem;background:light-dark(#f0f3f6,#202830);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:.94em}td,th{padding:.65rem;border:1px solid #8885;text-align:left}
+@media print{body{font-size:11pt;margin:0;max-width:none}pre{white-space:pre-wrap}h2{break-after:avoid}}
+</style><main><h1 id="script-editing">Script editing</h1>
+<p>Script Editor Renaissance edits Arcanum scripts and conversations without opening
+a map. It runs on Windows and Linux and shares its script editor and compiler with
+WorldED. New scripts use structured <code>.wscript</code> source. Existing <code>.scr</code> files open
+as native instructions, with their condition, then action and else action visible
+on each row.</p>
+<h2 id="start-a-project">Start a project</h2>
+<p>On Windows, extract <code>worlded-renaissance-win.zip</code> and run <code>script-editor.exe</code>
+from the same folder as <code>worlded-explorer.exe</code>. The archive contains both editors,
+their shared runtime and this guide. Keep the libraries and plugin folders beside
+the executables. You can launch the script editor without opening WorldED.</p>
+<p>On Linux, build the <code>script-editor</code> target with the instructions below and run
+it from the build folder. It uses the Qt libraries installed for that build.</p>
+<p>Choose <strong>File &gt; Open project folder</strong> for a folder containing your scripts and
+dialogues. <strong>Choose Arcanum installation</strong> adds campaign resources to the library
+and loads the game's operation descriptions. The installation is remembered.
+Opening a game resource creates a copy that needs a destination when saved;
+the editor does not write back into an archive.</p>
+<p>Use the library filter to find a filename or resource ID. Double-click to open
+it in a tab. You can work on several scripts and dialogues together.</p>
+<p>In WorldED, <strong>Resources &gt; Script editor</strong> opens the standalone application.
+WorldED's own script dialogs use the same editor. Save and close a project before
+editing its files in the other application; open tabs are not synchronized.</p>
+<h2 id="write-a-structured-script">Write a structured script</h2>
+<p>Choose <strong>File &gt; New structured script</strong>. Statements end with a semicolon; blocks
+use braces. For example:</p>
+<pre><code class="language-text">let total = 0;
+for (let i = 0; i &lt; 5; i++) {
+    if (i == 2) {
+        continue;
+    }
+    total += i;
+}
+return default;
+</code></pre>
+<p>Press <strong>F7</strong> to compile. Errors include a source line and column. The compiled
+instructions tab lets you inspect the result. <strong>Ctrl+Space</strong> lists completions.</p>
+<p>The language supports <code>if/else</code>, <code>while</code>, <code>for</code>, <code>break</code>, <code>continue</code>, named labels,
+<code>goto</code>, comparisons, <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>, addition, subtraction and multiplication.
+Use <code>//</code> for a comment. Integer values are signed 32-bit numbers; hexadecimal
+constants use <code>0x</code>. Division is rejected because the pinned engine implements
+its division instruction incorrectly.</p>
+<p>Native actions and conditions accept their full <code>SAT_…</code> or <code>SCT_…</code> name, or the
+lowercase suffix. Actions are statements; conditions belong in <code>if</code> and loops.
+Use structured loops and <code>goto label;</code> for control flow. The compiler manages
+instruction numbers.</p>
+<table>
+<thead>
+<tr>
+<th>Expression</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>let count = 0;</code></td>
+<td>Named numeric local</td>
+</tr>
+<tr>
+<td><code>global(1900)</code></td>
+<td>Campaign global variable; valid indices 0–1999</td>
+</tr>
+<tr>
+<td><code>flag(3000)</code></td>
+<td>Campaign global flag; valid indices 0–3199</td>
+</tr>
+<tr>
+<td><code>counter(0)</code></td>
+<td>One of the script's four counters</td>
+</tr>
+<tr>
+<td><code>pc_var(player, 8)</code></td>
+<td>Per-character variable with an explicit object focus</td>
+</tr>
+<tr>
+<td><code>pc_flag(self, 2)</code></td>
+<td>Per-character flag with an explicit object focus</td>
+</tr>
+<tr>
+<td><code>player</code>, <code>self</code>, <code>attachee</code>, <code>triggerer</code>, <code>current</code>, <code>extra</code></td>
+<td>Object context</td>
+</tr>
+<tr>
+<td><code>object(11, 0)</code></td>
+<td>Indexed object focus; here, local object zero</td>
+</tr>
+<tr>
+<td><code>raw(type, value)</code></td>
+<td>Explicit native operand for experienced authors</td>
+</tr>
+</tbody>
+</table>
+<p>Reserve global and flag indices for your project before using them. Example
+indices in this guide are not allocations. The engine has ten numeric local
+slots, shared by named variables and expression temporaries. Simplify an
+expression if compilation runs out of slots. Keep loops short: the runtime
+limits an invocation to 1,000 executed instructions.</p>
+<p><code>return;</code> skips the default event behavior. <code>return default;</code> allows it. Choose
+according to the event you attach the script to.</p>
+<p>Saving a structured script keeps the <code>.wscript</code> and writes a companion <code>.scr</code>.
+That companion also holds the script properties. Keep both files together.
+Use <strong>Build project</strong> after changing source used by a dialogue so both compiled
+resources use the same instruction numbers.</p>
+<h2 id="edit-a-native-script">Edit a native script</h2>
+<p>Open a <code>.scr</code> file. Double-click its condition, then action or else action to
+choose an operation and edit its operands. The picker lists all 53 conditions
+or 142 actions, with a search field. Operand controls distinguish numbers and
+variable indices from object focuses. PC variables and flags have a character
+focus selector.</p>
+<p><strong>Add action</strong> and <strong>Add condition</strong> insert after the selected row. <strong>Duplicate</strong>
+copies it. <strong>Up</strong>, <strong>Down</strong> and <strong>Delete</strong> change the instruction order. Undo and
+redo restore native instruction edits. Constant jumps within this script follow
+their destination when rows move. Deleting a destination still referenced by a
+jump is rejected; change the jump first.</p>
+<p>Review computed jumps, incoming calls from other scripts and numeric dialogue
+targets after inserting, deleting or moving rows. Those references cannot all
+be resolved from the current document. Unknown opcodes, unknown operand types
+and unused binary fields are retained. A native file is not converted into
+structured source on opening.</p>
+<p><strong>Script &gt; Properties</strong> edits the description, four counters, 32 local flags and
+trap, speech, radius and teleport flags. The description must fit 39
+Windows-1252 bytes when changed. Local flags and behavior flags are separate
+fields. Untouched unknown bits remain intact.</p>
+<h2 id="write-a-conversation">Write a conversation</h2>
+<p>Choose <strong>File &gt; New dialogue</strong>, or open a <code>.dlg</code> or <code>.wdlg</code>. The table contains
+the native seven fields: line ID, text, alternate text, intelligence requirement,
+condition, destination and effect. Use the editor's validation and preview to
+check the conversation. Preview follows text and links; it does not execute
+conditions or effects. These fields use Arcanum's native dialogue syntax.</p>
+<p>Give the dialogue and its companion script the same filename stem. For example,
+<code>01999.wdlg</code> and <code>01999.wscript</code> belong together. <strong>Open companion</strong> finds the
+matching file in the same folder or a WorldED project's source/export folders.</p>
+<p>A positive destination selects another dialogue line; zero ends the conversation.
+A negative destination resumes a numbered script instruction. To keep that last
+kind of destination stable while editing structured source, use a named label:</p>
+<pre><code class="language-text">dialog(1);
+label reward:
+global(1900) = 1;
+return;
+</code></pre>
+<p>Set the dialogue response's <strong>Target</strong> to <code>@reward</code>. Build the project to
+resolve it into the native negative instruction number. Labels are case-sensitive.
+A missing label stops compilation. A label at instruction zero cannot be used:
+zero means “end conversation” in a DLG. Put an initial instruction before the
+entry point, as in this example.</p>
+<p>Save named destinations in <code>.wdlg</code> source. Exported <code>.dlg</code> files contain numbers;
+keep the source for later edits. When saving a native dialogue containing a named
+destination, the editor asks for a <code>.wdlg</code> destination so the label is retained.
+Text must fit Windows-1252. The game supports at most five player responses at
+a time.</p>
+<h2 id="build-and-use-the-resources">Build and use the resources</h2>
+<p>Save all open documents, then choose <strong>Script &gt; Build project</strong>. Select a new or
+empty export folder <strong>outside the source project</strong>. The editor compiles structured
+scripts, resolves dialogue labels and retains native-only scripts and dialogues.
+It writes <code>scr/</code> and <code>dlg/</code> directories. Duplicate source names or duplicate
+native resources stop the build. A source file takes precedence over its compiled
+companion. Building never overwrites a populated export folder.</p>
+<p>For one document, <strong>Export compiled file</strong> writes a <code>.scr</code> or <code>.dlg</code> at a chosen
+path. Exporting one script does not rebuild a linked dialogue. Prefer a project
+build when they share named destinations.</p>
+<p>WorldED stores structured scripts and dialogue sources in <code>script-sources/</code>, and
+compiled resources in <code>exports/scr/</code> and <code>exports/dlg/</code>. Applying a structured
+script in WorldED also recompiles a matching project <code>.wdlg</code> when present. The
+files can be included in housing and campaign-update exports. Attach the script
+to the intended object or event; a resource file alone does not attach itself.</p>
+<p>Test in a separate game copy. Check the event, conversation branches and effects
+in the game, including repeat visits and a saved game. Compilation checks data
+and references; it cannot establish that a quest behaves as intended.</p>
+<h2 id="example-an-unlocked-chest-that-awards-50-coins-once">Example: an unlocked chest that awards 50 coins once</h2>
+<p>This script belongs on <strong>SAP_USE</strong> of a new, unlocked container. It awards the
+player 50 coins on first use, remembers that reward in counter 0, and allows the
+normal container interaction. Each attachment has its own counter; two chests
+using this script can each award one payment.</p>
+<pre><code class="language-text">if (counter(0) == 0) {
+    counter(0) = 1;
+    adjust_gold(player, 50);
+}
+return default;
+</code></pre>
+<p>The complete source is
+<a href="examples/scripts/49000_reward_chest.wscript">49000_reward_chest.wscript</a>.
+Choose an unused ID before adding it to your mod; 49000 is an example, not a
+reserved allocation.</p>
+<p>In WorldED, select the chest, create the script through <strong>Resources &gt; New
+script…</strong>, paste the source, and Validate. Enable <strong>Attach to selected object
+on apply</strong>, choose <strong>SAP_USE</strong>, then apply and save the zone. Check that counter
+0 is initially zero on the attachment. Use <strong>Load defaults from SCR</strong> only when
+you intend to reset its initial flags and counters.</p>
+<p>In a disposable game copy, note the player's gold and open the chest. Expect
+50 more coins and an open inventory. Open it again: gold must stay unchanged.
+Save, leave the area, return and reload; the reward must still be consumed.
+Restoring a copy of a save from before first use lets you repeat that test.</p>
+<p><code>return default;</code> matters here. Replacing it with <code>return;</code> suppresses the normal
+container interaction. An attachment on <strong>SAP_EXAMINE</strong> would run on examining
+the chest rather than using it. Neither recompiling nor replacing the SCR resets
+the counter already recorded in a saved game.</p>
+<h2 id="the-same-chest-in-the-native-editor">The same chest in the native editor</h2>
+<p>Choose <strong>File &gt; New native script</strong> in Script Editor. Press <strong>Add action</strong> four
+times so rows 0 through 3 exist before entering their jump targets. Double-click
+each cell to enter the following operations. Search by the enum name if your
+installation displays a translated description.</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>Condition</th>
+<th>Then action</th>
+<th>Else action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>SCT_EQ</code>: Counter 0 equals Number 0</td>
+<td><code>SAT_GOTO</code>: Number 1</td>
+<td><code>SAT_GOTO</code>: Number 3</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>SCT_TRUE</code></td>
+<td><code>SAT_ASSIGN_NUM</code>: Counter 0 = Number 1</td>
+<td><code>SAT_DO_NOTHING</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>SCT_TRUE</code></td>
+<td><code>SAT_ADJUST_GOLD</code>: Player, Number 50</td>
+<td><code>SAT_DO_NOTHING</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>SCT_TRUE</code></td>
+<td><code>SAT_RETURN_AND_RUN_DEFAULT</code></td>
+<td><code>SAT_DO_NOTHING</code></td>
+</tr>
+</tbody>
+</table>
+<p>For a <strong>Counter</strong> operand, enter its index, <strong>0</strong>, in the adjacent value field.
+For a <strong>Number</strong> operand, enter the literal value. On row 2, choose <strong>Player</strong>
+as the object focus; its index value can remain zero. Leave all four counters
+at zero in <strong>Properties</strong>. Row numbers in this table are zero-based, as in the
+editor's <strong>Line</strong> column.</p>
+<p>On first use, row 0 selects row 1, which marks the reward consumed; row 2 grants
+the coins. On subsequent uses, row 0 jumps directly to row 3. Both paths allow
+the normal chest behavior. This is the same behavior as the structured example,
+although the compiler may generate a different number of instructions.</p>
+<p>Validate and save as an unused numeric resource name, for example
+<code>49002_native_reward_chest.scr</code>. To add it to a WorldED scene, save and close
+the scene first, place the SCR in its <code>exports/scr/</code> folder, then reopen the scene.
+Find it in <strong>Resources &gt; Scripts &amp; dialogues…</strong>, attach it to the chest's
+<strong>SAP_USE</strong> event and save. Use this native script <strong>or</strong> the structured chest
+script on that event; they are two ways to implement the same behavior.</p>
+<p><a href="examples/scripts/reward_chest.native.txt">reward_chest.native.txt</a> contains
+the native listing for comparison. It is a reference for the table above, not
+<code>.wscript</code> source. The native listing tab is read-only; edit through the
+instruction cells.</p>
+<h2 id="example-a-payment-offered-in-a-conversation">Example: a payment offered in a conversation</h2>
+<p>Create a project NPC and attach this script to <strong>SAP_DIALOG</strong>:</p>
+<pre><code class="language-text">dialog(1);
+return;
+
+label reward:
+if (counter(0) == 0) {
+    counter(0) = 1;
+    adjust_gold(player, 50);
+}
+return;
+</code></pre>
+<p>Create a matching dialogue with these three rows. Leave conditions and effects
+blank. On the NPC line, the alternate text may repeat the same sentence.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Speaker</th>
+<th>Text</th>
+<th>Intelligence</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>NPC</td>
+<td>I have fifty coins set aside for you.</td>
+<td>Blank</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Player response</td>
+<td>I will collect them now.</td>
+<td>1</td>
+<td><code>@reward</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Player response</td>
+<td>I will come back later.</td>
+<td>1</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>The supplied
+<a href="examples/scripts/49001_reward_keeper.wscript">49001_reward_keeper.wscript</a>
+and <a href="examples/scripts/49001_reward_keeper.wdlg">49001_reward_keeper.wdlg</a>
+contain this example. Copy both into a working folder and use <strong>Open project
+folder</strong>, then <strong>Build project</strong>. Use the same filename stem for both if you
+rename them. The native output is a SCR/DLG pair; keep the WScript/WDlg sources.</p>
+<p>In WorldED, apply the script and dialogue under the same resource name, attach
+the script to the NPC's <strong>SAP_DIALOG</strong> event and save the scene. If importing
+the supplied pair into a saved scene, close it first, put the source files under
+<code>script-sources/</code>, and copy the compiled SCR and DLG into <code>exports/scr/</code> and
+<code>exports/dlg/</code>. Reopen the scene before attaching or exporting them.</p>
+<p>The first two compiled instructions are the dialogue call and the return, so
+<code>reward</code> resolves to instruction 2 in this example. The exported response target
+is therefore <strong>-2</strong>. A native-only conversation can use -2 directly when its
+companion SCR has that entry point, but you must update the number if rows move.
+Keeping <code>@reward</code> in <code>.wdlg</code> source lets a project build recalculate it.</p>
+<p>Test “come back later” first: the conversation should close without a payment.
+Talk again and collect it: gold should rise by 50. Talk and collect a second
+time, then save/reload and repeat: no further payment should be granted. The
+response remains visible in this example; the counter prevents repeat rewards.
+There is no quest-completion check in this script. Add the intended native quest
+condition before using it as a real quest reward.</p>
+<h2 id="command-line-and-builds">Command line and builds</h2>
+<p>The command-line compiler uses the same code as the editors and needs no display
+server. On Windows use <code>script-editor.exe</code> in these commands:</p>
+<pre><code class="language-sh">./script-editor --compile 01999.wscript --output 01999.scr
+./script-editor --compile-project ./my-project --output ./compiled-project
+./script-editor --validate 01999.scr
+</code></pre>
+<p>Single-file compilation creates default script properties. A project build reads
+properties from the source's companion SCR, or <code>exports/scr/</code> in a WorldED project.
+Validation reports unknown operations and references that need review. Keep the
+source files and properties under version control together.</p>
+<p>Follow <a href="docs/worlded-build.md">Building WorldED</a> to configure Qt, zlib and CMake on
+Windows or Linux. The same CMake project provides <code>script-editor</code> and
+<code>script-editor-check</code>; the standalone editor needs no engine build or map.</p>
+<pre><code class="language-sh">cmake --build build/worlded-linux --target script-editor script-editor-check
+ctest --test-dir build/worlded-linux -R script_editor --output-on-failure
+</code></pre>
+<p>On Windows add <code>--config Release</code> to the build and <code>-C Release</code> to CTest.
+The script editor and its guide are included in <code>worlded-renaissance-win.zip</code>.
+Follow the Windows packaging steps in <a href="docs/worlded-build.md">Building WorldED</a> to
+produce that shared archive. The packager checks executable startup and the Qt
+platform plugin without the SDK on PATH.</p></main></html>

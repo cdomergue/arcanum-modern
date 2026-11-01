@@ -48,9 +48,13 @@ class PackageTests(unittest.TestCase):
     def test_manual_links(self):
         parser = ManualParser()
         parser.feed((ROOT/'worlded-tutorial.html').read_text(encoding='utf-8'))
-        self.assertEqual(parser.sections, 19)
+        self.assertEqual(parser.sections, 20)
+        self.assertIn('scripts', parser.ids)
+        self.assertIn('modding', parser.ids)
         self.assertEqual(len(parser.ids), len(set(parser.ids)))
         for href in parser.links:
             if href.startswith('#'): self.assertIn(href[1:], parser.ids)
+            elif not href.startswith(('https:', 'http:')):
+                self.assertTrue((ROOT/href.split('#')[0]).is_file(), href)
 
 if __name__ == '__main__': unittest.main()

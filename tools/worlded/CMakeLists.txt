@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 project(WorldEdRenaissance VERSION 0.3.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,6 +36,13 @@ install(TARGETS worlded RUNTIME DESTINATION bin)
 option(WORLDED_BUILD_GUI "Build the Qt resource explorer" OFF)
 if(WORLDED_BUILD_GUI)
     find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Concurrent)
+    add_executable(script-editor src/script_main.cpp)
+    target_link_libraries(script-editor PRIVATE worlded_formats Qt6::Widgets)
+    if(MSVC)
+        target_compile_options(script-editor PRIVATE /utf-8)
+    endif()
+    install(TARGETS script-editor RUNTIME DESTINATION bin)
+
     add_executable(worlded-house-export ../house/export-scene.cpp)
     target_link_libraries(worlded-house-export PRIVATE worlded_formats Qt6::Core)
     if(MSVC)
@@ -100,4 +107,40 @@ if(WORLDED_BUILD_GUI AND BUILD_TESTING)
         target_compile_options(worlded-update-export-check PRIVATE /utf-8)
     endif()
     add_test(NAME worlded_update_export COMMAND worlded-update-export-check)
+endif()
+
+if(WORLDED_BUILD_GUI AND BUILD_TESTING)
+    add_executable(script-editor-check test_script_editor.cpp)
+    target_link_libraries(script-editor-check PRIVATE worlded_formats Qt6::Widgets)
+    target_compile_definitions(script-editor-check PRIVATE SCRIPT_EXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../examples/scripts")
+    if(MSVC)
+        target_compile_options(script-editor-check PRIVATE /utf-8)
+    endif()
+    add_test(NAME script_editor COMMAND script-editor-check -platform offscreen)
+    add_test(NAME script_editor_cli COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/test_script_editor_cli.py" "$<TARGET_FILE:script-editor>")
+endif()
+
+# Windows build-tree executables must find the Qt runtime without a shell PATH override.
+if(WIN32 AND WORLDED_BUILD_GUI)
+    foreach(worlded_program script-editor-check script-editor worlded-explorer worlded-house-export worlded-gui-check
+            worlded-campaign-check worlded-inventory-check worlded-update-export-check)
+        if(TARGET ${worlded_program})
+            add_custom_command(TARGET ${worlded_program} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_RUNTIME_DLLS:${worlded_program}> $<TARGET_FILE_DIR:${worlded_program}>
+                COMMAND_EXPAND_LISTS VERBATIM)
+            foreach(qt_platform QWindowsIntegrationPlugin QOffscreenIntegrationPlugin)
+                if(TARGET Qt6::${qt_platform})
+                    add_custom_command(TARGET ${worlded_program} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E make_directory
+                            "$<TARGET_FILE_DIR:${worlded_program}>/platforms"
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            $<TARGET_FILE:Qt6::${qt_platform}>
+                            "$<TARGET_FILE_DIR:${worlded_program}>/platforms"
+                        VERBATIM)
+                endif()
+            endforeach()
+        endif()
+    endforeach()
 endif()

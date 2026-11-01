@@ -1,6 +1,7 @@
 #pragma once
 #include "script_inspector.hpp"
 #include <QtWidgets>
+#include <set>
 namespace worlded {
 inline QString script_source(const Bytes& data) {
     auto info=inspect_script(data);QString result;
@@ -29,14 +30,14 @@ inline Bytes compile_script(const Bytes& original,const QString& source) {
 class ScriptHighlighter : public QSyntaxHighlighter {
 public:
     using QSyntaxHighlighter::QSyntaxHighlighter;
-    void highlightBlock(const QString& text) override {QTextCharFormat keyword;keyword.setForeground(QColor("#8ecbff"));keyword.setFontWeight(QFont::Bold);auto words=QRegularExpression(R"(\b(if|else|while|for|let|break|continue|return|default|label|goto|IF|THEN|ELSE|NEW)\b)").globalMatch(text);while(words.hasNext()){auto m=words.next();setFormat(m.capturedStart(),m.capturedLength(),keyword);}QTextCharFormat number;number.setForeground(QColor("#dfbe84"));auto values=QRegularExpression(R"(\b(0x[0-9a-fA-F]+|[0-9]+)\b)").globalMatch(text);while(values.hasNext()){auto m=values.next();setFormat(m.capturedStart(),m.capturedLength(),number);}int p=text.indexOf("//");if(p>=0){QTextCharFormat comment;comment.setForeground(QColor("#86a087"));setFormat(p,text.size()-p,comment);}}
+    void highlightBlock(const QString& text) override {QTextCharFormat keyword;keyword.setForeground(QColor(qApp->palette().color(QPalette::Base).lightness()>128?"#0759a5":"#8ecbff"));keyword.setFontWeight(QFont::Bold);auto words=QRegularExpression(R"(\b(if|else|while|for|let|break|continue|return|default|label|goto|IF|THEN|ELSE|NEW)\b)").globalMatch(text);while(words.hasNext()){auto m=words.next();setFormat(m.capturedStart(),m.capturedLength(),keyword);}QTextCharFormat number;number.setForeground(QColor(qApp->palette().color(QPalette::Base).lightness()>128?"#8a4c0a":"#dfbe84"));auto values=QRegularExpression(R"(\b(0x[0-9a-fA-F]+|[0-9]+)\b)").globalMatch(text);while(values.hasNext()){auto m=values.next();setFormat(m.capturedStart(),m.capturedLength(),number);}int p=text.indexOf("//");if(p>=0){QTextCharFormat comment;comment.setForeground(QColor(qApp->palette().color(QPalette::Base).lightness()>128?"#427044":"#86a087"));setFormat(p,text.size()-p,comment);}}
 };
 class ScriptEditor : public QPlainTextEdit {
     QCompleter* completer;
 public:
     explicit ScriptEditor(QWidget* parent=nullptr):QPlainTextEdit(parent){QStringList words;for(auto s:conditionNames)words<<s;for(auto s:actionNames)words<<s;words<<"IF"<<"THEN"<<"ELSE"<<"NEW";completer=new QCompleter(words,this);completer->setWidget(this);completer->setCaseSensitivity(Qt::CaseInsensitive);completer->setCompletionMode(QCompleter::PopupCompletion);
         connect(completer,QOverload<const QString&>::of(&QCompleter::activated),this,[this](const QString& value){auto c=textCursor();c.select(QTextCursor::WordUnderCursor);c.insertText(value);setTextCursor(c);});setLineWrapMode(NoWrap);setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));new ScriptHighlighter(document());}
-    void modernCompletion(){QStringList words={"if","else","while","for","let","break","continue","return","default","label","goto","true","false","player","self","attachee","triggerer","extra","current","global","flag","counter","raw"};for(auto s:conditionNames)words<<QString::fromLatin1(s).mid(4).toLower()<<s;for(auto s:actionNames)words<<QString::fromLatin1(s).mid(4).toLower()<<s;completer->setModel(new QStringListModel(words,completer));}
+    void modernCompletion(){QStringList words={"if","else","while","for","let","break","continue","return","default","label","goto","true","false","player","self","attachee","triggerer","extra","current","global","flag","counter","raw","object","pc_var","pc_flag"};for(auto s:conditionNames)words<<QString::fromLatin1(s).mid(4).toLower()<<s;for(auto s:actionNames)words<<QString::fromLatin1(s).mid(4).toLower()<<s;completer->setModel(new QStringListModel(words,completer));}
 protected:
     void keyPressEvent(QKeyEvent* e) override {if(completer->popup()->isVisible() && (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || e->key()==Qt::Key_Escape || e->key()==Qt::Key_Tab)){e->ignore();return;}bool manual=e->modifiers()==Qt::ControlModifier && e->key()==Qt::Key_Space;if(!manual)QPlainTextEdit::keyPressEvent(e);auto c=textCursor();c.select(QTextCursor::WordUnderCursor);auto prefix=c.selectedText();if(!manual && (e->text().isEmpty() || prefix.size()<2)){completer->popup()->hide();return;}completer->setCompletionPrefix(prefix);auto r=cursorRect();r.setWidth(380);completer->complete(r);}
 };

@@ -232,6 +232,10 @@ for its tile script and other commands tied to that position.
 
 ## Write scripts and dialogues
 
+For standalone editing, native instructions and named dialogue destinations,
+see [Script editing](script-editor.md). For an end-to-end distribution workflow,
+see [Create a mod for Arcanum Renaissance](worlded-modding.md).
+
 Open an editable zone, then use **Resources > New script…** or **New dialogue…**.
 Choose an unused resource ID. **Resources > Scripts & dialogues…** also opens existing
 resources; project resources are marked `[project]`.
@@ -300,11 +304,13 @@ Existing SCR files open in the native instruction editor. They are not
 converted to structured source. Dialogue conditions and effects also use native
 Arcanum syntax. Text must fit Windows-1252, and the game supports at most five
 player responses at a time. Negative dialogue targets refer to SCR instruction
-numbers: check them again after recompiling. **Preview conversation** follows
+numbers. In a dialogue source, use `@label` to refer to a named label in the
+companion structured script; compilation resolves the destination. Numeric
+targets still need review after recompiling. **Preview conversation** follows
 text and links; it does not execute conditions or effects.
 
 Source is saved in `script-sources/*.wscript`, compiled scripts in `exports/scr/`,
-and dialogues in `exports/dlg/`. Keep the source with your project so another
+dialogue sources in `script-sources/*.wdlg`, and compiled dialogues in `exports/dlg/`. Keep the source with your project so another
 author can continue editing it. Validation checks the format, not whether a
 quest behaves as intended.
 

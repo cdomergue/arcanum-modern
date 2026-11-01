@@ -1,0 +1,9 @@
+{
+  "format": "renaissance-dialogue-source",
+  "version": 1,
+  "lines": [
+    ["1", "I have fifty coins set aside for you.", "I have fifty coins set aside for you.", "", "", "0", ""],
+    ["2", "I will collect them now.", "", "1", "", "@reward", ""],
+    ["3", "I will come back later.", "", "1", "", "0", ""]
+  ]
+}

@@ -11,12 +11,15 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PROGRAMS = ('worlded-explorer.exe', 'worlded.exe', 'worlded-house-export.exe')
+PROGRAMS = ('worlded-explorer.exe', 'worlded.exe', 'worlded-house-export.exe', 'script-editor.exe')
 HELPER = 'worlded-native-inventory.exe'
 MOVIES = ('avformat-62.dll', 'avcodec-62.dll', 'avutil-60.dll')
 REQUIRED = (*PROGRAMS, HELPER, *MOVIES, 'Qt6Core.dll', 'Qt6Gui.dll',
-            'Qt6Widgets.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'platforms/qwindows.dll', 'worlded-tutorial.html',
+            'Qt6Widgets.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'platforms/qwindows.dll', 'platforms/qoffscreen.dll', 'worlded-tutorial.html',
             'tools/world-updates/package.py', 'tools/world-updates/FORMAT.md',
+            'script-editor.html', 'docs/script-editor.md', 'docs/worlded-modding.md',
+            'examples/scripts/49000_reward_chest.wscript', 'examples/scripts/49001_reward_keeper.wscript',
+            'examples/scripts/49001_reward_keeper.wdlg', 'examples/scripts/reward_chest.native.txt',
             'docs/worlded.md', 'docs/housing.md', 'docs/world-updates.md', 'README.txt')
 
 
@@ -58,9 +61,10 @@ def smoke_test(path):
                 del env[key]
         system = Path(env.get('SystemRoot', 'C:/Windows'))
         env['PATH'] = str(system/'System32') + os.pathsep + str(system)
+        env['QT_QPA_PLATFORM'] = 'offscreen'
         for name, args, expected in ((PROGRAMS[0], ['--help'], 0),
                                      (PROGRAMS[1], ['--help'], 0),
-                                     (PROGRAMS[2], [], 2), (HELPER, [], 2)):
+                                     (PROGRAMS[2], [], 2), (PROGRAMS[3], ['--help'], 0), (PROGRAMS[3], ['--smoke-test'], 0), (HELPER, [], 2)):
             result = subprocess.run([str(Path(temporary)/name), *args], cwd=temporary,
                                     env=env, capture_output=True, timeout=30)
             if result.returncode != expected:
@@ -137,6 +141,7 @@ def package(args):
             shutil.copy2(path, stage/path.name)
         subprocess.run([str(deploy), '--release', '--compiler-runtime', '--no-translations',
                         str(stage/PROGRAMS[0])], check=True)
+        shutil.copy2(qtbin.parent/'plugins/platforms/qoffscreen.dll', stage/'platforms/qoffscreen.dll')
         copy_msvc_runtime(stage)
         for path in sorted((ROOT/'docs').glob('*.md')):
             (stage/'docs').mkdir(exist_ok=True)
@@ -148,10 +153,14 @@ def package(args):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, target)
         shutil.copy2(ROOT/'worlded-tutorial.html', stage/'worlded-tutorial.html')
+        shutil.copy2(ROOT/'script-editor.html', stage/'script-editor.html')
+        shutil.copytree(ROOT/'examples/scripts', stage/'examples/scripts',
+                        ignore=shutil.ignore_patterns('__pycache__', '*.scr', '*.dlg'))
         (stage/'README.txt').write_text(
             'WorldED Renaissance for Windows x64\n\n'
             'Open worlded-tutorial.html in a browser for the complete offline guide.\n'
             'Run worlded-explorer.exe and choose your Arcanum installation.\n'
+            'For scripts and dialogues without a map, run script-editor.exe; its guide is script-editor.html.\n'
             'Keep every DLL and plugin folder beside the executables.\n'
             'The Microsoft C++ runtime DLLs are included beside the editor.\n'
             'Playtests require a matching Renaissance game executable and your game files.\n'
@@ -159,6 +168,9 @@ def package(args):
         if (ROOT/'source/LICENSE.md').is_file():
             (stage/'licenses').mkdir(exist_ok=True)
             shutil.copy2(ROOT/'source/LICENSE.md', stage/'licenses/arcanum-ce-LICENSE.md')
+        for notice in (ROOT/'tools/script-editor/licenses').glob('*'):
+            (stage/'licenses').mkdir(exist_ok=True)
+            shutil.copy2(notice, stage/'licenses'/notice.name)
         files = {p.relative_to(stage).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                  for p in sorted(stage.rglob('*')) if p.is_file()}
         manifest = {'format': 'worlded-windows-package', 'version': 1, 'files': files}

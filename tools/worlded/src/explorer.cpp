@@ -4,6 +4,7 @@
 #include "workspace.hpp"
 #include "script_editor.hpp"
 #include "modern_script.hpp"
+#include "script_workspace.hpp"
 #include "dialogue_editor.hpp"
 #include "terrain_brush.hpp"
 #include "facade.hpp"
@@ -253,7 +254,14 @@ public:
         zoneMenu->addAction("Sector script…",this,[this]{editGroundScript(UINT32_MAX);});
         zoneMenu->addSeparator();zoneMenu->addAction("Update reference…",this,[this]{adoptUpdateReference();});zoneMenu->addAction("Import campaign object for update…",this,[this]{importUpdateObject();});
         resourcesMenu->addAction("Campaign…",this,[this]{if(installation){CampaignEditor dialog(*installation,this,installationPath);dialog.exec();}});
-        resourcesMenu->addAction("Scripts & dialogues…",this,[this]{contentLibrary();});resourcesMenu->addSeparator();
+        resourcesMenu->addAction("Scripts & dialogues…",this,[this]{contentLibrary();});
+        resourcesMenu->addAction("Script editor…",this,[this]{QString executable=QCoreApplication::applicationDirPath()+"/script-editor";
+#ifdef Q_OS_WIN
+            executable+=".exe";
+#endif
+            QStringList arguments;if(!installationPath.isEmpty())arguments<<"--game"<<installationPath;
+            if(!QProcess::startDetached(executable,arguments))QMessageBox::warning(this,"Cannot open script editor","Keep script-editor beside WorldED, with its Qt runtime files.");
+        });resourcesMenu->addSeparator();
         resourcesMenu->addAction("New script…",this,[this]{createContent(false);});resourcesMenu->addAction("New dialogue…",this,[this]{createContent(true);});
         resourcesMenu->addSeparator();resourcesMenu->addAction(openArchive);
         viewMenu->addAction(worldAction);viewMenu->addAction(returnHouse);viewMenu->addAction(sideAction);viewMenu->addSeparator();

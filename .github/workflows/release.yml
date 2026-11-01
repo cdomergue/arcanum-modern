@@ -180,6 +180,25 @@ jobs:
           path: dist/worlded-renaissance-win.zip
           if-no-files-found: error
 
+  script-editor-linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          cache: true
+      - name: Install build and desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build zlib1g-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-image0 libxcb-render-util0
+      - name: Build and test script editor
+        run: |
+          cmake -S tools/worlded -B build/script-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DWORLDED_BUILD_GUI=ON
+          cmake --build build/script-release --target script-editor script-editor-check --parallel 4
+          ctest --test-dir build/script-release -R '^script_editor' --output-on-failure
+
   windows-install:
     needs: windows
     runs-on: windows-2022
@@ -243,7 +262,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-install, worlded-windows, macos, linux]
+    needs: [windows-install, worlded-windows, script-editor-linux, macos, linux]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'tools/worlded/**'
+      - 'tools/script-editor/**'
+      - 'examples/scripts/**'
+      - 'tests/test_script_editor_cli.py'
       - 'tools/house/**'
       - 'resources/house/**'
       - 'tests/test_house_catalog.py'
@@ -15,6 +18,9 @@ on:
     branches: [main]
     paths:
       - 'tools/worlded/**'
+      - 'tools/script-editor/**'
+      - 'examples/scripts/**'
+      - 'tests/test_script_editor_cli.py'
       - 'tools/house/**'
       - 'resources/house/**'
       - 'tests/test_house_catalog.py'
