@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - '.gitattributes'
       - 'tools/worlded/**'
       - 'tools/script-editor/**'
       - 'examples/scripts/**'
@@ -17,6 +18,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.gitattributes'
       - 'tools/worlded/**'
       - 'tools/script-editor/**'
       - 'examples/scripts/**'
