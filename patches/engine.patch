@@ -7895,7 +7895,13 @@ diff --git a/src/ui/sleep_ui.c b/src/ui/sleep_ui.c
 diff --git a/src/ui/slide_ui.c b/src/ui/slide_ui.c
 --- a/src/ui/slide_ui.c
 +++ b/src/ui/slide_ui.c
-@@ -48,6 +48,45 @@
+@@ -1,4 +1,5 @@
+ #include "ui/slide_ui.h"
++#include "ui/modern_ui.h"
+ 
+ #include <stdio.h>
+ 
+@@ -48,6 +49,45 @@
   * 0x67BB08
   */
  static bool slide_ui_active;
@@ -7941,7 +7947,7 @@ diff --git a/src/ui/slide_ui.c b/src/ui/slide_ui.c
  
  /**
   * Called when a module is being loaded.
-@@ -94,6 +133,7 @@
+@@ -94,6 +134,7 @@
      int index;
  
      slide_ui_active = true;
@@ -7949,7 +7955,20 @@ diff --git a/src/ui/slide_ui.c b/src/ui/slide_ui.c
  
      // Remove all enqeueued slides.
      slide_ui_queue_clear();
-@@ -211,17 +251,20 @@
+@@ -107,6 +148,12 @@
+         && slide_ui_queue_size == 0
+         && slide_ui_slide_mes_file != MES_FILE_HANDLE_INVALID) {
+         slide_ui_enqueue(0);
++    }
++
++    if (type == SLIDE_UI_TYPE_CREDITS
++        && modern_ui_credits(slide_ui_queue, slide_ui_queue_size, slide_ui_get_assets)) {
++        slide_ui_active = false;
++        return;
+     }
+ 
+     // Perform initial fade-out.
+@@ -211,17 +258,20 @@
      rect.height = 600;
  
      if (slide_ui_get_assets(slide, bmp_path, sizeof(bmp_path), speech_path, sizeof(speech_path))) {
@@ -7981,7 +8000,7 @@ diff --git a/src/ui/slide_ui.c b/src/ui/slide_ui.c
  
              // Refresh screen.
              sub_51E850(window_handle);
-@@ -305,8 +348,13 @@
+@@ -305,8 +355,13 @@
              }
          }
  

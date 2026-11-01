@@ -29,6 +29,8 @@ bool modern_ui_prepare_maps(const char* executable);
 SDL_Texture* modern_ui_loading_label(SDL_Renderer* target,const char* text,float size);
 void modern_ui_exit(void);
 bool modern_ui_enabled(void);
+bool modern_ui_credits(const int* slides,int count,
+    bool (*assets)(int,char*,size_t,char*,size_t));
 bool modern_ui_open_selector(bool spells);
 const char* modern_written_text(void);
 void modern_written_sync(bool enabled);

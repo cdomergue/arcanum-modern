@@ -1224,6 +1224,8 @@ static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,boo
     }
 }
 
+#include "modern_credits.inc"
+
 static bool draw_main_menu(void)
 {
     MainMenuWindowInfo* info=sub_5496C0(MM_WINDOW_MAINMENU);
@@ -2343,6 +2345,7 @@ static bool handle_binding_event(SDL_Event* event)
 
 static bool handle_ui_event(SDL_Event* event)
 {
+    if(album.pages) return credit_event(event);
     if(key_options_event(event))return true;
     if(inventory_sort_event(event))return true;
     if(slide_ui_is_active())return false;
