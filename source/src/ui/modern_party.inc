@@ -128,7 +128,7 @@ static bool party_action(int action)
         int choice=0;
         if(SDL_ShowMessageBox(&box,&choice) && choice==1 && party_can_dismiss(obj)){
             modern_party_set_grouped(obj,true);
-            object_destroy(obj);
+            critter_dismiss_familiar(obj);
         }
         return true;
     }

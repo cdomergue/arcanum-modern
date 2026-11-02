@@ -37,6 +37,7 @@ jobs:
           python3 tests/test_combat_music.py
           python3 tests/test_hud_messages.py
           python3 tests/test_party_grouping.py
+          python3 tests/test_follower_roster.py
           python3 tests/test_party_transitions.py
           python3 tests/test_uap_compat.py
           python3 tests/test_module_repositories.py

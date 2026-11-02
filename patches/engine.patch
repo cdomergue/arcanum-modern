@@ -1926,7 +1926,85 @@ diff --git a/src/game/critter.c b/src/game/critter.c
                  obj_field_int32_set(victim_obj, OBJ_F_NPC_EXPERIENCE_WORTH, 0);
  
                  // Adjust alignment.
-@@ -2457,3 +2481,17 @@
+@@ -969,45 +993,16 @@
+  *
+  * 0x45E040
+  */
+-void critter_disband_internal(int64_t obj)
+-{
+-    int64_t leader_obj;
+-    int64_t follower_obj;
+-    int cnt;
+-    int idx;
++static bool critter_unlink_follower(int64_t obj, bool require_member)
++{
+     unsigned int flags;
+-
+-    // Retrieve current leader.
+-    leader_obj = critter_leader_get(obj);
+-    if (leader_obj == OBJ_HANDLE_NULL) {
+-        return;
+-    }
+-
+-    sub_459EA0(obj);
+-
+-    // Find and remove the critter from the leader's follower list.
+-    cnt = obj_arrayfield_length_get(leader_obj, OBJ_F_CRITTER_FOLLOWER_IDX);
+-    if (cnt > 0) {
+-        // Find index of `obj` in the followers array.
+-        for (idx = 0; idx < cnt; idx++) {
+-            follower_obj = obj_arrayfield_handle_get(leader_obj, OBJ_F_CRITTER_FOLLOWER_IDX, idx);
+-            if (follower_obj == obj) {
+-                break;
+-            }
+-        }
+-
+-        // If we're not at the end of the array, move subsequent items up.
+-        if (idx < cnt - 1) {
+-            while (idx < cnt - 1) {
+-                follower_obj = obj_arrayfield_handle_get(leader_obj, OBJ_F_CRITTER_FOLLOWER_IDX, idx + 1);
+-                obj_arrayfield_obj_set(leader_obj, OBJ_F_CRITTER_FOLLOWER_IDX, idx, follower_obj);
+-                idx++;
+-            }
+-        }
+-
+-        // Shrink the array.
+-        obj_arrayfield_length_set(leader_obj, OBJ_F_CRITTER_FOLLOWER_IDX, cnt - 1);
+-    }
++    int64_t leader_obj=critter_leader_get(obj);
++    if (leader_obj==OBJ_HANDLE_NULL) return false;
++    // A dead or waiting NPC can still point to the leader without occupying
++    // a roster slot. Disbanding that NPC must not remove the last companion.
++    bool removed=obj_remove_follower_reference(leader_obj,obj);
++    if (!removed && require_member) return false;
++    if (removed || !(obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)&ONF_FAMILIAR)) sub_459EA0(obj);
+ 
+     critter_leader_set(obj, OBJ_HANDLE_NULL);
+ 
+@@ -1028,6 +1023,22 @@
+     if (critter_is_concealed(obj)) {
+         critter_set_concealed(obj, false);
+     }
++    return removed;
++}
++
++void critter_disband_internal(int64_t obj)
++{
++    critter_unlink_follower(obj,false);
++}
++
++bool critter_dismiss_familiar(int64_t obj)
++{
++    if (!critter_can_command_familiar(obj) || combat_turn_based_is_active() || tig_net_is_active()) return false;
++    // Dismissal ends the bond, without running a death or destruction script.
++    if (!critter_unlink_follower(obj,true)) return false;
++    ai_timeevent_clear(obj);
++    object_flags_set(obj,OF_OFF | OF_DESTROYED);
++    return true;
+ }
+ 
+ /**
+@@ -2457,3 +2468,17 @@
      // Print effects.
      effect_debug_obj(obj);
  }
@@ -1947,16 +2025,17 @@ diff --git a/src/game/critter.c b/src/game/critter.c
 diff --git a/src/game/critter.h b/src/game/critter.h
 --- a/src/game/critter.h
 +++ b/src/game/critter.h
-@@ -52,6 +52,8 @@
+@@ -52,6 +52,9 @@
  int critter_fatigue_current(int64_t obj);
  bool critter_is_prone(int64_t obj);
  bool critter_is_active(int64_t obj);
 +bool critter_is_bound_familiar(int64_t obj);
 +bool critter_can_command_familiar(int64_t obj);
++bool critter_dismiss_familiar(int64_t obj);
  bool critter_is_unconscious(int64_t obj);
  bool critter_is_sleeping(int64_t obj);
  bool critter_is_dead(int64_t obj);
-@@ -110,4 +112,7 @@
+@@ -110,4 +113,7 @@
  bool critter_is_dumb(int64_t obj);
  void critter_debug_obj(int64_t obj);
  
@@ -3370,20 +3449,49 @@ diff --git a/src/game/obj.c b/src/game/obj.c
              obj_unlock(obj);
              return false;
          }
-@@ -1848,6 +1855,12 @@
- 
+@@ -1849,6 +1856,12 @@
      obj_arrayfield_fetch(object, fld, index, &oid);
      obj_unlock(obj);
-+
+ 
 +    // Followers on another map retain their persistent ID until that map loads.
 +    if (fld == OBJ_F_CRITTER_FOLLOWER_IDX
 +        && oid.type != OID_TYPE_NULL && oid.type != OID_TYPE_HANDLE) {
 +        return obj_pool_perm_lookup(oid);
 +    }
- 
++
      if (oid.type == OID_TYPE_NULL || oid.type != OID_TYPE_HANDLE) {
          return OBJ_HANDLE_NULL;
-@@ -4081,7 +4094,8 @@
+     }
+@@ -2001,6 +2014,28 @@
+     obj_unlock(obj);
+ 
+     return length;
++}
++
++// Preserve persistent references to followers on other maps. Resolving these
++// to handles before shifting the roster would replace unloaded NPCs with null.
++bool obj_remove_follower_reference(int64_t leader, int64_t follower)
++{
++    ObjectID target=obj_get_id(follower);
++    Object* object=obj_lock(leader);
++    const int field=OBJ_F_CRITTER_FOLLOWER_IDX;
++    int count=0,keep=0;
++    sub_408D60(object,field,&count);
++    for (int i=0;i<count;i++) {
++        ObjectID entry;
++        obj_arrayfield_fetch(object,field,i,&entry);
++        if ((entry.type==OID_TYPE_HANDLE && entry.d.h==follower)
++            || (entry.type!=OID_TYPE_NULL && objid_is_equal(entry,target))) continue;
++        if (keep!=i) obj_arrayfield_store(object,field,keep,&entry);
++        ++keep;
++    }
++    for (int i=count-1;i>=keep;i--) sub_408E70(object,field,i);
++    obj_unlock(leader);
++    return keep!=count;
+ }
+ 
+ // 0x407A20
+@@ -4081,7 +4116,8 @@
              && sub_40D320(object, fld)) {
              sub_408F40(object, fld, &sa_ptr, &prototype_obj);
              if (*sa_ptr != NULL) {
@@ -3393,7 +3501,7 @@ diff --git a/src/game/obj.c b/src/game/obj.c
                      tig_debug_printf("Can't convert sizeable array of objects to handles (oft_as_count: %d)\n", idx);
                  }
              }
-@@ -4098,6 +4112,9 @@
+@@ -4098,6 +4134,9 @@
      (void)index;
  
      oid = *(ObjectID*)entry;
@@ -3403,7 +3511,7 @@ diff --git a/src/game/obj.c b/src/game/obj.c
  
      if (oid.type != OID_TYPE_NULL) {
          if (obj_handle_is_valid(oid.d.h)) {
-@@ -4119,6 +4136,20 @@
+@@ -4119,6 +4158,20 @@
          return oid.type != OID_TYPE_NULL;
      }
  
@@ -3435,6 +3543,14 @@ diff --git a/src/game/obj.h b/src/game/obj.h
  void sub_406B80(int64_t obj);
  int obj_field_int32_get(int64_t obj, int field);
  void obj_field_int32_set(int64_t obj, int field, int value);
+@@ -422,6 +423,7 @@
+ void obj_arrayfield_pc_quest_set(int64_t obj, int fld, int index, void* value);
+ int obj_arrayfield_length_get(int64_t obj, int fld);
+ void obj_arrayfield_length_set(int64_t obj, int fld, int length);
++bool obj_remove_follower_reference(int64_t leader, int64_t follower);
+ void obj_arrayfield_pc_rumor_copy_to_flat(int64_t obj, int fld, int cnt, void* data);
+ void obj_arrayfield_pc_quest_copy_to_flat(int64_t obj, int fld, int cnt, void* data);
+ void obj_field_reset(int64_t obj, int fld);
 diff --git a/src/game/object.c b/src/game/object.c
 --- a/src/game/object.c
 +++ b/src/game/object.c
