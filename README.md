@@ -4,6 +4,10 @@ An unofficial interface and gameplay mod for **Arcanum: Of Steamworks and
 Magick Obscura**, based on
 [Arcanum Community Edition](https://github.com/alexbatalov/arcanum-ce).
 
+## Windows Quick start
+
+Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe), select your Arcanum folder, and launch the game from the "Arcanum Renaissance" desktop shortcut. Check the Installation guide for more details and operating systems.
+
 ## Features
 
 - Turn-based combat with direct companion control, switching between allies
