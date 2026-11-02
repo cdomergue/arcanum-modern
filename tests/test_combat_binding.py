@@ -28,6 +28,9 @@ static int mode,pending_action=-1,tactical_pressed_actor;
 static void* window;
 static bool SDL_TextInputActive(void* w){(void)w;return typing;}
 static bool modern_camera_enabled(void){return !panel;}
+static bool follow_camera;
+static unsigned follow_walk_taps;
+static bool modern_follow_camera_active(void){return follow_camera && !active && !panel;}
 static bool native_panel(void){return panel;}
 static int intgame_mode_get(void){return mode;}
 static bool tactical_active(void){return active;}
@@ -51,9 +54,14 @@ static bool press(int key,int mods){
 }
 int main(void){
     memcpy(key_binding,key_defaults,sizeof(key_binding));
+    assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==0);
+    follow_camera=true;
+    assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==1);
+    follow_walk_taps=0;
     assert(press(SDL_SCANCODE_SPACE,1) && pending_action==7);
     assert(press(SDL_SCANCODE_SPACE,2) && pending_action==7);
     active=true;
+    assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==0);
     assert(press(SDL_SCANCODE_SPACE,SDL_KMOD_SHIFT) && pending_action==7);
     assert(press(SDL_SCANCODE_SPACE,0) && pending_action==1100);
     assert(press(SDL_SCANCODE_E,0) && pending_action==1100);
