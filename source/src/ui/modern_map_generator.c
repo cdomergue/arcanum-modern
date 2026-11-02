@@ -9,6 +9,9 @@
 #else
 #include <unistd.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #ifdef SDL_PLATFORM_MACOS
 #include <mach-o/dyld.h>
@@ -187,17 +190,165 @@ static void mapgen_report(int stage)
     if (mapgen_status_path) mapgen_atomic_text(mapgen_status_path, text);
 }
 
+// A receipt is only written after the original content and tile checks succeed.
+// Include change times as well as mtimes: an editor may preserve a file's mtime.
+#define MAPGEN_RECEIPT "modern-ui/.map-work/verified-maps-v1"
+
+#ifdef SDL_PLATFORM_WINDOWS
+static bool mapgen_tree_stamp(const char* path, bool archives_only, bool optional, Uint64* stamp)
+{
+    wchar_t* wide=(wchar_t*)SDL_iconv_string("UTF-16LE","UTF-8",path,strlen(path)+1);
+    if (!wide) return false;
+    DWORD attributes=GetFileAttributesW(wide);
+    if (attributes==INVALID_FILE_ATTRIBUTES) {
+        DWORD error=GetLastError();SDL_free(wide);
+        return optional && (error==ERROR_PATH_NOT_FOUND || error==ERROR_FILE_NOT_FOUND);
+    }
+    HANDLE dir=INVALID_HANDLE_VALUE;
+    if ((attributes&FILE_ATTRIBUTE_DIRECTORY) && !(attributes&FILE_ATTRIBUTE_REPARSE_POINT))
+        dir=CreateFileW(wide,FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
+    SDL_free(wide);
+    if (dir==INVALID_HANDLE_VALUE) return false;
+    // NTFS provides a change time and a file ID in each directory entry.
+    // Other filesystems keep the original validation path.
+    wchar_t fs[32];
+    bool ok=GetVolumeInformationByHandleW(dir,NULL,0,NULL,NULL,NULL,fs,32) && wcscmp(fs,L"NTFS")==0;
+    const DWORD capacity=64*1024;
+    BYTE* buffer=SDL_malloc(capacity);
+    ok=ok && buffer;
+    Uint64 sum=1;
+    while (ok) {
+        if (!GetFileInformationByHandleEx(dir,FileIdBothDirectoryInfo,buffer,capacity)) {
+            ok=GetLastError()==ERROR_NO_MORE_FILES;break;
+        }
+        FILE_ID_BOTH_DIR_INFO* entry=(FILE_ID_BOTH_DIR_INFO*)buffer;
+        for (;;) {
+            char name[1024];
+            int n=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,entry->FileName,
+                entry->FileNameLength/sizeof(wchar_t),name,sizeof(name)-1,NULL,NULL);
+            if (n<=0) {ok=false;break;}
+            name[n]=0;
+            bool directory=(entry->FileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=0;
+            if (!mapgen_excluded(name) && (!archives_only || (!directory && mapgen_archive(name)))) {
+                if (entry->FileAttributes&FILE_ATTRIBUTE_REPARSE_POINT) {ok=false;break;}
+                Uint64 item=mapgen_hash(name,n);
+                if (directory) {
+                    char* child=mapgen_join(path,name);
+                    Uint64 nested=0;
+                    ok=child && mapgen_tree_stamp(child,false,false,&nested);
+                    SDL_free(child);
+                    if (!ok) break;
+                    item^=mapgen_hash(&nested,sizeof(nested));
+                } else {
+                    Uint64 fields[]={entry->FileId.QuadPart,entry->ChangeTime.QuadPart,
+                        entry->LastWriteTime.QuadPart,entry->EndOfFile.QuadPart};
+                    if (!fields[0] || !fields[1]) {ok=false;break;}
+                    item^=mapgen_hash(fields,sizeof(fields));
+                }
+                sum+=item;
+            }
+            if (!entry->NextEntryOffset) break;
+            entry=(FILE_ID_BOTH_DIR_INFO*)((BYTE*)entry+entry->NextEntryOffset);
+        }
+    }
+    SDL_free(buffer);CloseHandle(dir);
+    *stamp=sum;
+    return ok;
+}
+
+#else
+static bool mapgen_tree_stamp(const char* path, bool archives_only, bool optional, Uint64* stamp)
+{
+    struct stat st;
+    if (lstat(path,&st)!=0) return optional && errno==ENOENT;
+    if (!S_ISDIR(st.st_mode)) return false;
+    DIR* dir=opendir(path);
+    if (!dir) return false;
+    Uint64 sum=1;
+    bool ok=true;
+    while (ok) {
+        errno=0;
+        struct dirent* entry=readdir(dir);
+        if (!entry) {ok=errno==0;break;}
+        const char* name=entry->d_name;
+        if (mapgen_excluded(name) || (archives_only && !mapgen_archive(name))) continue;
+        char* child=mapgen_join(path,name);
+        ok=child && lstat(child,&st)==0;
+        Uint64 item=mapgen_hash(name,strlen(name));
+        if (ok && S_ISDIR(st.st_mode)) {
+            Uint64 nested=0;
+            if (!archives_only) {
+                ok=mapgen_tree_stamp(child,false,false,&nested);
+                item^=mapgen_hash(&nested,sizeof(nested));
+            } else item=0;
+        } else if (ok && S_ISREG(st.st_mode)) {
+#ifdef SDL_PLATFORM_MACOS
+            struct timespec changed=st.st_ctimespec,modified=st.st_mtimespec;
+#else
+            struct timespec changed=st.st_ctim,modified=st.st_mtim;
+#endif
+            Uint64 fields[]={st.st_dev,st.st_ino,st.st_size,changed.tv_sec,changed.tv_nsec,
+                modified.tv_sec,modified.tv_nsec};
+            item^=mapgen_hash(fields,sizeof(fields));
+        } else ok=false;
+        SDL_free(child);
+        sum+=item;
+    }
+    closedir(dir);
+    *stamp=sum;
+    return ok;
+}
+#endif
+
+static bool mapgen_stamp(Uint64* stamp)
+{
+    const char* folders[]={".","data","modules","modern-ui/uap-fr/active","modern-ui/uap-en/active",
+        "modern-ui/uap-hotfix/fr/active","modern-ui/uap-hotfix/en/active","modern-ui/local-maps"};
+    Uint64 trees[SDL_arraysize(folders)]={0};
+    for (size_t i=0;i<SDL_arraysize(folders);i++)
+        if (!mapgen_tree_stamp(folders[i],i==0,i!=0 && i+1<SDL_arraysize(folders),&trees[i])) return false;
+    *stamp=mapgen_hash(trees,sizeof(trees));
+    return true;
+}
+
+static bool mapgen_read_marker(unsigned long long* source,unsigned long long* cache)
+{
+    char* text=SDL_LoadFile("modern-ui/local-maps/.generation-complete",NULL);
+    int version;
+    bool valid=text && sscanf(text,"%d %llx %llx",&version,source,cache)==3 && version==MAPGEN_VERSION;
+    SDL_free(text);
+    return valid;
+}
+
+bool modern_maps_cached_ready(void)
+{
+    unsigned long long source,cache,saved_source,saved_cache,saved_stamp;
+    if (!mapgen_read_marker(&source,&cache)) return false;
+    char* receipt=SDL_LoadFile(MAPGEN_RECEIPT,NULL);
+    bool matches=receipt && sscanf(receipt,"%llx %llx %llx",&saved_source,&saved_cache,&saved_stamp)==3
+        && source==saved_source && cache==saved_cache;
+    SDL_free(receipt);
+    Uint64 stamp;
+    return matches && mapgen_stamp(&stamp) && stamp==saved_stamp;
+}
+
 bool modern_maps_ready(void)
 {
-    char* text = SDL_LoadFile("modern-ui/local-maps/.generation-complete", NULL);
-    unsigned long long source, cache;
-    int version;
-    bool valid = text && sscanf(text, "%d %llx %llx", &version, &source, &cache) == 3 && version == MAPGEN_VERSION;
-    SDL_free(text);
-    Uint64 current;
-    if (!valid || !mapgen_fingerprint(".", &current) || current != source) return false;
-    MapGenWalk files = {NULL, 0, false, false};
-    return SDL_EnumerateDirectory("modern-ui/local-maps", mapgen_walk, &files) && files.hash == cache;
+    unsigned long long source,cache;
+    if (!mapgen_read_marker(&source,&cache)) return false;
+    Uint64 before,current;
+    bool can_cache=mapgen_stamp(&before);
+    if (!mapgen_fingerprint(".", &current) || current!=source) return false;
+    MapGenWalk files={NULL,0,false,false};
+    if (!SDL_EnumerateDirectory("modern-ui/local-maps",mapgen_walk,&files) || files.hash!=cache) return false;
+    Uint64 after;
+    if (can_cache && mapgen_stamp(&after) && before==after) {
+        char receipt[80];
+        SDL_snprintf(receipt,sizeof(receipt),"%llx %llx %llx\n",source,cache,(unsigned long long)after);
+        mapgen_atomic_text(MAPGEN_RECEIPT,receipt);
+    }
+    return true;
 }
 
 char* modern_maps_executable(const char* argv0)
@@ -697,6 +848,7 @@ static int mapgen_run(const char* game_root, int tile_limit, int town_id)
     char* marker = mapgen_join(cache, ".generation-complete");
     bool ok = mapgen_atomic_text(marker, text);
     SDL_free(marker); SDL_free(cache); SDL_free(sandbox);
+    if (ok && mapgen_chdir(game_root)) modern_maps_ready();
     return ok ? 0 : 29;
 }
 
@@ -727,7 +879,7 @@ int modern_maps_generate(const char* game_root, int tile_limit, int town_id)
     SDL_Log("HD map preparation: %s", game_root);
     mapgen_status_path = mapgen_join(game_root, "modern-ui/.map-work/progress");
     mapgen_report(0);
-    int result = !town_id && modern_maps_ready() ? 0 : mapgen_run(game_root, tile_limit, town_id);
+    int result = !town_id && (modern_maps_cached_ready() || modern_maps_ready()) ? 0 : mapgen_run(game_root, tile_limit, town_id);
     if (result) SDL_Log("HD map preparation stopped: code %d (%s)", result, SDL_GetError());
     mapgen_report(result ? 3 : 2);
     SDL_free(mapgen_status_path); mapgen_status_path = NULL;

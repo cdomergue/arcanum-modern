@@ -1,6 +1,6 @@
 bool modern_ui_prepare_maps(const char* executable)
 {
-    if (!enabled) return true;
+    if (!enabled || modern_maps_cached_ready()) return true;
     SDL_Process* process = modern_maps_start(executable);
     char launch_error[256] = "";
     if (!process) SDL_strlcpy(launch_error, SDL_GetError(), sizeof(launch_error));
