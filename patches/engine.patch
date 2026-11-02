@@ -1113,7 +1113,17 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
                      return false;
                  }
-@@ -13334,13 +13375,15 @@
+@@ -11591,7 +11632,8 @@
+ 
+             if ((run_info->flags & 0x80000) != 0
+                 && player_is_local_pc_obj(obj)
+-                && new_loc != loc) {
++                && new_loc != loc
++                && !modern_follow_camera_active()) {
+                 int64_t x;
+                 int64_t y;
+ 
+@@ -13334,13 +13376,15 @@
          return false;
      }
  
@@ -1131,7 +1141,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_MOVE_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
          if (!sub_424070(obj, 3, false, false)) {
-@@ -13441,7 +13484,7 @@
+@@ -13441,7 +13485,7 @@
          return false;
      }
  
@@ -1140,7 +1150,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)) {
          return sub_434030(obj, loc);
      }
-@@ -13507,7 +13550,8 @@
+@@ -13507,7 +13551,8 @@
          return false;
      }
  
@@ -1150,7 +1160,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_RUN_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
  
-@@ -13901,6 +13945,7 @@
+@@ -13901,6 +13946,7 @@
          return true;
      }
  
@@ -5138,7 +5148,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,8 +465,10 @@
+@@ -383,8 +465,11 @@
              output_profile_data = false;
          }
  
@@ -5146,24 +5156,25 @@ diff --git a/src/main.c b/src/main.c
          tig_ping();
          gamelib_ping();
 +        modern_autosave_tick();
++        modern_follow_camera_tick();
          iso_redraw();
          tig_window_display();
  
-@@ -698,6 +782,7 @@
+@@ -698,6 +783,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
-+    if(modern_combat_input_blocked()){scroll_stop();return;}
++    if(modern_combat_input_blocked() || modern_follow_camera_active()){scroll_stop();return;}
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +828,26 @@
+@@ -743,25 +829,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
 -    if (tig_kb_is_key_pressed(SDL_SCANCODE_UP)) {
 -        if (tig_kb_is_key_pressed(SDL_SCANCODE_LEFT)) {
-+    if(modern_combat_input_blocked()){scroll_stop();return;}
++    if(modern_combat_input_blocked() || modern_follow_camera_active()){scroll_stop();return;}
 +    if ((tig_kb_is_key_pressed(SDL_SCANCODE_UP) || modern_camera_key(SDL_SCANCODE_W))) {
 +        if ((tig_kb_is_key_pressed(SDL_SCANCODE_LEFT) || modern_camera_key(SDL_SCANCODE_A))) {
              scroll_start(SCROLL_DIRECTION_UP_LEFT);
@@ -9298,3 +9309,25 @@ diff --git a/src/game/sector.h b/src/game/sector.h
  bool sector_check_demo_limits(int64_t id);
  void sector_art_cache_register(tig_art_id_t art_id);
  bool sector_is_blocked(int64_t sec);
+diff --git a/src/game/scroll.c b/src/game/scroll.c
+--- a/src/game/scroll.c
++++ b/src/game/scroll.c
+@@ -13,7 +13,6 @@
+ #define SCROLL_DIAG_X 4
+ #define SCROLL_DIAG_Y 2
+ 
+-static void scroll_by(int64_t dx, int64_t dy);
+ static void scroll_origin_changed(int64_t loc);
+ static void scroll_speed_changed(void);
+ static bool scroll_cursor_art_set(tig_art_id_t art_id);
+diff --git a/src/game/scroll.h b/src/game/scroll.h
+--- a/src/game/scroll.h
++++ b/src/game/scroll.h
+@@ -33,6 +33,7 @@
+ ScrollSpeed scroll_speed_get(void);
+ void scroll_start(int direction);
+ void scroll_stop(void);
++void scroll_by(int64_t dx, int64_t dy);
+ void scroll_fps_set(int fps);
+ void scroll_distance_set(int distance);
+ int scroll_distance_get(void);

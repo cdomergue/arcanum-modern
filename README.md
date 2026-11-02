@@ -13,8 +13,8 @@ Magick Obscura**, based on
   Arcanum's rules.
 - Redesigned HUD, character sheet, inventory, trading, dialogue, journal, maps,
   spell and skill panels, save/load menus and display options.
-- World zoom, keyboard camera movement, remappable keys, and windowed,
-  desktop fullscreen and exclusive fullscreen modes.
+- Zoom the world, pan with the keyboard, or use Follow Camera to move your character with WASD.
+  Remap your keys and play in windowed, desktop fullscreen or exclusive fullscreen mode.
 - Inventory search, categories, equipment comparison, item details, stack
   transfers and ten personal quick slots per controlled character.
 - Integrated **AID descriptions in French and English** for the Arcanum
@@ -116,7 +116,7 @@ available.
 | Stealth / pickpocket | H / P |
 | Toggle combat mode | Shift + Space |
 | End turn | E or Space |
-| Move camera | WASD positions, ZQSD on AZERTY, or arrow keys |
+| Move character (follow camera) or pan (free camera) | WASD positions, ZQSD on AZERTY. Arrow keys also pan in free mode. |
 | Zoom game view, travel map, local map or continent map | Mouse wheel over the world or map |
 | Use quick slot | 1–0 |
 | Close panel or open pause menu | Escape |
@@ -146,6 +146,8 @@ available.
 ## Preferences and saves
 
 Paths are relative to the game folder.
+
+In **Options → Graphics**, set **Camera** to **Follow Camera** to keep your character centered as you move with the keyboard. Select **Free** to pan manually. During turn-based combat, the tactical camera follows the active turn.
 
 In **Options → Graphics**, **Button text size** adjusts button labels from 75%
 to 150%, including character sheet and journal tabs. The choice is saved

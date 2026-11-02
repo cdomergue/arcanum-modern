@@ -14,6 +14,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../third_party/stb/stb_truetype.h"
 
+#include "game/anim.h"
 #include "game/critter.h"
 #include "game/combat.h"
 #include "game/location.h"
@@ -140,6 +141,7 @@ static float canvas_w = 1600, canvas_h = 900, density = 1;
 static float mouse_x, mouse_y, text_width;
 static int body_size = 20;
 static int button_text_scale = 100;
+static bool follow_camera;
 static void save_settings(void);
 static char search[128];
 static char message_text[1024];
@@ -1688,7 +1690,10 @@ static void draw_menu(void)
     menu_button((SDL_FRect){rx+rw-42,y+350,42,48},413,">",can_resize);
     text_draw(0,g->selected.mode==1 ? tr("Le mode sans bordure suit la définition du bureau.","Borderless mode uses the desktop resolution.") :
         tr("Choisissez une définition adaptée à votre écran.","Choose a resolution for your display."),rx,y+416,MUTED);
-    if (*g->status) text_draw(0,g->status,rx,y+455,GOLD);
+    text_draw(0,tr("Caméra","Camera"),rx,y+459,MUTED);
+    menu_button((SDL_FRect){rx+rw-340,y+444,340,44},429,
+        follow_camera ? tr("Vue suivie","Follow Camera") : tr("Libre","Free"),!confirming);
+    if (*g->status) text_compact(g->status,x+275,y+h-85,w-590,false,GOLD);
     text_draw(1,tr("Taille du texte des boutons","Button text size"),rx,y+500,GOLD);
     menu_button((SDL_FRect){rx,y+536,42,42},426,"<",!confirming && button_text_scale>75);
     char text_scale[32];snprintf(text_scale,sizeof(text_scale),"%d %%",button_text_scale);
@@ -1815,6 +1820,96 @@ static bool world_zoom_allowed(void)
         && (mode==INTGAME_MODE_MAIN || mode==INTGAME_MODE_SPELL
             || mode==INTGAME_MODE_SKILL || mode==INTGAME_MODE_ITEM);
 }
+bool modern_follow_camera_active(void)
+{
+    return follow_camera && world_zoom_allowed() && !menu_suspended
+        && !slide_ui_is_active() && !tactical_active();
+}
+
+typedef struct CameraAxis {
+    double fraction;
+    double velocity;
+} CameraAxis;
+
+typedef struct CameraMotion {
+    Uint64 sample_time;
+    int64_t x, y;
+    double from_x, from_y, duration;
+} CameraMotion;
+
+static void follow_camera_target(CameraMotion* motion, Uint64 now, int64_t x, int64_t y,
+    double* target_x, double* target_y)
+{
+    double elapsed=(now-motion->sample_time)*1e-9;
+    if (!motion->sample_time || llabs(x-motion->x)>48 || llabs(y-motion->y)>48) {
+        *motion=(CameraMotion){now,x,y,(double)x,(double)y,0};
+    }
+    double phase=motion->duration>0 ? fmin(1.0,elapsed/motion->duration) : 1.0;
+    *target_x=motion->from_x+(motion->x-motion->from_x)*phase;
+    *target_y=motion->from_y+(motion->y-motion->from_y)*phase;
+    if (x==motion->x && y==motion->y) return;
+
+    // Spread a confirmed animation step over one pose interval. Start where
+    // the previous segment actually reached, even if this pose arrived early.
+    double interval=fmin(0.12,fmax(0.025,elapsed));
+    double duration=motion->duration>0 && elapsed<0.2 ? (motion->duration+interval)*0.5 : interval;
+    *motion=(CameraMotion){now,x,y,*target_x,*target_y,duration};
+}
+
+static const double follow_camera_frequency=52.0;
+
+static int64_t follow_camera_step(CameraAxis* axis, double distance, double seconds, double decay)
+{
+    // Exact critically damped motion. A new animation pose changes the target
+    // without abruptly changing camera velocity between rendered frames.
+    const double frequency=follow_camera_frequency;
+    double error=distance-axis->fraction;
+    double slope=axis->velocity-frequency*error;
+    double next=distance+(-error+slope*seconds)*decay;
+    axis->velocity=(axis->velocity-frequency*slope*seconds)*decay;
+    int64_t pixels=llround(next);
+    axis->fraction=next-pixels;
+    return pixels;
+}
+
+void modern_follow_camera_tick(void)
+{
+    static Uint64 last;
+    static CameraAxis horizontal, vertical;
+    static CameraMotion motion;
+    if (!modern_follow_camera_active()) {
+        last=0;
+        motion=(CameraMotion){0};
+        horizontal=(CameraAxis){0};
+        vertical=(CameraAxis){0};
+        return;
+    }
+    int64_t pc=player_get_local_pc_obj();
+    int64_t dx,dy;
+    location_calc_dist_from_screen_center(obj_field_int64_get(pc,OBJ_F_LOCATION),&dx,&dy);
+    dx-=obj_field_int32_get(pc,OBJ_F_OFFSET_X);
+    dy-=obj_field_int32_get(pc,OBJ_F_OFFSET_Y);
+
+    Uint64 now=SDL_GetTicksNS();
+    double seconds=last ? (now-last)*1e-9 : 1.0/60.0;
+    last=now;
+    int64_t origin_x,origin_y;
+    location_origin_get(&origin_x,&origin_y);
+    double target_x,target_y;
+    follow_camera_target(&motion,now,dx+origin_x,dy+origin_y,&target_x,&target_y);
+    double decay=exp(-follow_camera_frequency*seconds);
+    int64_t step_x=follow_camera_step(&horizontal,target_x-origin_x,seconds,decay);
+    int64_t step_y=follow_camera_step(&vertical,target_y-origin_y,seconds,decay);
+    if (step_x || step_y) {
+        if (llabs(step_x)<hrp_iso_window_width_get() && llabs(step_y)<hrp_iso_window_height_get()) {
+            scroll_by(step_x,step_y);
+        } else {
+            location_origin_scroll(step_x,step_y);
+            iso_invalidate_rect(NULL);
+        }
+    }
+}
+
 static void world_zoom_sync(void)
 {
     int output_width,output_height;
@@ -1926,6 +2021,12 @@ void modern_ui_menu_tick(void)
     case 414: modern_graphics_apply(); break;
     case 415: modern_graphics_confirm(); break;
     case 416: modern_graphics_cancel(); break;
+    case 429:
+        if(type==MM_WINDOW_OPTIONS && options_tab<0 && !modern_graphics.deadline) {
+            follow_camera=!follow_camera;
+            save_settings();
+        }
+        break;
     case 426:case 427:case 428:
         if(type==MM_WINDOW_OPTIONS && options_tab<0 && !modern_graphics.deadline) {
             button_text_scale=action==428?100:button_text_scale+(action==426?-25:25);
@@ -2228,20 +2329,21 @@ static void save_settings(void)
 {
     FILE* f=fopen("modern-ui/settings.ini.tmp","w");
     if(f) {
-        fprintf(f,"TextSize=%d\nButtonTextScale=%d\n",body_size,button_text_scale);
+        fprintf(f,"TextSize=%d\nButtonTextScale=%d\nFollowCamera=%d\n",body_size,button_text_scale,(int)follow_camera);
         if(fclose(f)==0) SDL_RenamePath("modern-ui/settings.ini.tmp","modern-ui/settings.ini");
     }
 }
 
 static void load_settings(void)
 {
-    body_size=20;button_text_scale=100;
+    body_size=20;button_text_scale=100;follow_camera=false;
     FILE* file=fopen("modern-ui/settings.ini","r");
     if(!file)return;
     char line[128];int value;
     while(fgets(line,sizeof(line),file)) {
         if(sscanf(line,"TextSize=%d",&value)==1 && value>=16 && value<=26)body_size=value;
         else if(sscanf(line,"ButtonTextScale=%d",&value)==1 && value>=75 && value<=150 && value%25==0)button_text_scale=value;
+        else if(sscanf(line,"FollowCamera=%d",&value)==1)follow_camera=value==1;
     }
     fclose(file);
 }
@@ -2299,6 +2401,8 @@ static bool handle_event(SDL_Event* event)
     return consumed;
 }
 
+static unsigned follow_walk_taps;
+
 static bool modern_camera_enabled(void)
 {
     int mode=intgame_mode_get();
@@ -2323,7 +2427,12 @@ static bool handle_binding_event(SDL_Event* event)
 {
     if((event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) || SDL_TextInputActive(window))return false;
     int key=event->key.scancode,mods=event->key.mod;
-    for(int i=KB_UP;i<=KB_RIGHT;i++)if(key_is(i,key,mods))return modern_camera_enabled();
+    for(int i=KB_UP;i<=KB_RIGHT;i++)if(key_is(i,key,mods)) {
+        if(!modern_camera_enabled())return false;
+        if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat && modern_follow_camera_active())
+            follow_walk_taps|=1U<<(i-KB_UP);
+        return true;
+    }
     const int actions[]={2,0,1,3,6,5,8,9,951,950,1100,-1,-1,-1,-1,7,-1};
     int binding=-1;
     for(int i=0;i<KB_COUNT;i++)if(key_is(i,key,mods)){binding=i;break;}
@@ -2575,11 +2684,98 @@ bool modern_ui_init(void)
 
 bool modern_ui_enabled(void) {return enabled;}
 
+typedef struct FollowWalk {
+    int64_t pc, destination;
+    int direction;
+    AnimID id;
+} FollowWalk;
+
+static FollowWalk follow_walk;
+
+static AnimRunInfo* follow_walk_animation(void)
+{
+    AnimRunInfo* run;
+    if (!follow_walk.pc || !anim_id_to_run_info(&follow_walk.id,&run)
+        || run->anim_obj!=follow_walk.pc
+        || (run->goals[0].type!=AG_MOVE_TO_TILE && run->goals[0].type!=AG_RUN_TO_TILE)
+        || run->goals[0].params[AGDATA_TARGET_TILE].loc!=follow_walk.destination) return NULL;
+    return run;
+}
+
+static void follow_walk_stop(void)
+{
+    AnimRunInfo* run=follow_walk_animation();
+    if (run && follow_walk.pc==player_get_local_pc_obj()) {
+        // Finish the step already in progress. Keep its animation and offsets.
+        AnimPath* path=&run->path;
+        int64_t stop=path->field_E8;
+        if (stop && path->curr>=0 && path->curr<path->max && path->max<=sizeof(path->rotations)) {
+            for (int i=0;i<=path->curr;i++) location_in_dir(stop,path->rotations[i],&stop);
+            if (!tig_net_is_active())path->max=path->curr+1;
+        } else {
+            int64_t tile=obj_field_int64_get(follow_walk.pc,OBJ_F_LOCATION);
+            if (!location_in_dir(tile,follow_walk.direction,&stop))stop=tile;
+        }
+        if (stop!=follow_walk.destination)anim_goal_move_to_tile(follow_walk.pc,stop);
+    }
+    follow_walk.pc=0;
+}
+
+static void follow_walk_tick(void)
+{
+    static Uint64 retry_at;
+    static int previous_direction=-1;
+    unsigned held=0,taps=follow_walk_taps;
+    follow_walk_taps=0;
+    int direction=-1;
+    if (modern_follow_camera_active() && modern_camera_enabled() && intgame_mode_get()==INTGAME_MODE_MAIN) {
+        const int keys[]={SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D};
+        for(int i=0;i<4;i++)if(modern_camera_key(keys[i]))held|=1U<<i;
+        unsigned input=held ? held : taps;
+        int x=((input & 8)!=0)-((input & 2)!=0);
+        int y=((input & 4)!=0)-((input & 1)!=0);
+        static const int directions[3][3]={{7,0,1},{6,-1,2},{5,4,3}};
+        direction=directions[y+1][x+1];
+    }
+    if (direction!=previous_direction) {
+        follow_walk_stop();
+        previous_direction=direction;
+        retry_at=0;
+    }
+    if (direction<0)return;
+    int64_t pc=player_get_local_pc_obj();
+    if (!critter_is_active(pc)) {follow_walk_stop();return;}
+    int64_t tile=obj_field_int64_get(pc,OBJ_F_LOCATION);
+    if (follow_walk_animation() && location_dist(tile,follow_walk.destination)>2)return;
+    Uint64 now=SDL_GetTicks();
+    if (now<retry_at)return;
+    retry_at=now+100;
+    // Give the native walker a continuous straight path. Renew it before
+    // the last tile, when the engine would otherwise return to its idle pose.
+    for (int steps=held ? 8 : 1; steps>0; --steps) {
+        int64_t destination;
+        AnimPath path;
+        if (!location_in_range(tile,direction,steps,&destination)
+            || !anim_preview_path(pc,destination,false,&path) || path.max>steps)continue;
+        bool straight=true;
+        for (int i=0;i<path.max;i++)if(path.rotations[i]!=direction)straight=false;
+        if (!straight)continue;
+        if (destination==follow_walk.destination && follow_walk_animation())return;
+        if (anim_goal_move_to_tile(pc,destination) && sub_423300(pc,&follow_walk.id)) {
+            follow_walk.pc=pc;
+            follow_walk.direction=direction;
+            follow_walk.destination=destination;
+        }
+        return;
+    }
+}
+
 void modern_ui_tick(void)
 {
     modern_ui_menu_tick();
     modern_map_route_tick();
     tactical_tick();
+    follow_walk_tick();
     if(pending_action==999 && tactical_active())pending_action=-1;
     if(pending_action==999) {
         pending_action=-1;

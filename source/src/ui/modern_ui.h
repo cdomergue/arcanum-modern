@@ -40,6 +40,8 @@ int modern_written_paragraph_count(void);
 const char* modern_written_heading(int index);
 const char* modern_written_book_paragraph(int index,bool* centered,int* font);
 bool modern_camera_key(int scancode);
+bool modern_follow_camera_active(void);
+void modern_follow_camera_tick(void);
 bool modern_hotkey_assign(int index,int type,int data,int64_t item_obj);
 bool modern_world_resize(int width,int height,float anchor_x,float anchor_y);
 void modern_ui_tick(void);
