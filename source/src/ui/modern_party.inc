@@ -14,7 +14,13 @@ static bool party_visible(void)
 }
 static int party_rows(void){return (int)fmaxf(1,fminf(6,(canvas_h-236)/108));}
 static SDL_FRect party_rect(int row){return (SDL_FRect){12,88+row*108,94,106};}
-static SDL_FRect party_menu_rect(void){return (SDL_FRect){114,party_menu_y,265,294};}
+static bool party_can_dismiss(int64_t obj)
+{
+    return !tactical_active() && !combat_turn_based_is_active() && !tig_net_is_active()
+        && intgame_mode_get()==INTGAME_MODE_MAIN && !dialog_ui_is_local_pc_in_dialog()
+        && critter_can_command_familiar(obj);
+}
+static SDL_FRect party_menu_rect(void){return (SDL_FRect){114,party_menu_y,265,party_can_dismiss(party_menu_obj)?329:294};}
 static bool party_region(float x,float y)
 {
     if(!party_visible())return false;
@@ -88,7 +94,15 @@ static void draw_party(void)
     }
     if(party_menu_obj){
         SDL_FRect r=party_menu_rect();hud_panel(r);
-        for(int i=0;i<8;i++)tactical_button((SDL_FRect){r.x+8,r.y+8+i*35,r.w-16,31},1940+i,game_text(modern_follower_text(i)),false,modern_follower_command_available(party_menu_obj,i));
+        for(int i=0;i<8;i++){
+            const char* label=game_text(modern_follower_text(i));
+            if(i==FOLLOWER_UI_COMMAND_WAIT && critter_is_bound_familiar(party_menu_obj)
+                && (obj_field_int32_get(party_menu_obj,OBJ_F_NPC_FLAGS)&ONF_AI_WAIT_HERE))
+                label=tr("Suivre","Follow");
+            tactical_button((SDL_FRect){r.x+8,r.y+8+i*35,r.w-16,31},1940+i,label,false,modern_follower_command_available(party_menu_obj,i));
+        }
+        if(party_can_dismiss(party_menu_obj))
+            tactical_button((SDL_FRect){r.x+8,r.y+288,r.w-16,31},1948,tr("Renvoyer le familier","Dismiss familiar"),false,true);
     }
 }
 static bool party_action(int action)
@@ -102,6 +116,22 @@ static bool party_action(int action)
         modern_party_set_grouped(party_action_obj,modern_party_detached(party_action_obj));return true;
     }
     if(action==1930 || action==1931){party_page+=action==1930?-1:1;if(party_page<0)party_page=0;return true;}
+    if(action==1948){
+        int64_t obj=party_action_obj;
+        if(!party_can_dismiss(obj))return true;
+        const SDL_MessageBoxButtonData choices[]={
+            {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT|SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT,0,tr("Garder","Keep")},
+            {0,1,tr("Renvoyer","Dismiss")}
+        };
+        SDL_MessageBoxData box={SDL_MESSAGEBOX_WARNING,window,tr("Renvoyer le familier","Dismiss familiar"),
+            tr("Ce familier disparaîtra définitivement. Le renvoyer ?","This familiar will disappear permanently. Dismiss it?"),2,choices,NULL};
+        int choice=0;
+        if(SDL_ShowMessageBox(&box,&choice) && choice==1 && party_can_dismiss(obj)){
+            modern_party_set_grouped(obj,true);
+            object_destroy(obj);
+        }
+        return true;
+    }
     if(action>=1940 && action<1948){modern_follower_command(party_action_obj,action-1940);return true;}
     if(action<1800 || action>=1928)return false;
     int64_t obj=party_action_obj;
@@ -147,7 +177,7 @@ static bool party_event(SDL_Event* event)
     party_capture=false;
     if(event->button.button!=party_pressed_button || party_pressed!=hit(x,y))return true;
     if(party_pressed_button==SDL_BUTTON_RIGHT && party_pressed>=1800 && party_pressed<1928){
-        party_menu_obj=party_pressed_obj;party_menu_y=fminf(canvas_h-430,fmaxf(88,y));
+        party_menu_obj=party_pressed_obj;party_menu_y=fminf(canvas_h-130-party_menu_rect().h,fmaxf(88,y));
     } else if(party_pressed_button==SDL_BUTTON_LEFT && party_pressed>=1800){
         party_action_obj=party_pressed_obj;pending_action=party_pressed;party_menu_obj=0;
     }

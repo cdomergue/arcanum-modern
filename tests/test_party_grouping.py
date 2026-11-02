@@ -11,6 +11,8 @@ code=r'''
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+static bool bound_familiar;
+static bool critter_can_command_familiar(int64_t obj){return obj==2 && bound_familiar;}
 #define OBJ_HANDLE_NULL 0
 #define INTGAME_MODE_MAIN 0
 #define INTGAME_MODE_SKILL 1
@@ -69,6 +71,7 @@ int main(void){
  dialog=true;assert(!modern_party_select(2));dialog=false;
  interruptible=false;assert(!modern_party_select(2)&&!modern_party_detached(2));
  interruptible=true;spells=OSF_MIND_CONTROLLED;assert(!modern_party_select(2));
+ bound_familiar=true;assert(modern_party_select(2));bound_familiar=false;assert(!modern_party_selected());
  spells=0;assert(modern_party_select(2));member=false;assert(!modern_party_selected());member=true;
  assert(modern_party_select(2));alive=false;assert(!modern_party_selected());alive=true;
  for(int state=1;state<=3;state++){object_flags=state;assert(!modern_party_select(2)&&!modern_party_set_grouped(2,true)&&!modern_party_selected());}

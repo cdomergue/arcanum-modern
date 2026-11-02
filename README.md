@@ -135,7 +135,8 @@ available.
 - **Companions:** outside combat, click a portrait to select and detach a
   companion. Use the portrait's **`=` / `/`** control to toggle grouping.
   Click the portrait again, **Player**, or right-click the world to return to
-  your main character.
+  your main character. Right-click a familiar’s portrait to have it wait, follow again,
+  or dismiss it permanently. Dismissal frees the slot for a new familiar.
 - **Combat:** select an available ally in the initiative bar to act. Allies
   with consecutive turns can switch while they have action points. **End turn**
   finishes the selected character; enemies act after the group finishes.

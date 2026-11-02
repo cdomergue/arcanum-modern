@@ -883,7 +883,32 @@ diff --git a/src/game/ai.c b/src/game/ai.c
  }
  
  // 0x4A9AD0
-@@ -2415,6 +2430,7 @@
+@@ -1469,6 +1484,12 @@
+         return;
+     }
+ 
++    if (critter_is_bound_familiar(obj)) {
++        // Keep the bond and portrait. Waiting NPCs are already excluded from travel.
++        sub_424070(obj,PRIORITY_3,false,true);
++        obj_field_int32_set(obj,OBJ_F_NPC_FLAGS,obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)|ONF_AI_WAIT_HERE);
++        return;
++    }
+     wait = obj_field_int32_get(obj, OBJ_F_NPC_WAIT);
+     leader_obj = critter_leader_get(obj);
+     if (stat_is_extraordinary(leader_obj, STAT_CHARISMA)
+@@ -1507,6 +1528,11 @@
+     }
+ 
+     if ((obj_field_int32_get(obj, OBJ_F_NPC_FLAGS) & ONF_AI_WAIT_HERE) == 0) {
++        return;
++    }
++
++    if (critter_is_bound_familiar(obj)) {
++        obj_field_int32_set(obj,OBJ_F_NPC_FLAGS,obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)&~ONF_AI_WAIT_HERE);
+         return;
+     }
+ 
+@@ -2415,6 +2441,7 @@
              return;
          }
  
@@ -891,7 +916,7 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          anim_goal_follow_obj(ai->obj, ai->leader_obj);
  
          if (!sub_423300(ai->obj, NULL)) {
-@@ -3186,7 +3202,7 @@
+@@ -3186,7 +3213,7 @@
          return AI_FOLLOW_LOW_LEVEL;
      }
  
@@ -1336,8 +1361,8 @@ diff --git a/src/game/combat.c b/src/game/combat.c
 +    if (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & (OCF_FLEEING | OCF_SPELL_FLEE | OCF_SURRENDERED)) return false;
 +    if (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) {
 +        int64_t controller = OBJ_HANDLE_NULL;
-+        if (!sub_459040(obj, OSF_MIND_CONTROLLED, &controller)
-+            || (controller != player_get_local_pc_obj()
++        if (!sub_459040(obj, OSF_MIND_CONTROLLED, &controller)) return critter_is_bound_familiar(obj);
++        if (!controller || (controller != player_get_local_pc_obj()
 +                && !player_is_local_pc_obj(critter_pc_leader_get(controller)))) return false;
 +    }
 +    return true;
@@ -1860,7 +1885,37 @@ diff --git a/src/game/critter.c b/src/game/critter.c
  #include "game/critter.h"
  
  #include "game/ai.h"
-@@ -698,8 +699,8 @@
+@@ -560,6 +561,29 @@
+     return true;
+ }
+ 
++// A waiting ordinary follower may retain a leader pointer after disbanding.
++bool critter_is_bound_familiar(int64_t obj)
++{
++    if (!obj || !obj_handle_is_valid(obj) || obj_field_int32_get(obj,OBJ_F_TYPE)!=OBJ_TYPE_NPC
++        || !(obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)&ONF_FAMILIAR)) return false;
++    int64_t leader=critter_leader_get(obj);
++    if (!leader) return false;
++    int count=obj_arrayfield_length_get(leader,OBJ_F_CRITTER_FOLLOWER_IDX);
++    for (int i=0;i<count;i++)
++        if (obj_arrayfield_handle_get(leader,OBJ_F_CRITTER_FOLLOWER_IDX,i)==obj) return true;
++    return false;
++}
++
++bool critter_can_command_familiar(int64_t obj)
++{
++    if (!critter_is_bound_familiar(obj)) return false;
++    int64_t pc=player_get_local_pc_obj(),controller=OBJ_HANDLE_NULL;
++    if (!pc || critter_pc_leader_get(obj)!=pc) return false;
++    // A permanent summon keeps the flag after its creation spell finishes.
++    if (!sub_459040(obj,OSF_MIND_CONTROLLED,&controller)) return true;
++    return controller && (controller==pc || critter_pc_leader_get(controller)==pc);
++}
++
+ /**
+  * Checks if a critter is active (not dead, unconscious, stunned, paralyzed, or
+  * stoned).
+@@ -698,8 +722,8 @@
                  ObjectList followers;
                  ObjectNode* node;
  
@@ -1871,7 +1926,7 @@ diff --git a/src/game/critter.c b/src/game/critter.c
                  obj_field_int32_set(victim_obj, OBJ_F_NPC_EXPERIENCE_WORTH, 0);
  
                  // Adjust alignment.
-@@ -2457,3 +2458,17 @@
+@@ -2457,3 +2481,17 @@
      // Print effects.
      effect_debug_obj(obj);
  }
@@ -1892,7 +1947,16 @@ diff --git a/src/game/critter.c b/src/game/critter.c
 diff --git a/src/game/critter.h b/src/game/critter.h
 --- a/src/game/critter.h
 +++ b/src/game/critter.h
-@@ -110,4 +110,7 @@
+@@ -52,6 +52,8 @@
+ int critter_fatigue_current(int64_t obj);
+ bool critter_is_prone(int64_t obj);
+ bool critter_is_active(int64_t obj);
++bool critter_is_bound_familiar(int64_t obj);
++bool critter_can_command_familiar(int64_t obj);
+ bool critter_is_unconscious(int64_t obj);
+ bool critter_is_sleeping(int64_t obj);
+ bool critter_is_dead(int64_t obj);
+@@ -110,4 +112,7 @@
  bool critter_is_dumb(int64_t obj);
  void critter_debug_obj(int64_t obj);
  
@@ -5683,10 +5747,11 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
 diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 --- a/src/ui/follower_ui.c
 +++ b/src/ui/follower_ui.c
-@@ -3,10 +3,14 @@
+@@ -3,10 +3,15 @@
  #include <stdio.h>
  
  #include "game/broadcast.h"
++#include "game/ai.h"
 +#include "game/anim.h"
 +#include "game/combat.h"
  #include "game/critter.h"
@@ -5698,16 +5763,32 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  #include "game/object.h"
  #include "game/player.h"
  #include "game/portrait.h"
-@@ -17,6 +21,8 @@
- #include "ui/intgame.h"
+@@ -18,23 +23,7 @@
  #include "ui/inven_ui.h"
  #include "ui/tb_ui.h"
-+
+ 
+-/**
+- * Commands available in the follower drop-down context menu.
+- *
+- * Menu labels for each command is loaded from "mes\follower_ui.mes", keyed by
+- * command index.
+- */
+-typedef enum FollowerUiCommand {
+-    FOLLOWER_UI_COMMAND_WALK,
+-    FOLLOWER_UI_COMMAND_ATTACK,
+-    FOLLOWER_UI_COMMAND_STAY_CLOSE,
+-    FOLLOWER_UI_COMMAND_SPREAD_OUT,
+-    FOLLOWER_UI_COMMAND_BACK_OFF,
+-    FOLLOWER_UI_COMMAND_WAIT,
+-    FOLLOWER_UI_COMMAND_INVENTORY,
+-    FOLLOWER_UI_COMMAND_CHARACTER_SHEET,
+-    FOLLOWER_UI_COMMAND_COUNT,
+-} FollowerUiCommand;
 +#include "ui/modern_party_control.inc"
  
  /**
-  * Commands available in the follower drop-down context menu.
-@@ -153,6 +159,8 @@
+  * The maximum number of followers visible at one time in the panel.
+@@ -153,6 +142,8 @@
   */
  #define FOLLOWER_UI_DROP_DOWN_MENU_ART 826
  
@@ -5716,7 +5797,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  static void follower_ui_create(int index);
  static bool follower_ui_message_filter(TigMessage* msg);
  static void follower_ui_drop_down_menu_create(int index);
-@@ -549,6 +557,7 @@
+@@ -549,6 +540,7 @@
   */
  void follower_ui_reset(void)
  {
@@ -5724,7 +5805,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      int index;
  
      follower_ui_visible = true;
-@@ -618,7 +627,7 @@
+@@ -618,7 +610,7 @@
  
      follower_ui_refresh();
  
@@ -5733,7 +5814,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  }
  
  /**
-@@ -631,7 +640,7 @@
+@@ -631,7 +623,7 @@
      if (tig_file_fwrite(&follower_ui_visible, sizeof(follower_ui_visible), 1, stream) != 1) return false;
      if (tig_file_fwrite(&follower_ui_top_index, sizeof(follower_ui_top_index), 1, stream) != 1) return false;
  
@@ -5742,7 +5823,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  }
  
  /**
-@@ -643,9 +652,7 @@
+@@ -643,9 +635,7 @@
  {
      int64_t pc_obj;
      int index;
@@ -5752,7 +5833,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      TargetDescriptor td;
  
      pc_obj = player_get_local_pc_obj();
-@@ -681,40 +688,7 @@
+@@ -681,40 +671,7 @@
                  for (index = 0; index < FOLLOWER_UI_COMMAND_COUNT; index++) {
                      if (msg->data.button.button_handle == follower_ui_drop_menu_item_buttons[index]) {
                          follower_ui_drop_down_menu_destroy();
@@ -5794,7 +5875,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                          return true;
                      }
                  }
-@@ -977,6 +951,13 @@
+@@ -977,6 +934,13 @@
      intgame_mode_set(INTGAME_MODE_MAIN);
  }
  
@@ -5808,7 +5889,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  /**
   * Redraws all visible follower portrait slots.
   *
-@@ -1016,7 +997,9 @@
+@@ -1016,7 +980,9 @@
          sub_444130(&(follower_ui_followers[follower_ui_top_index + index]));
  
          follower_obj = follower_ui_followers[follower_ui_top_index + index].obj;
@@ -5819,7 +5900,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
              // Follower is no longer valid - rebuild the list and stop.
              follower_ui_refresh();
              break;
-@@ -1039,7 +1022,7 @@
+@@ -1039,7 +1005,7 @@
          }
  
          // Draw health bar.
@@ -5828,7 +5909,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          if (stat_level_get(follower_obj, STAT_POISON_LEVEL) > FOLLOWER_UI_POISON_LEVEL_THRESHOLD) {
              follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_POISON_BAR_ART, 3, 39, hp_percent, 100);
          } else {
-@@ -1052,7 +1035,7 @@
+@@ -1052,7 +1018,7 @@
          }
  
          // Draw fatigue bar.
@@ -5837,7 +5918,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_FATIGUE_BAR_ART, 3, 44, fatigue_percent, 100);
      }
  
-@@ -1139,7 +1122,7 @@
+@@ -1139,7 +1105,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -5846,7 +5927,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
  
          tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
-@@ -1212,7 +1195,7 @@
+@@ -1212,7 +1178,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -5855,7 +5936,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
      }
  
-@@ -1243,7 +1226,7 @@
+@@ -1243,7 +1209,7 @@
  void update_toggle_button_visibility(void)
  {
      if (follower_ui_followers_count > 0) {
@@ -5864,7 +5945,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
      }
-@@ -1271,7 +1254,7 @@
+@@ -1271,7 +1237,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
@@ -5873,7 +5954,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
          // Scroll-down button is active if not already at the bottom.
          if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
-@@ -1280,7 +1263,7 @@
+@@ -1280,7 +1246,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
@@ -5882,7 +5963,16 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          // Either all portraits fit into existing slots, or the follower UI is
          // hidden.
-@@ -1351,3 +1334,108 @@
+@@ -1313,7 +1279,7 @@
+                 enabled = inven_ui_can_open_inven(follower_ui_commander_obj, follower_ui_subordinate_obj);
+                 break;
+             case FOLLOWER_UI_COMMAND_WAIT:
+-                enabled = (obj_field_int32_get(follower_ui_subordinate_obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0;
++                enabled = (obj_field_int32_get(follower_ui_subordinate_obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0 || critter_can_command_familiar(follower_ui_subordinate_obj);
+                 break;
+             default:
+                 enabled = true;
+@@ -1351,3 +1317,115 @@
          follower_ui_refresh();
      }
  }
@@ -5910,7 +6000,14 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 +        charedit_open(follower_ui_subordinate_obj, CHAREDIT_MODE_PASSIVE);
 +        break;
 +    case FOLLOWER_UI_COMMAND_WAIT:
-+        // Mind-controlled followers cannot be ordered to wait.
++        if (critter_can_command_familiar(follower_ui_subordinate_obj)) {
++            modern_party_set_grouped(follower_ui_subordinate_obj,true);
++            if (obj_field_int32_get(follower_ui_subordinate_obj,OBJ_F_NPC_FLAGS)&ONF_AI_WAIT_HERE)
++                ai_npc_unwait(follower_ui_subordinate_obj,true);
++            else ai_npc_wait(follower_ui_subordinate_obj);
++            return;
++        }
++        // Other mind-controlled followers cannot be ordered to wait.
 +        if ((obj_field_int32_get(follower_ui_subordinate_obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) != 0) {
 +            return;
 +        }
@@ -5976,7 +6073,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 +        return command == FOLLOWER_UI_COMMAND_INVENTORY && obj == combat_input_actor() && combat_input_ready(obj);
 +    }
 +    if (command == FOLLOWER_UI_COMMAND_INVENTORY) return inven_ui_can_open_inven(pc, obj);
-+    if (command == FOLLOWER_UI_COMMAND_WAIT) return (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0;
++    if (command == FOLLOWER_UI_COMMAND_WAIT) return (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0 || critter_can_command_familiar(obj);
 +    return true;
 +}
 +
@@ -5994,7 +6091,32 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 diff --git a/src/ui/follower_ui.h b/src/ui/follower_ui.h
 --- a/src/ui/follower_ui.h
 +++ b/src/ui/follower_ui.h
-@@ -18,4 +18,14 @@
+@@ -3,6 +3,24 @@
+ 
+ #include "game/context.h"
+ #include "game/target.h"
++
++/**
++ * Commands available in the follower drop-down context menu.
++ *
++ * Menu labels for each command is loaded from "mes\follower_ui.mes", keyed by
++ * command index.
++ */
++typedef enum FollowerUiCommand {
++    FOLLOWER_UI_COMMAND_WALK,
++    FOLLOWER_UI_COMMAND_ATTACK,
++    FOLLOWER_UI_COMMAND_STAY_CLOSE,
++    FOLLOWER_UI_COMMAND_SPREAD_OUT,
++    FOLLOWER_UI_COMMAND_BACK_OFF,
++    FOLLOWER_UI_COMMAND_WAIT,
++    FOLLOWER_UI_COMMAND_INVENTORY,
++    FOLLOWER_UI_COMMAND_CHARACTER_SHEET,
++    FOLLOWER_UI_COMMAND_COUNT,
++} FollowerUiCommand;
+ 
+ bool follower_ui_init(GameInitInfo* init_info);
+ void follower_ui_exit(void);
+@@ -18,4 +36,14 @@
  void follower_ui_hide(void);
  void follower_ui_show(void);
  
@@ -9331,3 +9453,15 @@ diff --git a/src/game/scroll.h b/src/game/scroll.h
  void scroll_fps_set(int fps);
  void scroll_distance_set(int distance);
  int scroll_distance_get(void);
+diff --git a/src/game/broadcast.c b/src/game/broadcast.c
+--- a/src/game/broadcast.c
++++ b/src/game/broadcast.c
+@@ -270,7 +270,7 @@
+                     }
+                     break;
+                 case BROADCAST_CMD_TYPE_WAIT:
+-                    if ((spell_flags & OSF_MIND_CONTROLLED) == 0) {
++                    if ((spell_flags & OSF_MIND_CONTROLLED) == 0 || critter_can_command_familiar(candidate_obj)) {
+                         if (broadcast_float_line_func != NULL) {
+                             dialog_copy_npc_order_ok_msg(candidate_obj, pc_obj, str, &speech_id);
+                             broadcast_float_line_func(candidate_obj, pc_obj, str, speech_id);

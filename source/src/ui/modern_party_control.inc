@@ -41,7 +41,7 @@ int64_t modern_party_selected(void)
     if(combat_turn_based_is_active() || !modern_party_detached(party_selected)
         || !critter_is_active(party_selected)
         || (obj_field_int32_get(party_selected,OBJ_F_CRITTER_FLAGS)&(OCF_FLEEING|OCF_SPELL_FLEE|OCF_SURRENDERED))
-        || (obj_field_int32_get(party_selected,OBJ_F_SPELL_FLAGS)&OSF_MIND_CONTROLLED))party_selected=OBJ_HANDLE_NULL;
+        || ((obj_field_int32_get(party_selected,OBJ_F_SPELL_FLAGS)&OSF_MIND_CONTROLLED) && !critter_can_command_familiar(party_selected)))party_selected=OBJ_HANDLE_NULL;
     return party_selected;
 }
 
@@ -52,7 +52,7 @@ bool modern_party_select(int64_t obj)
     if(obj!=party_selected)dialog_speaker_set(OBJ_HANDLE_NULL);
     if(obj==OBJ_HANDLE_NULL){party_selected=OBJ_HANDLE_NULL;return true;}
     if(!party_control_member(obj) || !critter_is_active(obj)
-        || (obj_field_int32_get(obj,OBJ_F_SPELL_FLAGS)&OSF_MIND_CONTROLLED)
+        || ((obj_field_int32_get(obj,OBJ_F_SPELL_FLAGS)&OSF_MIND_CONTROLLED) && !critter_can_command_familiar(obj))
         || !modern_party_set_grouped(obj,false))return false;
     party_selected=obj;
     return modern_party_selected()==obj;

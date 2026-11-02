@@ -73,6 +73,8 @@ static bool obj_handle_is_valid(int64_t obj){return obj>0&&obj<5;}
 static int obj_field_int32_get(int64_t obj,int field){assert(obj_handle_is_valid(obj));return field==OBJ_F_TYPE?OBJ_TYPE_NPC:field==OBJ_F_CRITTER_FLAGS?flags[obj]:spells[obj];}
 static int64_t obj_field_int64_get(int64_t obj,int field){(void)field;return obj;}
 static int64_t critter_pc_leader_get(int64_t obj){return obj?leader[obj]:0;}
+static bool familiar[5];
+static bool critter_is_bound_familiar(int64_t obj){return familiar[obj];}
 static bool sub_459040(int64_t obj,int flag,int64_t* out){(void)flag;*out=controller[obj];return *out!=0;}
 static int64_t combat_turn_based_whos_turn_get(void){return dword_5FC240?dword_5FC240->obj:0;}
 static bool critter_is_active(int64_t obj){return active[obj];}
@@ -112,6 +114,8 @@ int main(void){
  flags[2]=OCF_STUNNED;assert(!combat_input_ready(2));flags[2]=0;
  flags[2]=OCF_FLEEING;assert(!combat_player_controls(2));flags[2]=0;
  spells[2]=OSF_MIND_CONTROLLED;controller[2]=3;assert(!combat_player_controls(2));
+ familiar[2]=true;assert(!combat_player_controls(2));
+ controller[2]=0;assert(combat_player_controls(2));familiar[2]=false;assert(!combat_player_controls(2));
  controller[2]=1;assert(combat_player_controls(2));spells[2]=0;
  leader[2]=0;assert(combat_input_actor()==0);leader[2]=1;
  assert(combat_check_action_points(2,4));
