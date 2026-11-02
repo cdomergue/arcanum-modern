@@ -1389,6 +1389,42 @@ static void text_in_button(SDL_FRect rect,int action,const char* label,bool sele
         menu_control_color(rect,selected,available));
 }
 
+// Shared columns keep labels, values and their hit areas aligned on every tab.
+static void option_button(SDL_FRect r,int action,const char* label,bool selected,bool available)
+{
+    button(r,action,"",-1,selected,available);
+    button_label(MENU_BUTTON_FONT,label,(SDL_FRect){r.x+8,r.y+3,r.w-16,r.h-6},true,
+        menu_control_color(r,selected,available));
+}
+
+static float option_label_width(float w)
+{
+    return fminf(300,w*.45f);
+}
+
+static void option_row(float x,float y,float w,const char* label,bool enabled)
+{
+    button_label(1,label,(SDL_FRect){x,y,option_label_width(w)-12,42},false,enabled?GOLD:MUTED);
+    rule(x,y+44,w,(SDL_Color){104,78,48,110});
+}
+
+static void option_choice(float x,float y,float w,const char* label,const char* value,
+    int left,int right,bool less,bool more,bool enabled)
+{
+    option_row(x,y,w,label,enabled);
+    float label_width=option_label_width(w);
+    float cx=x+label_width,cw=fminf(355,w-label_width);
+    button((SDL_FRect){cx,y+3,36,36},left,"<",-1,false,less);
+    button_label(1,value,(SDL_FRect){cx+40,y,cw-80,42},true,enabled?(SDL_Color){240,224,191,255}:MUTED);
+    button((SDL_FRect){cx+cw-36,y+3,36,36},right,">",-1,false,more);
+}
+
+static void option_section(float x,float y,float w,const char* title)
+{
+    text_draw(2,title,x,y,GOLD);
+    rule(x,y+31,w,(SDL_Color){151,114,65,210});
+}
+
 #include "modern_keys.inc"
 
 static void draw_character_menu(void)
@@ -1603,15 +1639,15 @@ static void draw_menu(void)
     if(type==MM_WINDOW_NEW_CHAR || type==MM_WINDOW_PREGEN_CHAR) {draw_character_menu();return;}
     if(type==MM_WINDOW_LOAD_GAME || type==MM_WINDOW_SAVE_GAME) {draw_load_menu();return;}
     if(type==MM_WINDOW_CHAREDIT) {draw_character_sheet();return;}
-    float w = options ? 1180 : 610, h = options ? 830 : 660;
+    float w = options ? fminf(1010,canvas_w-32) : 610, h = options ? 830 : 660;
     float x = (canvas_w-w)/2, y = (canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
     centered(3, options ? menu_text(12) : "Arcanum Renaissance", canvas_w/2, y+33, GOLD);
-    const char* subtitle=options ? menu_text(12) : pause ? menu_text(4000) :
+    const char* subtitle=pause ? menu_text(4000) :
         type==MM_WINDOW_SINGLE_PLAYER ? menu_text(10) : type==MM_WINDOW_PICK_NEW_OR_PREGEN ? menu_text(50) : "";
-    centered(0,subtitle,canvas_w/2,y+80,MUTED);
-    rule(x+36,y+112,w-72,(SDL_Color){117,87,44,255});
     if (!options) {
+        centered(0,subtitle,canvas_w/2,y+80,MUTED);
+        rule(x+36,y+112,w-72,(SDL_Color){117,87,44,255});
         MainMenuWindowInfo* info=sub_5496C0(type);
         int count=info->num_buttons;
         float first=y+144+(5-count)*35;
@@ -1628,92 +1664,92 @@ static void draw_menu(void)
         if(type!=MM_WINDOW_MAINMENU) centered(0,menu_text(pause?34:4003),canvas_w/2,y+h-46,MUTED);
         return;
     }
-    ModernGraphics* g = &modern_graphics;
-    bool confirming = g->deadline != 0;
-    button((SDL_FRect){x+30,y+140,182,45},407,tr("Graphismes","Graphics"),-1,options_tab<0,!confirming);
-    const int tab_actions[]={406,408,409};
-    for(int i=0;i<3;i++)button((SDL_FRect){x+30,y+197+i*57,182,45},tab_actions[i],menu_text(4000+i),-1,options_tab==i,!confirming);
-    button((SDL_FRect){x+30,y+368,182,45},418,tr("Raccourcis","Key bindings"),-1,options_tab==3,!confirming);
-    if(options_tab==3){draw_key_options(x,y,w,h);return;}
-    if(options_tab>=0) {
-        float ox=x+246,ow=w-280,cw=(ow-24)/2;
-        for(int i=0;i<8;i++) {
-            ModernOption option;if(!modern_options_state(i,&option))continue;
-            float cx=ox+(i/4)*(cw+24),cy=y+137+(i%4)*114;
-            SDL_Color color=option.enabled?GOLD:MUTED;
-            menu_paragraph(game_text(option.label),(SDL_FRect){cx,cy,cw,54},0,color);
-            menu_button((SDL_FRect){cx,cy+57,38,42},430+i*2,"<",option.enabled && (!option.numeric || option.value>0));
-            menu_button((SDL_FRect){cx+cw-38,cy+57,38,42},431+i*2,">",option.enabled && (!option.numeric || option.value<option.maximum));
-            char value[80];snprintf(value,sizeof(value),"%d / %d",option.value,option.maximum);
-            const char* label=option.text?game_text(option.text):value;
-            /* Native text fitting handles long translated values without pixel scaling. */
-            text_in_button((SDL_FRect){cx+44,cy+57,cw-88,42},-1,label,false,false);
-            if(option.numeric && option.maximum>0) {
-                fill((SDL_FRect){cx+47,cy+102,cw-94,3},(SDL_Color){60,45,27,255});
-                fill((SDL_FRect){cx+47,cy+102,(cw-94)*option.value/option.maximum,3},color);
+    ModernGraphics* g=&modern_graphics;
+    bool pending=g->deadline!=0;
+    float ox=x+64,ow=w-128;
+    const int actions[]={407,406,408,409,418};
+    const char* tabs[]={tr("Graphismes","Graphics"),menu_text(4000),menu_text(4001),menu_text(4002),tr("Raccourcis","Key bindings")};
+    float tab_width=(ow-24)/5;
+    for(int i=0;i<5;i++){
+        SDL_FRect tab={ox+i*(tab_width+6),y+83,tab_width,44};
+        bool active=options_tab==i-1;
+        option_button(tab,actions[i],tabs[i],active,!pending);
+        if(active)rule(tab.x+6,tab.y+tab.h-2,tab.w-12,GOLD);
+    }
+    if(options_tab==3)draw_key_options(ox,y,ow);
+    else if(options_tab>=0){
+        const char* sections[]={tr("Règles de jeu","Game rules"),tr("Image et messages","Visual effects and messages"),tr("Volume","Volume")};
+        option_section(ox,y+151,ow,sections[options_tab]);
+        float row=y+193;
+        for(int i=0;i<8;i++){
+            ModernOption option;
+            if(!modern_options_state(i,&option))continue;
+            char value[256],label[256];
+            SDL_strlcpy(label,game_text(option.label),sizeof(label));
+            if(option.text)SDL_strlcpy(value,game_text(option.text),sizeof(value));
+            else snprintf(value,sizeof(value),"%d / %d",option.value,option.maximum);
+            option_choice(ox,row,ow,label,value,430+i*2,431+i*2,
+                option.enabled && (!option.numeric || option.value>0),
+                option.enabled && (!option.numeric || option.value<option.maximum),option.enabled);
+            if(option.numeric && option.maximum>0){
+                float label_width=option_label_width(ow);
+                float bx=ox+label_width+50,bw=fminf(355,ow-label_width)-100;
+                fill((SDL_FRect){bx,row+39,bw,3},(SDL_Color){76,57,37,255});
+                fill((SDL_FRect){bx,row+39,bw*option.value/option.maximum,3},GOLD);
+            }
+            row+=options_tab==0?47:62;
+        }
+        if(options_tab==0){
+            option_section(ox,row+6,ow,tr("Compagnons","Companions"));
+            row+=44;
+            for(int i=0;i<2;i++){
+                bool on=settings_get_value(&settings,i?MODERN_FOLLOWER_AUTO_PICKUP_KEY:MODERN_UNLIMITED_FOLLOWERS_KEY)!=0;
+                MesFileEntry entry={.num=on?1:0};
+                const char* value=on?tr("Oui","Yes"):tr("Non","No");
+                if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
+                option_row(ox,row,ow,i?tr("Ramassage automatique","Automatic pickup"):tr("Compagnons illimités","Unlimited companions"),true);
+                option_button((SDL_FRect){ox+option_label_width(ow),row+3,155,36},i?419:417,value,false,!tig_net_is_active());
+                const char* help=i?tr("Les compagnons ramassent les objets au sol.","Companions collect items from the ground."):
+                    tr("Ignore la limite de Charisme du groupe.","Ignores the party’s Charisma limit.");
+                float hx=ox+option_label_width(ow)+172;
+                button_label(0,help,(SDL_FRect){hx,row,ox+ow-hx,42},false,MUTED);
+                row+=47;
             }
         }
-        if(options_tab==0) {
-            bool on=settings_get_value(&settings,MODERN_UNLIMITED_FOLLOWERS_KEY)==1;
-            bool french=strcmp(modern_intgame_text(0),"Niveau")==0;
-            menu_paragraph(french?"Compagnons illimités":"Unlimited companions",(SDL_FRect){ox,y+601,ow-160,30},0,GOLD);
-            MesFileEntry entry={.num=on?1:0};
-            const char* value=on?"✓":"—";
-            if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
-            menu_button((SDL_FRect){ox+ow-130,y+595,130,36},417,value,!tig_net_is_active());
-            text_compact(french?"Retire la limite liée au charisme ; les conditions de recrutement restent actives.":"Removes the Charisma limit; recruitment requirements still apply.",ox,y+630,ow,false,MUTED);
-            on=settings_get_value(&settings,MODERN_FOLLOWER_AUTO_PICKUP_KEY)!=0;
-            menu_paragraph(tr("Ramassage automatique des compagnons","Companion auto-pickup"),(SDL_FRect){ox,y+664,ow-160,30},0,GOLD);
-            entry.num=on?1:0;
-            value=on?"✓":"—";
-            if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
-            menu_button((SDL_FRect){ox+ow-130,y+658,130,36},419,value,!tig_net_is_active());
-            text_compact(tr("Les compagnons ramassent spontanément les objets et fouillent les tas de déchets.","Companions pick up items and search junk piles on their own."),ox,y+693,ow,false,MUTED);
-        }
-        rule(x+30,y+h-110,w-60,(SDL_Color){117,87,44,255});
-        menu_button((SDL_FRect){x+40,y+h-82,220,54},405,menu_text(4003),true);
-        return;
-    }
-    float rx=x+246, rw=w-280;
-    text_draw(2,tr("Graphismes","Graphics"),rx,y+144,GOLD);
-    text_draw(0,tr("Mode d'affichage","Display mode"),rx,y+207,MUTED);
-    const char* modes[]={tr("Fenêtre","Windowed"), tr("Plein écran sans bordure","Borderless fullscreen"), tr("Plein écran exclusif","Exclusive fullscreen")};
-    menu_button((SDL_FRect){rx,y+238,42,48},410,"<",!confirming);
-    centered(2,modes[g->selected.mode],rx+rw/2,y+249,GOLD);
-    menu_button((SDL_FRect){rx+rw-42,y+238,42,48},411,">",!confirming);
-    text_draw(0,tr("Résolution","Resolution"),rx,y+319,MUTED);
-    char resolution[64];
-    snprintf(resolution,sizeof(resolution),"%d × %d",g->selected.width,g->selected.height);
-    bool can_resize=!confirming && g->count>1 && g->selected.mode!=1;
-    menu_button((SDL_FRect){rx,y+350,42,48},412,"<",can_resize);
-    centered(2,g->count ? resolution : tr("Aucun mode disponible","No modes available"),rx+rw/2,y+361,GOLD);
-    menu_button((SDL_FRect){rx+rw-42,y+350,42,48},413,">",can_resize);
-    text_draw(0,g->selected.mode==1 ? tr("Le mode sans bordure suit la définition du bureau.","Borderless mode uses the desktop resolution.") :
-        tr("Choisissez une définition adaptée à votre écran.","Choose a resolution for your display."),rx,y+416,MUTED);
-    text_draw(0,tr("Caméra","Camera"),rx,y+459,MUTED);
-    menu_button((SDL_FRect){rx+rw-340,y+444,340,44},429,
-        follow_camera ? tr("Vue suivie","Follow Camera") : tr("Libre","Free"),!confirming);
-    if (*g->status) text_compact(g->status,x+275,y+h-85,w-590,false,GOLD);
-    text_draw(1,tr("Taille du texte des boutons","Button text size"),rx,y+500,GOLD);
-    menu_button((SDL_FRect){rx,y+536,42,42},426,"<",!confirming && button_text_scale>75);
-    char text_scale[32];snprintf(text_scale,sizeof(text_scale),"%d %%",button_text_scale);
-    centered(2,text_scale,rx+rw/2,y+545,GOLD);
-    menu_button((SDL_FRect){rx+rw-42,y+536,42,42},427,">",!confirming && button_text_scale<150);
-    SDL_FRect preview={rx,y+600,rw-232,46};hud_panel(preview);
-    button_label(BUTTON_FONT,tr("Aperçu du texte des boutons","Button text preview"),
-        (SDL_FRect){preview.x+12,preview.y+4,preview.w-24,preview.h-8},true,GOLD);
-    menu_button((SDL_FRect){rx+rw-220,y+600,220,46},428,tr("Par défaut","Defaults"),!confirming && button_text_scale!=100);
-    rule(x+30,y+h-157,w-60,(SDL_Color){117,87,44,255});
-    if (confirming) {
-        Uint64 now=SDL_GetTicks();
-        int seconds=g->deadline>now ? (int)((g->deadline-now+999)/1000) : 0;
-        char question[128];snprintf(question,sizeof(question),tr("Conserver ces réglages ? Retour automatique dans %d s","Keep these settings? Reverting in %d s"),seconds);
-        centered(0,question,canvas_w/2,y+h-133,GOLD);
-        menu_button((SDL_FRect){x+60,y+h-92,350,52},415,tr("Conserver","Keep"),true);
-        menu_button((SDL_FRect){x+w-410,y+h-92,350,52},416,tr("Rétablir","Revert"),true);
     } else {
-        menu_button((SDL_FRect){x+40,y+h-102,220,54},405,menu_text(4003),true);
-        menu_button((SDL_FRect){x+w-300,y+h-102,260,54},414,tr("Appliquer","Apply"),g->count>0);
+        option_section(ox,y+151,ow,tr("Affichage","Display"));
+        const char* modes[]={tr("Fenêtre","Windowed"),tr("Plein écran sans bordure","Borderless fullscreen"),tr("Plein écran exclusif","Exclusive fullscreen")};
+        option_choice(ox,y+197,ow,tr("Mode d’affichage","Display mode"),modes[g->selected.mode],410,411,!pending,!pending,!pending);
+        char resolution[64];snprintf(resolution,sizeof(resolution),"%d × %d",g->selected.width,g->selected.height);
+        bool resize=!pending && g->count>1 && g->selected.mode!=1;
+        option_choice(ox,y+250,ow,tr("Résolution","Resolution"),resolution,412,413,resize,resize,resize);
+        if(g->selected.mode==1)text_draw(0,tr("Le plein écran sans bordure utilise la résolution du bureau.","Borderless fullscreen uses the desktop resolution."),ox,y+305,MUTED);
+
+        option_section(ox,y+361,ow,tr("Déplacements","Movement"));
+        option_row(ox,y+405,ow,tr("Mode de caméra","Camera mode"),true);
+        option_button((SDL_FRect){ox+option_label_width(ow),y+408,206,36},429,follow_camera?tr("Vue suivie","Follow Camera"):tr("Libre","Free"),false,!pending);
+        text_draw(0,follow_camera?tr("Les touches de direction configurées déplacent le personnage.","Your movement keys move the character."):
+            tr("Les touches de direction configurées déplacent la caméra.","Your movement keys pan the camera."),ox,y+458,MUTED);
+        option_section(ox,y+501,ow,tr("Lisibilité","Readability"));
+        char scale[32];snprintf(scale,sizeof(scale),"%d %%",button_text_scale);
+        option_choice(ox,y+545,ow,tr("Taille du texte des boutons","Button text size"),scale,426,427,!pending && button_text_scale>75,!pending && button_text_scale<150,true);
+        button_label(MENU_BUTTON_FONT,tr("Aperçu du texte","Text preview"),(SDL_FRect){ox,y+601,option_label_width(ow)-12,42},false,GOLD);
+        option_button((SDL_FRect){ox+option_label_width(ow),y+604,206,36},428,tr("Par défaut","Defaults"),false,!pending && button_text_scale!=100);
+    }
+    rule(ox,y+h-116,ow,(SDL_Color){151,114,65,210});
+    if(pending){
+        Uint64 now=SDL_GetTicks();
+        char question[180];snprintf(question,sizeof(question),tr("Conserver cet affichage ? Rétablissement dans %d s.","Keep these display settings? Reverting in %d s."),
+            g->deadline>now?(int)((g->deadline-now+999)/1000):0);
+        text_draw(1,question,ox,y+h-104,GOLD);
+        option_button((SDL_FRect){ox,y+h-68,160,44},416,tr("Rétablir","Revert"),false,true);
+        option_button((SDL_FRect){ox+ow-160,y+h-68,160,44},415,tr("Conserver","Keep"),false,true);
+    }else{
+        option_button((SDL_FRect){ox,y+h-72,144,44},405,menu_text(4003),false,true);
+        if(options_tab<0){
+            if(*g->status)button_label(0,g->status,(SDL_FRect){ox+156,y+h-108,ow-312,36},true,GOLD);
+            option_button((SDL_FRect){ox+ow-224,y+h-72,224,44},414,tr("Appliquer l’affichage","Apply display settings"),false,g->count>0);
+        }
     }
 }
 

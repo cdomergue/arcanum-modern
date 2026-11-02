@@ -23,8 +23,8 @@ static const char* key_label(int i)
     if(i==KB_COMBAT)return game_text(modern_intgame_text(1002));
     if(i<8)return game_text(modern_intgame_text(labels[i]));
     if(i==KB_STEALTH || i==KB_STEAL)return game_text(sub_57A700(i==KB_STEALTH?0:1));
-    const char* fr[]={"Fin du tour","Caméra : haut","Caméra : gauche","Caméra : bas","Caméra : droite"};
-    const char* en[]={"End turn","Camera: up","Camera: left","Camera: down","Camera: right"};
+    const char* fr[]={"Fin du tour","Déplacement vers le haut","Déplacement à gauche","Déplacement vers le bas","Déplacement à droite"};
+    const char* en[]={"End turn","Move up","Move left","Move down","Move right"};
     return tr(fr[i-KB_END],en[i-KB_END]);
 }
 static int key_chord(int key,int mods)
@@ -113,25 +113,30 @@ static bool key_options_event(SDL_Event* event)
     }
     return event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP || event->type==SDL_EVENT_TEXT_INPUT;
 }
-static void draw_key_options(float x,float y,float w,float h)
+static void draw_key_options(float x,float y,float w)
 {
-    float ox=x+246,ow=w-280;
-    text_draw(2,tr("Raccourcis","Key bindings"),ox,y+142,GOLD);
-    text_compact(tr("Lettre ou Espace ; molette ou Souris 4/5 pour le tri. Maj possible. Échap annule ; Retour arrière efface.","Letter or Space; middle click or Mouse 4/5 for sorting. Shift optional. Escape cancels; Backspace clears."),ox,y+182,ow,false,MUTED);
-    for(int row=0;row<KEY_ROWS_PER_PAGE;row++) {
-        int index=key_page*KEY_ROWS_PER_PAGE+row;if(index>=KB_COUNT)break;
+    int pages=(KB_COUNT+KEY_ROWS_PER_PAGE-1)/KEY_ROWS_PER_PAGE;
+    option_section(x,y+151,w,tr("Affectation des touches","Key assignments"));
+    for(int row=0;row<KEY_ROWS_PER_PAGE;row++){
+        int index=key_page*KEY_ROWS_PER_PAGE+row;
+        if(index>=KB_COUNT)break;
         int i=key_display_order[index];
-        float yy=y+222+row*42;
-        text_compact(key_label(i),ox,yy+8,ow-235,false,GOLD);
-        button((SDL_FRect){ox+ow-220,yy,220,38},480+i,key_edit==i?"...":key_name(i),-1,key_edit==i,true);
+        float yy=y+191+row*44;
+        option_row(x,yy,w,key_label(i),true);
+        option_button((SDL_FRect){x+option_label_width(w),yy+3,228,36},480+i,
+            key_edit==i?tr("Appuyez sur une touche","Press a key"):key_name(i),key_edit==i,true);
     }
-    text_compact(key_status,ox,y+601,ow,false,(SDL_Color){239,156,108,255});
-    button((SDL_FRect){ox,y+638,46,34},419,"<",-1,false,key_page>0);
-    button((SDL_FRect){ox+52,y+638,46,34},420,">",-1,false,(key_page+1)*KEY_ROWS_PER_PAGE<KB_COUNT);
-    button((SDL_FRect){ox+115,y+638,160,34},422,"AZERTY",-1,false,true);
-    button((SDL_FRect){ox+285,y+638,160,34},423,"QWERTY",-1,false,true);
-    button((SDL_FRect){ox+455,y+638,ow-455,34},424,tr("Par défaut","Defaults"),-1,false,true);
-    menu_button((SDL_FRect){x+40,y+h-82,180,54},405,menu_text(4003),true);
+    const char* hint=key_edit>=0?tr("Échap annule. Retour arrière efface le raccourci.","Escape cancels. Backspace clears the binding."):
+        tr("Sélectionnez une touche pour modifier son affectation.","Select a key to change its binding.");
+    button_label(1,*key_status?key_status:hint,(SDL_FRect){x,y+590,w,40},false,*key_status?GOLD:MUTED);
+    char page[24];snprintf(page,sizeof(page),"%d / %d",key_page+1,pages);
+    button((SDL_FRect){x,y+648,36,36},419,"<",-1,false,key_page>0);
+    button_label(1,page,(SDL_FRect){x+40,y+645,66,42},true,GOLD);
+    button((SDL_FRect){x+110,y+648,36,36},420,">",-1,false,key_page+1<pages);
+    float cx=x+option_label_width(w),bw=(fminf(400,w-option_label_width(w))-12)/3;
+    option_button((SDL_FRect){cx,y+648,bw,36},422,"AZERTY",false,true);
+    option_button((SDL_FRect){cx+bw+6,y+648,bw,36},423,"QWERTY",false,true);
+    option_button((SDL_FRect){cx+2*(bw+6),y+648,bw,36},424,tr("Par défaut","Defaults"),false,true);
 }
 static bool key_options_action(int action)
 {
