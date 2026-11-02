@@ -1,4 +1,14 @@
 {
+  "steamEnglishArt": {
+    "arcanum1.dat": {
+      "size": 447470816,
+      "sha256": "6dd9d10ef0932e02fc88f0eb5367b1bc37275db51d60bd68ac9bd7ef2d478576"
+    },
+    "arcanum2.dat": {
+      "size": 147991122,
+      "sha256": "4078653c740b2b62473a6d6b60efe4c822390fc1b0958194ac0bffa1d493e24d"
+    }
+  },
   "original": {
     "arcanum4.dat": {
       "size": 894562,

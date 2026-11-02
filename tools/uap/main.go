@@ -20,8 +20,9 @@ import (
 var assets embed.FS
 
 type catalog struct {
-	Original map[string]backupEntry `json:"original"`
-	Patch    map[string]backupEntry `json:"patch"`
+	SteamEnglishArt map[string]backupEntry `json:"steamEnglishArt"`
+	Original        map[string]backupEntry `json:"original"`
+	Patch           map[string]backupEntry `json:"patch"`
 }
 
 var work string
@@ -120,13 +121,25 @@ func compatibleEnglish(game string, c catalog) error {
 	if err := compatibleLayout(game, c); err != nil {
 		return err
 	}
-	for name, want := range c.Original {
+	// The English Steam depot (500811, manifest 6629016675592712844)
+	// ships a different pair of art archives. Match one complete pair.
+	art := c.Original
+	first, err := findCase(game, "arcanum1.dat")
+	if err != nil {
+		return err
+	}
+	if steam, ok := c.SteamEnglishArt["arcanum1.dat"]; ok {
+		if st, err := os.Stat(first); err == nil && st.Size() == steam.Size {
+			art = c.SteamEnglishArt
+		}
+	}
+	for name := range c.Original {
 		p, err := findCase(game, name)
 		if err != nil {
 			return err
 		}
 		if name == "arcanum1.dat" || name == "arcanum2.dat" {
-			if err = verify(p, want); err != nil {
+			if err = verify(p, art[name]); err != nil {
 				return err
 			}
 		}

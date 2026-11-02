@@ -75,6 +75,42 @@ func TestEditionDetection(t *testing.T) {
 		t.Fatal("accepted modified shared archive")
 	}
 }
+func TestSteamEnglishArtPair(t *testing.T) {
+	root, c := editionFixture(t)
+	putLanguage(t, root, "Level")
+	second := filepath.Join(root, "arcanum2.dat")
+	original, err := os.ReadFile(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.SteamEnglishArt = map[string]backupEntry{}
+	for _, name := range []string{"arcanum1.dat", "arcanum2.dat"} {
+		path := filepath.Join(root, name)
+		if err := writeDAT(path, map[string][]byte{"fixture": []byte("Steam English " + name)}); err != nil {
+			t.Fatal(err)
+		}
+		hash, size, err := fileHash(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.SteamEnglishArt[name] = backupEntry{size, hash}
+	}
+	if lang, err := detectEdition(root, c); err != nil || lang != "en" {
+		t.Fatalf("Steam: %q, %v", lang, err)
+	}
+	putLanguage(t, root, "Niveau")
+	if _, err := detectEdition(root, c); err == nil {
+		t.Fatal("accepted non-English text")
+	}
+	putLanguage(t, root, "Level")
+	if err := os.WriteFile(second, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := detectEdition(root, c); err == nil {
+		t.Fatal("accepted a mixed pair")
+	}
+}
+
 func TestOverlayMarkers(t *testing.T) {
 	root := t.TempDir()
 	for _, lang := range []string{"fr", "en"} {
