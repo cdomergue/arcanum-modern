@@ -7,6 +7,7 @@ import tempfile
 
 root=Path(__file__).resolve().parents[1]
 source=(root/'source/src/game/modern_shared_turn.inc').read_text()
+ai_source=(root/'source/src/game/modern_companion_ai.inc').read_text()
 code=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -24,6 +25,8 @@ static ObjectNode nodes[7];
 static struct {ObjectNode* head;} combat_critter_list;
 static ObjectNode* dword_5FC240;
 static bool tactical_enabled=true,combat_turn_based_active=true,loading,blocked;
+static bool companion_ai_enabled,companion_ai_requested,network,manual_cursor=true;
+static int ai_started,display_points;
 static int combat_action_points,combat_required_action_points,combat_turn_based_turn=1;
 static int64_t qword_5FC258;
 static int dword_5FC260;
@@ -32,7 +35,8 @@ static bool active[8],controlled[8],busy[8],fidget[8];
 static int starts[8];
 static bool obj_handle_is_valid(int64_t obj){return obj>0 && obj<8;}
 static bool critter_is_active(int64_t obj){return active[obj];}
-static bool combat_player_controls(int64_t obj){return obj_handle_is_valid(obj) && controlled[obj];}
+static bool combat_party_control_eligible(int64_t obj){return obj_handle_is_valid(obj) && controlled[obj];}
+static bool combat_player_controls(int64_t obj){return combat_party_control_eligible(obj)&&(!companion_ai_enabled||obj==1);}
 static bool sub_4B7DC0(int64_t obj){(void)obj;return false;}
 static bool gamelib_in_load(void){return loading;}
 static int64_t combat_input_actor(void){return dword_5FC240 && combat_player_controls(dword_5FC240->obj)?dword_5FC240->obj:0;}
@@ -48,7 +52,16 @@ static ObjectID obj_get_id(int64_t actor){return (ObjectID){1,actor};}
 static int64_t obj_pool_perm_lookup(ObjectID oid){return oid.type && obj_handle_is_valid(oid.id)?oid.id:0;}
 static void combat_turn_based_whos_turn_set(int64_t actor);
 static void combat_turn_based_subturn_start(void);
-''' + source + r'''
+static bool player_is_local_pc_obj(int64_t obj){return obj==1;}
+static bool tig_net_is_active(void){return network;}
+static void ap_callback(int points){display_points=points;}
+static struct {void (*field_C)(int);} combat_callbacks={ap_callback};
+static void sub_4BB910(void){}
+static bool sub_4BB900(void){return manual_cursor;}
+static void sub_4BB8F0(void){manual_cursor=false;}
+static void sub_4BB8E0(void){manual_cursor=true;}
+static void sub_4B7010(int64_t obj){assert(obj==dword_5FC240->obj);ai_started++;}
+''' + source + ai_source + r'''
 static void combat_turn_based_whos_turn_set(int64_t actor){
     dword_5FC240=combat_critter_list.head;
     while(dword_5FC240 && dword_5FC240->obj!=actor)dword_5FC240=dword_5FC240->next;
@@ -57,6 +70,7 @@ static void combat_turn_based_whos_turn_set(int64_t actor){
 }
 static void combat_turn_based_subturn_start(void){combat_turn_based_whos_turn_set(dword_5FC240->obj);}
 static void reset(void){
+    companion_ai_enabled=companion_ai_requested=network=false;ai_started=0;
     shared_turn_count=0;memset(starts,0,sizeof(starts));
     memset(busy,0,sizeof(busy));memset(fidget,0,sizeof(fidget));
     loading=blocked=false;tactical_enabled=combat_turn_based_active=true;
@@ -99,10 +113,42 @@ int main(void){
     assert(!shared_turn_load()&&shared_turn_count==0);
     reset();loading=true;assert(!shared_turn_restore(1));loading=false;
     shared_turn_count=0;combat_turn_based_whos_turn_set(1);assert(combat_action_points==10&&starts[1]==2);
+    reset();combat_action_points=6;assert(combat_shared_turn_select(2));combat_action_points=3;
+    busy[2]=true;combat_companion_ai_set(true);combat_companion_ai_sync();
+    assert(combat_companion_ai_get()&&combat_companion_ai_pending()&&combat_player_controls(2)&&combat_action_points==3);
+    busy[2]=false;combat_companion_ai_sync();
+    assert(!combat_companion_ai_pending()&&!combat_player_controls(2)&&combat_player_controls(1));
+    assert(combat_action_points==3&&ai_started==1&&display_points==0&&!manual_cursor);
+    assert(!combat_shared_turn_available(2));
+    combat_action_points=1;busy[2]=true;combat_companion_ai_set(false);combat_companion_ai_sync();
+    assert(combat_companion_ai_pending()&&!combat_player_controls(2)&&combat_action_points==1);
+    busy[2]=false;assert(combat_companion_ai_apply());
+    assert(combat_player_controls(2)&&combat_action_points==1&&display_points==1&&manual_cursor);
+    assert(combat_shared_turn_select(1)&&combat_action_points==6);
+    combat_companion_ai_set(true);combat_companion_ai_sync();
+    assert(combat_player_controls(1)&&combat_action_points==6);
+    assert(shared_turn_next()&&dword_5FC240->obj==2&&combat_action_points==1);
+    assert(!shared_turn_next());assert(shared_turn_member(2,false)->ended);
+    combat_companion_ai_set(false);combat_companion_ai_sync();assert(combat_action_points==1);
+    assert(!combat_shared_turn_available(1)&&!combat_shared_turn_available(2));
+    reset();network=true;combat_companion_ai_set(true);assert(!combat_companion_ai_get());network=false;
+    combat_companion_ai_set(true);combat_companion_ai_sync();assert(shared_turn_save());
+    assert(shared_turn_load()&&combat_companion_ai_get()&&combat_companion_ai_pending());
+    combat_companion_ai_sync();assert(companion_ai_enabled&&combat_player_controls(1));
+    /* Outside-combat saves retain the preference without restoring turn members. */
+    combat_turn_based_active=false;assert(shared_turn_save());
+    companion_ai_enabled=companion_ai_requested=false;
+    assert(shared_turn_load()&&combat_companion_ai_get()&&companion_ai_enabled&&shared_turn_count==0);
+    combat_turn_based_active=true;assert(shared_turn_save());
+    /* A version-one save without the optional setting remains readable. */
+    unsigned char bytes[8192];FILE* old=fopen("turns.dat","rb");size_t size=fread(bytes,1,sizeof(bytes),old);fclose(old);
+    old=fopen("turns.dat","wb");assert(size>sizeof(int));fwrite(bytes,1,size-sizeof(int),old);fclose(old);
+    assert(shared_turn_load()&&!combat_companion_ai_get()&&!companion_ai_enabled);
+
 }
 '''
 with tempfile.TemporaryDirectory(prefix='arcanum-shared-turns-') as directory:
     path=Path(directory);(path/'test.c').write_text(code)
     subprocess.run([os.environ.get('CC','cc'),'-std=c17','-Wall','-Wextra','-Werror',str(path/'test.c'),'-o',str(path/'test')],check=True)
     subprocess.run([str(path/'test')],cwd=path,check=True)
-print('PASS: shared turns preserve AP, enemy boundaries, ended turns, busy guards and saved state')
+print('PASS: shared turns preserve AP, enemy boundaries, ended turns, busy guards and saved state; AI handoffs, deferred actions, unchanged AP and old saves')

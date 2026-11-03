@@ -283,6 +283,7 @@ static void tactical_tick(void)
         tactical_was_active=false;return;
     }
     enabled=true;
+    combat_companion_ai_sync();
     modern_combat_sync();
     int64_t actor=combat_turn_based_whos_turn_get();
     if(!tactical_was_active){tactical_page=0;}
@@ -379,7 +380,8 @@ static void tactical_button(SDL_FRect r,int action,const char* label,bool select
 {
     button(r,action,"",-1,selected,available);
     if(!control_symbol(r,label,available,selected || (available && inside(r,mouse_x,mouse_y))))
-        text_compact(label,r.x+5,r.y+(r.h-fonts[0].size)/2,r.w-10,true,menu_control_color(r,selected,available));
+        button_label(0,label,(SDL_FRect){r.x+5,r.y+3,r.w-10,r.h-6-(action==1100?18:0)},
+            true,menu_control_color(r,selected,available));
 }
 static void draw_tactical_hud(void)
 {
@@ -401,7 +403,7 @@ static void draw_tactical_hud(void)
         char name[1024];object_examine(obj,player_get_local_pc_obj(),name);
         text_compact(game_text(name),x+38,20,32,false,menu_control_color(rect,selected,true));
         int hp=object_hp_max(obj);float fraction=hp>0?(float)object_hp_current(obj)/hp:0;
-        fill((SDL_FRect){x+38,49,30*fmaxf(0,fminf(1,fraction)),4},combat_player_controls(obj)?(SDL_Color){107,176,116,255}:(SDL_Color){190,74,57,255});
+        fill((SDL_FRect){x+38,49,30*fmaxf(0,fminf(1,fraction)),4},(player_is_local_pc_obj(obj) || player_is_local_pc_obj(critter_pc_leader_get(obj)))?(SDL_Color){107,176,116,255}:(SDL_Color){190,74,57,255});
         if(inside(rect,mouse_x,mouse_y)){
             const char* n=game_text(name);float w=text_measure(1,n)+20;
             hud_panel((SDL_FRect){x,80,w,30});text_draw(1,n,x+10,82,GOLD);
@@ -424,7 +426,8 @@ static void draw_tactical_hud(void)
     bool preview=tactical_has_preview && tactical_preview.actor==actor && !native_panel() && !tactical_region(mouse_x,mouse_y);
     int after=preview?combat_action_points_get()-tactical_preview.cost:combat_action_points_get();
     if(preview){char next[96];snprintf(next,sizeof(next),"%s %s%d %s",tr("Après :","After:"),tactical_preview.count>1?"~":"",after>0?after:0,tactical_text(TC_AP));text_compact(next,x+350,y+35,185,false,tactical_preview.affordable?GOLD:(SDL_Color){236,128,95,255});}
-    if(!ready)text_compact(tactical_text(owned?TC_BUSY:TC_WAIT),x+350,y+35,185,false,MUTED);
+    if(!ready)text_compact(!owned && player_is_local_pc_obj(critter_pc_leader_get(actor))
+        ?tr("Tour du compagnon","Companion turn"):tactical_text(owned?TC_BUSY:TC_WAIT),x+350,y+35,185,false,MUTED);
     int pa=combat_action_points_get();
     int cells=max>30?30:max;
     for(int i=0;i<cells;i++)fill((SDL_FRect){x+172+i*363.0f/cells,y+64,363.0f/cells-3,8},i*max<pa*cells?(preview && i*max>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
@@ -436,9 +439,22 @@ static void draw_tactical_hud(void)
         Hotkey* hk=modern_hotkey_get(i);if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+4,r.y+2,29,26},true);
         char digit[3];snprintf(digit,sizeof(digit),"%d",(i+1)%10);text_draw(0,digit,r.x+1,r.y+19,MUTED);
     }
+    bool companion_ai=combat_companion_ai_get();
+    char ai_label[64];snprintf(ai_label,sizeof(ai_label),"%s%s",
+        companion_ai?tr("Compagnons : auto","Companions: auto"):tr("Compagnons : manuel","Companions: manual"),combat_companion_ai_pending()?" *":"");
+    SDL_FRect ai_button={x+775,y+83,125,24};
+    tactical_button(ai_button,1109,ai_label,companion_ai,!tig_net_is_active());
     tactical_button((SDL_FRect){x+550,y+83,210,24},1106,tactical_text(TC_LOG),tactical_log_open,true);
+    if(inside(ai_button,mouse_x,mouse_y)) {
+        const char* hint=combat_companion_ai_pending()
+            ?tr("Compagnons : changement après l’action en cours","Companions: change after the current action")
+            :companion_ai?tr("Reprendre le contrôle manuel des compagnons","Take manual control of companions")
+            :tr("Confier les compagnons à leur IA de combat","Let the combat AI control companions");
+        float width=text_measure(0,hint)+24;SDL_FRect tip={fminf(canvas_w-width-12,x+550),y-38,width,30};
+        hud_panel(tip);text_draw(0,hint,tip.x+12,tip.y+6,GOLD);
+    }
     tactical_button((SDL_FRect){x+775,y+18,125,56},1100,tactical_text(TC_END),false,ready);
-    centered(0,key_name(KB_END),x+837,y+84,MUTED);
+    button_label(0,key_name(KB_END),(SDL_FRect){x+780,y+54,115,15},true,MUTED);
     if(*message_text && SDL_GetTicks()-message_time<8000){
         float width=fminf(940,text_measure(0,message_text)+32);
         SDL_FRect r={(canvas_w-width)/2,y-39,width,30};
@@ -453,6 +469,12 @@ static bool tactical_action(int action)
     if(action==1107){tactical_log_move(TACTICAL_LOG_ROWS);return true;}
     if(action==1108){tactical_log_move(-TACTICAL_LOG_ROWS);return true;}
     if(!tactical_active())return false;
+    if(action==1109){
+        selector=0;tactical_has_preview=false;
+        if(intgame_mode_get()==INTGAME_MODE_SPELL)spell_ui_cancel();
+        else if(intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_ITEM)intgame_mode_set(INTGAME_MODE_MAIN);
+        combat_companion_ai_set(!combat_companion_ai_get());return true;
+    }
     if(action==1101){if(tactical_page>0)tactical_page--;return true;}
     if(action==1102){if((tactical_page+1)*10<tactical_count)tactical_page++;return true;}
     if(action==1110){if(tactical_spell_page>0)tactical_spell_page--;return true;}

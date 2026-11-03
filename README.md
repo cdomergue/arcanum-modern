@@ -141,6 +141,11 @@ available.
   with consecutive turns can switch while they have action points. **End turn**
   finishes the selected character; enemies act after the group finishes.
   Left-click highlighted scenery in combat mode to attack it.
+  Use **Companions: auto / manual** beside the combat log to let companions act automatically
+  or take manual control again. Your character remains under manual control.
+  Changes wait for the current companion action to finish and preserve remaining
+  action points. The choice carries over to subsequent combats and is preserved
+  in saves, including saves made outside combat.
 - **Maps and journal:** drag the map to pan. On travel and continent maps, the
   mouse wheel zooms in and out continuously, down to the full map. Travel
   destinations and route points follow the zoomed view.

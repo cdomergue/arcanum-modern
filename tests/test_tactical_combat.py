@@ -13,7 +13,7 @@ def function(name):
     assert m,name
     end=source.index('\n}',m.end())+2
     return source[m.start():end]+'\n'
-names=['combat_player_controls','combat_input_actor','combat_input_ready',
+names=['combat_party_control_eligible','combat_player_controls','combat_input_actor','combat_input_ready',
        'combat_input_end_turn','combat_check_action_points','combat_consume_action_points',
        'combat_turn_based_end_critter_turn','sub_4B7080','sub_4B7010','combat_tb_timeevent_process']
 prelude=r'''
@@ -46,7 +46,8 @@ typedef struct {int type;} TimeEvent;
 typedef struct {int delay;} DateTime;
 static ObjectNode turn={2};static ObjectNode* dword_5FC240=&turn;
 static bool tactical_enabled=true,combat_turn_based_active=true;
-static bool camera_blocked;
+static bool camera_blocked,companion_ai_enabled;
+static bool combat_companion_ai_apply(void){return false;}
 static int64_t selected;
 static int64_t modern_party_selected(void){return selected;}
 static bool modern_combat_input_blocked(void){return camera_blocked;}

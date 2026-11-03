@@ -25,7 +25,7 @@ static void shared_turn_store(void)
 
 static bool shared_turn_restore(int64_t actor)
 {
-    if(!tactical_enabled || gamelib_in_load() || !combat_player_controls(actor))return false;
+    if(!tactical_enabled || gamelib_in_load() || !combat_party_control_eligible(actor))return false;
     SharedTurnMember* member=shared_turn_member(actor,true);
     if(!member || !member->started)return false;
     combat_action_points=member->ended?0:member->points;
@@ -34,7 +34,7 @@ static bool shared_turn_restore(int64_t actor)
 
 static void shared_turn_started(int64_t actor)
 {
-    if(!tactical_enabled || gamelib_in_load() || !combat_player_controls(actor))return;
+    if(!tactical_enabled || gamelib_in_load() || !combat_party_control_eligible(actor))return;
     SharedTurnMember* member=shared_turn_member(actor,true);
     if(member){member->started=true;member->points=combat_action_points;}
 }
@@ -43,12 +43,12 @@ static bool shared_turn_block(ObjectNode** first,ObjectNode** last)
 {
     *first=*last=NULL;
     if(!tactical_enabled || !combat_turn_based_active || !dword_5FC240
-        || !combat_player_controls(dword_5FC240->obj))return false;
+        || !combat_party_control_eligible(dword_5FC240->obj))return false;
     bool found=false;
     for(ObjectNode* node=combat_critter_list.head;node;node=node->next){
         bool current=node==dword_5FC240;
         if(!current && (!obj_handle_is_valid(node->obj) || !critter_is_active(node->obj) || sub_4B7DC0(node->obj)))continue;
-        if(combat_player_controls(node->obj)){
+        if(combat_party_control_eligible(node->obj)){
             if(!*first)*first=node;
             *last=node;
             if(current)found=true;
@@ -100,7 +100,7 @@ static bool shared_turn_next(void)
     for(ObjectNode* node=first;node;node=node->next){
         member=shared_turn_member(node->obj,false);
         if(obj_handle_is_valid(node->obj) && critter_is_active(node->obj) && !sub_4B7DC0(node->obj)
-            && combat_player_controls(node->obj) && (!member || !member->ended)){
+            && combat_party_control_eligible(node->obj) && (!member || !member->ended)){
             dword_5FC240=node;
             qword_5FC258=OBJ_HANDLE_NULL;dword_5FC260=0;dword_5FC264=false;
             combat_turn_based_subturn_start();
@@ -137,20 +137,25 @@ static bool shared_turn_save(void)
         ObjectID oid=obj_handle_is_valid(node->obj)?obj_get_id(node->obj):(ObjectID){.type=OID_TYPE_NULL};
         ok=tig_file_fwrite(&oid,sizeof(oid),1,file)==1;
     }
+    /* Optional trailing setting: old readers ignore it, old saves default to manual. */
+    int companion_ai=companion_ai_requested?1:0;
+    ok=ok && tig_file_fwrite(&companion_ai,sizeof(companion_ai),1,file)==1;
     if(tig_file_fclose(file)!=0)ok=false;
     return ok;
 }
 
 static bool shared_turn_load(void)
 {
+    companion_ai_enabled=companion_ai_requested=false;
     shared_turn_count=0;
-    if(!tactical_enabled || !combat_turn_based_active)return true;
+    if(!tactical_enabled)return true;
     TigFile* file=tig_file_fopen("Save\\Current\\modern-turns.dat","rb");
     if(file){
         int version=0,round=0,count=0;
         bool ok=tig_file_fread(&version,sizeof(version),1,file)==1 && version==1
-            && tig_file_fread(&round,sizeof(round),1,file)==1 && round==combat_turn_based_turn
-            && tig_file_fread(&count,sizeof(count),1,file)==1 && count>=0 && count<=SHARED_TURN_CAPACITY;
+            && tig_file_fread(&round,sizeof(round),1,file)==1 && (!combat_turn_based_active || round==combat_turn_based_turn)
+            && tig_file_fread(&count,sizeof(count),1,file)==1 && count>=0 && count<=SHARED_TURN_CAPACITY
+            && (combat_turn_based_active || count==0);
         for(int i=0;ok && i<count;i++){
             ObjectID oid;int points,state;
             ok=tig_file_fread(&oid,sizeof(oid),1,file)==1
@@ -172,8 +177,14 @@ static bool shared_turn_load(void)
             ok=tig_file_fread(&oid,sizeof(oid),1,file)==1;
             order[i]=ok?obj_pool_perm_lookup(oid):OBJ_HANDLE_NULL;
         }
+        int companion_ai=0;
+        if(ok && tig_file_fread(&companion_ai,sizeof(companion_ai),1,file)==1) {
+            if(companion_ai!=0 && companion_ai!=1)ok=false;
+            else companion_ai_requested=companion_ai!=0;
+        }
         tig_file_fclose(file);
         if(!ok){shared_turn_count=0;return false;}
+        if(!combat_turn_based_active){companion_ai_enabled=companion_ai_requested;return true;}
         ObjectNode* ordered=NULL;
         ObjectNode** tail=&ordered;
         for(int i=0;i<order_count;i++){
@@ -187,14 +198,15 @@ static bool shared_turn_load(void)
         *tail=combat_critter_list.head;
         combat_critter_list.head=ordered;
     }else{
+        if(!combat_turn_based_active)return true;
         for(ObjectNode* node=combat_critter_list.head;node && node!=dword_5FC240;node=node->next){
-            if(combat_player_controls(node->obj)){
+            if(combat_party_control_eligible(node->obj)){
                 SharedTurnMember* member=shared_turn_member(node->obj,true);
                 if(member){member->started=true;member->ended=true;}
             }
         }
     }
-    if(dword_5FC240 && combat_player_controls(dword_5FC240->obj)){
+    if(dword_5FC240 && combat_party_control_eligible(dword_5FC240->obj)){
         SharedTurnMember* member=shared_turn_member(dword_5FC240->obj,true);
         if(!member)return false;
         member->started=true;member->ended=false;member->points=combat_action_points;

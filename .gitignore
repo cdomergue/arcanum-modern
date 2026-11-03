@@ -31,6 +31,7 @@
 !/source/src/game/
 /source/src/game/*
 !/source/src/game/modern_shared_turn.inc
+!/source/src/game/modern_companion_ai.inc
 !/source/src/game/modern_autosave.c
 !/source/src/game/modern_autosave.h
 !/source/src/game/modern_uap.c
