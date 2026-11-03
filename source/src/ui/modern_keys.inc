@@ -164,6 +164,6 @@ static int key_for_action(int action)
 {
     switch(action){case 2:case 1104:return KB_INVENTORY;case 0:return KB_JOURNAL;
     case 1:case 1105:return KB_CHARACTER;case 3:return KB_MAP;case 6:return KB_SPELLS;
-    case 7:return KB_COMBAT;case 5:return KB_SKILLS;case 8:return KB_SCHEMATICS;case 9:return KB_REST;
+    case 7:case 1103:return KB_COMBAT;case 5:return KB_SKILLS;case 8:return KB_SCHEMATICS;case 9:return KB_REST;
     case 731:return KB_SORT;case 951:return KB_STEALTH;case 950:return KB_STEAL;case 1100:return KB_END;default:return -1;}
 }

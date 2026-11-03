@@ -86,6 +86,8 @@ connection does not prevent the game from starting.
 On first launch, Renaissance prepares detailed local maps from your game files.
 Allow about **8 GB** for Arcanum and Vormantown, plus temporary working space.
 Choose **Play now** to use the original maps; preparation resumes next launch.
+Choose **Skip and don’t ask again** to disable automatic preparation.
+Use **Options > Graphics > HD maps > Start generation** to resume manually.
 Completed maps are reused.
 
 If preparation fails, check `modern-ui/.map-work/generation.log` in the game

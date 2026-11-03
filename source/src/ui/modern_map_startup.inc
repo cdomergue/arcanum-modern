@@ -1,6 +1,11 @@
-bool modern_ui_prepare_maps(const char* executable)
+static bool prepare_maps(const char* executable, bool manual)
 {
-    if (!enabled || modern_maps_cached_ready()) return true;
+    if (!enabled || (!manual && skip_map_generation)) return true;
+    if (modern_maps_cached_ready()) {
+        if (manual) SDL_strlcpy(modern_graphics.status, tr("Les cartes HD sont déjà prêtes.", "HD maps are already ready."), sizeof(modern_graphics.status));
+        return true;
+    }
+    SDL_Scancode closing_key = SDL_SCANCODE_UNKNOWN;
     SDL_Process* process = modern_maps_start(executable);
     char launch_error[256] = "";
     if (!process) SDL_strlcpy(launch_error, SDL_GetError(), sizeof(launch_error));
@@ -29,16 +34,20 @@ bool modern_ui_prepare_maps(const char* executable)
         SDL_SetRenderLogicalPresentation(renderer, (int)canvas_w, (int)canvas_h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
         float cx = canvas_w / 2, cy = canvas_h / 2;
-        SDL_FRect button = {cx - 160, cy + 142, 320, 48};
+        SDL_FRect button = {cx - 390, cy + 142, 300, 48};
+        SDL_FRect never = {cx - 70, cy + 142, 460, 48};
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {proceed = false; finished = true;}
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
-                && (event.key.scancode == SDL_SCANCODE_ESCAPE || event.key.scancode == SDL_SCANCODE_RETURN)) finished = true;
+                && (event.key.scancode == SDL_SCANCODE_ESCAPE || event.key.scancode == SDL_SCANCODE_RETURN)) closing_key = event.key.scancode;
+            if (event.type == SDL_EVENT_KEY_UP && closing_key != SDL_SCANCODE_UNKNOWN
+                && event.key.scancode == closing_key) finished = true;
             if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && event.button.button == SDL_BUTTON_LEFT) {
                 float x, y;
                 SDL_RenderCoordinatesFromWindow(renderer, event.button.x, event.button.y, &x, &y);
                 if (inside(button, x, y)) finished = true;
+                if (inside(never, x, y)) {skip_map_generation = true; save_settings(); finished = true;}
             }
         }
         draw_menu_background();
@@ -65,17 +74,31 @@ bool modern_ui_prepare_maps(const char* executable)
         else if (progress.total) SDL_snprintf(status, sizeof(status), "%d%%  —  %llu / %llu", (int)(fraction * 100), progress.done, progress.total);
         else SDL_strlcpy(status, tr("Vérification et préparation…", "Checking and preparing…"), sizeof(status));
         centered(0, status, cx, cy + 43, GOLD);
-        centered(0, tr("Vous pouvez jouer maintenant et reprendre au prochain lancement.", "You can play now and resume at the next launch."), cx, cy + 94, MUTED);
+        centered(0, tr("Reprise possible dans Options > Graphismes > Cartes HD.", "Resume from Options > Graphics > HD maps."), cx, cy + 94, MUTED);
         fill(button, (SDL_Color){54,38,21,255}); outline(button, GOLD);
-        centered(0, tr("Jouer maintenant", "Play now"), cx, button.y + 13, GOLD);
+        button_label(0, manual ? tr("Retour aux options", "Back to options") : tr("Jouer maintenant", "Play now"), button, true, GOLD);
+        fill(never, (SDL_Color){54,38,21,255}); outline(never, GOLD);
+        button_label(0, tr("Passer et ne plus demander", "Skip and don’t ask again"), never, true, GOLD);
         SDL_RenderPresent(renderer);
         SDL_Delay(33);
     }
     if (running) {SDL_KillProcess(process, true); SDL_WaitProcess(process, true, &exit_code);}
     if (process) SDL_DestroyProcess(process);
+    if (manual) {
+        /* Recheck even a previously missing cache when returning to the map. */
+        map_cache_clear();
+        SDL_strlcpy(modern_graphics.status, !failed && !running
+            ? tr("Les cartes HD sont prêtes.", "HD maps are ready.")
+            : tr("Génération interrompue ; reprise possible ici.", "Generation stopped; you can resume here."), sizeof(modern_graphics.status));
+    }
     if (!cursor_visible) SDL_HideCursor();
     SDL_SetRenderDrawBlendMode(renderer, old_blend);
     SDL_SetRenderLogicalPresentation(renderer, old_w, old_h, old_mode);
     SDL_SetRenderTarget(renderer, old_target);
     return proceed;
+}
+
+bool modern_ui_prepare_maps(const char* executable)
+{
+    return prepare_maps(executable, false);
 }

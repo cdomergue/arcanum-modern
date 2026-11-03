@@ -115,13 +115,14 @@ void modern_combat_rejected(int64_t actor,int64_t target,int reason,int required
 
 static SDL_FRect tactical_log_rect(void)
 {
-    return (SDL_FRect){(canvas_w-980)/2,canvas_h-492,980,318};
+    SDL_FRect bar=bottom_bar_rect(0,0,BOTTOM_BAR_SOURCE_WIDTH,BOTTOM_BAR_SOURCE_HEIGHT);
+    return (SDL_FRect){bar.x,bar.y-330,bar.w,318};
 }
 
 static bool tactical_log_region(float x,float y)
 {
     return (tactical_log_open && inside(tactical_log_rect(),x,y))
-        || (!tactical_active() && tactical_line_count && inside((SDL_FRect){(canvas_w-980)/2,canvas_h-164,190,30},x,y));
+        || (!tactical_active() && tactical_line_count && inside((SDL_FRect){(canvas_w-980)/2,bottom_bar_rect(0,0,0,0).y-38,190,30},x,y));
 }
 
 static void tactical_log_move(int amount)
@@ -142,7 +143,7 @@ static bool tactical_log_event(SDL_Event* event)
 static void draw_tactical_log(void)
 {
     if(!tactical_active() && tactical_line_count)
-        button((SDL_FRect){(canvas_w-980)/2,canvas_h-164,190,30},1106,tactical_text(TC_LOG),-1,tactical_log_open,true);
+        button((SDL_FRect){(canvas_w-980)/2,bottom_bar_rect(0,0,0,0).y-38,190,30},1106,tactical_text(TC_LOG),-1,tactical_log_open,true);
     if(!tactical_log_open)return;
     SDL_FRect r=tactical_log_rect();hud_panel(r);
     text_draw(0,tactical_text(TC_LOG),r.x+12,r.y+10,GOLD);
@@ -269,7 +270,7 @@ static bool tactical_camera_event(SDL_Event* event)
 static bool tactical_region(float x,float y)
 {
     return maintained_region(x,y) || party_region(x,y) || inside((SDL_FRect){(canvas_w-930)/2,10,930,66},x,y)
-        || inside((SDL_FRect){(canvas_w-980)/2,canvas_h-126,980,116},x,y)
+        || inside(bottom_bar_rect(0,0,BOTTOM_BAR_SOURCE_WIDTH,BOTTOM_BAR_SOURCE_HEIGHT),x,y)
         || tactical_log_region(x,y);
 }
 static void tactical_tick(void)
@@ -366,7 +367,7 @@ static void draw_tactical_preview(void)
     }
     float height=31+(*health?24:0)+(*detail?24:0);
     float width=fminf(900,fmaxf(text_measure(0,detail),fmaxf(text_measure(0,line),text_measure(0,health)))+42);
-    float x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(canvas_h-137-height,mouse_y+36);
+    float x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(bottom_bar_rect(0,0,0,0).y-12-height,mouse_y+36);
     /* Keep action cost/chance feedback clear of the character inspection card. */
     if(world_hover_rect.h>0 && x<world_hover_rect.x+world_hover_rect.w && x+width>world_hover_rect.x
         && y<world_hover_rect.y+world_hover_rect.h && y+height>world_hover_rect.y)
@@ -380,9 +381,56 @@ static void tactical_button(SDL_FRect r,int action,const char* label,bool select
 {
     button(r,action,"",-1,selected,available);
     if(!control_symbol(r,label,available,selected || (available && inside(r,mouse_x,mouse_y))))
-        button_label(0,label,(SDL_FRect){r.x+5,r.y+3,r.w-10,r.h-6-(action==1100?18:0)},
+        button_label(0,label,(SDL_FRect){r.x+5,r.y+3,r.w-10,r.h-6},
             true,menu_control_color(r,selected,available));
 }
+static void draw_tactical_bottom_content(int64_t actor,bool ready,SDL_FRect content)
+{
+    /* Inspection occupies only the upper part: turn controls never disappear. */
+    SDL_FRect info=content;info.h-=34;
+    if(!draw_bottom_hover(info)) {
+        tactical_portrait(actor,(SDL_FRect){info.x,info.y+2,42,55});
+        float x=info.x+52,width=info.w-52;
+        char name[1024];object_examine(actor,player_get_local_pc_obj(),name);
+        button_label(0,game_text(name),(SDL_FRect){x,info.y,width,17},false,GOLD);
+        int pa=combat_action_points_get(),maximum=SDL_max(5,stat_level_get(actor,STAT_SPEED));
+        char points[96];snprintf(points,sizeof(points),"%s  %d / %d",tactical_text(TC_AP),pa,maximum);
+        button_label(1,points,(SDL_FRect){x,info.y+19,width*.46f,24},false,GOLD);
+        bool preview=tactical_has_preview && tactical_preview.actor==actor && !native_panel() && !tactical_region(mouse_x,mouse_y);
+        int after=preview?pa-tactical_preview.cost:pa;
+        char status[128]="";
+        if(!ready)SDL_strlcpy(status,!combat_player_controls(actor) && player_is_local_pc_obj(critter_pc_leader_get(actor))
+            ?tr("Tour du compagnon","Companion turn"):tactical_text(combat_player_controls(actor)?TC_BUSY:TC_WAIT),sizeof(status));
+        else if(preview)snprintf(status,sizeof(status),"%s %s%d %s",tr("Après :","After:"),tactical_preview.count>1?"~":"",SDL_max(0,after),tactical_text(TC_AP));
+        button_label(0,status,(SDL_FRect){x+width*.47f,info.y+19,width*.53f,24},true,
+            preview && !tactical_preview.affordable?(SDL_Color){236,128,95,255}:MUTED);
+        int cells=SDL_min(maximum,30);
+        for(int i=0;i<cells;i++)fill((SDL_FRect){x+i*width/cells,info.y+info.h-10,width/cells-3,8},
+            i*maximum<pa*cells?(preview && i*maximum>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
+    }
+    float y=content.y+content.h-28,gap=6;
+    float ai_width=content.w*.37f,log_width=content.w*.25f;
+    SDL_FRect ai={content.x,y,ai_width,28};
+    SDL_FRect log={ai.x+ai.w+gap,y,log_width,28};
+    SDL_FRect end={log.x+log.w+gap,y,content.x+content.w-log.x-log.w-gap,28};
+    bool automatic=combat_companion_ai_get();char label[128];
+    snprintf(label,sizeof(label),"%s%s",automatic?tr("Compagnons : auto","Companions: auto"):tr("Compagnons : manuel","Companions: manual"),combat_companion_ai_pending()?" *":"");
+    tactical_button(ai,1109,label,automatic,!tig_net_is_active());
+    tactical_button(log,1106,game_text(modern_intgame_text(1004)),tactical_log_open,true);
+    snprintf(label,sizeof(label),"%s [%s]",tactical_text(TC_END),key_name(KB_END));
+    tactical_button(end,1100,label,false,ready);
+    if(ready)outline((SDL_FRect){end.x+2,end.y+2,end.w-4,end.h-4},GOLD);
+    if(inside(ai,mouse_x,mouse_y)) {
+        const char* hint=combat_companion_ai_pending()
+            ?tr("Compagnons : changement après l’action en cours","Companions: change after the current action")
+            :automatic?tr("Reprendre le contrôle manuel des compagnons","Take manual control of companions")
+            :tr("Confier les compagnons à leur IA de combat","Let the combat AI control companions");
+        float width=ceilf(text_measure(0,hint))+24;
+        SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,ai.x)),bottom_bar_rect(0,0,0,0).y-38,width,30};
+        hud_panel(tip);button_label(0,hint,tip,true,GOLD);
+    }
+}
+
 static void draw_tactical_hud(void)
 {
     float tx=(canvas_w-930)/2;hud_frame((SDL_FRect){tx,10,930,66},false);
@@ -409,60 +457,15 @@ static void draw_tactical_hud(void)
             hud_panel((SDL_FRect){x,80,w,30});text_draw(1,n,x+10,82,GOLD);
         }
     }
-    float x=(canvas_w-980)/2,y=canvas_h-126;hud_frame((SDL_FRect){x,y,980,116},true);
     int64_t actor=tactical_actor;if(!actor || !obj_handle_is_valid(actor))return;
-    bool ready=combat_input_ready(actor),owned=combat_player_controls(actor);
-    gauge(x+27,y+9,object_hp_current(actor),object_hp_max(actor),false);
-    gauge(x+915,y+9,critter_fatigue_current(actor),critter_fatigue_max(actor),true);
-    SDL_FRect portrait_frame={x+116,y+16,44,59};
-    if(hud_atlas)hud_button_surface(portrait_frame,false,true,false);
-    else {fill(portrait_frame,(SDL_Color){18,12,8,255});outline(portrait_frame,MUTED);}
-    tactical_portrait(actor,(SDL_FRect){x+121,y+21,34,49});
-    char name[1024];object_examine(actor,player_get_local_pc_obj(),name);
-    text_compact(game_text(name),x+172,y+14,365,false,GOLD);
-    char points[120];int max=stat_level_get(actor,STAT_SPEED);if(max<5)max=5;
-    snprintf(points,sizeof(points),"%s  %d / %d",tactical_text(TC_AP),combat_action_points_get(),max);
-    text_draw(1,points,x+172,y+34,GOLD);
-    bool preview=tactical_has_preview && tactical_preview.actor==actor && !native_panel() && !tactical_region(mouse_x,mouse_y);
-    int after=preview?combat_action_points_get()-tactical_preview.cost:combat_action_points_get();
-    if(preview){char next[96];snprintf(next,sizeof(next),"%s %s%d %s",tr("Après :","After:"),tactical_preview.count>1?"~":"",after>0?after:0,tactical_text(TC_AP));text_compact(next,x+350,y+35,185,false,tactical_preview.affordable?GOLD:(SDL_Color){236,128,95,255});}
-    if(!ready)text_compact(!owned && player_is_local_pc_obj(critter_pc_leader_get(actor))
-        ?tr("Tour du compagnon","Companion turn"):tactical_text(owned?TC_BUSY:TC_WAIT),x+350,y+35,185,false,MUTED);
-    int pa=combat_action_points_get();
-    int cells=max>30?30:max;
-    for(int i=0;i<cells;i++)fill((SDL_FRect){x+172+i*363.0f/cells,y+64,363.0f/cells-3,8},i*max<pa*cells?(preview && i*max>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
-    const int ids[]={1103,6,5,1104,1105};
-    const char* names[]={tactical_text(TC_ATTACK),game_text(modern_intgame_text(1000)),game_text(modern_intgame_text(1001)),game_text(modern_intgame_text(1006)),game_text(modern_intgame_text(1005))};
-    for(int i=0;i<5;i++)tactical_button((SDL_FRect){x+100+i*90,y+82,86,25},ids[i],names[i],false,ready);
-    if(owned)for(int i=0;i<10;i++){
-        SDL_FRect r={x+550+(i%5)*43,y+13+(i/5)*38,38,34};button(r,300+hotbar_offset()+i,"",-1,false,ready);
-        Hotkey* hk=modern_hotkey_get(hotbar_offset()+i);if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+4,r.y+2,29,26},true);
-        char digit[4];snprintf(digit,sizeof(digit),"%s%d",hotbar_offset()?"+":"",(i+1)%10);button_label(0,digit,(SDL_FRect){r.x+3,r.y+r.h-14,r.w-6,11},false,MUTED);
-    }
-    bool companion_ai=combat_companion_ai_get();
-    char ai_label[64];snprintf(ai_label,sizeof(ai_label),"%s%s",
-        companion_ai?tr("Compagnons : auto","Companions: auto"):tr("Compagnons : manuel","Companions: manual"),combat_companion_ai_pending()?" *":"");
-    SDL_FRect ai_button={x+775,y+83,125,24};
-    tactical_button(ai_button,1109,ai_label,companion_ai,!tig_net_is_active());
-    tactical_button((SDL_FRect){x+550,y+83,210,24},1106,tactical_text(TC_LOG),tactical_log_open,true);
-    if(inside(ai_button,mouse_x,mouse_y)) {
-        const char* hint=combat_companion_ai_pending()
-            ?tr("Compagnons : changement après l’action en cours","Companions: change after the current action")
-            :companion_ai?tr("Reprendre le contrôle manuel des compagnons","Take manual control of companions")
-            :tr("Confier les compagnons à leur IA de combat","Let the combat AI control companions");
-        float width=text_measure(0,hint)+24;SDL_FRect tip={fminf(canvas_w-width-12,x+550),y-38,width,30};
-        hud_panel(tip);text_draw(0,hint,tip.x+12,tip.y+6,GOLD);
-    }
-    tactical_button((SDL_FRect){x+775,y+18,125,56},1100,tactical_text(TC_END),false,ready);
-    button_label(0,key_name(KB_END),(SDL_FRect){x+780,y+54,115,15},true,MUTED);
+    draw_bottom_bar(actor,combat_input_ready(actor),true);
     if(*message_text && SDL_GetTicks()-message_time<8000){
         float width=fminf(940,text_measure(0,message_text)+32);
-        SDL_FRect r={(canvas_w-width)/2,y-39,width,30};
-        hud_panel(r);
-        text_compact(message_text,r.x+12,r.y+6,r.w-24,true,GOLD);
+        SDL_FRect r={(canvas_w-width)/2,bottom_bar_rect(0,0,0,0).y-39,width,30};
+        hud_panel(r);text_compact(message_text,r.x+12,r.y+6,r.w-24,true,GOLD);
     }
-
 }
+
 typedef struct SelectorSpell { int spell; int64_t item,actor; } SelectorSpell;
 static SelectorSpell selector_spells[10];
 static int selector_spell_count,selector_spell_pages=1;
