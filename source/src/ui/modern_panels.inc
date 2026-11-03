@@ -142,6 +142,7 @@ static QuickBinding binding_hover(void)
         int action=buttons[i].action;
         if(action>=870 && action<875) {result.type=HOTKEY_SPELL;result.data=selector_college*5+action-870;}
         if(action>=1400 && action<1480) {result.type=HOTKEY_SPELL;result.data=action-1400;}
+        if(selector_item_binding(action,&result.item,&result.data))result.type=HOTKEY_ITEM_SPELL;
         if(action>=880 && action<884) {result.type=HOTKEY_SKILL;result.data=action-880;}
         if(result.type==HOTKEY_SPELL && !spell_is_known(result.actor,result.data))result.type=HOTKEY_NONE;
         return result;
@@ -150,7 +151,7 @@ static QuickBinding binding_hover(void)
 }
 static int binding_slot_at(float x,float y)
 {
-    if(binding_bar_visible)for(int i=0;i<10;i++)if(inside(binding_slots[i],x,y))return i;
+    if(binding_bar_visible)for(int i=0;i<10;i++)if(inside(binding_slots[i],x,y))return hotbar_offset()+i;
     return -1;
 }
 static void binding_tick(void)
@@ -172,16 +173,16 @@ static void draw_binding_bar(void)
             SDL_FRect r={x+i*pitch,y,pitch-6,binding_dock.h};binding_slots[i]=r;
             if(hud_atlas)hud_button_surface(r,false,true,binding_pressed && inside(r,mouse_x,mouse_y));
             else {fill(r,(SDL_Color){40,29,18,255});outline(r,MUTED);}
-            Hotkey* hk=modern_hotkey_get(i);
+            Hotkey* hk=modern_hotkey_get(hotbar_offset()+i);
             float side=fminf(r.w-10,r.h-8);
             if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+(r.w-side)/2,r.y+4,side,side},true);
-            char number[4];snprintf(number,sizeof(number),"%d",(i+1)%10);text_draw(0,number,r.x+3,r.y+22,GOLD);
+            char number[4];snprintf(number,sizeof(number),"%s%d",hotbar_offset()?"+":"",(i+1)%10);button_label(0,number,(SDL_FRect){r.x+3,r.y+r.h-14,r.w-6,11},false,GOLD);
         }
     }
     if(binding_pressed && binding_moved) {
         if(binding_drag.type==HOTKEY_ITEM && obj_handle_is_valid(binding_drag.item))
             draw_art_id(obj_field_int32_get(binding_drag.item,OBJ_F_ITEM_INV_AID),(SDL_FRect){mouse_x+12,mouse_y+12,48,48},true);
-        else if(binding_drag.type==HOTKEY_SPELL)draw_art(spell_icon(binding_drag.data),(SDL_FRect){mouse_x+12,mouse_y+12,48,48},true);
+        else if(binding_drag.type==HOTKEY_SPELL || binding_drag.type==HOTKEY_ITEM_SPELL)draw_art(spell_icon(binding_drag.data),(SDL_FRect){mouse_x+12,mouse_y+12,48,48},true);
         else if(binding_drag.type==HOTKEY_SKILL)draw_art(sub_579F50(binding_drag.data),(SDL_FRect){mouse_x+12,mouse_y+12,48,48},true);
     }
 }
@@ -195,7 +196,7 @@ static bool binding_event(SDL_Event* event)
         if(key>=SDL_SCANCODE_1 && key<=SDL_SCANCODE_0)slot=key-SDL_SCANCODE_1;
         if(slot>=0) {
             QuickBinding source=binding_hover();
-            if(source.type){source.slot=slot;binding_pending=source;}
+            if(source.type){source.slot=slot+((event->key.mod&SDL_KMOD_SHIFT)?10:0);binding_pending=source;}
             return true;
         }
         if(event->key.scancode==SDL_SCANCODE_ESCAPE && binding_pressed) {
@@ -1014,7 +1015,7 @@ static void draw_dialogue(void)
 
 static void draw_selector(void)
 {
-    if(selector==1 && tactical_active()){draw_tactical_spells();return;}
+    if(selector==1){draw_tactical_spells();return;}
     float w=fminf(1080,canvas_w-60),x=(canvas_w-w)/2,y=(canvas_h-700)/2;
     frame((SDL_FRect){x,y,w,700});
     binding_dock=(SDL_FRect){x+30,y+625,w-330,48};

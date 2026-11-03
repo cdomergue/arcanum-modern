@@ -28,6 +28,7 @@
 #include "ui/charedit_ui.h"
 #include "ui/inven_ui.h"
 #include "ui/follower_ui.h"
+#include "ui/dialog_ui.h"
 #include "ui/wmap_ui.h"
 #include "ui/tb_ui.h"
 #include "ui/spell_ui.h"
@@ -36,6 +37,7 @@
 #include "game/object.h"
 #include "game/obj_pool.h"
 #include "game/item.h"
+#include "game/mt_item.h"
 #include "game/stat.h"
 #include "game/level.h"
 #include "game/modern_compat.h"
@@ -142,6 +144,21 @@ static float mouse_x, mouse_y, text_width;
 static int body_size = 20;
 static int button_text_scale = 100;
 static bool follow_camera;
+/* The selected page is transient; deferred actions carry an absolute slot. */
+static SDL_Keymod hotbar_mods;
+static int hotbar_offset(void) { return (hotbar_mods & SDL_KMOD_SHIFT) ? 10 : 0; }
+static void hotbar_event(const SDL_Event* event)
+{
+    if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST)hotbar_mods=SDL_KMOD_NONE;
+    else if(event->type==SDL_EVENT_WINDOW_FOCUS_GAINED)hotbar_mods=SDL_GetModState();
+    else if(event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP) {
+        hotbar_mods=event->key.mod;
+        SDL_Keymod bit=event->key.scancode==SDL_SCANCODE_LSHIFT?SDL_KMOD_LSHIFT:
+            event->key.scancode==SDL_SCANCODE_RSHIFT?SDL_KMOD_RSHIFT:SDL_KMOD_NONE;
+        if(event->type==SDL_EVENT_KEY_DOWN)hotbar_mods|=bit;else hotbar_mods&=~bit;
+    }
+}
+
 static void save_settings(void);
 static char search[128];
 static char message_text[1024];
@@ -157,6 +174,7 @@ static bool maintained_region(float x,float y);
 static bool party_region(float x,float y);
 static int hit(float x,float y);
 static void draw_tactical_spells(void);
+static bool selector_item_binding(int action,int64_t* item,int* spell);
 static void panels_tick(void);
 static void draw_play_panels(void);
 static bool play_sheet(void);
@@ -1047,13 +1065,15 @@ static void draw_hud(void)
     gauge(x+27,y+9,object_hp_current(pc),object_hp_max(pc),false);
     gauge(x+w-65,y+9,critter_fatigue_current(pc),critter_fatigue_max(pc),true);
     float sx=x+102;
+    /* Use one baseline for all digits, inside the bevel rather than on it. */
+    SDL_FRect number_ink=button_text_bounds(0,"0123456789+");
     for(int i=0;i<10;i++) {
         SDL_FRect slot={sx+i*49,y+15,43,44};
-        button(slot,300+i,"",-1,false,controls_enabled);
-        Hotkey* hk=modern_hotkey_get(i);
+        button(slot,300+hotbar_offset()+i,"",-1,false,controls_enabled);
+        Hotkey* hk=modern_hotkey_get(hotbar_offset()+i);
         if(hk && hk->type!=HOTKEY_NONE) draw_art_id(hk->art_id,(SDL_FRect){slot.x+5,slot.y+5,33,31},true);
-        char key[8];snprintf(key,sizeof(key),"%d",(i+1)%10);
-        text_draw(0,key,slot.x+3,slot.y+28,MUTED);
+        char key[8];snprintf(key,sizeof(key),"%s%d",hotbar_offset()?"+":"",(i+1)%10);
+        text_draw(0,key,slot.x+7,slot.y+slot.h-7-number_ink.y-number_ink.h,GOLD);
     }
     const int small_icons[]={470,473,472,471};
     const int small_actions[]={7,6,5,8};
@@ -2218,7 +2238,7 @@ static int hit(float x,float y)
 static void quickslot_hint(int slot,char* hint,size_t capacity)
 {
     hint[0]=0;
-    if(slot<0 || slot>=10)return;
+    if(slot<0 || slot>=20)return;
     Hotkey* hk=modern_hotkey_get(slot);
     if(!hk || hk->type==HOTKEY_NONE)return;
     char name[2048]="";
@@ -2232,7 +2252,7 @@ static void quickslot_hint(int slot,char* hint,size_t capacity)
     else if(hk->type==HOTKEY_SKILL && hk->data>=0 && hk->data<4)
         SDL_strlcpy(name,sub_57A700(hk->data),sizeof(name));
     if(!*name)return;
-    snprintf(hint,capacity,"[%d] %s",(slot+1)%10,game_text(name));
+    snprintf(hint,capacity,"[%s%d] %s",slot>=10?tr("Maj + ","Shift + "):"",(slot+1)%10,game_text(name));
     if(hk->type==HOTKEY_ITEM_SPELL && hk->data>=0 && hk->data<SPELL_COUNT) {
         SDL_strlcat(hint," · ",capacity);
         SDL_strlcat(hint,game_text(spell_name(hk->data)),capacity);
@@ -2244,10 +2264,10 @@ static void draw_quickslot_hint(void)
     SDL_FRect anchor={0};int slot=-1;
     if(native_panel()) {
         slot=binding_slot_at(mouse_x,mouse_y);
-        if(slot>=0)anchor=binding_slots[slot];
+        if(slot>=0)anchor=binding_slots[slot%10];
     } else if(hud) {
         for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
-            if(buttons[i].action>=300 && buttons[i].action<310){slot=buttons[i].action-300;anchor=buttons[i].rect;}
+            if(buttons[i].action>=300 && buttons[i].action<320){slot=buttons[i].action-300;anchor=buttons[i].rect;}
             break;
         }
     }
@@ -2405,7 +2425,7 @@ static void activate(int action)
     case 205: if(spread+1<spread_count) spread++;break;
     case 210:case 211:case 212:case 213:case 214:quest_filter=action-210;spread=0;dirty=true;break;
     default:
-        if(action>=300 && action<310) {
+        if(action>=300 && action<320) {
             modern_hotkey_activate(action-300);
         } else modern_intgame_action(action);
     }
@@ -2413,6 +2433,7 @@ static void activate(int action)
 
 static bool handle_event(SDL_Event* event)
 {
+    hotbar_event(event);
     static bool captured_keys[SDL_SCANCODE_COUNT];
     bool keyboard = event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP;
     SDL_Scancode key = keyboard ? event->key.scancode : SDL_SCANCODE_UNKNOWN;
@@ -2463,6 +2484,14 @@ static bool handle_binding_event(SDL_Event* event)
 {
     if((event->key.mod&(SDL_KMOD_CTRL|SDL_KMOD_ALT|SDL_KMOD_GUI)) || SDL_TextInputActive(window))return false;
     int key=event->key.scancode,mods=event->key.mod;
+    if(key>=SDL_SCANCODE_1 && key<=SDL_SCANCODE_0 && !native_panel()
+        && intgame_mode_get()!=INTGAME_MODE_DIALOG) {
+        if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
+            tactical_pressed_actor=combat_input_actor();
+            pending_action=300+key-SDL_SCANCODE_1+((mods&SDL_KMOD_SHIFT)?10:0);
+        }
+        return true;
+    }
     for(int i=KB_UP;i<=KB_RIGHT;i++)if(key_is(i,key,mods)) {
         if(!modern_camera_enabled())return false;
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat && modern_follow_camera_active())
@@ -2521,6 +2550,7 @@ static bool handle_ui_event(SDL_Event* event)
         if(event->button.down && over) {
             tactical_pressed_actor=combat_input_actor();
             click_captured=true;pressed_action=event->button.button==SDL_BUTTON_LEFT?hit(mouse_x,mouse_y):-1;
+            if(pressed_action>=300 && pressed_action<320)pressed_action=300+(pressed_action-300)%10+hotbar_offset();
             if(menu)menu_button_sound(pressed_action,TIG_BUTTON_STATE_PRESSED);
             maintained_pressed_id=-1;
             if(pressed_action>=2500 && pressed_action<2505) {
@@ -2530,7 +2560,9 @@ static bool handle_ui_event(SDL_Event* event)
             return true;
         }
         if(!event->button.down && click_captured) {
-            if(event->button.button==SDL_BUTTON_LEFT && pressed_action==hit(mouse_x,mouse_y)) {
+            int released_action=hit(mouse_x,mouse_y);
+            if(released_action>=300 && released_action<320)released_action=300+(released_action-300)%10+hotbar_offset();
+            if(event->button.button==SDL_BUTTON_LEFT && pressed_action==released_action) {
                 if(menu)menu_button_sound(pressed_action,TIG_BUTTON_STATE_RELEASED);
                 pending_action=pressed_action;
             }

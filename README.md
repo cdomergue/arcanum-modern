@@ -20,7 +20,7 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
 - Zoom the world, pan with the keyboard, or use Follow Camera to move your character with WASD.
   Remap your keys and play in windowed, desktop fullscreen or exclusive fullscreen mode.
 - Inventory search, categories, equipment comparison, item details, stack
-  transfers and ten personal quick slots per controlled character.
+  transfers and two banks of ten personal quick slots per controlled character.
 - Integrated **AID descriptions in French and English** for the Arcanum
   campaign: item effects, strength requirements, quest and crafting tags,
   offerings and gifts. Supports existing saves and installations with AID
@@ -146,6 +146,9 @@ available.
   Changes wait for the current companion action to finish and preserve remaining
   action points. The choice carries over to subsequent combats and is preserved
   in saves, including saves made outside combat.
+- **Second hotbar:** hold **Shift** to display the second bank; release it to return
+  to the first. **Shift + 1–0** activates its slots. Hold Shift when assigning
+  items, spells or skills by number or drag-and-drop. Both banks are saved.
 - **Maps and journal:** drag the map to pan. On travel and continent maps, the
   mouse wheel zooms in and out continuously, down to the full map. Travel
   destinations and route points follow the zoomed view.

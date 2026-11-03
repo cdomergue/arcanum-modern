@@ -22,6 +22,7 @@ typedef int SDL_Scancode;
 enum { SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_ESCAPE, SDL_SCANCODE_J, SDL_SCANCODE_COUNT };
 enum { SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP, SDL_EVENT_MOUSE_MOTION };
 typedef struct { int type; struct { SDL_Scancode scancode; bool repeat; } key; } SDL_Event;
+static void hotbar_event(const SDL_Event* event) {(void)event;}
 static bool ui_visible;
 static bool movie_playing;
 static bool tig_movie_is_playing(void) { return movie_playing; }

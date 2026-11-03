@@ -435,9 +435,9 @@ static void draw_tactical_hud(void)
     const char* names[]={tactical_text(TC_ATTACK),game_text(modern_intgame_text(1000)),game_text(modern_intgame_text(1001)),game_text(modern_intgame_text(1006)),game_text(modern_intgame_text(1005))};
     for(int i=0;i<5;i++)tactical_button((SDL_FRect){x+100+i*90,y+82,86,25},ids[i],names[i],false,ready);
     if(owned)for(int i=0;i<10;i++){
-        SDL_FRect r={x+550+(i%5)*43,y+13+(i/5)*38,38,34};button(r,300+i,"",-1,false,ready);
-        Hotkey* hk=modern_hotkey_get(i);if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+4,r.y+2,29,26},true);
-        char digit[3];snprintf(digit,sizeof(digit),"%d",(i+1)%10);text_draw(0,digit,r.x+1,r.y+19,MUTED);
+        SDL_FRect r={x+550+(i%5)*43,y+13+(i/5)*38,38,34};button(r,300+hotbar_offset()+i,"",-1,false,ready);
+        Hotkey* hk=modern_hotkey_get(hotbar_offset()+i);if(hk && hk->type!=HOTKEY_NONE)draw_art_id(hk->art_id,(SDL_FRect){r.x+4,r.y+2,29,26},true);
+        char digit[4];snprintf(digit,sizeof(digit),"%s%d",hotbar_offset()?"+":"",(i+1)%10);button_label(0,digit,(SDL_FRect){r.x+3,r.y+r.h-14,r.w-6,11},false,MUTED);
     }
     bool companion_ai=combat_companion_ai_get();
     char ai_label[64];snprintf(ai_label,sizeof(ai_label),"%s%s",
@@ -463,8 +463,84 @@ static void draw_tactical_hud(void)
     }
 
 }
+typedef struct SelectorSpell { int spell; int64_t item,actor; } SelectorSpell;
+static SelectorSpell selector_spells[10];
+static int selector_spell_count,selector_spell_pages=1;
+
+static bool selector_item_spell_valid(int64_t actor,int64_t item,int spell)
+{
+    int64_t owner;
+    if(!item || !obj_handle_is_valid(item) || !item_parent(item,&owner) || owner!=actor
+        || !item_is_identified(item) || item_magic_tech_complexity(item)<=0
+        || spell<0 || spell==10000 || magictech_is_tech(spell) || sub_45A030(spell))return false;
+    for(int slot=0;slot<5;slot++)if(mt_item_spell(item,slot)==spell)return true;
+    return false;
+}
+static bool selector_item_binding(int action,int64_t* item,int* spell)
+{
+    if(selector!=1 || action<1540 || action>=1540+selector_spell_count)return false;
+    SelectorSpell entry=selector_spells[action-1540];
+    if(entry.actor!=combat_input_actor() || !selector_item_spell_valid(entry.actor,entry.item,entry.spell))return false;
+    *item=entry.item;*spell=entry.spell;return true;
+}
+static void selector_spell_append(int64_t actor,int spell,int64_t item,int* count)
+{
+    int index=(*count)++-tactical_spell_page*10;
+    if(index>=0 && index<10)selector_spells[index]=(SelectorSpell){spell,item,actor};
+}
+static void selector_spells_collect(int64_t actor)
+{
+    int count=0;
+    memset(selector_spells,0,sizeof(selector_spells));
+    for(int spell=0;spell<SPELL_COUNT;spell++)if(spell_is_known(actor,spell))
+        selector_spell_append(actor,spell,0,&count);
+    int64_t* items=NULL;int total=item_list_get(actor,&items);
+    for(int i=0;i<total;i++)for(int slot=0;slot<5;slot++) {
+        int spell=mt_item_spell(items[i],slot);
+        if(selector_item_spell_valid(actor,items[i],spell))
+            selector_spell_append(actor,spell,items[i],&count);
+    }
+    item_list_free(items);
+    selector_spell_pages=(count+9)/10;if(selector_spell_pages<1)selector_spell_pages=1;
+    if(tactical_spell_page>=selector_spell_pages) {
+        tactical_spell_page=selector_spell_pages-1;selector_spells_collect(actor);return;
+    }
+    selector_spell_count=count-tactical_spell_page*10;
+    if(selector_spell_count>10)selector_spell_count=10;
+}
+static bool selector_spell_ap(int64_t actor)
+{
+    return !combat_turn_based_is_active() || combat_action_points_get()>=4
+        || (combat_action_points_get()>0 && player_is_local_pc_obj(actor) && critter_fatigue_current(actor)>1);
+}
+static bool selector_spell_action(int action)
+{
+    if(selector!=1)return false;
+    if(action==1110){if(tactical_spell_page>0)tactical_spell_page--;return true;}
+    if(action==1111){if(tactical_spell_page+1<selector_spell_pages)tactical_spell_page++;return true;}
+    bool learned=action>=1400 && action<1400+SPELL_COUNT;
+    bool item=action>=1540 && action<1550;
+    bool maintained=action>=1500 && action<1532;
+    if(!learned && !item && !maintained)return false;
+    int64_t actor=combat_input_actor();
+    if(combat_turn_based_is_active() && !combat_input_ready(actor))return true;
+    if(maintained){int i=action-1500;if(i<tactical_maintained_count)modern_spell_stop(actor,tactical_maintained_ids[i]);return true;}
+    if(!selector_spell_ap(actor))return true;
+    if(item) {
+        SelectorSpell entry=selector_spells[action-1540];
+        if(entry.actor==actor && selector_item_spell_valid(actor,entry.item,entry.spell)) {
+            selector=0;spell_ui_activate(entry.item,entry.spell);
+        }
+    } else {
+        int spell=action-1400,cost;
+        if(modern_spell_resources(actor,spell,&cost)){selector=0;spell_ui_activate(actor,spell);}
+    }
+    return true;
+}
+
 static bool tactical_action(int action)
 {
+    if(selector_spell_action(action))return true;
     if(action==1106){tactical_log_open=!tactical_log_open;return true;}
     if(action==1107){tactical_log_move(TACTICAL_LOG_ROWS);return true;}
     if(action==1108){tactical_log_move(-TACTICAL_LOG_ROWS);return true;}
@@ -477,8 +553,6 @@ static bool tactical_action(int action)
     }
     if(action==1101){if(tactical_page>0)tactical_page--;return true;}
     if(action==1102){if((tactical_page+1)*10<tactical_count)tactical_page++;return true;}
-    if(action==1110){if(tactical_spell_page>0)tactical_spell_page--;return true;}
-    if(action==1111){if(tactical_spell_page<7)tactical_spell_page++;return true;}
     if(action>=1200 && action<1328){
         int64_t obj=tactical_order_actor(action-1200);
         if(obj && !combat_shared_turn_select(obj))tactical_camera_focus(obj,false);
@@ -506,11 +580,8 @@ static bool tactical_action(int action)
 
 static void draw_tactical_spells(void)
 {
-    int64_t actor=combat_input_actor();int known[80],count=0;
-    for(int spell=0;spell<SPELL_COUNT;spell++)if(spell_is_known(actor,spell))known[count++]=spell;
-    int pages=(count+9)/10;if(pages<1)pages=1;
-    if(tactical_spell_page>=pages)tactical_spell_page=pages-1;
-    int visible=count-tactical_spell_page*10;if(visible>10)visible=10;
+    int64_t actor=combat_input_actor();selector_spells_collect(actor);
+    int pages=selector_spell_pages,visible=selector_spell_count;
     int rows=(visible+1)/2;
     tactical_maintained_count=modern_maintained_spells(actor,tactical_maintained_ids,tactical_maintained_spells,32);
     float width=850,height=257+fmaxf(1,rows)*78+(tactical_maintained_count?85:0);
@@ -519,21 +590,24 @@ static void draw_tactical_spells(void)
     binding_dock=(SDL_FRect){x+115,y+height-125,620,48};
     centered(2,game_text(modern_intgame_text(1000)),canvas_w/2,y+20,GOLD);
     text_compact(actor_name(actor),x+25,y+55,width-50,true,MUTED);
-    bool ready=combat_input_ready(actor);
-    bool ap=combat_action_points_get()>=4 || (combat_action_points_get()>0 && player_is_local_pc_obj(actor) && critter_fatigue_current(actor)>1);
+    bool ready=!combat_turn_based_is_active() || combat_input_ready(actor);
+    bool ap=selector_spell_ap(actor);
     for(int i=0;i<visible;i++){
-        int spell=known[tactical_spell_page*10+i],cost;
-        bool resources=modern_spell_resources(actor,spell,&cost);
+        SelectorSpell entry=selector_spells[i];int spell=entry.spell,cost=0;
+        bool resources=entry.item || modern_spell_resources(actor,spell,&cost);
         bool available=ready && ap && resources;
         SDL_FRect r={x+25+(i%2)*400,y+91+(i/2)*78,390,69};
-        button(r,1400+spell,"",-1,false,available);
+        button(r,entry.item?1540+i:1400+spell,"",-1,false,available);
         draw_art(spell_icon(spell),(SDL_FRect){r.x+8,r.y+10,44,44},true);
         text_compact(game_text(spell_name(spell)),r.x+62,r.y+10,r.w-72,false,menu_control_color(r,false,available));
-        char price[100];snprintf(price,sizeof(price),"4 %s  ·  %s %d",tactical_text(TC_AP),game_text(modern_intgame_text(44)),cost);
+        char price[1024];
+        if(entry.item){char name[1024];object_examine(entry.item,actor,name);SDL_strlcpy(price,game_text(name),sizeof(price));}
+        else if(combat_turn_based_is_active())snprintf(price,sizeof(price),"4 %s  ·  %s %d",tactical_text(TC_AP),game_text(modern_intgame_text(44)),cost);
+        else snprintf(price,sizeof(price),"%s %d",game_text(modern_intgame_text(44)),cost);
         if(!available)snprintf(price,sizeof(price),"%s",!ready?tactical_text(TC_BUSY):!ap?tr("PA insuffisants","Insufficient AP"):tr("Fatigue insuffisante","Insufficient fatigue"));
         text_compact(price,r.x+62,r.y+39,r.w-72,false,available?GOLD:(SDL_Color){210,134,103,255});
     }
-    if(!count)centered(1,"—",canvas_w/2,y+111,MUTED);
+    if(!visible)centered(1,"—",canvas_w/2,y+111,MUTED);
     if(tactical_maintained_count){
         float yy=y+94+fmaxf(1,rows)*78;
         text_draw(0,tactical_text(TC_MAINTAINED),x+25,yy,MUTED);

@@ -1,4 +1,4 @@
-enum { COMPANION_HOTKEY_BANKS = 128, COMPANION_HOTKEY_SLOTS = 10 };
+enum { COMPANION_HOTKEY_BANKS = 128, COMPANION_HOTKEY_SLOTS = 20 };
 typedef struct CompanionHotkeys {
     ObjectID owner;
     Hotkey slots[COMPANION_HOTKEY_SLOTS];
@@ -23,14 +23,38 @@ static CompanionHotkeys* companion_hotkey_bank(int64_t actor, bool create)
     return bank;
 }
 
+static bool hotkey_item_spell_valid(int64_t actor,int64_t item,int spell)
+{
+    int64_t owner;
+    if(!item || !obj_handle_is_valid(item) || !item_parent(item,&owner) || owner!=actor
+        || !item_is_identified(item) || item_magic_tech_complexity(item)<=0
+        || spell<0 || spell>=MT_SPELL_COUNT || magictech_is_tech(spell) || sub_45A030(spell))return false;
+    for(int i=0;i<5;i++)if(mt_item_spell(item,i)==spell)return true;
+    return false;
+}
+
 Hotkey* modern_hotkey_get(int index)
 {
     int64_t actor = combat_input_actor();
     if (index < 0 || index >= COMPANION_HOTKEY_SLOTS || !actor || !obj_handle_is_valid(actor)) return NULL;
-    if (player_is_local_pc_obj(actor)) return sub_57F240(index);
-    CompanionHotkeys* bank = companion_hotkey_bank(actor, false);
-    if (!bank) return NULL;
-    Hotkey* hotkey = &bank->slots[index];
+    Hotkey* hotkey;
+    if (player_is_local_pc_obj(actor) && index < 10) {
+        hotkey=sub_57F240(index);
+        if(hotkey->type!=HOTKEY_ITEM_SPELL)return hotkey;
+    } else {
+        CompanionHotkeys* bank = companion_hotkey_bank(actor, false);
+        if (!bank) return NULL;
+        hotkey=&bank->slots[index];
+    }
+    if(hotkey->type==HOTKEY_ITEM_SPELL) {
+        int64_t item=obj_pool_perm_lookup(hotkey->item_obj.field_8.objid);
+        if(!hotkey_item_spell_valid(actor,item,hotkey->data))sub_57E5A0(hotkey);
+        else {
+            sub_4440E0(item,&hotkey->item_obj);
+            hotkey->info.art_num=spell_icon(hotkey->data);
+            tig_art_interface_id_create(hotkey->info.art_num,0,0,0,&hotkey->art_id);
+        }
+    }
     if (hotkey->type == HOTKEY_ITEM) {
         int64_t item = obj_pool_perm_lookup(hotkey->item_obj.field_8.objid), owner;
         if (!item || !item_parent(item, &owner) || owner != actor) {
@@ -50,7 +74,11 @@ void modern_hotkey_activate(int index)
 {
     Hotkey* hotkey = modern_hotkey_get(index);
     if (!hotkey || hotkey->type == HOTKEY_NONE) return;
-    if (player_is_local_pc_obj(combat_input_actor())) {
+    if(hotkey->type==HOTKEY_ITEM_SPELL) {
+        if(combat_input_ready(combat_input_actor()))spell_ui_activate(hotkey->item_obj.obj,hotkey->data);
+        return;
+    }
+    if (player_is_local_pc_obj(combat_input_actor()) && index < 10) {
         intgame_hotkey_activate(hotkey);
     } else {
         Hotkey action = *hotkey;
@@ -69,7 +97,8 @@ static bool companion_hotkey_assign(int64_t actor, int index, int type, int data
         hotkey->art_id = sub_554BE0(item);
         hotkey->count = item_count_items_matching_prototype(actor, item);
     } else {
-        hotkey->info.art_num = type == HOTKEY_SPELL ? spell_icon(data) : sub_579F70(data);
+        if(type==HOTKEY_ITEM_SPELL)sub_4440E0(item,&hotkey->item_obj);
+        hotkey->info.art_num = (type == HOTKEY_SPELL || type == HOTKEY_ITEM_SPELL) ? spell_icon(data) : sub_579F70(data);
         tig_art_interface_id_create(hotkey->info.art_num, 0, 0, 0, &hotkey->art_id);
     }
     return true;
@@ -80,7 +109,7 @@ static bool companion_hotkeys_save(void)
 {
     TigFile* file = tig_file_fopen("Save\\Current\\modern-hotkeys.dat", "wb");
     if (!file) return false;
-    int version = 1;
+    int version = 2;
     bool ok = tig_file_fwrite(&version, sizeof(version), 1, file) == 1
         && tig_file_fwrite(&companion_hotkey_count, sizeof(companion_hotkey_count), 1, file) == 1;
     for (int i = 0; ok && i < companion_hotkey_count; i++) {
@@ -103,7 +132,7 @@ static bool companion_hotkeys_load(void)
     TigFile* file = tig_file_fopen("Save\\Current\\modern-hotkeys.dat", "rb");
     if (!file) return true;
     int version, count;
-    bool ok = tig_file_fread(&version, sizeof(version), 1, file) == 1 && version == 1
+    bool ok = tig_file_fread(&version, sizeof(version), 1, file) == 1 && (version == 1 || version == 2)
         && tig_file_fread(&count, sizeof(count), 1, file) == 1 && count >= 0 && count <= COMPANION_HOTKEY_BANKS;
     for (int i = 0; ok && i < count; i++) {
         CompanionHotkeys* bank = &companion_hotkeys[i];
@@ -116,6 +145,7 @@ static bool companion_hotkeys_load(void)
             hotkey->slot = -1;
             hotkey->count = -1;
             hotkey->art_id = TIG_ART_ID_INVALID;
+            if (version == 1 && j >= 10) continue;
             ok = tig_file_fread(&hotkey->type, sizeof(hotkey->type), 1, file) == 1
                 && tig_file_fread(&hotkey->data, sizeof(hotkey->data), 1, file) == 1
                 && tig_file_fread(&hotkey->item_obj.field_8.objid, sizeof(ObjectID), 1, file) == 1;
@@ -123,6 +153,9 @@ static bool companion_hotkeys_load(void)
             switch (hotkey->type) {
             case HOTKEY_NONE:
             case HOTKEY_ITEM:
+                break;
+            case HOTKEY_ITEM_SPELL:
+                ok=hotkey->data>=0 && hotkey->data<MT_SPELL_COUNT;
                 break;
             case HOTKEY_SKILL:
             case HOTKEY_SPELL:
