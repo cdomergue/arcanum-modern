@@ -866,9 +866,26 @@ static void draw_map(void)
         menu_button((SDL_FRect){x+w-585,y+741,220,50},748,menu_text(54),map_local.count>0);
     }
     menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
-    text_in_button((SDL_FRect){x+w-350,y+741,320,50},743,game_text(modern_map_text(512)),false,map.mode!=1);
+    SDL_FRect navigation={x+w-350,y+741,320,50};
+    text_in_button(navigation,743,game_text(modern_map_text(512)),false,map.mode!=1);
     if(memo_placing)text_draw(0,tr("Cliquez sur la carte pour placer la note.","Click the map to place your note."),x+35,y+711,GOLD);
     else if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+35,y+704,w-70,34},0,GOLD);
+    if(memo_edit<0 && inside(navigation,mouse_x,mouse_y)) {
+        char help[1024];
+        if(map.mode==1)snprintf(help,sizeof(help),tr(
+            "Passez en « %s » pour choisir votre destination et lancer le déplacement automatique.",
+            "Switch to “%s” to choose your destination and start automatic travel."),game_text(modern_map_text(501)));
+        else SDL_strlcpy(help,map.moving
+            ?tr("Cliquez ici pour arrêter le déplacement automatique.","Click here to stop automatic travel.")
+            :tr("Cliquez sur la carte pour choisir une destination. Vous pouvez ajouter plusieurs points au trajet. Cliquez ensuite ici pour démarrer le déplacement automatique.",
+                "Click the map to choose a destination. You can add several waypoints to the route. Then click here to start automatic travel."),sizeof(help));
+        float width=fminf(560,w-60);
+        SDL_FRect content={fmaxf(x+30,navigation.x+navigation.w-width)+14,0,width-28,0};
+        int rows=menu_paragraph(help,content,0,GOLD);
+        SDL_FRect tip={content.x-14,navigation.y-rows*27-28,width,rows*27+20};
+        hud_panel(tip);content.y=tip.y+8;content.h=rows*27;
+        menu_paragraph(help,content,0,GOLD);
+    }
     draw_memo_editor();
 }
 
