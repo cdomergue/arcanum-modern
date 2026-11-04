@@ -8220,16 +8220,23 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -2921,7 +3082,7 @@
+@@ -2917,11 +3078,14 @@
+         mainmenu_ui_reset();
+     }
+ 
++    char update_error[512];
++    snprintf(update_error, sizeof(update_error), "%s", modern_world_updates_error());
++
+     mes_file_entry.num = 5001; // "Save Game Corrupt!  Load Failed!"
      mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
  
      ui_message.type = UI_MSG_TYPE_EXCLAMATION;
 -    ui_message.str = mes_file_entry.str;
-+    ui_message.str = modern_world_updates_error()[0] ? modern_world_updates_error() : mes_file_entry.str;
++    ui_message.str = update_error[0] != '\0' ? update_error : mes_file_entry.str;
      ui_display_msg(&ui_message);
  
      return false;
-@@ -3018,6 +3179,7 @@
+@@ -3018,6 +3182,7 @@
  // 0x5435D0
  bool mainmenu_ui_save_game_execute(int btn)
  {
@@ -8237,7 +8244,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      int v1;
      char fname[COMPAT_MAX_FNAME];
      const char* name;
-@@ -3032,53 +3194,31 @@
+@@ -3032,53 +3197,31 @@
          return false;
      }
  
@@ -8311,16 +8318,23 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      }
  
      sub_542200();
-@@ -3103,7 +3243,7 @@
+@@ -3099,11 +3242,14 @@
+     }
+ 
+     if (!gamelib_save(name, mainmenu_ui_textedit_buffer)) {
++        char update_error[512];
++        snprintf(update_error, sizeof(update_error), "%s", modern_world_updates_error());
++
+         mes_file_entry.num = 5003; // "Save Game Corrupt!  Save Failed!"
          mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
  
          ui_message.type = UI_MSG_TYPE_EXCLAMATION;
 -        ui_message.str = mes_file_entry.str;
-+        ui_message.str = modern_world_updates_error()[0] ? modern_world_updates_error() : mes_file_entry.str;
++        ui_message.str = update_error[0] != '\0' ? update_error : mes_file_entry.str;
          ui_display_msg(&ui_message);
  
          return false;
-@@ -3533,7 +3673,7 @@
+@@ -3533,7 +3679,7 @@
      gamelib_savelist_create(&mainmenu_ui_gsl);
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -8329,7 +8343,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -4073,7 +4213,7 @@
+@@ -4073,7 +4219,7 @@
              return false;
          }
      } else {
@@ -8338,7 +8352,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stat_level_get(obj, STAT_GENDER) == GENDER_FEMALE) {
              while (race >= 0 && !stru_5C5170[race].available_for_female) {
                  race--;
-@@ -4122,13 +4262,13 @@
+@@ -4122,13 +4268,13 @@
      int race;
  
      race = stat_level_get(obj, STAT_RACE);
@@ -8356,7 +8370,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4146,7 +4286,7 @@
+@@ -4146,7 +4292,7 @@
                  race++;
              }
  
@@ -8365,7 +8379,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4157,7 +4297,7 @@
+@@ -4157,7 +4303,7 @@
          }
      }
  
@@ -8374,7 +8388,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          background_clear(obj);
          mainmenu_ui_new_char_set_race(obj, race);
          return true;
-@@ -4602,7 +4742,7 @@
+@@ -4602,7 +4748,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -8383,7 +8397,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_window_rect.x;
              src_rect.y = 0;
-@@ -4645,7 +4785,7 @@
+@@ -4645,7 +4791,7 @@
                  window_data.rect.y = mainmenu_ui_bottom_bar_cover_rects[idx].y;
                  window_data.rect.width = mainmenu_ui_bottom_bar_cover_rects[idx].width;
                  window_data.rect.height = mainmenu_ui_bottom_bar_cover_rects[idx].height;
@@ -8392,7 +8406,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
                  src_rect.x = mainmenu_ui_bottom_bar_cover_rects[idx].x;
                  src_rect.y = 0;
-@@ -4681,7 +4821,7 @@
+@@ -4681,7 +4827,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -8401,7 +8415,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_top_bar_cover_rect.x;
              src_rect.y = 0;
-@@ -4832,6 +4972,9 @@
+@@ -4832,6 +4978,9 @@
          if (!main_menu_button_create(button, font_desc.width, font_desc.height)) {
              tig_debug_printf("mainmenu_ui_create_window_func: ERROR: main_menu_button_create failed!\n");
              exit(EXIT_FAILURE);
@@ -8411,7 +8425,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          }
      }
  
-@@ -5133,6 +5276,9 @@
+@@ -5133,6 +5282,9 @@
              for (idx = 0; idx < window->num_buttons; idx++) {
                  if (msg->data.button.button_handle == window->buttons[idx].button_handle) {
                      if (window->buttons[idx].field_10 > 0) {
@@ -8421,7 +8435,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                          if (window->execute_func != NULL) {
                              dword_5C3FB8 = window->execute_func(idx);
                              if (dword_5C3FB8 == 0) {
-@@ -5397,6 +5543,9 @@
+@@ -5397,6 +5549,9 @@
              }
  
              if (window->buttons[idx].field_10 > 0) {
@@ -8431,7 +8445,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  if (window->execute_func != NULL) {
                      dword_5C3FB8 = window->execute_func(idx);
                      if (!dword_5C3FB8) {
-@@ -6046,10 +6195,22 @@
+@@ -6046,10 +6201,22 @@
          if (obj != OBJ_HANDLE_NULL
              && tig_art_exists(obj_field_int32_get(obj, OBJ_F_CURRENT_AID)) == TIG_OK) {
              dword_5C3620 = false;
