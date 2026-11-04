@@ -2628,12 +2628,13 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  static bool gamelib_load_module_data(const char* module_name);
  static void gamelib_unload_module_data(void);
  
-@@ -324,10 +330,12 @@
+@@ -324,10 +330,13 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
 +    settings_register(&settings, MODERN_FOLLOWER_AUTO_PICKUP_KEY, "1", NULL);
 +    settings_register(&settings, MODERN_UNLIMITED_FOLLOWERS_KEY, "0", NULL);
++    settings_register(&settings, MODERN_AUTOSAVE_KEY, "1", modern_autosave_reset);
      difficulty_changed();
  
      gamelib_mod_loaded = false;
@@ -2642,7 +2643,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (!init_info->editor) {
          if (highres_config_get()->logos) {
-@@ -410,6 +418,9 @@
+@@ -410,6 +419,9 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
@@ -2652,7 +2653,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -448,6 +459,7 @@
+@@ -448,6 +460,7 @@
  
      sector_art_cache_enable();
      in_reset = false;
@@ -2660,7 +2661,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      duration = tig_timer_elapsed(reset_started_at);
      tig_debug_printf("gamelib_reset(): Done.  Total time: %d ms.\n", duration);
-@@ -456,6 +468,7 @@
+@@ -456,6 +469,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2668,7 +2669,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -501,6 +514,8 @@
+@@ -501,6 +515,8 @@
              gamelib_modules[index].ping_func(gamelib_ping_time);
          }
      }
@@ -2677,7 +2678,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x4025C0
-@@ -671,6 +686,17 @@
+@@ -671,6 +687,17 @@
          return false;
      }
  
@@ -2695,7 +2696,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      if (gamelib_mod_dat_path[0] != '\0') {
          tig_file_repository_guid(gamelib_mod_dat_path, &gamelib_mod_guid);
      }
-@@ -755,6 +781,7 @@
+@@ -755,6 +782,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -2703,7 +2704,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -939,6 +966,10 @@
+@@ -939,6 +967,10 @@
      unsigned int sentinel = 0xBEEFCAFE;
      int version;
      GameSaveInfo save_info;
@@ -2714,7 +2715,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
-@@ -949,6 +980,7 @@
+@@ -949,6 +981,7 @@
  
      if (!tig_file_is_directory("Save\\Current")) {
          tig_debug_printf("gamelib_save(): Error finding folder %s\n", "Save\\Current");
@@ -2722,7 +2723,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -959,6 +991,7 @@
+@@ -959,6 +992,7 @@
      stream = tig_file_fopen(path, "wb");
      if (stream == NULL) {
          tig_debug_printf("gamelib_save(): Error creating %s\n", path);
@@ -2730,7 +2731,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -968,6 +1001,7 @@
+@@ -968,6 +1002,7 @@
          tig_debug_printf("gamelib_save(): Error writing version\n");
          tig_file_fclose(stream);
          tig_file_remove(path);
@@ -2738,7 +2739,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1004,10 +1038,11 @@
+@@ -1004,10 +1039,11 @@
          }
      }
  
@@ -2751,7 +2752,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1017,6 +1052,7 @@
+@@ -1017,6 +1053,7 @@
          tig_timer_now(&time);
          if (!gamelib_extra_save_func()) {
              tig_file_remove(path);
@@ -2759,7 +2760,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_save = false;
              return false;
          }
-@@ -1024,8 +1060,15 @@
+@@ -1024,8 +1061,15 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
@@ -2776,7 +2777,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1033,23 +1076,31 @@
+@@ -1033,23 +1077,31 @@
      if (!gamelib_saveinfo_save(&save_info)) {
          tig_debug_printf("gamelib_save(): error saving saveinfo\n");
          gamelib_saveinfo_exit(&save_info);
@@ -2809,7 +2810,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      ui_progressbar_update(MODULE_COUNT + 2);
  
-@@ -1078,12 +1129,16 @@
+@@ -1078,12 +1130,16 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
@@ -2826,7 +2827,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1094,6 +1149,7 @@
+@@ -1094,6 +1150,7 @@
      tig_timer_now(&time);
      if (!tig_file_empty_directory("Save\\Current")) {
          tig_debug_printf("gamelib_load(): Error clearing folder %s\n", "Save\\Current");
@@ -2834,7 +2835,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1104,21 +1160,31 @@
+@@ -1104,21 +1161,31 @@
      tig_timer_now(&time);
      if (!tig_file_unarchive(path, "Save\\Current")) {
          tig_debug_printf("gamelib_load(): error restoring archive %s to save\\test\n", path);
@@ -2866,7 +2867,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1165,6 +1231,7 @@
+@@ -1165,6 +1232,7 @@
      tig_file_fclose(stream);
  
      if (index < MODULE_COUNT) {
@@ -2874,7 +2875,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1173,6 +1240,7 @@
+@@ -1173,6 +1241,7 @@
          tig_debug_printf("gamelib_load: Begin gamelib_extra_load_func()...");
          tig_timer_now(&time);
          if (!gamelib_extra_load_func()) {
@@ -2882,7 +2883,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_load = false;
              return false;
          }
-@@ -1180,6 +1248,12 @@
+@@ -1180,6 +1249,12 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
@@ -2895,7 +2896,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      ui_progressbar_update(MODULE_COUNT + 2);
  
      in_load = false;
-@@ -1200,7 +1274,7 @@
+@@ -1200,7 +1275,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -2904,7 +2905,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1468,9 @@
+@@ -1394,13 +1469,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -2921,7 +2922,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1625,7 @@
+@@ -1555,7 +1626,7 @@
          } while (0);
      }
  
@@ -2930,7 +2931,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1822,81 @@
+@@ -1752,11 +1823,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -3013,7 +3014,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1940,7 @@
+@@ -1800,6 +1941,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -3021,7 +3022,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1958,7 @@
+@@ -1817,7 +1959,7 @@
  }
  
  // 0x404A20
@@ -3030,7 +3031,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1973,12 @@
+@@ -1832,6 +1974,12 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
@@ -3043,7 +3044,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x404C10
-@@ -1874,6 +2021,7 @@
+@@ -1874,6 +2022,7 @@
      }
  
      path1[end] = '\0';
@@ -3051,7 +3052,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +2054,9 @@
+@@ -1906,6 +2055,9 @@
  void gamelib_unload_module_data(void)
  {
      int index;

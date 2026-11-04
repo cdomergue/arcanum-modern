@@ -62,7 +62,7 @@ static void autosave_name(int generation, char name[9])
 static bool autosave_safe(void)
 {
     int64_t pc;
-    if (modern_tutorial_active() || autosave_running || gamelib_in_reset() || gamelib_in_load() || gamelib_in_save()
+    if (!settings_get_value(&settings, MODERN_AUTOSAVE_KEY) || modern_tutorial_active() || autosave_running || gamelib_in_reset() || gamelib_in_load() || gamelib_in_save()
         || mainmenu_ui_is_active() || intgame_mode_get() != INTGAME_MODE_MAIN
         || wmap_ui_is_created() || dialog_ui_is_local_pc_in_dialog()
         || teleport_is_teleporting() || combat_turn_based_is_active()) return false;
@@ -183,7 +183,7 @@ void modern_autosave_reset(void)
 
 void modern_autosave_after_combat(void)
 {
-    if (modern_tutorial_active() || gamelib_in_reset() || gamelib_in_load() || gamelib_in_save() || teleport_is_teleporting()) return;
+    if (!settings_get_value(&settings, MODERN_AUTOSAVE_KEY) || modern_tutorial_active() || gamelib_in_reset() || gamelib_in_load() || gamelib_in_save() || teleport_is_teleporting()) return;
     autosave_pending = true;
     tig_timer_now(&autosave_requested_at);
 }
@@ -206,7 +206,7 @@ void modern_autosave_before_map_change(void)
 
 void modern_autosave_tick(void)
 {
-    if (modern_tutorial_active()) { autosave_pending=false; return; }
+    if (!settings_get_value(&settings, MODERN_AUTOSAVE_KEY) || modern_tutorial_active()) { autosave_pending=false; return; }
     if (autosave_pending && tig_timer_elapsed(autosave_requested_at) >= 1000 && autosave_safe()) {
         autosave_pending = false;
         autosave_write();

@@ -33,7 +33,7 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
 - Select automatic level-up schemes for your character and companions.
   Choose **None** for a companion to assign their available points yourself.
 - Three rotating autosaves before and after combat and before eligible area
-  transitions, separate from manual saves.
+  transitions, separate from manual saves. Automatic saves can be disabled in the game options.
 - Journal search, quest filters, favorites, quest tracking and personal map notes.
 - Zoomable local maps with exploration fog, localized labels and route planning without a waypoint limit.
 - Books, letters, newspapers, inscriptions, telegrams and floating dialogue

@@ -868,7 +868,7 @@ static void draw_map(void)
     }
     menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
     SDL_FRect navigation={x+w-350,y+741,320,50};
-    text_in_button(navigation,743,game_text(modern_map_text(512)),false,map.mode!=1);
+    text_in_button(navigation,743,tr(game_text(modern_map_text(512)),"Follow the plotted route"),false,map.mode!=1);
     if(memo_placing)text_draw(0,tr("Cliquez sur la carte pour placer la note.","Click the map to place your note."),x+35,y+711,GOLD);
     else if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+35,y+704,w-70,34},0,GOLD);
     if(memo_edit<0 && inside(navigation,mouse_x,mouse_y)) {

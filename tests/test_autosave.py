@@ -28,6 +28,9 @@ typedef struct {int num;char* str;} MesFileEntry;
 static char files[256][TIG_MAX_PATH];
 static int file_count,write_count,rename_count,fail_rename,fail_save;
 static bool tutorial;
+#define MODERN_AUTOSAVE_KEY "modern autosave"
+static int settings,autosave_enabled=1;
+static int settings_get_value(int* store,const char* key){assert(store==&settings && !strcmp(key,MODERN_AUTOSAVE_KEY));return autosave_enabled;}
 static bool modern_tutorial_active(void){return tutorial;}
 static bool reset_state,load_state,save_state,menu,worldmap,dialog,teleport,combat,dead,unconscious,armed;
 static int mode,map_id=1;
@@ -89,6 +92,19 @@ int main(void){
   modern_autosave_before_combat();modern_autosave_before_map_change();modern_autosave_after_combat();modern_autosave_tick();
   assert(write_count==writes && rename_count==renames && file_count==old_count);
   tutorial=false;modern_autosave_tick();assert(write_count==writes);
+  modern_autosave_before_map_change();assert(write_count==writes+1);assert_complete();
+ }
+ {
+  int writes=write_count,renames=rename_count,old_count=file_count;
+  modern_autosave_after_combat();autosave_enabled=0;modern_autosave_reset();
+  modern_autosave_before_combat();modern_autosave_before_map_change();modern_autosave_after_combat();
+  now+=1000;modern_autosave_tick();
+  assert(write_count==writes && rename_count==renames && file_count==old_count);
+  autosave_enabled=1;modern_autosave_tick();assert(write_count==writes);
+  modern_autosave_after_combat();autosave_enabled=0;modern_autosave_tick();
+  autosave_enabled=1;now+=1000;modern_autosave_tick();assert(write_count==writes);
+  autosave_enabled=0;assert(gamelib_save("Slot0013","Manual while disabled"));writes++;
+  autosave_enabled=1;
   modern_autosave_before_map_change();assert(write_count==writes+1);assert_complete();
  }
  file_count=0;gamelib_save("SlotAZZY","Tail");gamelib_save("SlotAZZZ","Tail");modern_autosave_before_map_change();modern_autosave_before_map_change();assert(autosaves()==3);assert(find_file("save\\SlotAZZYTail.gsi")<0);assert(find_file("save\\SlotAZZZTail.gsi")>=0);assert_complete();

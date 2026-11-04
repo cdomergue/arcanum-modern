@@ -35,6 +35,7 @@
 #include "ui/spell_ui.h"
 #include "ui/skill_ui.h"
 #include "game/gamelib.h"
+#include "game/modern_autosave.h"
 #include "game/object.h"
 #include "game/obj_pool.h"
 #include "game/item.h"
@@ -1742,6 +1743,16 @@ static void draw_menu(void)
             row+=options_tab==0?47:62;
         }
         if(options_tab==0){
+            bool autosave=settings_get_value(&settings,MODERN_AUTOSAVE_KEY)!=0;
+            MesFileEntry entry={.num=autosave?1:0};
+            const char* value=autosave?tr("Oui","Yes"):tr("Non","No");
+            if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
+            option_row(ox,row,ow,tr("Sauvegardes automatiques","Automatic saves"),true);
+            option_button((SDL_FRect){ox+option_label_width(ow),row+3,155,36},447,value,false,true);
+            float hx=ox+option_label_width(ow)+172;
+            button_label(0,tr("Avant et après les combats, et avant les changements de zone.",
+                "Before and after combat, and before changing areas."),(SDL_FRect){hx,row,ox+ow-hx,42},false,MUTED);
+            row+=47;
             option_section(ox,row+6,ow,tr("Compagnons","Companions"));
             row+=44;
             for(int i=0;i<2;i++){
@@ -1751,7 +1762,7 @@ static void draw_menu(void)
                 if(option_boolean_file!=MES_FILE_HANDLE_INVALID && mes_search(option_boolean_file,&entry))value=game_text(entry.str);
                 option_row(ox,row,ow,i?tr("Ramassage automatique","Automatic pickup"):tr("Compagnons illimités","Unlimited companions"),true);
                 option_button((SDL_FRect){ox+option_label_width(ow),row+3,155,36},i?419:417,value,false,!tig_net_is_active());
-                const char* help=i?tr("Les compagnons ramassent les objets au sol.","Companions collect items from the ground."):
+                const char* help=i?tr("Les compagnons ramassent les objets au sol. Oui par défaut dans le jeu original.","Companions collect items from the ground. Yes is the original game’s default."):
                     tr("Ignore la limite de Charisme du groupe.","Ignores the party’s Charisma limit.");
                 float hx=ox+option_label_width(ow)+172;
                 button_label(0,help,(SDL_FRect){hx,row,ox+ow-hx,42},false,MUTED);
@@ -2124,6 +2135,12 @@ void modern_ui_menu_tick(void)
             if(button_text_scale<75)button_text_scale=75;
             if(button_text_scale>150)button_text_scale=150;
             save_settings();
+        }
+        break;
+    case 447:
+        if(type==MM_WINDOW_OPTIONS && options_tab==0) {
+            settings_set_value(&settings,MODERN_AUTOSAVE_KEY,!settings_get_value(&settings,MODERN_AUTOSAVE_KEY));
+            settings_save(&settings);
         }
         break;
     case 419:
