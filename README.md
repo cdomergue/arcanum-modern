@@ -244,6 +244,6 @@ other bundled dependencies.
 ## Special thanks
 
 Thanks to [OliverCooperMirror](https://github.com/OliverCooperMirror),
-[Seldon24](https://www.reddit.com/user/Seldon24) and
-[LazarusHimself](https://www.reddit.com/user/LazarusHimself) for helping find bugs
+[Seldon24](https://www.reddit.com/user/Seldon24),
+[LazarusHimself](https://www.reddit.com/user/LazarusHimself) and [SCARaw](https://www.reddit.com/user/SCARaw/) for helping find bugs
 and suggesting new features.
