@@ -37,8 +37,10 @@ static bool tactical_active(void){return active;}
 static int combat_input_actor(void){return 42;}
 static bool tig_movie_is_playing(void){return false;}
 static bool tactical_camera_event(SDL_Event* e){(void)e;return false;}
+static void hotbar_event(SDL_Event* e){(void)e;}
 '''
 code += 'enum {' + ','.join(f'SDL_SCANCODE_{chr(65+i)}={i+4}' for i in range(26)) + '};\n'
+code += 'enum {' + ','.join(f'SDL_SCANCODE_{(i+1)%10}={i+30}' for i in range(10)) + '};\n'
 code += keys[keys.index('enum {KB_'):keys.index('static const char* tr(')]
 code += keys[keys.index('static int key_chord'):keys.index('static const char* key_name')]
 code += function(ui, 'static bool handle_binding_event(SDL_Event* event)')
@@ -60,6 +62,9 @@ int main(void){
     follow_walk_taps=0;
     assert(press(SDL_SCANCODE_SPACE,1) && pending_action==7);
     assert(press(SDL_SCANCODE_SPACE,2) && pending_action==7);
+    assert(press(SDL_SCANCODE_1,0) && pending_action==300);
+    assert(press(SDL_SCANCODE_1,SDL_KMOD_SHIFT) && pending_action==310);
+    assert(press(SDL_SCANCODE_0,SDL_KMOD_SHIFT) && pending_action==319);
     active=true;
     assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==0);
     assert(press(SDL_SCANCODE_SPACE,SDL_KMOD_SHIFT) && pending_action==7);

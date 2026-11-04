@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-source = (root/'source/src/ui/modern_hotkeys.inc').read_text()
+source = (root/'source/src/ui/modern_hotkeys.inc').read_text().replace('#include "ui/item_ui.h"', '')
 harness = r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -17,6 +17,7 @@ typedef struct {int id;} ObjectID;
 typedef struct {int64_t obj;struct {ObjectID objid;} field_8;} Ref;
 typedef struct {int slot,type,data,count,flags,art_id;Ref item_obj;struct {int art_num;} info;} Hotkey;
 enum {HOTKEY_NONE,HOTKEY_ITEM,HOTKEY_SKILL,HOTKEY_SPELL,HOTKEY_ITEM_SPELL};
+enum {OBJ_F_TYPE,OBJ_F_ITEM_SPELL_MANA_STORE,OBJ_TYPE_SCROLL=10};
 #define TIG_ART_ID_INVALID -1
 #define SPELL_COUNT 80
 #define MT_SPELL_COUNT 256
@@ -25,7 +26,7 @@ typedef FILE TigFile;
 #define tig_file_fread fread
 #define tig_file_fclose fclose
 static int64_t actor=1,item_owner=2;
-static int generation,activated,activated_data;
+static int generation,activated,activated_data,item_type;
 static bool item_exists=true,known=true;
 static Hotkey hero[10];
 static int64_t combat_input_actor(void){return actor;}
@@ -47,6 +48,8 @@ static int item_magic_tech_complexity(int64_t item){return item>0?10:0;}
 static bool magictech_is_tech(int spell){return spell==90;}
 static bool sub_45A030(int spell){return spell==91;}
 static int mt_item_spell(int64_t item,int slot){return item>0&&slot==0?42:-1;}
+static int obj_field_int32_get(int64_t item,int field){assert(item>0);return field==OBJ_F_TYPE?item_type:10;}
+static void item_ui_activate(int64_t who,int64_t item){assert(who==actor);activated=(int)item;activated_data=-1;}
 static void spell_ui_activate(int64_t item,int spell){assert(item==40);activated=40;activated_data=spell;}
 static int spell_icon(int spell){return 100+spell;}
 static int sub_579F70(int skill){return 200+skill;}

@@ -2,10 +2,14 @@
 """Check complete HUD message wrapping with the real UTF-8 paragraph renderer."""
 from pathlib import Path
 import os, subprocess, tempfile
-ui=(Path(__file__).resolve().parents[1]/'source/src/ui/modern_ui.c').read_text()
-wrap=ui[ui.index('static int menu_paragraph_aligned('):ui.index('\nstatic void description_panel(')]
+root=Path(__file__).resolve().parents[1]
+ui=(root/'source/src/ui/modern_ui.c').read_text()
+bottom=(root/'source/src/ui/modern_bottom_bar.inc').read_text()
+wrap=ui[ui.index('/* Wrap at Unicode character boundaries'):ui.index('\nstatic void description_panel(')]
 decode=ui[ui.index('static int codepoint('):ui.index('/* Game strings are Windows-1252;')]
-message=ui[ui.index('static bool hud_message_visible('):ui.index('static void draw_hud(void)')]
+bar=(bottom[bottom.index('#define BOTTOM_BAR_WIDTH'):bottom.index('\nstatic void bottom_bar_load(')]
+    +bottom[bottom.index('\nstatic SDL_FRect bottom_bar_rect('):bottom.index('\n/* Counters must never truncate')])
+message=ui[ui.index('static bool hud_message_visible('):ui.index('#include "modern_top_bar.inc"')]
 code=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -34,7 +38,7 @@ static uint64_t SDL_GetTicks(void){return now;}
 static void fill(SDL_FRect r,SDL_Color c){(void)c;box=r;}
 static void outline(SDL_FRect r,SDL_Color c){(void)r;(void)c;}
 static void hud_panel(SDL_FRect r){fill(r,MUTED);outline(r,MUTED);}
-''' + decode + wrap + message + r'''
+''' + decode + wrap + bar + message + r'''
 
 static void compact(const char* src,char* dst){while(*src){if(*src!=' '&&*src!='\n')*dst++=*src;src++;}*dst=0;}
 static void check(const char* text){
