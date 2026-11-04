@@ -189,7 +189,7 @@ static void tutorial_draw_lesson(void)
     case TUTORIAL_HOTBAR: {
         voice="TUTORIAL_HOTBAR";
         line=tr("Dans l’inventaire d’Erwin, faites glisser la potion donnée par le garde vers la case 1 de la barre rapide.",
-                "In Erwin’s inventory, drag the potion given by the guard to quick slot 1.");
+                "In Merwin’s inventory, drag the potion given by the guard to quick slot 1.");
         Hotkey* slot=modern_hotkey_get(0);
         target=panel==2?300:2;
         complete=slot && slot->type==HOTKEY_ITEM && slot->item_obj.obj
