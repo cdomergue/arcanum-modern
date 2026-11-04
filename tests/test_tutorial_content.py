@@ -29,10 +29,17 @@ class TutorialContentTests(unittest.TestCase):
         self.assertEqual(len(list((base / 'tutorial/mobs').glob('*.mob'))), 7)
         self.assertEqual(len(list((base / 'townmap/tutorial-island').glob('*.bmp'))), 32)
         self.assertEqual(len(list((base / 'sound/tutorial').glob('TUTORIAL_*.mp3'))), 35)
+        for line in ('1', '10'):
+            voice = Path(f'speech/16106/v{line}_m.mp3')
+            self.assertEqual((base / 'sound' / voice).read_bytes(),
+                             (ROOT / 'resources/tutorial' / voice).read_bytes())
         for lang in ('fr', 'en'):
             dlg = (base / f'tutorial/{lang}/48874_guide.dlg').read_bytes().decode('cp1252')
             mes = (base / f'tutorial/{lang}/journal.mes').read_bytes().decode('cp1252')
             self.assertIn('{1}{', dlg)
+            for line in ('1', '10'):
+                self.assertIn(f'}}{{}}{{{line}}}{{0}}{{}}',
+                              next(row for row in dlg.splitlines() if row.startswith(f'{{{line}}}')))
             for num in (1980, 1981, 1982, 1983, 2980, 2981, 2982, 2983):
                 self.assertIn(f'{{{num}}}{{', mes)
         # Ensure zero extracted base-game MES files are shipped.

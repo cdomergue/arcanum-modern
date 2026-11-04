@@ -1,0 +1,10 @@
+﻿TUTORIAL GUARD — ENGLISH RECORDING SCRIPT
+
+Only the guard speaks these lines. Do not read the line references.
+The male/female player variants use identical wording; one recording per line is sufficient.
+
+[Dialogue 48874, line 1]
+Welcome to the island. Three wolves are prowling beyond the camp. Before we approach them, let's practise travelling together. Shall I join you?
+
+[Dialogue 48874, line 10]
+Look at our portraits. Keep an eye on your health and fatigue when we go to face the wolves.

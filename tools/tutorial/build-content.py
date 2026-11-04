@@ -27,6 +27,9 @@ EXPECTED_MOBS = (
 )
 QUEST_IDS = ('1980', '1981', '1982', '1983')
 RUMOR_IDS = ('2980', '2981', '2982', '2983')
+# Native speech IDs retain 15 bits of the dialogue script number.
+GUIDE_SPEECH_DIR = f'{48874 & 0x7FFF:05d}'
+GUIDE_VOICE_LINES = ('1', '10')
 
 
 def expected_voice_ids(lessons_source=ROOT / 'source/src/ui/modern_tutorial_lessons.inc'):
@@ -88,7 +91,17 @@ def validate_resources(resources=ROOT / 'resources/tutorial',
         if not dlg.is_file():
             raise ValueError(f'Missing guide dialogue for {lang}')
         validate_dlg(dlg.read_bytes(), str(dlg))
+        rows = {fields[0]: fields for fields in
+                (re.findall(r'\{([^}]*)\}', line) for line in dlg.read_text(encoding='cp1252').splitlines()) if fields}
+        for line in GUIDE_VOICE_LINES:
+            if rows[line][4] != line:
+                raise ValueError(f'{dlg}: missing speech reference for line {line}')
         compile_journal_mes(journal_dir / f'{lang}.json')
+
+    for line in GUIDE_VOICE_LINES:
+        clip = resources / 'speech' / GUIDE_SPEECH_DIR / f'v{line}_m.mp3'
+        if not clip.is_file() or clip.stat().st_size < 256:
+            raise ValueError(f'Missing or invalid guard voice clip: {clip.name}')
 
     tmi_dir = resources / 'townmap/tutorial-island'
     tmi = tmi_dir / 'tutorial-island.tmi'
@@ -160,6 +173,13 @@ def build(output,
     snd_out.mkdir(parents=True, exist_ok=True)
     for clip in expected_voice_ids(lessons_source):
         shutil.copy2(resources / 'sound' / f'{clip}.mp3', snd_out / f'{clip}.mp3')
+
+    speech_out = base / 'sound/speech' / GUIDE_SPEECH_DIR
+    speech_out.mkdir(parents=True, exist_ok=True)
+    for line in GUIDE_VOICE_LINES:
+        # The native female-player fallback uses the same English recording.
+        name = f'v{line}_m.mp3'
+        shutil.copy2(resources / 'speech' / GUIDE_SPEECH_DIR / name, speech_out / name)
 
 
 if __name__ == '__main__':

@@ -20,3 +20,7 @@ sans voix. Les textes français servent aux sous-titres.
 Installation : python tutorial/install-voice.py VOICES GAME
 L’export se régénère avec :
 python tutorial/export-voiceover.py
+
+Le dialogue du garde figure dans garde-en.txt. Les enregistrements anglais
+48874-1.mp3 et 48874-10.mp3 accompagnent les répliques 1 et 10 dans les deux
+langues. Ils sont intégrés au pack tutoriel par tools/tutorial/build-content.py.
