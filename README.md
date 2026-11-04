@@ -216,8 +216,6 @@ player and is saved between sessions.
 | --- | --- |
 | [![Woodland House on the main map](docs/screenshots/house-exterior.webp)](docs/screenshots/house-exterior.webp) | [![Furnished Woodland House with storage](docs/screenshots/house-interior.webp)](docs/screenshots/house-interior.webp) |
 
-Tactical combat and inventory screenshots use English game files; house screenshots use French game files.
-
 ## Build and contribute
 
 See the [development guide](docs/development.md#build-from-source) for build
