@@ -79,6 +79,18 @@ class SetupPayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Missing required files: .*vegetation.mes'):
             self.p.extract_payload(self.archive(), self.work/'missing-house')
 
+    def test_includes_complete_tutorial_content_and_requires_it(self):
+        tutorial = self.p.package.tutorial_files()
+        self.files.update(tutorial)
+        target = self.work/'payload'
+        names = self.p.extract_payload(self.archive(), target)
+        self.assertTrue(tutorial.keys() <= set(names))
+        for name, data in tutorial.items():
+            self.assertEqual((target/name).read_bytes(), data)
+        del self.files['ArcanumModern/tutorial/base/sound/tutorial/TUTORIAL_DONE.mp3']
+        with self.assertRaisesRegex(ValueError, 'Missing required files: .*TUTORIAL_DONE.mp3'):
+            self.p.extract_payload(self.archive(), self.work/'missing-tutorial')
+
     def test_refuses_game_data_preferences_and_unsafe_paths(self):
         for name in ['arcanum1.dat', 'modern-ui/settings.ini', 'modules/Arcanum.dat',
                      'ArcanumModern/house/base/house/unexpected.mes',

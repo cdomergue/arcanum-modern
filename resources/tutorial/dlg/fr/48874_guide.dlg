@@ -1,0 +1,5 @@
+{1}{Bienvenue sur l'île. Trois loups rôdent au-delà du camp. Avant de les approcher, apprenons à voyager ensemble. Tu veux que je t'accompagne ?}{Bienvenue sur l'île. Trois loups rôdent au-delà du camp. Avant de les approcher, apprenons à voyager ensemble. Tu veux que je t'accompagne ?}{}{}{0}{}
+{2}{Oui, viens avec moi.}{}{1}{}{-6}{}
+{3}{Je vais d'abord explorer le camp.}{}{1}{}{0}{}
+{10}{Regarde nos portraits. Garde un œil sur ta vie et ta fatigue quand nous irons affronter les loups.}{Regarde nos portraits. Garde un œil sur ta vie et ta fatigue quand nous irons affronter les loups.}{}{}{0}{}
+{11}{Entendu.}{}{1}{}{0}{}

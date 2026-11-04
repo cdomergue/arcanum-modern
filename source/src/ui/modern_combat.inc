@@ -474,6 +474,7 @@ static bool selector_item_spell_valid(int64_t actor,int64_t item,int spell)
 {
     int64_t owner;
     if(!item || !obj_handle_is_valid(item) || !item_parent(item,&owner) || owner!=actor
+        || obj_field_int32_get(item,OBJ_F_ITEM_SPELL_MANA_STORE)==0
         || !item_is_identified(item) || item_magic_tech_complexity(item)<=0
         || spell<0 || spell==10000 || magictech_is_tech(spell) || sub_45A030(spell))return false;
     for(int slot=0;slot<5;slot++)if(mt_item_spell(item,slot)==spell)return true;
@@ -532,7 +533,7 @@ static bool selector_spell_action(int action)
     if(item) {
         SelectorSpell entry=selector_spells[action-1540];
         if(entry.actor==actor && selector_item_spell_valid(actor,entry.item,entry.spell)) {
-            selector=0;spell_ui_activate(entry.item,entry.spell);
+            selector=0;modern_item_spell_activate(actor,entry.item,entry.spell);
         }
     } else {
         int spell=action-1400,cost;

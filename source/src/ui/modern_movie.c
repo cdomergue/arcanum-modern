@@ -1,4 +1,5 @@
 #include "ui/modern_movie.h"
+#include "ui/modern_ui.h"
 #include <tig/tig.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -145,6 +146,7 @@ static bool movie_decode(Movie* movie, AVCodecContext* decoder, const AVPacket* 
 
 static int movie_play(const char* path, TigMovieFlags flags, int sound_track)
 {
+    if (modern_tutorial_skip_movie(path)) return TIG_OK;
     movie_quit = false;
     Movie movie = {0};
     movie.video_index = movie.audio_index = -1;

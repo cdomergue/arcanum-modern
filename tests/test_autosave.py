@@ -27,6 +27,8 @@ typedef struct {unsigned count;char** names;} GameSaveList;
 typedef struct {int num;char* str;} MesFileEntry;
 static char files[256][TIG_MAX_PATH];
 static int file_count,write_count,rename_count,fail_rename,fail_save;
+static bool tutorial;
+static bool modern_tutorial_active(void){return tutorial;}
 static bool reset_state,load_state,save_state,menu,worldmap,dialog,teleport,combat,dead,unconscious,armed;
 static int mode,map_id=1;
 static int64_t pc=1;
@@ -75,12 +77,20 @@ int main(void){
  }
  fail_save=fail_rename=0;
  {int count=write_count;modern_autosave_after_combat();modern_autosave_before_combat();assert(write_count==count+1);assert_complete();now+=1000;modern_autosave_tick();assert(write_count==count+1);}
- bool* guards[]={&reset_state,&load_state,&save_state,&menu,&worldmap,&dialog,&teleport,&combat,&dead,&unconscious,&armed};
+ bool* guards[]={&tutorial,&reset_state,&load_state,&save_state,&menu,&worldmap,&dialog,&teleport,&combat,&dead,&unconscious,&armed};
  for(unsigned i=0;i<sizeof(guards)/sizeof(guards[0]);i++){int count=write_count;*guards[i]=true;modern_autosave_before_map_change();modern_autosave_before_combat();assert(write_count==count);*guards[i]=false;}
  int count=write_count;pc=0;modern_autosave_before_map_change();pc=1;mode=1;modern_autosave_before_map_change();mode=0;assert(write_count==count);
  modern_autosave_after_combat();modern_autosave_tick();assert(write_count==count);now+=1000;menu=true;modern_autosave_tick();assert(write_count==count);menu=false;modern_autosave_tick();assert(write_count==count+1);modern_autosave_tick();assert(write_count==count+1);
  modern_autosave_after_combat();modern_autosave_reset();now+=1000;modern_autosave_tick();assert(write_count==count+1);
  load_state=true;modern_autosave_after_combat();load_state=false;now+=1000;modern_autosave_tick();assert(write_count==count+1);
+ {
+  int writes=write_count,renames=rename_count,old_count=file_count;
+  modern_autosave_after_combat();tutorial=true;now+=1000;
+  modern_autosave_before_combat();modern_autosave_before_map_change();modern_autosave_after_combat();modern_autosave_tick();
+  assert(write_count==writes && rename_count==renames && file_count==old_count);
+  tutorial=false;modern_autosave_tick();assert(write_count==writes);
+  modern_autosave_before_map_change();assert(write_count==writes+1);assert_complete();
+ }
  file_count=0;gamelib_save("SlotAZZY","Tail");gamelib_save("SlotAZZZ","Tail");modern_autosave_before_map_change();modern_autosave_before_map_change();assert(autosaves()==3);assert(find_file("save\\SlotAZZYTail.gsi")<0);assert(find_file("save\\SlotAZZZTail.gsi")>=0);assert_complete();
  puts("PASS: persistent rotation, wrap, manual preservation, save/rename failures, safe-state guards, immediate pre-combat save, deferred combat and load/reset cancellation");
 }

@@ -35,4 +35,5 @@ cp -R "$arcanum_build/uap-runtime/ArcanumModern/." "$arcanum_project/game/Arcanu
 mkdir -p "$arcanum_project/game/ArcanumModern/licenses"
 cp "$arcanum_project/resources/aid/LICENSE.txt" "$arcanum_project/game/ArcanumModern/licenses/aid.txt"
 python3 "$arcanum_project/tools/house/build-content.py" --output "$arcanum_project/game/ArcanumModern/house"
+python3 "$arcanum_project/tools/tutorial/build-content.py" --output "$arcanum_project/game/ArcanumModern/tutorial"
 printf '%s\n' 'Compilation installée. Elle sera utilisée au prochain lancement.'

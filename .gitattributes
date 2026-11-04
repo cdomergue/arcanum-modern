@@ -5,3 +5,11 @@
 patches/*.patch -text whitespace=-blank-at-eol
 # Housing templates verify these authoring files by their exact SHA-256 bytes.
 resources/house/scene/*.mes text eol=lf
+# Tutorial CP1252 dialogs and engine binary assets must preserve exact bytes.
+resources/tutorial/dlg/*/*.dlg -text
+resources/tutorial/**/*.sec binary
+resources/tutorial/**/*.mob binary
+resources/tutorial/**/*.scr binary
+resources/tutorial/**/*.tmi binary
+resources/tutorial/**/*.bmp binary
+resources/tutorial/**/*.mp3 binary

@@ -445,6 +445,21 @@ static bool mapgen_catalog(const char* module, MapGenTask** tasks, size_t* count
         SDL_strlcpy(task->module, module, sizeof(task->module));
         task->id = entry.num; task->info = info;
     } while (mes_find_next(towns, &entry));
+    if (!SDL_strcasecmp(module, "Arcanum")) {
+        bool present = false;
+        for (size_t i = first; i < *count; i++) if ((*tasks)[i].id == 145) present = true;
+        TownMapInfo info;
+        if (!present && townmap_info(145, &info) && info.width > 0 && info.height > 0
+            && info.width <= 1000000 && info.height <= 1000000) {
+            MapGenTask* next = SDL_realloc(*tasks, (*count + 1) * sizeof(**tasks));
+            if (!next) return false;
+            *tasks = next;
+            MapGenTask* task = &next[(*count)++];
+            SDL_zero(*task);
+            SDL_strlcpy(task->module, module, sizeof(task->module));
+            task->id = 145; task->info = info;
+        }
+    }
     for (int pass = 0; pass < 2; pass++) {
         if (mes_find_first(maps, &entry)) do {
             if (entry.num < 5000) continue;

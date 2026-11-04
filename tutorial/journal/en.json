@@ -1,0 +1,14 @@
+{
+  "quests": {
+    "1980": "Wolves on the eastern shore. The guard asks you to protect the camp: reach the eastern part of the island after your training and defeat the three wolves.",
+    "1981": "Camp supplies. The crates have been counted and the supplies stored in the house. This task is complete.",
+    "1982": "The soaked letter. A letter left on the shore was swept away by the tide. It is too late to recover it.",
+    "1983": "A light offshore. A fisherman reportedly saw a light near the reefs. You have heard about this affair but have not agreed to investigate."
+  },
+  "rumors": {
+    "2980": "Options — Camera. In Graphics, choose Follow Camera to move the character with the movement keys, or Free to pan the camera. Use the mouse wheel to zoom in play.",
+    "2981": "Options — Display and readability. In Graphics, choose windowed or fullscreen mode and an available resolution. Button text size is adjustable; Defaults resets it. HD maps starts detailed map generation.",
+    "2982": "Options — Companions. In the game rules, Unlimited companions removes the Charisma-based party limit. Automatic pickup lets companions collect items from the ground. Both settings apply to single-player games.",
+    "2983": "Options — Key bindings. The Key bindings tab lets you change keys. Interface and tutorial hints use your configured bindings. You can adapt the controls to your keyboard."
+  }
+}

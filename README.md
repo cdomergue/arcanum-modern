@@ -17,6 +17,9 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
   Arcanum's rules.
 - Redesigned HUD, character sheet, inventory, trading, dialogue, journal, maps,
   spell and skill panels, save/load menus and display options.
+- Interactive voiced tutorial on a dedicated island, offered on first launch and
+  replayable anytime from **Single Player → Tutorial** (with French or English
+  subtitles).
 - Zoom the world, pan with the keyboard, or use Follow Camera to move your character with WASD.
   Remap your keys and play in windowed, desktop fullscreen or exclusive fullscreen mode.
 - Inventory search, categories, equipment comparison, item details, stack

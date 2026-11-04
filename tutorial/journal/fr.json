@@ -1,0 +1,14 @@
+{
+  "quests": {
+    "1980": "Les loups de la rive est. Le garde vous demande de protéger le camp : rejoignez la partie est de l’île lorsque votre formation sera terminée et éliminez les trois loups.",
+    "1981": "Les provisions du camp. Les caisses ont été comptées et les réserves rangées dans la maison. Cette tâche est terminée.",
+    "1982": "Le courrier détrempé. Une lettre oubliée sur la grève a été emportée par la marée. Il est trop tard pour la récupérer.",
+    "1983": "Une lumière au large. Un pêcheur aurait aperçu une lueur près des récifs. Vous avez entendu parler de cette affaire, sans accepter de l’enquêter."
+  },
+  "rumors": {
+    "2980": "Options — Caméra. Dans Graphismes, choisissez Vue suivie pour déplacer le personnage avec les touches de direction, ou Libre pour déplacer la caméra. La molette règle le zoom en jeu.",
+    "2981": "Options — Affichage et lisibilité. Dans Graphismes, choisissez le mode fenêtre ou plein écran et la résolution disponible. La taille du texte des boutons est réglable ; Par défaut la rétablit. Cartes HD permet de lancer la génération des cartes détaillées.",
+    "2982": "Options — Compagnons. Dans les règles de jeu, Compagnons illimités permet de dépasser la limite liée au Charisme. Ramassage automatique permet aux compagnons de récupérer les objets au sol. Ces deux réglages concernent le jeu en solo.",
+    "2983": "Options — Raccourcis. L’onglet Raccourcis permet de changer les touches. Les indications de l’interface et du tutoriel utilisent les raccourcis configurés. Vous pouvez adapter les commandes à votre clavier."
+  }
+}

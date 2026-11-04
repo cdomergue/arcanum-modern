@@ -18,6 +18,7 @@
 #include "game/critter.h"
 #include "game/combat.h"
 #include "game/location.h"
+#include "game/tile_block.h"
 #include "game/gsound.h"
 #include "game/scroll.h"
 #include "game/snd.h"
@@ -1275,6 +1276,8 @@ static bool draw_main_menu(void)
     return true;
 }
 
+static bool tutorial_available;
+
 static bool draw_navigation_menu(MainMenuWindowType type)
 {
     if(!ornate_menu_style())return false;
@@ -1285,13 +1288,20 @@ static bool draw_navigation_menu(MainMenuWindowType type)
     SDL_RenderTexture(renderer,single_player_texture,NULL,&bounds);
     SDL_FRect title={bounds.x+640*scale,bounds.y+162*scale,392*scale,83*scale};
     main_menu_label(title,menu_text(pause?4000:type==MM_WINDOW_SINGLE_PLAYER?10:50),GOLD,false,true);
-    float first=296+(5-info->num_buttons)*42;
+    bool replay=tutorial_available && type==MM_WINDOW_SINGLE_PLAYER;
+    float first=296+(5-info->num_buttons-(int)replay)*42;
+    if(replay) {
+        SDL_FRect rect={bounds.x+645*scale,bounds.y+first*scale,382*scale,72*scale};
+        menu_button(rect,680,tr("Tutoriel","Tutorial"),true);
+        first+=84;
+    }
     for(int i=0;i<info->num_buttons;i++) {
         int index=pause?(i==0?info->num_buttons-1:i-1):i;
         bool hidden=true;tig_button_is_hidden(info->buttons[index].button_handle,&hidden);
         SDL_FRect rect={bounds.x+645*scale,bounds.y+(first+i*84)*scale,382*scale,72*scale};
         int label=pause && i==0?34:info->num+index+(type==MM_WINDOW_26 && index>=1?1:0);
-        menu_button(rect,500+index,menu_text(label),!hidden);
+        bool saving=info->buttons[index].field_10==MM_WINDOW_SAVE_GAME;
+        menu_button(rect,500+index,menu_text(label),!hidden && !(saving && modern_tutorial_active()));
     }
     return true;
 }
@@ -1650,9 +1660,12 @@ bool modern_ui_confirm(const char* message)
     return confirmation_choice==1;
 }
 
+#include "modern_tutorial.inc"
+
 static void draw_menu(void)
 {
     MainMenuWindowType type=mainmenu_ui_window_type_get();
+    if(type==MM_WINDOW_MAINMENU && !confirming_menu && tutorial_invite){tutorial_draw_invite();return;}
     if(type==MM_WINDOW_MAINMENU && !confirming_menu && draw_main_menu())return;
     bool options = type == MM_WINDOW_OPTIONS;
     bool pause = type == MM_WINDOW_MAINMENU_IN_PLAY || type == MM_WINDOW_MAINMENU_IN_PLAY_LOCKED || type == MM_WINDOW_26;
@@ -1673,7 +1686,12 @@ static void draw_menu(void)
         rule(x+36,y+112,w-72,(SDL_Color){117,87,44,255});
         MainMenuWindowInfo* info=sub_5496C0(type);
         int count=info->num_buttons;
-        float first=y+144+(5-count)*35;
+        bool replay=tutorial_available && type==MM_WINDOW_SINGLE_PLAYER;
+        float first=y+144+(5-count-(int)replay)*35;
+        if(replay) {
+            menu_button((SDL_FRect){x+55,first,w-110,58},680,tr("Tutoriel","Tutorial"),true);
+            first+=81;
+        }
         for (int row=0;row<count;row++) {
             int index=pause ? (row==0 ? count-1 : row-1) : row;
             MesFileEntry entry={0};entry.num=info->num+index+(type==MM_WINDOW_26 && index>=1 ? 1 : 0);
@@ -1682,7 +1700,8 @@ static void draw_menu(void)
             if(pause && row==0) SDL_strlcpy(label,menu_text(34),sizeof(label));
             bool hidden=true;
             tig_button_is_hidden(info->buttons[index].button_handle,&hidden);
-            menu_button((SDL_FRect){x+55,first+row*81,w-110,58},500+index,label,!hidden);
+            bool saving=info->buttons[index].field_10==MM_WINDOW_SAVE_GAME;
+            menu_button((SDL_FRect){x+55,first+row*81,w-110,58},500+index,label,!hidden && !(saving && modern_tutorial_active()));
         }
         if(type!=MM_WINDOW_MAINMENU) centered(0,menu_text(pause?34:4003),canvas_w/2,y+h-46,MUTED);
         return;
@@ -2055,6 +2074,7 @@ void modern_ui_menu_tick(void)
         pressed_action=-1;click_captured=false;
     }
     modern_graphics_tick();
+    if (native_menu() && !confirming_menu && tutorial_menu_tick(type)) return;
     if (!native_menu() || pending_action<400 || pending_action>699) return;
     int action=pending_action;pending_action=-1;
     if(type==MM_WINDOW_OPTIONS && action>=430 && action<446) {
@@ -2251,6 +2271,8 @@ static bool hud_region(float x,float y)
         || inside(bottom_bar_rect(0,0,BOTTOM_BAR_SOURCE_WIDTH,BOTTOM_BAR_SOURCE_HEIGHT),x,y);
 }
 
+#include "modern_tutorial_lessons.inc"
+
 static int hit(float x,float y)
 {
     for(int i=button_count-1;i>=0;i--) if(buttons[i].enabled && inside(buttons[i].rect,x,y)) return buttons[i].action;
@@ -2349,6 +2371,7 @@ static void render_overlay(SDL_Renderer* target)
         if(journal) draw_journal();
         draw_play_panels();
         draw_binding_bar();
+        tutorial_draw_lesson();
         drawing_play_panel=false;
     }
     if(key_edit<0 && !*button_overflow_hint)for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
@@ -2544,6 +2567,16 @@ static bool handle_ui_event(SDL_Event* event)
 {
     if(album.pages) return credit_event(event);
     if(key_options_event(event))return true;
+    if(!mainmenu_ui_is_active() && tutorial_next_rect.w>0 &&
+       (event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP)) {
+        int w,h;SDL_GetWindowSize(window,&w,&h);
+        static bool lesson_pressed;
+        bool over=w>0 && h>0 && inside(tutorial_next_rect,event->button.x*canvas_w/w,event->button.y*canvas_h/h);
+        if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN && over){lesson_pressed=event->button.button==SDL_BUTTON_LEFT;return true;}
+        if(event->type==SDL_EVENT_MOUSE_BUTTON_UP && lesson_pressed){
+            lesson_pressed=false;tutorial_skip=over;return true;
+        }
+    }
     if(inventory_sort_event(event))return true;
     if(slide_ui_is_active())return false;
     bool menu=native_menu();
@@ -2595,6 +2628,13 @@ static bool handle_ui_event(SDL_Event* event)
     }
     if(menu) {
         MainMenuWindowType type=mainmenu_ui_window_type_get();
+        if(type==MM_WINDOW_MAINMENU && tutorial_invite && (event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP)) {
+            if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
+                if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=681;
+                if(event->key.scancode==SDL_SCANCODE_RETURN)pending_action=680;
+            }
+            return true;
+        }
         if(!confirming_menu && event->type==SDL_EVENT_TEXT_INPUT && name_focused) {
             menu_name_input(event->text.text,false);return true;
         }
@@ -2924,6 +2964,7 @@ void modern_ui_message(const char* text)
 
 void modern_ui_exit(void)
 {
+    tutorial_exit();
     update_close();
     tactical_portraits_clear();
     if(option_boolean_file!=MES_FILE_HANDLE_INVALID){mes_unload(option_boolean_file);option_boolean_file=MES_FILE_HANDLE_INVALID;}

@@ -1,0 +1,22 @@
+﻿Doublage du tutoriel Arcanum Renaissance
+
+Les scripts tutoriel-fr.txt et tutoriel-en.txt reprennent exactement les textes
+actuels des encadrés, dans leur ordre de lecture. Le fichier TSV aligne les langues.
+35 textes de leçon : accueil HELLO, 33 étapes et les deux variantes de comparaison.
+Les six textes d’invitation et de boutons figurent à part, en fin de fichier.
+
+Enregistrer un fichier par identifiant et par langue, par exemple :
+fr/TUTORIAL_GUIDE.wav et en/TUTORIAL_GUIDE.wav.
+Ne pas lire les identifiants. Pour TUTORIAL_COMPARE_1, la comparaison est déjà
+active ; pour TUTORIAL_COMPARE_2, le joueur doit l’activer.
+Les touches entre crochets ajoutées dynamiquement à l’écran ne font pas partie
+de la voix, puisqu’elles dépendent des raccourcis choisis par le joueur.
+Les dialogues du garde et les textes du journal ne sont pas des encadrés tutoriels
+et ne sont pas inclus dans ces scripts.
+
+Les MP3 anglais sont utilisés dans les deux langues. TUTORIAL_HELLO précède
+TUTORIAL_GUIDE de 9 secondes. Les identifiants INVITATION et BUTTON_SKIP restent
+sans voix. Les textes français servent aux sous-titres.
+Installation : python tutorial/install-voice.py VOICES GAME
+L’export se régénère avec :
+python tutorial/export-voiceover.py

@@ -70,6 +70,17 @@ def house_files():
         return files
 
 
+def tutorial_files():
+    spec = importlib.util.spec_from_file_location('tutorial_builder', ROOT/'tools/tutorial/build-content.py')
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    with tempfile.TemporaryDirectory(prefix='arcanum-tutorial-') as directory:
+        target = Path(directory)
+        builder.build(target)
+        return {'ArcanumModern/tutorial/'+path.relative_to(target).as_posix(): path.read_bytes()
+                for path in sorted(target.rglob('*')) if path.is_file()}
+
+
 def validate_pe_dependencies(files):
     bundled = {Path(name).name.lower() for name in files if name.lower().endswith('.dll')}
     for name, data in files.items():
@@ -125,7 +136,7 @@ def write_archive(output, files, metadata):
             for index, (name, data) in enumerate(sorted(files.items()), 1):
                 if isinstance(data, Path):
                     info = zipfile.ZipInfo(name)
-                    info.compress_type = (zipfile.ZIP_STORED if data.suffix.lower() in {'.png', '.bik', '.ogg'}
+                    info.compress_type = (zipfile.ZIP_STORED if data.suffix.lower() in {'.png', '.bik', '.ogg', '.mp3'}
                                           else zipfile.ZIP_DEFLATED)
                     digest = hashlib.sha256()
                     with data.open('rb') as source, archive.open(info, 'w', force_zip64=True) as target:
@@ -199,6 +210,7 @@ def package(exe, build_dir, output, include_game=None):
     files.update(movie_files(build_dir, 'windows'))
     files.update(uap_files('windows'))
     files.update(house_files())
+    files.update(tutorial_files())
     validate_pe_dependencies(files)
     for name in ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()

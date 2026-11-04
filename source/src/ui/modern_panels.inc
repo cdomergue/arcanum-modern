@@ -1186,7 +1186,10 @@ static bool panels_action(int action)
     }
     if(p==3 && action==748){modern_map_route_clear();map_texture_time=0;return true;}
     if(p==3 && (action==749 || action==750)){map_zoom(action==749?0.8f:1.25f,map_destination.x+map_destination.w/2,map_destination.y+map_destination.h/2);return true;}
-    if(action>=740 && action<=747 && p==3){modern_map_action(action-740);return true;}
+    if(action>=740 && action<=747 && p==3){
+        if(action==743 && tutorial_available && tutorial_step==TUTORIAL_ROUTE && map_camera_local && map_local.count>0)tutorial_route_started=true;
+        modern_map_action(action-740);return true;
+    }
     if(action>=760 && action<=764 && p==2) {
         int amount,max;modern_quantity_state(&amount,&max);
         modern_quantity_action(action==764?-1:action==762?max:amount+(action==760?-1:action==761?1:0),action==763);return true;

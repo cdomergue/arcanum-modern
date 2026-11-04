@@ -1296,6 +1296,18 @@ diff --git a/src/game/background.c b/src/game/background.c
              background_gender_specifiers[gender]);
  
          // Convert the condition string to uppercase for comparison.
+diff --git a/src/game/broadcast.c b/src/game/broadcast.c
+--- a/src/game/broadcast.c
++++ b/src/game/broadcast.c
+@@ -270,7 +270,7 @@
+                     }
+                     break;
+                 case BROADCAST_CMD_TYPE_WAIT:
+-                    if ((spell_flags & OSF_MIND_CONTROLLED) == 0) {
++                    if ((spell_flags & OSF_MIND_CONTROLLED) == 0 || critter_can_command_familiar(candidate_obj)) {
+                         if (broadcast_float_line_func != NULL) {
+                             dialog_copy_npc_order_ok_msg(candidate_obj, pc_obj, str, &speech_id);
+                             broadcast_float_line_func(candidate_obj, pc_obj, str, speech_id);
 diff --git a/src/game/combat.c b/src/game/combat.c
 --- a/src/game/combat.c
 +++ b/src/game/combat.c
@@ -2105,10 +2117,11 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
  
  #include <stdio.h>
  
-@@ -24,6 +25,21 @@
+@@ -24,6 +25,22 @@
  #include "game/tc.h"
  #include "game/timeevent.h"
  #include "game/ui.h"
++#include "ui/modern_ui.h"
 +
 +static int64_t dialog_speaker;
 +
@@ -2127,7 +2140,18 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
  
  typedef enum GeneratedDialog {
      GD_PC2M,
-@@ -484,7 +500,7 @@
+@@ -420,6 +437,10 @@
+ {
+     int index;
+     DialogFile dialog;
++    const char* tutorial_path = modern_tutorial_dialog_path(path);
++    if (tutorial_path != NULL) {
++        path = tutorial_path;
++    }
+ 
+     if (find_dialog(path, &index)) {
+         dialog_files[index].refcount++;
+@@ -484,7 +505,7 @@
  
      if (critter_is_dead(state->npc_obj) || ai_check_kos(state->npc_obj, state->pc_obj) == AI_KOS_NO) {
          if (player_is_local_pc_obj(state->pc_obj)) {
@@ -2136,7 +2160,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              npc_loc = obj_field_int64_get(state->npc_obj, OBJ_F_LOCATION);
              location_xy(pc_loc, &tmp, &pc_loc_y);
              location_xy(npc_loc, &tmp, &npc_loc_y);
-@@ -1317,11 +1333,11 @@
+@@ -1317,11 +1338,11 @@
      int cnt;
  
      key.num = a1->field_17EC;
@@ -2151,7 +2175,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          intelligence = 1;
      }
  
-@@ -1407,66 +1423,66 @@
+@@ -1407,66 +1428,66 @@
          switch (cond) {
          case DIALOG_COND_PS:
              if (value < 0) {
@@ -2230,7 +2254,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1547,11 +1563,11 @@
+@@ -1547,11 +1568,11 @@
              break;
          case DIALOG_COND_HA:
              if (value < 0) {
@@ -2244,7 +2268,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1570,21 +1586,21 @@
+@@ -1570,21 +1591,21 @@
              training = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
                  if (training < 0) {
@@ -2270,7 +2294,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                          return false;
                      }
                  }
-@@ -1594,21 +1610,21 @@
+@@ -1594,21 +1615,21 @@
              level = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
                  if (level < 0) {
@@ -2296,7 +2320,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                          return false;
                      }
                  }
-@@ -1649,11 +1665,11 @@
+@@ -1649,11 +1670,11 @@
              break;
          case DIALOG_COND_LE:
              if (value < 0) {
@@ -2310,7 +2334,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1713,11 +1729,11 @@
+@@ -1713,11 +1734,11 @@
              break;
          case DIALOG_COND_RA:
              if (value > 0) {
@@ -2324,7 +2348,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1794,11 +1810,11 @@
+@@ -1794,11 +1815,11 @@
              break;
          case DIALOG_COND_NA:
              if (value < 0) {
@@ -2338,7 +2362,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -2066,9 +2082,9 @@
+@@ -2066,9 +2087,9 @@
  
              training = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
@@ -2350,7 +2374,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              }
              break;
          }
-@@ -2196,11 +2212,11 @@
+@@ -2196,11 +2217,11 @@
  
              v50 = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
@@ -2366,7 +2390,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              }
  
              if (level < training_min_skill_level_required(TRAINING_EXPERT)) {
-@@ -2330,7 +2346,7 @@
+@@ -2330,7 +2351,7 @@
      }
  
      if (obj_type_is_critter(obj_field_int32_get(a1->pc_obj, OBJ_F_TYPE))
@@ -2375,7 +2399,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          sub_416B00(a1->reply, entry.data.female_str, a1);
      } else {
          sub_416B00(a1->reply, entry.str, a1);
-@@ -3051,7 +3067,7 @@
+@@ -3051,7 +3072,7 @@
      int cnt;
      MesFileEntry mes_file_entry;
  
@@ -2384,7 +2408,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          gd = stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE
              ? GD_DUMB_PC2M
              : GD_DUMB_PC2F;
-@@ -3077,7 +3093,7 @@
+@@ -3077,7 +3098,7 @@
      int cnt;
      MesFileEntry mes_file_entry;
  
@@ -2393,7 +2417,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          gd = stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE
              ? GD_CLS_DUMB_PC2M
              : GD_CLS_DUMB_PC2F;
-@@ -3118,21 +3134,21 @@
+@@ -3118,21 +3139,21 @@
  
      if (critter_is_dumb(state->npc_obj)) {
          if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2419,7 +2443,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                  ? GD_CLS_F2M
                  : GD_CLS_F2F;
          }
-@@ -3164,26 +3180,26 @@
+@@ -3164,26 +3185,26 @@
  
      if (critter_is_dumb(state->npc_obj)) {
          if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2451,7 +2475,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          if (race != stat_level_get(state->npc_obj, STAT_RACE)) {
              num += 50 * (race + 1);
          }
-@@ -3211,11 +3227,11 @@
+@@ -3211,11 +3232,11 @@
      }
  
      if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2465,7 +2489,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              ? GD_NPC_F2M
              : GD_NPC_F2F;
      }
-@@ -3263,7 +3279,7 @@
+@@ -3263,7 +3284,7 @@
  
      if (state->pc_obj != OBJ_HANDLE_NULL
          && obj_type_is_critter(obj_field_int32_get(state->pc_obj, OBJ_F_TYPE))
@@ -2474,7 +2498,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          strcpy(buffer, entry.str);
      } else {
          strcpy(buffer, entry.data.female_str);
-@@ -3389,7 +3405,7 @@
+@@ -3389,7 +3410,7 @@
      index = state->num_options - 1;
      if (IS_TECH_SKILL(skill)) {
          // Check if PC is already trained.
@@ -2483,7 +2507,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              // "You already have received apprentice training in that skill."
              sub_418C40(4000, state->field_17F0[index], state->field_1804[index], state);
              return;
-@@ -3397,30 +3413,30 @@
+@@ -3397,30 +3418,30 @@
  
          // Check if PC can be trained - attempt to temporarily grant apprentice
          // training.
@@ -2519,7 +2543,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          dialog_ask_money(100, 7, skill, state->field_17F0[index], state->field_1804[index], state);
      }
  }
-@@ -3429,9 +3445,9 @@
+@@ -3429,9 +3450,9 @@
  void dialog_perform_training(int skill, DialogState* state)
  {
      if (IS_TECH_SKILL(skill)) {
@@ -2532,7 +2556,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
      }
  
      // "Your apprentice training is complete."
-@@ -4162,11 +4178,11 @@
+@@ -4162,11 +4183,11 @@
      }
  
      if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2685,7 +2709,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      GameSaveInfo save_info;
 +    char stage[9] = "";
 +
-+    if (modern_autosave_is_slot(name) || sector_save_failed()) return false;
++    if (modern_tutorial_active() || modern_autosave_is_slot(name) || sector_save_failed()) return false;
 +    if (!rw_save_stage(stage)) return false;
  
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
@@ -3006,19 +3030,20 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1973,11 @@
+@@ -1832,6 +1973,12 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
 +    if (!modern_uap_load()) return false;
 +    modern_compat_load();
 +    modern_house_load();
++    modern_tutorial_load();
 +    if (!modern_world_updates_resources_init()) return false;
 +    return true;
  }
  
  // 0x404C10
-@@ -1874,6 +2020,7 @@
+@@ -1874,6 +2021,7 @@
      }
  
      path1[end] = '\0';
@@ -3026,7 +3051,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +2053,9 @@
+@@ -1906,6 +2054,9 @@
  void gamelib_unload_module_data(void)
  {
      int index;
@@ -3412,6 +3437,198 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 +    magictech_interrupt(id);
 +    return true;
 +}
+diff --git a/src/game/map.c b/src/game/map.c
+--- a/src/game/map.c
++++ b/src/game/map.c
+@@ -33,6 +33,7 @@
+ #include "game/tile.h"
+ #include "game/timeevent.h"
+ #include "game/townmap.h"
++#include "ui/modern_ui.h"
+ #include "game/ui.h"
+ #include "game/wall.h"
+ #include "game/wallcheck.h"
+@@ -361,7 +362,7 @@
+ 
+     tig_debug_printf("map_save: flushing map...");
+     tig_timer_now(&start);
+-    map_flush(1);
++    if (!map_flush(1)) return false;
+     tig_debug_printf("done.  Time (ms): %d\n", tig_timer_elapsed(start));
+ 
+     tig_debug_printf("map_save: saving map names...");
+@@ -399,7 +400,7 @@
+ 
+             if (!map_modules[index].save_func(stream)) {
+                 tig_debug_printf("map_save: save function %d (%s) failed\n", index, map_modules[index].name);
+-                break;
++                return false;
+             }
+ 
+             int pos;
+@@ -412,7 +413,7 @@
+ 
+             if (tig_file_fwrite(&sentinel, sizeof(sentinel), 1, stream) != 1) {
+                 tig_debug_printf("map_save(): ERROR: Sentinel Failed to Save!");
+-                break;
++                return false;
+             }
+         }
+     }
+@@ -805,7 +806,7 @@
+ 
+     info = &(map_list_info[map - 1]);
+     if (map_valid && !a3) {
+-        map_flush(0);
++        if (!map_flush(0)) return false;
+     }
+ 
+     if (!obj_validate_system(1)) {
+@@ -949,53 +950,36 @@
+ }
+ 
+ // 0x410070
+-void map_flush(unsigned int flags)
+-{
++bool map_flush(unsigned int flags)
++{
++    bool ok = true;
+     char path[TIG_MAX_PATH];
+     TigFile* stream;
+-
++    if (sector_save_failed()) return false;
+     wallcheck_flush();
+-
+-    if (!map_save_preprocess()) {
+-        tig_debug_println("Error: map_save_preprocess failed in map_flush.");
+-    }
+-
++    if (!map_save_preprocess()) return false;
+     if (map_editor) {
+-        if (!map_save_objects()) {
+-            tig_debug_println("Error: map_save_objects failed in map_flush.");
+-        }
++        ok = map_save_objects();
+     } else {
+-        if (!map_save_difs()) {
+-            tig_debug_println("Error: map_save_difs failed in map_flush.");
+-        }
+-
+-        if (!map_save_dynamic()) {
+-            tig_debug_println("Error: map_save_dynamic failed in map_flush.");
+-        }
+-    }
+-
++        ok = map_save_difs();
++        if (ok) ok = map_save_dynamic();
++    }
++    // Restore runtime handles even when persistence failed.
+     map_load_postprocess();
+-    sector_flush(flags);
+-    jumppoint_flush();
+-    terrain_flush();
++    if (!ok) return false;
++    if (!sector_flush(flags) || !jumppoint_flush() || (map_editor && !terrain_flush())) return false;
+     townmap_flush();
+-
+     if (map_editor) {
+         snprintf(path, sizeof(path), "%s\\startloc.txt", map_save_path);
+         if (map_starting_loc != 0) {
+             stream = tig_file_fopen(path, "wt");
+-            if (stream != NULL) {
+-                tig_file_fprintf(stream,
+-                    "%I64d\n%I64d\n",
+-                    LOCATION_GET_X(map_starting_loc),
+-                    LOCATION_GET_Y(map_starting_loc));
+-            } else {
+-                tig_debug_printf("Error could not open map start location file for writing %s\n", path);
+-            }
+-        } else {
+-            tig_file_remove(path);
+-        }
+-    }
++            if (stream == NULL) return false;
++            ok = tig_file_fprintf(stream, "%I64d\n%I64d\n",
++                LOCATION_GET_X(map_starting_loc), LOCATION_GET_Y(map_starting_loc)) >= 0;
++            if (tig_file_fclose(stream) != 0) ok = false;
++        } else if (tig_file_exists(path, NULL) && tig_file_remove(path) != 0) ok = false;
++    }
++    return ok && !sector_save_failed();
+ }
+ 
+ // 0x4101D0
+@@ -1271,19 +1255,19 @@
+         } while (obj_inst_next(&obj, &iter));
+     }
+ 
+-    tig_file_fclose(stream2);
++    bool closed2 = tig_file_fclose(stream2) == 0;
+ 
+     if (size < sizeof(oid)) {
+         tig_file_remove(path2);
+     }
+ 
+-    tig_file_fclose(stream1);
++    bool closed1 = tig_file_fclose(stream1) == 0;
+ 
+     if (cnt == 0) {
+         tig_file_remove(path1);
+     }
+ 
+-    return true;
++    return closed1 && closed2;
+ }
+ 
+ // 0x410B20
+@@ -1320,13 +1304,13 @@
+         } while (obj_inst_next(&obj, &iter));
+     }
+ 
+-    tig_file_fclose(stream);
++    bool closed = tig_file_fclose(stream) == 0;
+ 
+     if (cnt == 0) {
+         tig_file_remove(path);
+     }
+ 
+-    return true;
++    return closed;
+ }
+ 
+ // 0x410C50
+@@ -1444,6 +1428,20 @@
+ 
+     // FIX: Release `stream`.
+     tig_file_fclose(stream);
++
++    if (!map_editor && modern_tutorial_active()
++        && SDL_strcasecmp(base_path, "maps\\Arcanum1-024-fixed") == 0) {
++        tig_file_list_create(&file_list, "tutorial\\mobs\\*.mob");
++        for (idx = 0; idx < file_list.count; idx++) {
++            snprintf(path, sizeof(path), "tutorial\\mobs\\%s", file_list.entries[idx].path);
++            if (!objf_solitary_read(&obj, path)) {
++                tig_file_list_destroy(&file_list);
++                tig_debug_printf("Error reading object %s\n", path);
++                return false;
++            }
++        }
++        tig_file_list_destroy(&file_list);
++    }
+ 
+     strcpy(fname, "mobile.md");
+     if (tig_file_exists(path3, NULL)) {
+diff --git a/src/game/map.h b/src/game/map.h
+--- a/src/game/map.h
++++ b/src/game/map.h
+@@ -32,7 +32,7 @@
+ bool map_get_area(int map, int* area);
+ bool map_get_worldmap(int map, int* worldmap);
+ bool map_is_clearing_objects(void);
+-void map_flush(unsigned int flags);
++bool map_flush(unsigned int flags);
+ void map_process_jumppoint(int64_t loc, int64_t obj);
+ bool map_is_valid(void);
+ void map_starting_loc_get(int64_t* loc_ptr);
 diff --git a/src/game/mes.c b/src/game/mes.c
 --- a/src/game/mes.c
 +++ b/src/game/mes.c
@@ -3787,6 +4004,117 @@ diff --git a/src/game/portrait.c b/src/game/portrait.c
              portrait_gender_specifiers[gender]);
  
          // Check if portrait file name starts with the race-gender specifiers.
+diff --git a/src/game/quest.c b/src/game/quest.c
+--- a/src/game/quest.c
++++ b/src/game/quest.c
+@@ -9,6 +9,7 @@
+ #include "game/snd.h"
+ #include "game/stat.h"
+ #include "game/ui.h"
++#include "ui/modern_ui.h"
+ 
+ #define MAX_QUEST 1000
+ 
+@@ -165,7 +166,7 @@
+         if (mes_load("mes\\gamequestlogdumb.mes", &quest_log_dumb_mes_file)) {
+             for (num = 1000; num < 2000; num++) {
+                 mes_file_entry.num = num;
+-                if (mes_search(quest_log_mes_file, &mes_file_entry)) {
++                if (mes_search(quest_log_dumb_mes_file, &mes_file_entry)) {
+                     quests[quest_num_to_idx(num)].dumb_description = mes_file_entry.str;
+                 }
+             }
+@@ -383,11 +384,66 @@
+     }
+ 
+     // Award experience points if the quest is completed.
+-    if (state == QUEST_STATE_COMPLETED) {
++    if (state == QUEST_STATE_COMPLETED && modern_tutorial_quest_text(num) == NULL) {
+         critter_give_xp(pc_obj, quest_get_xp(quests[quest_num_to_idx(num)].experience_level));
+     }
+ 
+     return quest_state_set_internal(pc_obj, num, state, npc_obj);
++}
++
++/* Convert loaded state without granting rewards or replaying dialogue effects. */
++bool quest_state_migrate(int64_t pc_obj, int num, int before, int after,
++    bool authoritative, char* error, size_t size)
++{
++    const char* reason = NULL;
++    if (size != 0) error[0] = '\0';
++    if (authoritative) reason = "Quest migrations require an explicit old-state guard";
++    else if (!pc_obj || obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC)
++        reason = "Quest migration requires the loaded player character";
++    else if (!quests || !quest_gstate || num < 1000 || num >= 2000
++        || before < 0 || before >= QUEST_STATE_COUNT || after < 0 || after >= QUEST_STATE_COUNT)
++        reason = "Invalid quest migration target or state";
++    if (reason == NULL) {
++        Quest* definition = &quests[quest_num_to_idx(num)];
++        bool defined = definition->normal_description != NULL || definition->dumb_description != NULL
++            || modern_tutorial_quest_text(num) != NULL;
++        for (int i = 0; i < QUEST_STATE_COUNT; i++) {
++            if (definition->normal_dialog[i] != -1 || definition->dumb_dialog[i] != -1
++                || definition->bad_reaction_dialog[i] != -1) defined = true;
++        }
++        if (!defined) reason = "Quest definition is absent from this module";
++    }
++    if (reason != NULL) {
++        if (size != 0) snprintf(error, size, "%s", reason);
++        return false;
++    }
++    int current = quest_state_get(pc_obj, num);
++    if (current == after) return true;
++    int global = quest_gstate[quest_num_to_idx(num)];
++    if (current >= QUEST_STATE_COMPLETED)
++        reason = "Completed, externally completed and botched quests cannot be reset";
++    else if (current != before)
++        reason = "Player quest state differs from the declared precondition";
++    else if (global == QUEST_STATE_BOTCHED && after != QUEST_STATE_BOTCHED)
++        reason = "The global quest outcome is already botched";
++    else if (global == QUEST_STATE_COMPLETED && after != QUEST_STATE_OTHER_COMPLETED)
++        reason = "The global quest outcome was completed by another character";
++    if (reason != NULL) {
++        if (size != 0) snprintf(error, size, "%s", reason);
++        return false;
++    }
++    PcQuestState state;
++    obj_arrayfield_pc_quest_get(pc_obj, OBJ_F_PC_QUEST_IDX, num, &state);
++    state.state = after == QUEST_STATE_BOTCHED ? state.state | QUEST_BOTCHED_MODIFIER : after;
++    /* Keep the original journal date and padding; no XP, sound, alignment or reaction. */
++    obj_arrayfield_pc_quest_set(pc_obj, OBJ_F_PC_QUEST_IDX, num, &state);
++    if (global == QUEST_STATE_ACCEPTED) {
++        if (after == QUEST_STATE_COMPLETED || after == QUEST_STATE_OTHER_COMPLETED)
++            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_COMPLETED;
++        else if (after == QUEST_STATE_BOTCHED)
++            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_BOTCHED;
++    }
++    return true;
+ }
+ 
+ /**
+@@ -557,6 +613,11 @@
+  */
+ void quest_copy_description(int64_t obj, int num, char* buffer, size_t maxlen)
+ {
++    const char* tutorial_description = modern_tutorial_quest_text(num);
++    if (tutorial_description != NULL) {
++        SDL_strlcpy(buffer, tutorial_description, maxlen);
++        return;
++    }
+     if (quests[quest_num_to_idx(num)].dumb_description != NULL
+         && stat_level_get(obj, STAT_INTELLIGENCE) <= LOW_INTELLIGENCE) {
+         SDL_strlcpy(buffer, quests[quest_num_to_idx(num)].dumb_description, maxlen);
+diff --git a/src/game/quest.h b/src/game/quest.h
+--- a/src/game/quest.h
++++ b/src/game/quest.h
+@@ -41,6 +41,7 @@
+ int quest_dialog_line(int64_t pc_obj, int64_t npc_obj, int num);
+ int quest_state_get(int64_t pc_obj, int num);
+ int quest_state_set(int64_t pc_obj, int num, int state, int64_t npc_obj);
++bool quest_state_migrate(int64_t pc_obj, int num, int before, int after, bool authoritative, char* error, size_t size);
+ int quest_unbotch(int64_t obj, int num);
+ int quest_global_state_get(int num);
+ int quest_global_state_set(int num, int state);
 diff --git a/src/game/reaction.c b/src/game/reaction.c
 --- a/src/game/reaction.c
 +++ b/src/game/reaction.c
@@ -3849,6 +4177,41 @@ diff --git a/src/game/roof.h b/src/game/roof.h
  void roof_fill_off(int64_t loc);
  void roof_fill_on(int64_t loc);
  void roof_fade_on(int64_t loc);
+diff --git a/src/game/rumor.c b/src/game/rumor.c
+--- a/src/game/rumor.c
++++ b/src/game/rumor.c
+@@ -5,6 +5,7 @@
+ #include "game/critter.h"
+ #include "game/mes.h"
+ #include "game/stat.h"
++#include "ui/modern_ui.h"
+ 
+ /**
+  * Size of the rumor state bit array.
+@@ -336,6 +337,11 @@
+ void rumor_copy_logbook_normal_str(int rumor, char* buffer, size_t maxlen)
+ {
+     MesFileEntry mes_file_entry;
++    const char* tutorial_description = modern_tutorial_rumor_text(rumor);
++    if (tutorial_description != NULL) {
++        SDL_strlcpy(buffer, tutorial_description, maxlen);
++        return;
++    }
+ 
+     mes_file_entry.num = 20 * rumor;
+     if (!mes_search(rumor_mes_files[RUMOR_INTERACTION_TYPE_MALE_TO_MALE], &mes_file_entry)) {
+@@ -355,6 +361,11 @@
+ void rumor_copy_logbook_dumb_str(int rumor, char* buffer, size_t maxlen)
+ {
+     MesFileEntry mes_file_entry;
++    const char* tutorial_description = modern_tutorial_rumor_text(rumor);
++    if (tutorial_description != NULL) {
++        SDL_strlcpy(buffer, tutorial_description, maxlen);
++        return;
++    }
+ 
+     mes_file_entry.num = 20 * rumor;
+     if (!mes_search(rumor_mes_files[RUMOR_INTERACTION_TYPE_DUMB], &mes_file_entry)) {
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
@@ -3938,6 +4301,28 @@ diff --git a/src/game/script.c b/src/game/script.c
          return;
      }
  
+diff --git a/src/game/scroll.c b/src/game/scroll.c
+--- a/src/game/scroll.c
++++ b/src/game/scroll.c
+@@ -13,7 +13,6 @@
+ #define SCROLL_DIAG_X 4
+ #define SCROLL_DIAG_Y 2
+ 
+-static void scroll_by(int64_t dx, int64_t dy);
+ static void scroll_origin_changed(int64_t loc);
+ static void scroll_speed_changed(void);
+ static bool scroll_cursor_art_set(tig_art_id_t art_id);
+diff --git a/src/game/scroll.h b/src/game/scroll.h
+--- a/src/game/scroll.h
++++ b/src/game/scroll.h
+@@ -33,6 +33,7 @@
+ ScrollSpeed scroll_speed_get(void);
+ void scroll_start(int direction);
+ void scroll_stop(void);
++void scroll_by(int64_t dx, int64_t dy);
+ void scroll_fps_set(int fps);
+ void scroll_distance_set(int distance);
+ int scroll_distance_get(void);
 diff --git a/src/game/sector.c b/src/game/sector.c
 --- a/src/game/sector.c
 +++ b/src/game/sector.c
@@ -4324,6 +4709,20 @@ diff --git a/src/game/sector.c b/src/game/sector.c
          }
  
          sector_blocked_sectors_changed = false;
+diff --git a/src/game/sector.h b/src/game/sector.h
+--- a/src/game/sector.h
++++ b/src/game/sector.h
+@@ -65,7 +65,9 @@
+ bool sector_lock(int64_t id, Sector** sector_ptr);
+ bool sector_unlock(int64_t id);
+ void sector_cache_reset(void);
+-void sector_flush(unsigned int flags);
++bool sector_flush(unsigned int flags);
++bool sector_save_failed(void);
++void sector_save_error_reset(void);
+ bool sector_check_demo_limits(int64_t id);
+ void sector_art_cache_register(tig_art_id_t art_id);
+ bool sector_is_blocked(int64_t sec);
 diff --git a/src/game/sector_object_list.c b/src/game/sector_object_list.c
 --- a/src/game/sector_object_list.c
 +++ b/src/game/sector_object_list.c
@@ -4763,7 +5162,28 @@ diff --git a/src/game/townmap.c b/src/game/townmap.c
  
  /**
   * The size of `townmap_kstate` in bytes.
-@@ -585,6 +590,12 @@
+@@ -260,6 +265,9 @@
+     // Search for the map entry in the mes file.
+     mes_file_entry.num = map;
+     if (!mes_search(townmap_mes_file, &mes_file_entry)) {
++        if (map == 145 && tig_file_exists("townmap\\tutorial-island\\tutorial-island.tmi", NULL)) {
++            return "tutorial-island";
++        }
+         return NULL;
+     }
+ 
+@@ -575,6 +583,10 @@
+         }
+     }
+ 
++    if (map == 145 && tig_file_exists("townmap\\tutorial-island\\tutorial-island.tmi", NULL)) {
++        return true;
++    }
++
+     return false;
+ }
+ 
+@@ -585,6 +597,12 @@
   */
  void townmap_kstate_reset(void)
  {
@@ -4776,7 +5196,7 @@ diff --git a/src/game/townmap.c b/src/game/townmap.c
      if (townmap_kstate != NULL) {
          FREE(townmap_kstate);
          townmap_kstate = NULL;
-@@ -609,6 +620,7 @@
+@@ -609,6 +627,7 @@
          // bits.
          value = known ? 0xFF : 0;
          for (idx = 0; idx < townmap_kstate_size; idx++) {
@@ -4784,7 +5204,7 @@ diff --git a/src/game/townmap.c b/src/game/townmap.c
              townmap_kstate[idx] = value;
          }
  
-@@ -624,7 +636,8 @@
+@@ -624,7 +643,8 @@
   */
  void townmap_tile_known_set(int map, int index)
  {
@@ -4794,7 +5214,7 @@ diff --git a/src/game/townmap.c b/src/game/townmap.c
          townmap_kstate[index / 8] |= 1 << (index % 8);
          townmap_kstate_modified = true;
      }
-@@ -642,23 +655,30 @@
+@@ -642,23 +662,30 @@
      char path[TIG_MAX_PATH];
  
      // Load k-state for the specified map.
@@ -4831,7 +5251,7 @@ diff --git a/src/game/townmap.c b/src/game/townmap.c
  }
  
  /**
-@@ -723,6 +743,10 @@
+@@ -723,6 +750,10 @@
          }
  
          townmap_kstate = (uint8_t*)MALLOC(townmap_kstate_size);
@@ -5367,7 +5787,15 @@ diff --git a/src/main.c b/src/main.c
          iso_redraw();
          tig_window_display();
  
-@@ -698,6 +783,7 @@
+@@ -460,6 +545,7 @@
+                         }
+                         break;
+                     case SDL_SCANCODE_F7:
++                        if (modern_tutorial_active()) break;
+                         if (!critter_is_dead(player_get_local_pc_obj())) {
+                             if (wmap_ui_is_created()) {
+                                 wmap_ui_close();
+@@ -698,6 +784,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -5375,7 +5803,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +829,26 @@
+@@ -743,25 +830,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
@@ -7801,7 +8229,15 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      ui_display_msg(&ui_message);
  
      return false;
-@@ -3032,53 +3193,31 @@
+@@ -3018,6 +3179,7 @@
+ // 0x5435D0
+ bool mainmenu_ui_save_game_execute(int btn)
+ {
++    if (modern_tutorial_active()) return false;
+     int v1;
+     char fname[COMPAT_MAX_FNAME];
+     const char* name;
+@@ -3032,53 +3194,31 @@
          return false;
      }
  
@@ -7875,7 +8311,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      }
  
      sub_542200();
-@@ -3103,7 +3242,7 @@
+@@ -3103,7 +3243,7 @@
          mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
  
          ui_message.type = UI_MSG_TYPE_EXCLAMATION;
@@ -7884,7 +8320,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          ui_display_msg(&ui_message);
  
          return false;
-@@ -3533,7 +3672,7 @@
+@@ -3533,7 +3673,7 @@
      gamelib_savelist_create(&mainmenu_ui_gsl);
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -7893,7 +8329,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -4073,7 +4212,7 @@
+@@ -4073,7 +4213,7 @@
              return false;
          }
      } else {
@@ -7902,7 +8338,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stat_level_get(obj, STAT_GENDER) == GENDER_FEMALE) {
              while (race >= 0 && !stru_5C5170[race].available_for_female) {
                  race--;
-@@ -4122,13 +4261,13 @@
+@@ -4122,13 +4262,13 @@
      int race;
  
      race = stat_level_get(obj, STAT_RACE);
@@ -7920,7 +8356,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4146,7 +4285,7 @@
+@@ -4146,7 +4286,7 @@
                  race++;
              }
  
@@ -7929,7 +8365,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4157,7 +4296,7 @@
+@@ -4157,7 +4297,7 @@
          }
      }
  
@@ -7938,7 +8374,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          background_clear(obj);
          mainmenu_ui_new_char_set_race(obj, race);
          return true;
-@@ -4602,7 +4741,7 @@
+@@ -4602,7 +4742,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -7947,7 +8383,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_window_rect.x;
              src_rect.y = 0;
-@@ -4645,7 +4784,7 @@
+@@ -4645,7 +4785,7 @@
                  window_data.rect.y = mainmenu_ui_bottom_bar_cover_rects[idx].y;
                  window_data.rect.width = mainmenu_ui_bottom_bar_cover_rects[idx].width;
                  window_data.rect.height = mainmenu_ui_bottom_bar_cover_rects[idx].height;
@@ -7956,7 +8392,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
                  src_rect.x = mainmenu_ui_bottom_bar_cover_rects[idx].x;
                  src_rect.y = 0;
-@@ -4681,7 +4820,7 @@
+@@ -4681,7 +4821,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -7965,7 +8401,37 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_top_bar_cover_rect.x;
              src_rect.y = 0;
-@@ -6046,10 +6185,22 @@
+@@ -4832,6 +4972,9 @@
+         if (!main_menu_button_create(button, font_desc.width, font_desc.height)) {
+             tig_debug_printf("mainmenu_ui_create_window_func: ERROR: main_menu_button_create failed!\n");
+             exit(EXIT_FAILURE);
++        }
++        if (button->field_10 == MM_WINDOW_SAVE_GAME && modern_tutorial_active()) {
++            tig_button_hide(button->button_handle);
+         }
+     }
+ 
+@@ -5133,6 +5276,9 @@
+             for (idx = 0; idx < window->num_buttons; idx++) {
+                 if (msg->data.button.button_handle == window->buttons[idx].button_handle) {
+                     if (window->buttons[idx].field_10 > 0) {
++                        if (window->buttons[idx].field_10 == MM_WINDOW_SAVE_GAME && modern_tutorial_active()) {
++                            return true;
++                        }
+                         if (window->execute_func != NULL) {
+                             dword_5C3FB8 = window->execute_func(idx);
+                             if (dword_5C3FB8 == 0) {
+@@ -5397,6 +5543,9 @@
+             }
+ 
+             if (window->buttons[idx].field_10 > 0) {
++                if (window->buttons[idx].field_10 == MM_WINDOW_SAVE_GAME && modern_tutorial_active()) {
++                    return true;
++                }
+                 if (window->execute_func != NULL) {
+                     dword_5C3FB8 = window->execute_func(idx);
+                     if (!dword_5C3FB8) {
+@@ -6046,10 +6195,22 @@
          if (obj != OBJ_HANDLE_NULL
              && tig_art_exists(obj_field_int32_get(obj, OBJ_F_CURRENT_AID)) == TIG_OK) {
              dword_5C3620 = false;
@@ -9336,298 +9802,3 @@ diff --git a/src/ui/written_ui.c b/src/ui/written_ui.c
 +    if(modern && !hidden)tig_window_hide(written_ui_window);
 +    else if(!modern && hidden)tig_window_show(written_ui_window);
 +}
-diff --git a/src/game/quest.c b/src/game/quest.c
---- a/src/game/quest.c
-+++ b/src/game/quest.c
-@@ -165,7 +165,7 @@
-         if (mes_load("mes\\gamequestlogdumb.mes", &quest_log_dumb_mes_file)) {
-             for (num = 1000; num < 2000; num++) {
-                 mes_file_entry.num = num;
--                if (mes_search(quest_log_mes_file, &mes_file_entry)) {
-+                if (mes_search(quest_log_dumb_mes_file, &mes_file_entry)) {
-                     quests[quest_num_to_idx(num)].dumb_description = mes_file_entry.str;
-                 }
-             }
-@@ -390,6 +390,60 @@
-     return quest_state_set_internal(pc_obj, num, state, npc_obj);
- }
- 
-+/* Convert loaded state without granting rewards or replaying dialogue effects. */
-+bool quest_state_migrate(int64_t pc_obj, int num, int before, int after,
-+    bool authoritative, char* error, size_t size)
-+{
-+    const char* reason = NULL;
-+    if (size != 0) error[0] = '\0';
-+    if (authoritative) reason = "Quest migrations require an explicit old-state guard";
-+    else if (!pc_obj || obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC)
-+        reason = "Quest migration requires the loaded player character";
-+    else if (!quests || !quest_gstate || num < 1000 || num >= 2000
-+        || before < 0 || before >= QUEST_STATE_COUNT || after < 0 || after >= QUEST_STATE_COUNT)
-+        reason = "Invalid quest migration target or state";
-+    if (reason == NULL) {
-+        Quest* definition = &quests[quest_num_to_idx(num)];
-+        bool defined = definition->normal_description != NULL || definition->dumb_description != NULL;
-+        for (int i = 0; i < QUEST_STATE_COUNT; i++) {
-+            if (definition->normal_dialog[i] != -1 || definition->dumb_dialog[i] != -1
-+                || definition->bad_reaction_dialog[i] != -1) defined = true;
-+        }
-+        if (!defined) reason = "Quest definition is absent from this module";
-+    }
-+    if (reason != NULL) {
-+        if (size != 0) snprintf(error, size, "%s", reason);
-+        return false;
-+    }
-+    int current = quest_state_get(pc_obj, num);
-+    if (current == after) return true;
-+    int global = quest_gstate[quest_num_to_idx(num)];
-+    if (current >= QUEST_STATE_COMPLETED)
-+        reason = "Completed, externally completed and botched quests cannot be reset";
-+    else if (current != before)
-+        reason = "Player quest state differs from the declared precondition";
-+    else if (global == QUEST_STATE_BOTCHED && after != QUEST_STATE_BOTCHED)
-+        reason = "The global quest outcome is already botched";
-+    else if (global == QUEST_STATE_COMPLETED && after != QUEST_STATE_OTHER_COMPLETED)
-+        reason = "The global quest outcome was completed by another character";
-+    if (reason != NULL) {
-+        if (size != 0) snprintf(error, size, "%s", reason);
-+        return false;
-+    }
-+    PcQuestState state;
-+    obj_arrayfield_pc_quest_get(pc_obj, OBJ_F_PC_QUEST_IDX, num, &state);
-+    state.state = after == QUEST_STATE_BOTCHED ? state.state | QUEST_BOTCHED_MODIFIER : after;
-+    /* Keep the original journal date and padding; no XP, sound, alignment or reaction. */
-+    obj_arrayfield_pc_quest_set(pc_obj, OBJ_F_PC_QUEST_IDX, num, &state);
-+    if (global == QUEST_STATE_ACCEPTED) {
-+        if (after == QUEST_STATE_COMPLETED || after == QUEST_STATE_OTHER_COMPLETED)
-+            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_COMPLETED;
-+        else if (after == QUEST_STATE_BOTCHED)
-+            quest_gstate[quest_num_to_idx(num)] = QUEST_STATE_BOTCHED;
-+    }
-+    return true;
-+}
-+
- /**
-  * Internal function to set a quest state and handle side effects.
-  *
-diff --git a/src/game/map.c b/src/game/map.c
---- a/src/game/map.c
-+++ b/src/game/map.c
-@@ -361,7 +361,7 @@
- 
-     tig_debug_printf("map_save: flushing map...");
-     tig_timer_now(&start);
--    map_flush(1);
-+    if (!map_flush(1)) return false;
-     tig_debug_printf("done.  Time (ms): %d\n", tig_timer_elapsed(start));
- 
-     tig_debug_printf("map_save: saving map names...");
-@@ -399,7 +399,7 @@
- 
-             if (!map_modules[index].save_func(stream)) {
-                 tig_debug_printf("map_save: save function %d (%s) failed\n", index, map_modules[index].name);
--                break;
-+                return false;
-             }
- 
-             int pos;
-@@ -412,7 +412,7 @@
- 
-             if (tig_file_fwrite(&sentinel, sizeof(sentinel), 1, stream) != 1) {
-                 tig_debug_printf("map_save(): ERROR: Sentinel Failed to Save!");
--                break;
-+                return false;
-             }
-         }
-     }
-@@ -805,7 +805,7 @@
- 
-     info = &(map_list_info[map - 1]);
-     if (map_valid && !a3) {
--        map_flush(0);
-+        if (!map_flush(0)) return false;
-     }
- 
-     if (!obj_validate_system(1)) {
-@@ -949,53 +949,36 @@
- }
- 
- // 0x410070
--void map_flush(unsigned int flags)
--{
-+bool map_flush(unsigned int flags)
-+{
-+    bool ok = true;
-     char path[TIG_MAX_PATH];
-     TigFile* stream;
--
-+    if (sector_save_failed()) return false;
-     wallcheck_flush();
--
--    if (!map_save_preprocess()) {
--        tig_debug_println("Error: map_save_preprocess failed in map_flush.");
--    }
--
-+    if (!map_save_preprocess()) return false;
-     if (map_editor) {
--        if (!map_save_objects()) {
--            tig_debug_println("Error: map_save_objects failed in map_flush.");
--        }
-+        ok = map_save_objects();
-     } else {
--        if (!map_save_difs()) {
--            tig_debug_println("Error: map_save_difs failed in map_flush.");
--        }
--
--        if (!map_save_dynamic()) {
--            tig_debug_println("Error: map_save_dynamic failed in map_flush.");
--        }
--    }
--
-+        ok = map_save_difs();
-+        if (ok) ok = map_save_dynamic();
-+    }
-+    // Restore runtime handles even when persistence failed.
-     map_load_postprocess();
--    sector_flush(flags);
--    jumppoint_flush();
--    terrain_flush();
-+    if (!ok) return false;
-+    if (!sector_flush(flags) || !jumppoint_flush() || (map_editor && !terrain_flush())) return false;
-     townmap_flush();
--
-     if (map_editor) {
-         snprintf(path, sizeof(path), "%s\\startloc.txt", map_save_path);
-         if (map_starting_loc != 0) {
-             stream = tig_file_fopen(path, "wt");
--            if (stream != NULL) {
--                tig_file_fprintf(stream,
--                    "%I64d\n%I64d\n",
--                    LOCATION_GET_X(map_starting_loc),
--                    LOCATION_GET_Y(map_starting_loc));
--            } else {
--                tig_debug_printf("Error could not open map start location file for writing %s\n", path);
--            }
--        } else {
--            tig_file_remove(path);
--        }
--    }
-+            if (stream == NULL) return false;
-+            ok = tig_file_fprintf(stream, "%I64d\n%I64d\n",
-+                LOCATION_GET_X(map_starting_loc), LOCATION_GET_Y(map_starting_loc)) >= 0;
-+            if (tig_file_fclose(stream) != 0) ok = false;
-+        } else if (tig_file_exists(path, NULL) && tig_file_remove(path) != 0) ok = false;
-+    }
-+    return ok && !sector_save_failed();
- }
- 
- // 0x4101D0
-@@ -1271,19 +1254,19 @@
-         } while (obj_inst_next(&obj, &iter));
-     }
- 
--    tig_file_fclose(stream2);
-+    bool closed2 = tig_file_fclose(stream2) == 0;
- 
-     if (size < sizeof(oid)) {
-         tig_file_remove(path2);
-     }
- 
--    tig_file_fclose(stream1);
-+    bool closed1 = tig_file_fclose(stream1) == 0;
- 
-     if (cnt == 0) {
-         tig_file_remove(path1);
-     }
- 
--    return true;
-+    return closed1 && closed2;
- }
- 
- // 0x410B20
-@@ -1320,13 +1303,13 @@
-         } while (obj_inst_next(&obj, &iter));
-     }
- 
--    tig_file_fclose(stream);
-+    bool closed = tig_file_fclose(stream) == 0;
- 
-     if (cnt == 0) {
-         tig_file_remove(path);
-     }
- 
--    return true;
-+    return closed;
- }
- 
- // 0x410C50
-diff --git a/src/game/map.h b/src/game/map.h
---- a/src/game/map.h
-+++ b/src/game/map.h
-@@ -32,7 +32,7 @@
- bool map_get_area(int map, int* area);
- bool map_get_worldmap(int map, int* worldmap);
- bool map_is_clearing_objects(void);
--void map_flush(unsigned int flags);
-+bool map_flush(unsigned int flags);
- void map_process_jumppoint(int64_t loc, int64_t obj);
- bool map_is_valid(void);
- void map_starting_loc_get(int64_t* loc_ptr);
-diff --git a/src/game/quest.h b/src/game/quest.h
---- a/src/game/quest.h
-+++ b/src/game/quest.h
-@@ -41,6 +41,7 @@
- int quest_dialog_line(int64_t pc_obj, int64_t npc_obj, int num);
- int quest_state_get(int64_t pc_obj, int num);
- int quest_state_set(int64_t pc_obj, int num, int state, int64_t npc_obj);
-+bool quest_state_migrate(int64_t pc_obj, int num, int before, int after, bool authoritative, char* error, size_t size);
- int quest_unbotch(int64_t obj, int num);
- int quest_global_state_get(int num);
- int quest_global_state_set(int num, int state);
-diff --git a/src/game/sector.h b/src/game/sector.h
---- a/src/game/sector.h
-+++ b/src/game/sector.h
-@@ -65,7 +65,9 @@
- bool sector_lock(int64_t id, Sector** sector_ptr);
- bool sector_unlock(int64_t id);
- void sector_cache_reset(void);
--void sector_flush(unsigned int flags);
-+bool sector_flush(unsigned int flags);
-+bool sector_save_failed(void);
-+void sector_save_error_reset(void);
- bool sector_check_demo_limits(int64_t id);
- void sector_art_cache_register(tig_art_id_t art_id);
- bool sector_is_blocked(int64_t sec);
-diff --git a/src/game/scroll.c b/src/game/scroll.c
---- a/src/game/scroll.c
-+++ b/src/game/scroll.c
-@@ -13,7 +13,6 @@
- #define SCROLL_DIAG_X 4
- #define SCROLL_DIAG_Y 2
- 
--static void scroll_by(int64_t dx, int64_t dy);
- static void scroll_origin_changed(int64_t loc);
- static void scroll_speed_changed(void);
- static bool scroll_cursor_art_set(tig_art_id_t art_id);
-diff --git a/src/game/scroll.h b/src/game/scroll.h
---- a/src/game/scroll.h
-+++ b/src/game/scroll.h
-@@ -33,6 +33,7 @@
- ScrollSpeed scroll_speed_get(void);
- void scroll_start(int direction);
- void scroll_stop(void);
-+void scroll_by(int64_t dx, int64_t dy);
- void scroll_fps_set(int fps);
- void scroll_distance_set(int distance);
- int scroll_distance_get(void);
-diff --git a/src/game/broadcast.c b/src/game/broadcast.c
---- a/src/game/broadcast.c
-+++ b/src/game/broadcast.c
-@@ -270,7 +270,7 @@
-                     }
-                     break;
-                 case BROADCAST_CMD_TYPE_WAIT:
--                    if ((spell_flags & OSF_MIND_CONTROLLED) == 0) {
-+                    if ((spell_flags & OSF_MIND_CONTROLLED) == 0 || critter_can_command_familiar(candidate_obj)) {
-                         if (broadcast_float_line_func != NULL) {
-                             dialog_copy_npc_order_ok_msg(candidate_obj, pc_obj, str, &speech_id);
-                             broadcast_float_line_func(candidate_obj, pc_obj, str, speech_id);

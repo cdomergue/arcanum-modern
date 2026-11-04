@@ -1,3 +1,5 @@
+#include "ui/item_ui.h"
+
 enum { COMPANION_HOTKEY_BANKS = 128, COMPANION_HOTKEY_SLOTS = 20 };
 typedef struct CompanionHotkeys {
     ObjectID owner;
@@ -27,6 +29,7 @@ static bool hotkey_item_spell_valid(int64_t actor,int64_t item,int spell)
 {
     int64_t owner;
     if(!item || !obj_handle_is_valid(item) || !item_parent(item,&owner) || owner!=actor
+        || obj_field_int32_get(item,OBJ_F_ITEM_SPELL_MANA_STORE)==0
         || !item_is_identified(item) || item_magic_tech_complexity(item)<=0
         || spell<0 || spell>=MT_SPELL_COUNT || magictech_is_tech(spell) || sub_45A030(spell))return false;
     for(int i=0;i<5;i++)if(mt_item_spell(item,i)==spell)return true;
@@ -70,12 +73,22 @@ Hotkey* modern_hotkey_get(int index)
     return hotkey;
 }
 
+// Scrolls use native item targeting, which consumes the inventory object only
+// when a target is accepted. Item use calls spell_ui internally: routing back
+// into item use from spell_ui_apply would recurse.
+void modern_item_spell_activate(int64_t actor,int64_t item,int spell)
+{
+    if(!combat_input_ready(actor) || !hotkey_item_spell_valid(actor,item,spell))return;
+    if(obj_field_int32_get(item,OBJ_F_TYPE)==OBJ_TYPE_SCROLL)item_ui_activate(actor,item);
+    else spell_ui_activate(item,spell);
+}
+
 void modern_hotkey_activate(int index)
 {
     Hotkey* hotkey = modern_hotkey_get(index);
     if (!hotkey || hotkey->type == HOTKEY_NONE) return;
     if(hotkey->type==HOTKEY_ITEM_SPELL) {
-        if(combat_input_ready(combat_input_actor()))spell_ui_activate(hotkey->item_obj.obj,hotkey->data);
+        modern_item_spell_activate(combat_input_actor(),hotkey->item_obj.obj,hotkey->data);
         return;
     }
     if (player_is_local_pc_obj(combat_input_actor()) && index < 10) {
