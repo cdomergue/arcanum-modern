@@ -562,7 +562,7 @@ static bool tactical_action(int action)
         if(obj && !combat_shared_turn_select(obj))tactical_camera_focus(obj,false);
         return true;
     }
-    bool command=action==5 || action==6 || action==950 || action==951
+    bool command=action==5 || action==6 || action==950 || action==951 || action==952
         || (action>=300 && action<310) || (action>=870 && action<884)
         || (action>=1100 && action<=1105) || (action>=1400 && action<1480) || (action>=1500 && action<1532);
     if(!command)return false;

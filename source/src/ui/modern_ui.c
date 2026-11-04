@@ -2463,6 +2463,13 @@ static void activate(int action)
     if(action>=100 && action<107) {
         chapter=action-100;spread=0;search[0]=0;quest_filter=0;dirty=true;search_focus(false);
     } else switch(action) {
+    case 952: {
+        if(!combat_input_ready(combat_input_actor()))break;
+        TigMessage message={0};message.type=TIG_MESSAGE_KEYBOARD;
+        message.data.keyboard.key=SDLK_A;message.data.keyboard.pressed=true;
+        hotkey_ui_process_event(&message);
+        break;
+    }
     case 200: logbook_ui_close();break;
     case 201: search_focus(true);break;
     case 202: if(body_size>16) {body_size-=2;dirty=true;spread=0;save_settings();} break;
@@ -2544,10 +2551,9 @@ static bool handle_binding_event(SDL_Event* event)
             follow_walk_taps|=1U<<(i-KB_UP);
         return true;
     }
-    const int actions[]={2,0,1,3,6,5,8,9,951,950,1100,-1,-1,-1,-1,7,-1};
+    const int actions[]={2,0,1,3,6,5,8,9,951,950,1100,-1,-1,-1,-1,7,-1,952};
     int binding=-1;
     for(int i=0;i<KB_COUNT;i++)if(key_is(i,key,mods)){binding=i;break;}
-    if(binding<0 && key==SDL_SCANCODE_SPACE && !(mods&SDL_KMOD_SHIFT) && tactical_active())binding=KB_END;
     if(binding==KB_SORT)return true; /* Active only inside the inventory. */
     if(binding>=0) {
         if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat && !native_panel() && intgame_mode_get()!=INTGAME_MODE_DIALOG) {
@@ -2559,7 +2565,9 @@ static bool handle_binding_event(SDL_Event* event)
         return true;
     }
     /* Unassigned defaults must not trigger an engine shortcut. */
-    for(int i=0;i<KB_COUNT;i++)if((i<KB_UP || i==KB_COMBAT) && key_defaults[i]==key_chord(key,mods))return true;
+    for(int i=0;i<KB_COUNT;i++)if((i<KB_UP || i==KB_COMBAT || i==KB_LAST) && key_default(i)==key_chord(key,mods))return true;
+    // The native A shortcut has moved to its own configurable binding.
+    if(key==SDL_GetScancodeFromKey('a',NULL))return true;
     return false;
 }
 
@@ -2700,7 +2708,7 @@ static bool handle_ui_event(SDL_Event* event)
         SDL_Scancode key=event->key.scancode;
         if(journal) {
             if(down && !event->key.repeat) {
-                if(key==SDL_SCANCODE_ESCAPE) {
+                if(key==SDL_SCANCODE_ESCAPE || (key==SDL_SCANCODE_SPACE && !searching)) {
                     if(searching) search_focus(false);else pending_action=200;
                 } else if(searching && key==SDL_SCANCODE_BACKSPACE) {
                     size_t n=strlen(search);
@@ -2941,6 +2949,8 @@ void modern_ui_tick(void)
         && (intgame_mode_get()==INTGAME_MODE_MAIN || intgame_mode_get()==INTGAME_MODE_DIALOG || intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_ITEM || journal)
         && iso_interface_window_get()==ROTWIN_TYPE_MSG;
     modern_intgame_hud_hide(hud || journal || native_panel());
+    if(hud && !journal && !native_panel() && !mainmenu_ui_is_active() && intgame_mode_get()==INTGAME_MODE_MAIN)
+        modern_intgame_cursor_sync();
     party_tick();
 }
 

@@ -13,6 +13,7 @@ typedef struct ModernCombatPreview {
     int64_t path[201];
 } ModernCombatPreview;
 bool modern_combat_preview(ModernCombatPreview* preview);
+void modern_intgame_cursor_sync(void);
 void modern_combat_sync(void);
 bool modern_combat_input_blocked(void);
 void modern_combat_log(int64_t object, const char* text);

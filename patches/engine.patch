@@ -7095,7 +7095,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              combat_critter_deactivate_combat_mode(pc_obj);
          } else {
              mes_file_entry.num = 24; // "You cannot exit combat-mode when under attack."
-@@ -3245,8 +3274,12 @@
+@@ -3245,8 +3274,21 @@
      sub_57CCF0(player_get_local_pc_obj(), qword_64C690);
  }
  
@@ -7107,10 +7107,19 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        || (combat_turn_based_is_active() && combat_player_controls(actor));
 +}
 +
++/* Original held-key targeting, shared by commands, cursor and hit previews. */
++static int intgame_called_shot(void)
++{
++    if (tig_kb_is_key_pressed(SDL_SCANCODE_COMMA)) return HIT_LOC_HEAD;
++    if (tig_kb_is_key_pressed(SDL_SCANCODE_PERIOD)) return HIT_LOC_ARM;
++    if (tig_kb_is_key_pressed(SDL_SCANCODE_SLASH)) return HIT_LOC_LEG;
++    return HIT_LOC_TORSO;
++}
++
  // 0x54ED30
  void sub_54ED30(TargetDescriptor* td)
  {
-@@ -3261,16 +3294,19 @@
+@@ -3261,16 +3303,19 @@
      int anim;
      bool v26 = false;
  
@@ -7132,12 +7141,24 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!td->is_loc && td->obj == pc_obj) {
          return;
      }
-@@ -3314,56 +3350,13 @@
+@@ -3282,6 +3327,11 @@
+         && (critter_flags & (OCF_PARALYZED | OCF_STUNNED)) != 0) {
+         return;
+     }
++
++    // Scenery remains usable while weapons are drawn; Alt explicitly attacks it.
++    bool scenery = target_type == OBJ_TYPE_WALL || target_type == OBJ_TYPE_PORTAL
++        || target_type == OBJ_TYPE_CONTAINER || target_type == OBJ_TYPE_SCENERY;
++    bool attack = scenery ? tig_kb_get_modifier(SDL_KMOD_ALT) : intgame_attack_mode(pc_obj);
+ 
+     if (inven_ui_drag_item_obj_get() != OBJ_HANDLE_NULL) {
+         if ((spell_flags & OSF_POLYMORPHED) != 0) {
+@@ -3314,56 +3364,13 @@
              }
          }
  
 -        if (combat_critter_is_combat_mode_active(pc_obj)) {
-+        if (intgame_attack_mode(pc_obj)) {
++        if (attack) {
              switch (target_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
@@ -7191,7 +7212,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  break;
              case OBJ_TYPE_WEAPON:
              case OBJ_TYPE_AMMO:
-@@ -3396,8 +3389,8 @@
+@@ -3396,8 +3403,8 @@
                      }
  
                      if (!td->is_loc
@@ -7202,7 +7223,24 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                          return;
                      }
                  }
-@@ -3570,6 +3563,7 @@
+@@ -3518,15 +3525,7 @@
+     }
+ 
+     if (anim == AG_ATTACK || anim == AG_ATTEMPT_ATTACK) {
+-        if (tig_kb_is_key_pressed(SDL_SCANCODE_COMMA)) {
+-            goal_data.params[AGDATA_SCRATCH_VAL3].data = 1;
+-        } else if (tig_kb_is_key_pressed(SDL_SCANCODE_PERIOD)) {
+-            goal_data.params[AGDATA_SCRATCH_VAL3].data = 2;
+-        } else if (tig_kb_is_key_pressed(SDL_SCANCODE_SLASH)) {
+-            goal_data.params[AGDATA_SCRATCH_VAL3].data = 3;
+-        } else {
+-            goal_data.params[AGDATA_SCRATCH_VAL3].data = 0;
+-        }
++        goal_data.params[AGDATA_SCRATCH_VAL3].data = intgame_called_shot();
+ 
+         int64_t weapon_obj = item_wield_get(pc_obj, ITEM_INV_LOC_WEAPON);
+         if (weapon_obj != OBJ_HANDLE_NULL
+@@ -3570,6 +3569,7 @@
          }
  
          if (!anim_goal_add_ex(&goal_data, &anim_id, flags)) {
@@ -7210,7 +7248,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              return;
          }
  
-@@ -3712,10 +3706,12 @@
+@@ -3712,10 +3712,12 @@
          return;
      }
  
@@ -7224,7 +7262,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (critter_is_dead(pc_obj)) {
          return;
-@@ -3781,7 +3777,7 @@
+@@ -3781,7 +3783,7 @@
          sub_579FA0(pc_obj, hotkey->data);
          break;
      case HOTKEY_SPELL:
@@ -7233,7 +7271,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          break;
      case HOTKEY_ITEM_SPELL:
          sub_444130(&(hotkey->item_obj));
-@@ -4051,6 +4047,8 @@
+@@ -4051,6 +4053,8 @@
  // 0x5506C0
  void iso_interface_window_set(RotatingWindowType window_type)
  {
@@ -7242,7 +7280,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      broadcast_ui_close();
  
      if (intgame_iso_window_type == ROTWIN_TYPE_QUANTITY) {
-@@ -4085,9 +4083,21 @@
+@@ -4085,9 +4089,21 @@
      }
  }
  
@@ -7264,7 +7302,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      sub_552770(ui_message);
      if (dword_64C6D4 != NULL) {
          dword_64C6D4(ui_message);
-@@ -4100,6 +4110,7 @@
+@@ -4100,6 +4116,7 @@
      UiMessage ui_message;
  
      (void)a1;
@@ -7272,7 +7310,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (dword_64C6D4 != NULL) {
          ui_message.type = UI_MSG_TYPE_FEEDBACK;
-@@ -4166,6 +4177,7 @@
+@@ -4166,6 +4183,7 @@
  // 0x550930
  void intgame_message_window_clear_internal(void)
  {
@@ -7280,7 +7318,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (!intgame_iso_interface_created) {
          return;
      }
-@@ -4202,6 +4214,11 @@
+@@ -4202,6 +4220,11 @@
  // 0x550A10
  bool intgame_message_window_write_text(tig_window_handle_t window_handle, char* str, TigRect* rect, tig_font_handle_t font, unsigned int flags)
  {
@@ -7292,7 +7330,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      TigFont font_desc;
      TigRect text_rect;
      int width;
-@@ -4833,14 +4850,14 @@
+@@ -4833,14 +4856,14 @@
          if (!map_is_clearing_objects()) {
              if (target_pick_at_screen_xy_ex(msg->data.mouse.x, msg->data.mouse.y, &td, qword_5C7280, intgame_fullscreen)) {
                  if (!td.is_loc) {
@@ -7309,7 +7347,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              }
          }
      }
-@@ -4912,13 +4929,13 @@
+@@ -4912,13 +4935,13 @@
              v1 = true;
              v17 = true;
              spell_ui_cancel();
@@ -7325,7 +7363,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              break;
          case INTGAME_MODE_DIALOG:
              sub_551A10(pc_obj);
-@@ -5431,7 +5448,7 @@
+@@ -5431,7 +5454,7 @@
      int prev_idx;
  
      if (ui_message->type >= 6 && ui_message->type <= 12) {
@@ -7334,7 +7372,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
              && intgame_iso_window_type == ROTWIN_TYPE_MSG) {
              intgame_message_window_clear_internal();
              intgame_message_draw(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
-@@ -5888,6 +5905,8 @@
+@@ -5888,6 +5911,8 @@
  // 0x553320
  bool intgame_dialog_begin(bool (*func)(TigMessage* msg))
  {
@@ -7343,7 +7381,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = func;
      tc_show();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -5899,6 +5918,8 @@
+@@ -5899,6 +5924,8 @@
  // 0x553350
  void intgame_dialog_end(void)
  {
@@ -7352,7 +7390,70 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      intgame_dialog_process_event_func = NULL;
      tc_hide();
      intgame_mode_set(INTGAME_MODE_MAIN);
-@@ -6378,7 +6399,9 @@
+@@ -6147,14 +6174,15 @@
+ }
+ 
+ // 0x553990
+-void intgame_refresh_cursor(void)
++static void intgame_refresh_cursor_internal(bool force)
+ {
+     bool have_weapon = false;
+     int64_t pc_obj;
+     tig_art_id_t art_id;
+     int art_num;
+ 
+-    pc_obj = player_get_local_pc_obj();
++    pc_obj = combat_input_actor();
++    if (pc_obj == OBJ_HANDLE_NULL) pc_obj = player_get_local_pc_obj();
+     if (pc_obj != OBJ_HANDLE_NULL) {
+         art_id = obj_field_int32_get(pc_obj, OBJ_F_CURRENT_AID);
+         if (tig_art_critter_id_weapon_get(art_id) != TIG_ART_WEAPON_TYPE_NO_WEAPON) {
+@@ -6168,15 +6196,12 @@
+ 
+         art_num = intgame_mode_cursors[intgame_mode_get()];
+         if (art_num == -1) {
+-            if (have_weapon) {
+-                if (tig_kb_is_key_pressed(SDL_SCANCODE_COMMA)) {
+-                    art_num = 818; // "cursor-called-head.art"
+-                } else if (tig_kb_is_key_pressed(SDL_SCANCODE_PERIOD)) {
+-                    art_num = 819; // "cursor-called-leg.art"
+-                } else if (tig_kb_is_key_pressed(SDL_SCANCODE_SLASH)) {
+-                    art_num = 820; // "cursor-called-arm.art"
+-                } else {
+-                    art_num = 353; // "battlecur.art"
++            if (have_weapon || (pc_obj != OBJ_HANDLE_NULL && intgame_attack_mode(pc_obj))) {
++                switch (intgame_called_shot()) {
++                case HIT_LOC_HEAD: art_num = 818; break; // Cursor-Called-Head.ART
++                case HIT_LOC_ARM: art_num = 819; break; // Cursor-Called-Arm.ART
++                case HIT_LOC_LEG: art_num = 820; break; // Cursor-Called-Leg.ART
++                default: art_num = 353; break; // battlecur.art
+                 }
+             } else {
+                 art_num = 0; // "cursor.art"
+@@ -6184,10 +6209,21 @@
+         }
+ 
+         tig_art_interface_id_create(art_num, 0, 0, 0, &art_id);
+-        tig_mouse_cursor_set_art_id(art_id);
++        if (force || tig_mouse_cursor_get_art_id() != art_id) tig_mouse_cursor_set_art_id(art_id);
+ 
+         sub_5736E0();
+     }
++}
++
++void intgame_refresh_cursor(void)
++{
++    intgame_refresh_cursor_internal(true);
++}
++
++/* The modern HUD hides the classic windows that refreshed held-key cursors. */
++void modern_intgame_cursor_sync(void)
++{
++    if (inven_ui_drag_item_obj_get() == OBJ_HANDLE_NULL) intgame_refresh_cursor_internal(false);
+ }
+ 
+ // 0x553A60
+@@ -6378,7 +6414,9 @@
          }
  
          // Generic race-specific icon.
@@ -7363,7 +7464,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          return false;
      default:
          return false;
-@@ -6405,7 +6428,8 @@
+@@ -6405,7 +6443,8 @@
          alignment = stat_level_get(critter_obj, STAT_ALIGNMENT);
      }
  
@@ -7373,7 +7474,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          && combat_critter_is_combat_mode_active(pc_obj)
          && !critter_is_dead(critter_obj)) {
          sub_554830(pc_obj, critter_obj);
-@@ -6573,6 +6597,7 @@
+@@ -6573,6 +6612,7 @@
  // 0x554560
  void intgame_message_window_draw_image(tig_window_handle_t window_handle, int num)
  {
@@ -7381,7 +7482,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -6611,6 +6636,16 @@
+@@ -6611,6 +6651,16 @@
  // 0x554640
  void sub_554640(int a1, int a2, TigRect* rect, int value)
  {
@@ -7398,7 +7499,16 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_window_handle_t window_handle;
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
-@@ -6795,6 +6830,11 @@
+@@ -6722,6 +6772,8 @@
+     sub_4440E0(a2, &(skill_invocation.target));
+     sub_4440E0(weapon_obj, &(skill_invocation.item));
+     skill_invocation.skill = skill;
++    skill_invocation.hit_loc = intgame_called_shot();
++    if (skill_invocation.hit_loc != HIT_LOC_TORSO) skill_invocation.flags |= SKILL_INVOCATION_AIM;
+ 
+     effectiveness -= skill_invocation_difficulty(&skill_invocation);
+ 
+@@ -6795,6 +6847,11 @@
  // 0x554B00
  void sub_554B00(tig_window_handle_t window_handle, int art_num, int x, int y)
  {
@@ -7410,7 +7520,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      tig_art_id_t art_id;
      TigArtFrameData art_frame_data;
      TigArtBlitInfo blit_info;
-@@ -7131,6 +7171,21 @@
+@@ -7131,6 +7188,21 @@
          break;
      }
  
@@ -7432,7 +7542,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (buffer[0] != '\0' || !intgame_is_compact_interface()) {
          intgame_message_window_write_text(intgame_rotwin_text_frame[intgame_iso_window_type].window_handle,
              buffer,
-@@ -7612,6 +7667,7 @@
+@@ -7612,6 +7684,7 @@
  // 0x5561D0
  void intgame_draw_portrait(int64_t obj, int portrait, tig_window_handle_t window_handle, int x, int y)
  {
@@ -7440,7 +7550,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
      if (intgame_is_compact_interface()) {
          window_handle = compact_ui_message_window_acquire();
          x -= 211;
-@@ -7640,7 +7696,7 @@
+@@ -7640,7 +7713,7 @@
          mes_file_entry.str,
          item_total_attack(obj));
  
@@ -7449,7 +7559,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, str);
          return;
      }
-@@ -7784,7 +7840,7 @@
+@@ -7784,7 +7857,7 @@
          mes_file_entry.str,
          value);
  
@@ -7458,7 +7568,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
          intgame_message_window_display_str(-1, buffer);
          return;
      }
-@@ -8225,7 +8281,7 @@
+@@ -8225,7 +8298,7 @@
      window_data.rect.height = 400;
      window_data.background_color = 0;
      window_data.message_filter = intgame_big_window_message_filter;
@@ -7467,14 +7577,13 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (tig_window_create(&window_data, &intgame_big_window_handle) != TIG_OK) {
          return false;
-@@ -8311,22 +8367,12 @@
+@@ -8311,22 +8384,12 @@
              switch (target_obj_type) {
              case OBJ_TYPE_WALL:
              case OBJ_TYPE_PORTAL:
 +            case OBJ_TYPE_CONTAINER:
              case OBJ_TYPE_SCENERY:
--                if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
-+                if (intgame_attack_mode(source_obj) || tig_kb_get_modifier(SDL_KMOD_ALT)) {
+                 if (tig_kb_get_modifier(SDL_KMOD_ALT)) {
                      combat_check_attack(source_obj, target_obj);
 -                } else {
 -                    if ((spell_flags & OSF_POLYMORPHED) == 0) {
@@ -7494,7 +7603,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
                  }
                  break;
              case OBJ_TYPE_WEAPON:
-@@ -8791,8 +8837,7 @@
+@@ -8791,8 +8854,7 @@
  
      // Move bottom bar window up so its aligned with mainmenu covers.
      rect = intgame_interface_window_frames[1];
@@ -7504,7 +7613,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
  
      if (!intgame_is_compact_interface()) {
          tig_window_show(dword_64C4F8[1]);
-@@ -8828,8 +8873,244 @@
+@@ -8828,8 +8890,246 @@
  
      // Restore bottom bar position.
      rect = intgame_interface_window_frames[1];
@@ -7700,7 +7809,7 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +        /* Skills and items have specific validation/costs: don't invent a quote. */
 +        return false;
 +    } else if (p->target && ((obj_type_is_critter(target_type) && !critter_is_dead(p->target))
-+        || (intgame_attack_mode(p->actor) && (target_type == OBJ_TYPE_WALL || target_type == OBJ_TYPE_PORTAL
++        || (tig_kb_get_modifier(SDL_KMOD_ALT) && (target_type == OBJ_TYPE_WALL || target_type == OBJ_TYPE_PORTAL
 +            || target_type == OBJ_TYPE_CONTAINER || target_type == OBJ_TYPE_SCENERY)))) {
 +        p->kind = 1; p->cost = combat_attack_cost(p->actor);
 +        int64_t weapon = item_wield_get(p->actor, ITEM_INV_LOC_WEAPON);
@@ -7713,6 +7822,8 @@ diff --git a/src/ui/intgame.c b/src/ui/intgame.c
 +            SkillInvocation si; skill_invocation_init(&si);
 +            sub_4440E0(p->actor, &si.source); sub_4440E0(p->target, &si.target); sub_4440E0(weapon, &si.item);
 +            si.skill = item_weapon_skill(weapon);
++            si.hit_loc = intgame_called_shot();
++            if (si.hit_loc != HIT_LOC_TORSO) si.flags |= SKILL_INVOCATION_AIM;
 +            int effectiveness = IS_TECH_SKILL(si.skill) ? tech_skill_effectiveness(p->actor, GET_TECH_SKILL(si.skill), p->target)
 +                : basic_skill_effectiveness(p->actor, GET_BASIC_SKILL(si.skill), p->target);
 +            effectiveness -= skill_invocation_difficulty(&si);
@@ -7808,7 +7919,7 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      sub_575770();
  
      follower_obj = qword_6813A8;
-@@ -4595,3 +4602,61 @@
+@@ -4595,3 +4602,64 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }
@@ -7859,7 +7970,10 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 +    case 1:inven_ui_message_filter_handle_button_released(inven_ui_arrange_items_btn);break;
 +    case 2:if(inven_ui_mode==INVEN_UI_MODE_LOOT)inven_ui_message_filter_handle_button_released(inven_ui_take_all_btn);break;
 +    case 3:inven_ui_message_filter_handle_button_pressed(inven_ui_panel==INVEN_UI_PANEL_PAPERDOLL?inven_ui_inventory_btn:inven_ui_paperdoll_btn);break;
-+    case 4:inven_ui_message_filter_handle_button_pressed(inven_ui_target_panel==INVEN_UI_PANEL_PAPERDOLL?inven_ui_target_inventory_btn:inven_ui_target_paperdoll_btn);break;
++    case 4:
++        if(qword_682C78 != OBJ_HANDLE_NULL && obj_type_is_critter(obj_field_int32_get(qword_682C78,OBJ_F_TYPE)))
++            inven_ui_message_filter_handle_button_pressed(inven_ui_target_panel==INVEN_UI_PANEL_PAPERDOLL?inven_ui_target_inventory_btn:inven_ui_target_paperdoll_btn);
++        break;
 +    case 5:sub_574FD0(false);break;
 +    case 6:sub_574FD0(true);break;
 +    case 7:modern_inventory_transfer_all(true);break;

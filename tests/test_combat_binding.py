@@ -19,7 +19,7 @@ code = r'''
 #include <string.h>
 typedef int SDL_Scancode;
 enum {SDL_BUTTON_MIDDLE=2};
-enum {SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_SPACE=44, SDL_SCANCODE_COUNT=512};
+enum {SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_SPACE=44, SDL_SCANCODE_COMMA=54, SDL_SCANCODE_PERIOD=55, SDL_SCANCODE_SLASH=56, SDL_SCANCODE_COUNT=512};
 enum {SDL_KMOD_SHIFT=3, SDL_KMOD_CTRL=192, SDL_KMOD_ALT=768, SDL_KMOD_GUI=3072};
 enum {SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP, INTGAME_MODE_DIALOG=10};
 typedef struct {int type; struct {int scancode,mod; bool repeat;} key;} SDL_Event;
@@ -41,8 +41,10 @@ static void hotbar_event(SDL_Event* e){(void)e;}
 '''
 code += 'enum {' + ','.join(f'SDL_SCANCODE_{chr(65+i)}={i+4}' for i in range(26)) + '};\n'
 code += 'enum {' + ','.join(f'SDL_SCANCODE_{(i+1)%10}={i+30}' for i in range(10)) + '};\n'
+code += "static int SDL_GetScancodeFromKey(int key,void* mods){(void)mods;return key-'a'+SDL_SCANCODE_A;}\n"
 code += keys[keys.index('enum {KB_'):keys.index('static const char* tr(')]
 code += keys[keys.index('static int key_chord'):keys.index('static const char* key_name')]
+code += function(keys, 'static int key_default(int i)')
 code += function(ui, 'static bool handle_binding_event(SDL_Event* event)')
 code += '\nstatic bool handle_ui_event(SDL_Event* e){return handle_binding_event(e);}\n'
 code += function(ui, 'static bool handle_event(SDL_Event* event)')
@@ -60,34 +62,42 @@ int main(void){
     follow_camera=true;
     assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==1);
     follow_walk_taps=0;
-    assert(press(SDL_SCANCODE_SPACE,1) && pending_action==7);
-    assert(press(SDL_SCANCODE_SPACE,2) && pending_action==7);
+    assert(press(SDL_SCANCODE_R,0) && pending_action==7);
+    assert(press(SDL_SCANCODE_L,0) && pending_action==0);
+    assert(press(SDL_SCANCODE_G,0) && pending_action==3);
+    assert(press(SDL_SCANCODE_M,0) && pending_action==6);
+    assert(press(SDL_SCANCODE_H,0) && pending_action==9);
+    assert(press(SDL_SCANCODE_H,1) && pending_action==951);
+    assert(press(SDL_SCANCODE_A,1) && pending_action==952);
     assert(press(SDL_SCANCODE_1,0) && pending_action==300);
     assert(press(SDL_SCANCODE_1,SDL_KMOD_SHIFT) && pending_action==310);
     assert(press(SDL_SCANCODE_0,SDL_KMOD_SHIFT) && pending_action==319);
+    assert(!press(SDL_SCANCODE_COMMA,0));
+    assert(!press(SDL_SCANCODE_PERIOD,0));
+    assert(!press(SDL_SCANCODE_SLASH,0));
     active=true;
     assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==0);
-    assert(press(SDL_SCANCODE_SPACE,SDL_KMOD_SHIFT) && pending_action==7);
-    assert(press(SDL_SCANCODE_SPACE,0) && pending_action==1100);
+    assert(press(SDL_SCANCODE_R,0) && pending_action==7);
+    assert(!press(SDL_SCANCODE_SPACE,0) && pending_action==-1);
     assert(press(SDL_SCANCODE_E,0) && pending_action==1100);
     assert(tactical_pressed_actor==42);
-    panel=true;assert(press(SDL_SCANCODE_SPACE,1) && pending_action==-1);panel=false;
-    mode=INTGAME_MODE_DIALOG;assert(press(SDL_SCANCODE_SPACE,1) && pending_action==-1);mode=0;
-    typing=true;assert(!press(SDL_SCANCODE_SPACE,1) && pending_action==-1);typing=false;
-    assert(!press(SDL_SCANCODE_SPACE,SDL_KMOD_CTRL|1) && pending_action==-1);
+    panel=true;assert(press(SDL_SCANCODE_R,0) && pending_action==-1);panel=false;
+    mode=INTGAME_MODE_DIALOG;assert(press(SDL_SCANCODE_R,0) && pending_action==-1);mode=0;
+    typing=true;assert(!press(SDL_SCANCODE_R,0) && pending_action==-1);typing=false;
+    assert(!press(SDL_SCANCODE_R,SDL_KMOD_CTRL) && pending_action==-1);
     key_binding[KB_COMBAT]=SDL_SCANCODE_E|KEY_SHIFT;
     assert(press(SDL_SCANCODE_E,1) && pending_action==7);
     assert(press(SDL_SCANCODE_E,0) && pending_action==1100);
-    assert(press(SDL_SCANCODE_SPACE,1) && pending_action==-1);
+    assert(press(SDL_SCANCODE_R,0) && pending_action==-1);
     key_binding[KB_COMBAT]=0;
-    assert(press(SDL_SCANCODE_SPACE,1) && pending_action==-1);
+    assert(press(SDL_SCANCODE_R,0) && pending_action==-1);
     memcpy(key_binding,key_defaults,sizeof(key_binding));
-    SDL_Event e={.type=SDL_EVENT_KEY_DOWN,.key={SDL_SCANCODE_SPACE,1,false}};
+    SDL_Event e={.type=SDL_EVENT_KEY_DOWN,.key={SDL_SCANCODE_R,0,false}};
     assert(handle_event(&e) && pending_action==7);pending_action=-1;
-    e.key.repeat=true;e.key.mod=0;
+    e.key.repeat=true;e.key.mod=SDL_KMOD_SHIFT;
     assert(handle_event(&e) && pending_action==-1);
     e.type=SDL_EVENT_KEY_UP;assert(handle_event(&e) && pending_action==-1);
-    assert(press(SDL_SCANCODE_SPACE,0) && pending_action==1100);
+    assert(!press(SDL_SCANCODE_SPACE,0) && pending_action==-1);
 }
 '''
 with tempfile.TemporaryDirectory(prefix='arcanum-combat-binding-') as directory:
@@ -96,4 +106,4 @@ with tempfile.TemporaryDirectory(prefix='arcanum-combat-binding-') as directory:
     subprocess.run([os.environ.get('CC', 'cc'), '-std=c17', '-Wall', '-Wextra',
                     '-Wno-unused-variable', str(path / 'test.c'), '-o', str(path / 'test')], check=True)
     subprocess.run([str(path / 'test')], check=True)
-print('PASS: Shift+Space, rebinding, end-turn separation, modifiers, panels and held-key release')
+print('PASS: original actions, movement exceptions, rebinding, native Space, modifiers, panels and held-key release')

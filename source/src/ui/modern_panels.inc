@@ -391,7 +391,8 @@ static void draw_inventory(void)
         equipment_slots((SDL_FRect){left,y+182,cw,422},0,inv.mode);
     } else {
         text_draw(2,actor_name(inv.target),left,y+85,GOLD);
-        text_in_button((SDL_FRect){left,y+126,250,52},734,game_text(modern_intgame_text(inv.target_paperdoll?1006:1005)),false,true);
+        if(inv.target && obj_type_is_critter(obj_field_int32_get(inv.target,OBJ_F_TYPE)))
+            text_in_button((SDL_FRect){left,y+126,250,52},734,game_text(modern_intgame_text(inv.target_paperdoll?1006:1005)),false,true);
         if(inv.target_paperdoll)equipment_slots((SDL_FRect){left,y+190,cw,420},1,inv.mode);
         else inventory_grid((SDL_FRect){left,y+190,cw,0},8,inv.mode==INVEN_UI_MODE_BARTER?209:177,inv.rows,inv.scroll);
         menu_button((SDL_FRect){left+cw+8,y+195,42,46},735,"^",inv.scroll>0);
@@ -1388,7 +1389,7 @@ static bool panels_event(SDL_Event* event)
                 selector=selector==next?0:next;
             }
             if((p==1 && key_is(KB_CHARACTER,event->key.scancode,event->key.mod)) || (p==3 && key_is(KB_MAP,event->key.scancode,event->key.mod)))pending_action=p==1?720:740;
-            if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=p==9?990:p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
+            if(event->key.scancode==SDL_SCANCODE_ESCAPE || (event->key.scancode==SDL_SCANCODE_SPACE && p!=4))pending_action=p==9?990:p==1?720:p==2?(intgame_mode_get()==INTGAME_MODE_QUANTITY?764:mainmenu_ui_is_active()?737:730):p==3?740:p==6?908:p==7?929:p==8?969:840;
             if(p==4 && event->key.scancode>=SDL_SCANCODE_1 && event->key.scancode<=SDL_SCANCODE_5)pending_action=800+event->key.scancode-SDL_SCANCODE_1;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEDOWN)pending_action=821;
             if(p==4 && event->key.scancode==SDL_SCANCODE_PAGEUP)pending_action=820;

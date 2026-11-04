@@ -114,21 +114,26 @@ folder. **Play now** remains available.
 ## Controls
 
 Change bindings in **Options → Key bindings**. AZERTY and QWERTY presets are
-available.
+available. Original letter shortcuts are retained except A, S and W, which
+share the movement keys: their actions use Shift + A, H and G respectively.
+Existing custom bindings are preserved.
 
 | Action | Default |
 | --- | --- |
-| Inventory / journal / character sheet | I / J / C |
+| Inventory / journal / character sheet | I / L / C |
 | Map | G |
 | Spells / skills / schematics | M / K / T |
-| Rest | R |
-| Stealth / pickpocket | H / P |
-| Toggle combat mode | Shift + Space |
-| End turn | E or Space |
+| Rest | H |
+| Stealth / pickpocket | Shift + H / P |
+| Ready / unready weapons | R |
+| Last active shortcut | Shift + A |
+| Called shot: head / arms / legs (hold while attacking) | QWERTY key positions `,` / `.` / `/` (`;` / `:` / `!` on AZERTY) |
+| End turn | E |
 | Move character (follow camera) or pan (free camera) | WASD positions, ZQSD on AZERTY. Arrow keys also pan in free mode. |
 | Zoom game view, travel map, local map or continent map | Mouse wheel over the world or map |
 | Use quick slot | 1–0 |
-| Close panel or open pause menu | Escape |
+| Close panel | Escape or Space |
+| Open pause menu | Escape |
 
 - **Quick slots:** hover an item, spell or skill and press **1–0**, or drag it
   onto the bar. Assignments are saved separately for each controlled character.
@@ -145,7 +150,8 @@ available.
 - **Combat:** select an available ally in the initiative bar to act. Allies
   with consecutive turns can switch while they have action points. **End turn**
   finishes the selected character; enemies act after the group finishes.
-  Left-click highlighted scenery in combat mode to attack it.
+  Left-click doors, containers and scenery to interact with them, including during combat.
+  Hold **Alt** while clicking to attack them.
   Use **Companions: auto / manual** beside the combat log to let companions act automatically
   or take manual control again. Your character remains under manual control.
   Changes wait for the current companion action to finish and preserve remaining

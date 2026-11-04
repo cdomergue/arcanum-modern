@@ -33,16 +33,27 @@ static bool obj_handle_is_valid(int64_t o){return o>0;}
 static int64_t obj_get_id(int64_t o){return o;}
 static void objid_id_to_str(char* s,int64_t id){sprintf(s,"PC:%ld",(long)id);}
 '''
-prelude+='enum {'+','.join('SDL_SCANCODE_'+chr(65+i)+'='+str(i+4) for i in range(26))+',SDL_SCANCODE_SPACE=44};\n'
+prelude+='enum {'+','.join('SDL_SCANCODE_'+chr(65+i)+'='+str(i+4) for i in range(26))+',SDL_SCANCODE_SPACE=44,SDL_SCANCODE_RIGHT=79,SDL_SCANCODE_LEFT=80,SDL_SCANCODE_DOWN=81,SDL_SCANCODE_UP=82};\n'
+prelude+=r"""
+typedef int SDL_Keycode;
+enum {SDL_KMOD_NONE=0,SDLK_A=97,SDLK_Z=122};
+static bool azerty;
+static int SDL_GetScancodeFromKey(int key,void* mods){
+ (void)mods;
+ if(azerty){if(key=='m')return 51;if(key=='a')key='q';else if(key=='q')key='a';else if(key=='z')key='w';else if(key=='w')key='z';}
+ return key-'a'+SDL_SCANCODE_A;
+}
+static SDL_Keycode SDL_GetKeyFromScancode(int key,int mods,bool event){(void)mods;(void)event;return azerty&&key==51?'m':key>=4&&key<=29?key-4+'a':0;}
+"""
 code=prelude+keys[keys.index('enum {KB_'):keys.index('static const char* tr(')]
-code+='\n'.join(function(keys,n) for n in ['key_save','key_allowed','key_load','key_assign'])
+code+='\n'.join(function(keys,n) for n in ['key_default','key_reset_defaults','key_save','key_allowed','key_load','key_assign'])
 code+=notes[notes.index('typedef struct JournalMark'):notes.index('static void notebook_action')]
 code+=r'''
 int main(void){
     assert(mkdir("modern-ui",0700)==0);
     key_load();assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_MIDDLE));
-    assert(KB_COMBAT==15 && key_binding[KB_COMBAT]==(SDL_SCANCODE_SPACE|KEY_SHIFT));
-    assert(!key_assign(KB_INVENTORY,SDL_SCANCODE_J));
+    assert(KB_COMBAT==15 && key_binding[KB_COMBAT]==SDL_SCANCODE_R);
+    assert(!key_assign(KB_INVENTORY,SDL_SCANCODE_L));
     assert(key_binding[KB_INVENTORY]==SDL_SCANCODE_I && *key_status);
     assert(!key_assign(KB_INVENTORY,40)); /* Return belongs to modal controls. */
     assert(key_assign(KB_INVENTORY,SDL_SCANCODE_B));
@@ -52,7 +63,7 @@ int main(void){
     assert(key_assign(KB_UP,0)); /* An unbound camera direction must stay unbound. */
     assert(KB_SORT==16);
     assert(key_assign(KB_SORT,SDL_SCANCODE_B|KEY_SHIFT));
-    assert(!key_assign(KB_SORT,SDL_SCANCODE_J));
+    assert(!key_assign(KB_SORT,SDL_SCANCODE_L));
     memset(key_binding,0,sizeof(key_binding));key_load();assert(key_binding[KB_SORT]==(SDL_SCANCODE_B|KEY_SHIFT));
     assert(key_assign(KB_SORT,KEY_MOUSE|SDL_BUTTON_X1|KEY_SHIFT));
     key_load();assert(key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_X1|KEY_SHIFT));
@@ -68,6 +79,32 @@ int main(void){
     key_save();f=fopen("modern-ui/keys.ini","r");assert(f);char line[128];while(fgets(line,sizeof(line),f))assert(!strstr(line,"inventory_middle_sort"));fclose(f);
     f=fopen("modern-ui/keys.ini","w");assert(f);fprintf(f,"16=%d\ninventory_middle_sort=0\n",KEY_MOUSE|SDL_BUTTON_MIDDLE);fclose(f);
     key_load();assert(key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_MIDDLE));
+    /* Upgrade a complete previous default profile without changing its sort preference. */
+    f=fopen("modern-ui/keys.ini","w");assert(f);
+    for(int i=0;i<KB_SORT;i++)fprintf(f,"%d=%d\n",i,key_legacy_defaults[i]);
+    fprintf(f,"16=%d\n",KEY_MOUSE|SDL_BUTTON_X2);fclose(f);
+    key_load();assert(key_binding[KB_COMBAT]==SDL_SCANCODE_R && key_binding[KB_REST]==SDL_SCANCODE_H);
+    assert(key_binding[KB_JOURNAL]==SDL_SCANCODE_L && key_binding[KB_LAST]==(SDL_SCANCODE_A|KEY_SHIFT));
+    assert(key_binding[KB_SORT]==(KEY_MOUSE|SDL_BUTTON_X2));
+    /* A custom sort gesture conflicting with a new default retains the old profile. */
+    f=fopen("modern-ui/keys.ini","w");assert(f);
+    for(int i=0;i<KB_SORT;i++)fprintf(f,"%d=%d\n",i,key_legacy_defaults[i]);
+    fprintf(f,"16=%d\n",SDL_SCANCODE_H|KEY_SHIFT);fclose(f);
+    key_load();assert(key_binding[KB_SORT]==(SDL_SCANCODE_H|KEY_SHIFT));
+    assert(key_binding[KB_REST]==SDL_SCANCODE_R);
+    /* A customized old profile retains every existing assignment, even when it owns Shift+A. */
+    f=fopen("modern-ui/keys.ini","w");assert(f);
+    for(int i=0;i<=KB_SORT;i++)fprintf(f,"%d=%d\n",i,i==KB_INVENTORY?(SDL_SCANCODE_A|KEY_SHIFT):key_legacy_defaults[i]);
+    fclose(f);key_load();assert(key_binding[KB_INVENTORY]==(SDL_SCANCODE_A|KEY_SHIFT));
+    assert(key_binding[KB_COMBAT]==(SDL_SCANCODE_SPACE|KEY_SHIFT) && key_binding[KB_LAST]==0);
+    /* Logical menu letters follow AZERTY; camera directions retain physical WASD. */
+    assert(remove("modern-ui/keys.ini")==0);azerty=true;key_load();
+    assert(key_binding[KB_LAST]==(SDL_SCANCODE_Q|KEY_SHIFT));
+    assert(key_binding[KB_UP]==SDL_SCANCODE_W && key_binding[KB_LEFT]==SDL_SCANCODE_A);
+    for(int i=0;i<KB_COUNT;i++)for(int j=0;j<i;j++)assert(!key_binding[i] || key_binding[i]!=key_binding[j]);
+    assert(key_binding[KB_SPELLS]==51);
+    assert(key_assign(KB_SPELLS,51));key_load();assert(key_binding[KB_SPELLS]==51);
+    azerty=false;
     notebook_sync();assert(tracked_quest==-1 && !map_memo_count);
     tracked_quest=1024;journal_marks[journal_mark_count++]=(JournalMark){1,1024};
     map_memos[map_memo_count++]=(MapMemo){2,504,120,-53,"Entrée derrière l’église"};
