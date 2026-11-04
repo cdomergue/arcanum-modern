@@ -204,7 +204,7 @@ player and is saved between sessions.
 
 ## Video
 
-[Watch the gameplay video](https://www.youtube.com/watch?v=v1U5BpJ3y8U).
+[Watch the presentation video](https://www.youtube.com/watch?v=aElikFnVZpw).
 
 ## Screenshots
 
