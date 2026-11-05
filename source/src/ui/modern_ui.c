@@ -2644,6 +2644,10 @@ static bool handle_binding_event(SDL_Event* event)
 static bool handle_ui_event(SDL_Event* event)
 {
     if(album.pages) return credit_event(event);
+    if(portrait_editor.active){
+        int pw,ph;SDL_GetWindowSize(window,&pw,&ph);
+        if(pw>0 && ph>0 && portrait_editor_event(event,pw,ph))return true;
+    }
     if(key_options_event(event))return true;
     if(!mainmenu_ui_is_active() && tutorial_next_rect.w>0 &&
        (event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP)) {
@@ -2673,7 +2677,6 @@ static bool handle_ui_event(SDL_Event* event)
     if(!menu && (!visible() || (!hud && !journal))) return false;
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
     if(ww<=0 || wh<=0) return false;
-    if(portrait_editor_event(event,ww,wh))return true;
     if(event->type==SDL_EVENT_MOUSE_MOTION) {
         mouse_x=event->motion.x*canvas_w/ww;mouse_y=event->motion.y*canvas_h/wh;
         if(menu)menu_hover_sound(hit(mouse_x,mouse_y));

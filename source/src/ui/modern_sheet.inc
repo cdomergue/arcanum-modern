@@ -114,6 +114,11 @@ static void draw_character_sheet(void)
     bool playing=play_sheet();
     int64_t obj=playing?modern_charedit_object():player_get_local_pc_obj();
     if(!obj)return;
+    portrait_editor_poll();
+    if(portrait_editor.active){
+        if(portrait_editor_target_valid()){draw_portrait_editor();return;}
+        portrait_editor_close();
+    }
     if(sheet_category<1 || sheet_category>4)sheet_category=1;
     float w=fminf(1760,canvas_w-48),h=canvas_h-48,x=(canvas_w-w)/2,y=24;
     frame((SDL_FRect){x,y,w,h});
@@ -121,7 +126,13 @@ static void draw_character_sheet(void)
     float aw=90,gap=18,lw=(w-40-aw-2*gap)*.54f;
     float right=left+lw+gap,rw=w-40-lw-aw-2*gap;
     fill((SDL_FRect){left,y+18,w-40,106},(SDL_Color){22,18,13,245});
-    draw_portrait(portrait_get(obj),(SDL_FRect){left+12,y+24,76,94});
+    SDL_FRect portrait_rect={left+12,y+24,76,94};
+    if(playing && obj==player_get_local_pc_obj() && !tig_net_is_active()) {
+        button(portrait_rect,3000,"",-1,false,true);
+        if(inside(portrait_rect,mouse_x,mouse_y))
+            SDL_strlcpy(button_overflow_hint,tr("Changer de portrait","Change portrait"),sizeof(button_overflow_hint));
+    }
+    draw_portrait(portrait_get(obj),portrait_rect);
     char name[512];sub_57CD60(player_get_local_pc_obj(),obj,name);
     const char* display_name=game_text(name);
     if(text_measure(3,display_name)<lw-110)text_draw(3,display_name,left+106,y+30,GOLD);

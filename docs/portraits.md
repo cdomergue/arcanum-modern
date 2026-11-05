@@ -14,6 +14,16 @@ modified.
 Images may be up to 8,192 pixels on either side, 24 megapixels in total and
 64 MB on disk. Transparent areas are flattened onto a dark brown background.
 
+## Changing a portrait during a game
+
+Open your hero's character sheet and click the portrait. Use the arrows to
+browse existing portraits, then choose **Use this portrait**, or select
+**Import an image** to open the crop editor. **Cancel** keeps the current
+portrait. Changing a portrait does not change the character's attributes.
+
+Save your game to keep the change. This option is available for your own hero
+in single-player games.
+
 ## Classic game compatibility
 
 Renaissance generates the native portrait pair: indexed, 256-color BMP images

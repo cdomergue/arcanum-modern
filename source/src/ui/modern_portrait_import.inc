@@ -1,6 +1,7 @@
-/* Character creation owns the crop draft. Nothing is published until Import. */
+/* Creation and the local hero sheet share a draft; only confirmation applies it. */
 static struct {
-    bool active,dragging,dirty;
+    bool active,dragging,dirty,in_game,choosing;
+    int selected;
     int64_t object;
     unsigned char* pixels;
     int width,height;
@@ -114,8 +115,24 @@ static void portrait_editor_poll(void)
     }
     SDL_free(path);
 }
+static bool portrait_editor_target_valid(void)
+{
+    if(portrait_editor.in_game)return play_sheet() && !tig_net_is_active()
+        && modern_charedit_object()==portrait_editor.object
+        && player_get_local_pc_obj()==portrait_editor.object;
+    ModernCharacter c;
+    return mainmenu_ui_window_type_get()==MM_WINDOW_NEW_CHAR
+        && modern_mainmenu_character(&c,0) && c.editable && c.object==portrait_editor.object;
+}
 static bool portrait_editor_action(int action)
 {
+    if(action==3000 && !portrait_editor.active) {
+        int64_t obj=modern_charedit_object();
+        if(!play_sheet() || !obj || obj!=player_get_local_pc_obj() || tig_net_is_active())return true;
+        portrait_editor_close();portrait_editor.active=portrait_editor.in_game=portrait_editor.choosing=true;
+        portrait_editor.object=obj;portrait_editor.selected=portrait_get(obj);
+        SDL_StopTextInput(window);return true;
+    }
     if(action==512 && !portrait_editor.active) {
         ModernCharacter c;
         if(mainmenu_ui_window_type_get()!=MM_WINDOW_NEW_CHAR || !modern_mainmenu_character(&c,0) || !c.editable)return true;
@@ -123,7 +140,18 @@ static bool portrait_editor_action(int action)
         name_focused=false;SDL_StopTextInput(window);portrait_editor_browse();return true;
     }
     if(!portrait_editor.active)return false;
+    if(!portrait_editor_target_valid()){portrait_editor_close();return true;}
     if(SDL_GetAtomicInt(&portrait_picker.state))return true;
+    if(portrait_editor.choosing) {
+        if(action==3001)portrait_find_prev(portrait_editor.object,&portrait_editor.selected);
+        else if(action==3002)portrait_find_next(portrait_editor.object,&portrait_editor.selected);
+        else if(action==515){
+            obj_field_int32_set(portrait_editor.object,OBJ_F_CRITTER_PORTRAIT,portrait_editor.selected);
+            portrait_number=-1;portrait_editor_close();
+        } else if(action==514)portrait_editor_close();
+        else if(action==513){portrait_editor.choosing=false;portrait_editor_browse();}
+        return true;
+    }
     if(action==513)portrait_editor_browse();
     else if(action==514)portrait_editor_close();
     else if(action==516)portrait_editor_zoom(1/1.15f);
@@ -132,14 +160,10 @@ static bool portrait_editor_action(int action)
         portrait_editor.zoom=1;portrait_editor.cx=portrait_editor.width/2.f;
         portrait_editor.cy=portrait_editor.height/2.f;portrait_editor_clamp();
     } else if(action==515 && portrait_editor.pixels) {
-        ModernCharacter c;
-        if(mainmenu_ui_window_type_get()!=MM_WINDOW_NEW_CHAR || !modern_mainmenu_character(&c,0) || c.object!=portrait_editor.object) {
-            portrait_editor_close();return true;
-        }
         if(portrait_editor.dirty && !portrait_editor_preview())return true;
         int id;PortraitImportResult result=portrait_import(portrait_editor.small,portrait_editor.large,&id);
         if(result==PORTRAIT_IMPORT_OK) {
-            obj_field_int32_set(c.object,OBJ_F_CRITTER_PORTRAIT,id);portrait_number=-1;portrait_editor_close();
+            obj_field_int32_set(portrait_editor.object,OBJ_F_CRITTER_PORTRAIT,id);portrait_number=-1;portrait_editor_close();
         } else if(result==PORTRAIT_IMPORT_FULL)
             portrait_editor_error("Le catalogue contient déjà 999 portraits personnalisés.","The catalogue already contains 999 custom portraits.");
         else if(result==PORTRAIT_IMPORT_CATALOGUE)
@@ -152,6 +176,23 @@ static bool portrait_editor_action(int action)
 }
 static void draw_portrait_editor(void)
 {
+    if(portrait_editor.choosing) {
+        float w=fminf(720,canvas_w-40),h=660,x=(canvas_w-w)/2,y=(canvas_h-h)/2;
+        frame((SDL_FRect){x,y,w,h});
+        button_label(3,tr("Changer de portrait","Change portrait"),(SDL_FRect){x+24,y+24,w-48,52},true,GOLD);
+        draw_portrait(portrait_editor.selected,(SDL_FRect){canvas_w/2-128,y+100,256,256});
+        int previous=portrait_editor.selected,next=portrait_editor.selected;
+        bool has_previous=portrait_find_prev(portrait_editor.object,&previous);
+        bool has_next=portrait_find_next(portrait_editor.object,&next);
+        menu_button((SDL_FRect){x+24,y+198,70,54},3001,"<",has_previous);
+        menu_button((SDL_FRect){x+w-94,y+198,70,54},3002,">",has_next);
+        menu_button((SDL_FRect){x+60,y+390,w-120,52},513,tr("Importer une image…","Import an image…"),true);
+        menu_paragraph(tr("Le portrait sera conservé dans votre prochaine sauvegarde.",
+            "The portrait will be stored in your next save."),(SDL_FRect){x+32,y+466,w-64,100},0,MUTED);
+        menu_button((SDL_FRect){x+24,y+h-76,(w-72)/2,52},514,tr("Annuler","Cancel"),true);
+        menu_button((SDL_FRect){x+w/2+12,y+h-76,(w-72)/2,52},515,tr("Utiliser ce portrait","Use this portrait"),true);
+        return;
+    }
     float w=fminf(1120,canvas_w-40),h=800,x=(canvas_w-w)/2,y=(canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
     centered(3,tr("Importer un portrait","Import portrait"),canvas_w/2,y+22,GOLD);
@@ -172,15 +213,15 @@ static void draw_portrait_editor(void)
     float right=x+510,rw=w-542;
     text_draw(2,tr("Résultat en jeu","In-game result"),right,y+162,GOLD);
     menu_paragraph(tr("Les deux formats sont convertis en 256 couleurs, compatibles avec le jeu classique.",
-        "Both sizes are converted to 256 colors, compatible with the classic game."),(SDL_FRect){right,y+205,rw,80},0,MUTED);
-    SDL_FRect big={right,y+308,192,192},small={right+220,y+308,96,96};
+        "Both sizes are converted to 256 colors, compatible with the classic game."),(SDL_FRect){right,y+205,rw,122},0,MUTED);
+    SDL_FRect big={right,y+340,160,160},small={right+190,y+340,80,80};
     fill(big,(SDL_Color){30,22,16,255});fill(small,(SDL_Color){30,22,16,255});
     if(portrait_editor.preview_large)SDL_RenderTexture(renderer,portrait_editor.preview_large,NULL,&big);
     if(portrait_editor.preview_small)SDL_RenderTexture(renderer,portrait_editor.preview_small,NULL,&small);
     outline(big,GOLD);outline(small,GOLD);
-    text_draw(0,"128 × 128",right,y+513,MUTED);text_draw(0,"64 × 64",right+220,y+417,MUTED);
+    text_draw(0,"128 × 128",right,y+513,MUTED);text_draw(0,"64 × 64",right+190,y+433,MUTED);
     menu_paragraph(tr("Glissez l’image pour cadrer le visage. Utilisez la molette ou les boutons pour zoomer.",
-        "Drag the image to frame the face. Use the wheel or buttons to zoom."),(SDL_FRect){right,y+555,rw,80},0,MUTED);
+        "Drag the image to frame the face. Use the wheel or buttons to zoom."),(SDL_FRect){right,y+550,rw,122},0,MUTED);
     menu_button((SDL_FRect){x+32,y+620,48,40},516,"-",loaded && !waiting && portrait_editor.zoom>1);
     char zoom[32];snprintf(zoom,sizeof(zoom),"%.0f %%",portrait_editor.zoom*100);
     centered(1,loaded?zoom:"",x+144,y+629,GOLD);

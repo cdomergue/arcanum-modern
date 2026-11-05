@@ -89,6 +89,8 @@ static void check_settings(void)
     load_settings();assert(text_scale==125);
     text_scale=100;save_settings();
 }
+#include "check-portrait-in-game.inc"
+
 int main(int argc,char** argv)
 {
     if((argc!=3&&argc!=4)||chdir(argv[1])||access(".map-export-sandbox",R_OK))return 2;
@@ -118,6 +120,8 @@ int main(int argc,char** argv)
 
 
 
+    const char* portrait_check=SDL_getenv("ARCANUM_CHECK_PORTRAIT");
+    if(portrait_check){check_portrait_in_game(pc,portrait_check);return 0;}
     check_settings();
     const int scales[]={75,100,125,150};
     for(int s=0;s<4;s++){

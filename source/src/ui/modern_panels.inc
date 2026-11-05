@@ -1133,6 +1133,7 @@ static void draw_play_panels(void)
 static bool panels_action(int action)
 {
     int p=native_panel();
+    if(portrait_editor.active || action==3000)return portrait_editor_action(action);
     if(p==9 && action>=990 && action<=992) {
         if(action==990)written_ui_close();
         else {written_scroll+=action==991?-written_step:written_step;if(written_scroll<0)written_scroll=0;if(written_scroll>written_max)written_scroll=written_max;}
@@ -1212,6 +1213,7 @@ static bool panels_action(int action)
 static void panels_tick(void)
 {
     int p=native_panel();
+    if(portrait_editor.active && portrait_editor.in_game && !portrait_editor_target_valid())portrait_editor_close();
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
         if(memo_edit>=0)memo_close();memo_placing=false;
