@@ -136,8 +136,13 @@ Packaging requires Python 3.10 or later and `readelf` from binutils. The output 
 resources and license notices. It excludes game data and personal settings.
 SDL is linked into the executable. Three FFmpeg shared libraries are included in
 `ArcanumModern/lib`; the packager rejects other non-system dependencies and records
-the required glibc version. FFmpeg's license, exact source and build script are
-included under `ArcanumModern/licenses/ffmpeg`.
+the required glibc version. Runtime packages retain dependency licenses under
+`ArcanumModern/licenses`. Matching FFmpeg and 7-Zip sources, FFmpeg build scripts
+and configuration are generated separately as
+`ArcanumModern-dependency-sources-<platform>.zip`. Publish these optional archives
+alongside the runtime packages on the same GitHub release; the license notices
+link to the versioned downloads. They are not needed to install or play the game
+and are not included in the setup or downloaded by the launcher.
 
 The release workflow builds on Ubuntu 22.04 for **x86-64 Linux with glibc 2.35
 or newer**. Packages built on newer distributions may require a newer glibc.

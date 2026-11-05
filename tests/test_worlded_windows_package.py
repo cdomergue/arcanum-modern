@@ -41,7 +41,10 @@ class PackageTests(unittest.TestCase):
             package.verify_archive(path)
             for kwargs in ({'omit': 'worlded-tutorial.html'}, {'omit': 'vcruntime140.dll'},
                            {'corrupt': True}, {'extra': '../escape'},
-                           {'extra': 'WORLDed.exe'}, {'extra': 'Slot0001.sav'}):
+                           {'extra': 'WORLDed.exe'}, {'extra': 'Slot0001.sav'},
+                           {'omit': 'licenses/ffmpeg/COPYING.LGPLv2.1'},
+                           {'extra': 'licenses/ffmpeg/ffmpeg-8.1.3.tar.xz'},
+                           {'extra': 'licenses/ffmpeg/build-ffmpeg.py'}):
                 with self.subTest(kwargs=kwargs):
                     self.make_archive(path, **kwargs)
                     with self.assertRaises(ValueError): package.verify_archive(path)

@@ -79,13 +79,19 @@ tag moves and full rebuilds. Do not repeat that sequence.
 - Tag the validated commit only after preflight is green. Any code change needs
   appropriate revalidation. Never move a published tag or replace its assets;
   post-release documentation updates belong in a separate commit.
-- Before publishing, verify all five expected packages plus `SHA256SUMS.txt`,
+- Before publishing, verify all five runtime packages, the three optional
+  `ArcanumModern-dependency-sources-*.zip` assets, and `SHA256SUMS.txt`,
   matching tag/manifest revisions, and checksums of the final files. Confirm the
   public release and latest-release endpoint afterwards. Report exactly which
   tests ran and where; do not promise that passing tests proves absence of bugs.
-- For Nexus distribution, provide the exact verified installer. Check current
-  Nexus requirements before recommending ZIPs: source archives embedded for
-  licensing may need extraction, with sources and notices preserved. Keep release
+- Keep dependency sources and build scripts out of runtime ZIPs and installers.
+  Publish matching FFmpeg/7-Zip sources separately with the same GitHub release;
+  preserve licenses and versioned source links in runtime packages. Verify source
+  hashes and the presence of all optional source assets before publishing. Do not
+  expand source trees into a game installation or a Nexus runtime download.
+- For Nexus distribution, provide the exact verified installer or runtime ZIP.
+  Check current Nexus requirements; antivirus quarantine requires investigation,
+  not speculative repacking. Keep release
   highlights focused on user features; put build incident details in the requested
   report and these contributor instructions.
 

@@ -2,6 +2,7 @@
 """Build and verify the portable WorldED Windows archive without game assets."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,9 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location('windows_package', ROOT/'tools/package-windows.py')
+resources = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(resources)
 PROGRAMS = ('worlded-explorer.exe', 'worlded.exe', 'worlded-house-export.exe', 'script-editor.exe')
 HELPER = 'worlded-native-inventory.exe'
 MOVIES = ('avformat-62.dll', 'avcodec-62.dll', 'avutil-60.dll')
@@ -20,7 +24,8 @@ REQUIRED = (*PROGRAMS, HELPER, *MOVIES, 'Qt6Core.dll', 'Qt6Gui.dll',
             'script-editor.html', 'docs/script-editor.md', 'docs/worlded-modding.md',
             'examples/scripts/49000_reward_chest.wscript', 'examples/scripts/49001_reward_keeper.wscript',
             'examples/scripts/49001_reward_keeper.wdlg', 'examples/scripts/reward_chest.native.txt',
-            'docs/worlded.md', 'docs/housing.md', 'docs/world-updates.md', 'README.txt')
+            'docs/worlded.md', 'docs/housing.md', 'docs/world-updates.md', 'README.txt',
+            'licenses/ffmpeg/README.txt', 'licenses/ffmpeg/COPYING.LGPLv2.1')
 
 
 def verify_archive(path):
@@ -34,6 +39,8 @@ def verify_archive(path):
                 raise ValueError('Unsafe archive path: ' + name)
             if name.lower().endswith(('.dat', '.sav', '.tfaf', '.tfai', '.gsi', '.pdb')):
                 raise ValueError('Game data, saves or debug files in editor archive: ' + name)
+            if name.startswith('licenses/ffmpeg/') and Path(name).name not in ('README.txt', 'COPYING.LGPLv2.1'):
+                raise ValueError('Dependency sources belong in a separate download: '+name)
         missing = set(REQUIRED) - set(names)
         if missing:
             raise ValueError('Missing package files: ' + ', '.join(sorted(missing)))
@@ -133,7 +140,13 @@ def package(args):
                 for line in cache.read_text(encoding='utf-8').splitlines():
                     if line.startswith('ARCANUM_FFMPEG_ROOT:PATH='):
                         notices = Path(line.split('=', 1)[1])/'share/arcanum-ffmpeg'
-                        shutil.copytree(notices, stage/'licenses/ffmpeg')
+                        prefix = 'ArcanumModern/licenses/ffmpeg/'
+                        files = {prefix+p.name: p.read_bytes() for p in notices.iterdir() if p.is_file()}
+                        resources.separate_dependency_sources(files, output, 'worlded-windows', ('ffmpeg',))
+                        for name, data in files.items():
+                            target = stage/'licenses/ffmpeg'/Path(name).name
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            target.write_bytes(data)
                         break
         for path in args.extra_dll:
             if path.suffix.lower() != '.dll':

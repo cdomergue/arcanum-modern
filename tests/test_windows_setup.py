@@ -58,8 +58,7 @@ class SetupPayloadTests(unittest.TestCase):
         files = {'ArcanumModern/'+name for name in (
             'uap/uap-helper.exe', 'uap/7z.exe', 'uap/7z.dll',
             'docs/uap.md', 'docs/uap-fr.md', 'licenses/Go.txt',
-            'licenses/7zip/LICENSE.txt', 'licenses/7zip/README.txt',
-            'licenses/7zip/7z2604-src.tar.xz')}
+            'licenses/7zip/LICENSE.txt', 'licenses/7zip/README.txt')}
         self.files.update({name: b'uap fixture' for name in files})
         target = self.work/'payload'
         names = self.p.extract_payload(self.archive(), target)
@@ -95,6 +94,9 @@ class SetupPayloadTests(unittest.TestCase):
         for name in ['arcanum1.dat', 'modern-ui/settings.ini', 'modules/Arcanum.dat',
                      'ArcanumModern/house/base/house/unexpected.mes',
                      'ArcanumModern/house/../Save/Slot0001.tfaf',
+                     'ArcanumModern/licenses/ffmpeg/ffmpeg-8.1.3.tar.xz',
+                     'ArcanumModern/licenses/ffmpeg/build-ffmpeg.py',
+                     'ArcanumModern/licenses/7zip/7z2604-src.tar.xz',
                      '../escape', '/absolute', 'modern-ui\\Book.ttf',
                      'ArcanumModern/licenses/../../escape', 'ArcanumModern/licenses/$bad.txt']:
             with self.subTest(name=name):

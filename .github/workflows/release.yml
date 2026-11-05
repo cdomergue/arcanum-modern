@@ -64,6 +64,7 @@ jobs:
           build/linux-x64/check-name-input
           python3 tools/package-linux.py --exe build/linux-x64/arcanum-ce --build-dir build/linux-x64
           python3 tests/test_linux_package.py dist/ArcanumModern-linux-x64.zip
+          python3 tests/test_dependency_source_packages.py dist/ArcanumModern-linux-x64.zip dist/ArcanumModern-dependency-sources-linux-x64.zip
           RENAISSANCE_LAUNCHER_PACKAGE="$PWD/dist/ArcanumModern-linux-x64.zip" build/launcher/launcher-tests-linux
           python3 tests/test_launcher_ui.py build/linux-x64/renaissance-launcher-ui
       - name: Check extracted runtime
@@ -82,7 +83,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux-release
-          path: dist/ArcanumModern-linux-x64.zip
+          path: |
+            dist/ArcanumModern-linux-x64.zip
+            dist/ArcanumModern-dependency-sources-linux-x64.zip
           if-no-files-found: error
 
   windows:
@@ -95,6 +98,7 @@ jobs:
           python3 tests/test_windows_full_package.py
           python3 tests/test_windows_setup.py
           python3 tests/test_ffmpeg_download.py
+          python3 tests/test_dependency_source_packages.py
       - name: Build Windows ZIP
         run: |
           docker run --rm \
@@ -111,6 +115,7 @@ jobs:
           sudo apt-get install -y nsis
           sudo chown -R "$(id -u):$(id -g)" dist
           python3 tests/test_windows_package.py
+          python3 tests/test_dependency_source_packages.py dist/ArcanumModern-windows-x64.zip dist/ArcanumModern-dependency-sources-windows-x64.zip
           python3 tools/package-windows-setup.py
       - uses: actions/upload-artifact@v4
         with:
@@ -131,6 +136,7 @@ jobs:
           path: |
             dist/ArcanumModern-windows-x64.zip
             dist/ArcanumModern-windows-x64-setup.exe
+            dist/ArcanumModern-dependency-sources-windows-x64.zip
           if-no-files-found: error
 
   worlded-windows:
@@ -263,6 +269,8 @@ jobs:
           python3 tools/build-map-exporter.py --source tools/check-cursor-scale.c --name check-cursor-scale
           build/macos-arm64/check-cursor-scale
       - run: python3 tests/test_macos_package.py
+      - name: Verify runtime and separate dependency sources
+        run: python3 tests/test_dependency_source_packages.py dist/ArcanumModern-macos-arm64.zip dist/ArcanumModern-dependency-sources-macos-arm64.zip
       - name: Check macOS launcher and packaged update payload
         run: |
           RENAISSANCE_LAUNCHER_PACKAGE="$PWD/dist/ArcanumModern-macos-arm64.zip" build/launcher/launcher-tests-macos
@@ -274,7 +282,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos-release
-          path: dist/ArcanumModern-macos-arm64.zip
+          path: |
+            dist/ArcanumModern-macos-arm64.zip
+            dist/ArcanumModern-dependency-sources-macos-arm64.zip
           if-no-files-found: error
 
   release:
@@ -296,7 +306,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd dist
-          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip ArcanumModern-linux-x64.zip worlded-renaissance-win.zip)
+          files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip ArcanumModern-linux-x64.zip worlded-renaissance-win.zip ArcanumModern-dependency-sources-windows-x64.zip ArcanumModern-dependency-sources-macos-arm64.zip ArcanumModern-dependency-sources-linux-x64.zip)
           sha256sum "${files[@]}" > SHA256SUMS.txt
           if gh release view "$RELEASE_TAG" --json isDraft > release.json; then
             test "$(jq -r .isDraft release.json)" = true || { echo 'Refusing to replace a published release.' >&2; exit 1; }

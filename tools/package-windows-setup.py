@@ -25,12 +25,11 @@ REQUIRED_FILES = {'arcanum-modern.exe', 'renaissance-launcher.exe', 'Play Arcanu
                   'ArcanumModern/licenses/fpattern.txt', 'ArcanumModern/licenses/zlib.txt',
                   'ArcanumModern/licenses/stb.txt'} | {'modern-ui/'+name for name in package.ASSETS} | set(package.MOVIE_LIBRARIES['windows']) | {
                   'ArcanumModern/licenses/ffmpeg/'+name for name in
-                  ('ffmpeg-8.1.3.tar.xz', 'COPYING.LGPLv2.1', 'build-ffmpeg.py', 'README.txt')} | {
+                  ('COPYING.LGPLv2.1', 'README.txt')} | {
                   'ArcanumModern/'+name for name in (
                   'uap/uap-helper.exe', 'uap/7z.exe', 'uap/7z.dll',
                   'docs/uap.md', 'docs/uap-fr.md', 'licenses/Go.txt',
-                  'licenses/7zip/LICENSE.txt', 'licenses/7zip/README.txt',
-                  'licenses/7zip/7z2604-src.tar.xz')} | set(package.house_files()) | set(package.tutorial_files()) | set(package.cinematic_files())
+                  'licenses/7zip/LICENSE.txt', 'licenses/7zip/README.txt')} | set(package.house_files()) | set(package.tutorial_files()) | set(package.cinematic_files())
 
 
 def extract_payload(archive, target):

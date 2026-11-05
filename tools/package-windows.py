@@ -24,6 +24,10 @@ REQUIRED_GAME_FILES = {'arcanum1.dat', 'arcanum2.dat', 'arcanum3.dat', 'tig.dat'
 MOVIE_LIBRARIES = {'windows': ('avformat-62.dll', 'avcodec-62.dll', 'avutil-60.dll'),
                    'macos': ('libavformat.62.dylib', 'libavcodec.62.dylib', 'libavutil.60.dylib'),
                    'linux': ('libavformat.so.62', 'libavcodec.so.62', 'libavutil.so.60')}
+DEPENDENCY_SOURCE_HASHES = {
+    'ffmpeg-8.1.3.tar.xz': '7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3',
+    '7z2604-src.tar.xz': '9691944c0fe0d01bb49373a704fb983fd33bc98b1738695179dfbf99ac1734f6',
+}
 
 
 def movie_files(build_dir, platform):
@@ -48,6 +52,53 @@ def uap_files(platform):
     spec.loader.exec_module(builder)
     with tempfile.TemporaryDirectory(prefix='arcanum-uap-') as directory:
         return builder.build(platform, Path(directory), ROOT/'build/uap-tools')
+
+
+def separate_dependency_sources(files, output, target, components=('ffmpeg', '7zip')):
+    """Publish matching dependency sources beside, never inside, runtime packages."""
+    version = re.search(r'ARCANUM_RENAISSANCE_VERSION "([^"]+)"',
+                        (ROOT/'source/src/ui/modern_version.h').read_text()).group(1)
+    name = f'ArcanumModern-dependency-sources-{target}.zip'
+    url = f'https://github.com/cdomergue/arcanum-modern/releases/download/v{version}/{name}'
+    source_names = {
+        'ffmpeg': ('ffmpeg-8.1.3.tar.xz', 'build-ffmpeg.py'),
+        '7zip': ('7z2604-src.tar.xz',),
+    }
+    sources, replacements, removed = {}, {}, []
+    for component in components:
+        prefix = f'ArcanumModern/licenses/{component}/'
+        for filename in source_names[component]:
+            path = prefix+filename
+            data = files[path]
+            if filename in DEPENDENCY_SOURCE_HASHES and hashlib.sha256(data).hexdigest() != DEPENDENCY_SOURCE_HASHES[filename]:
+                raise ValueError('Dependency source checksum mismatch: '+filename)
+            sources[path] = data
+            removed.append(path)
+        for path, data in files.items():
+            if path.startswith(prefix):
+                sources[path] = data
+        readme = prefix+'README.txt'
+        text = files[readme].decode('utf-8')
+        text = text.replace('Exact source and the build script are included here.',
+                            'Exact source and the build script are available separately.')
+        text = text.replace('Corresponding source is included.',
+                            'Corresponding source is available separately.')
+        replacements[readme] = (text.rstrip()+'\n\nSource download (not needed to play):\n'+url+'\n').encode()
+    sources['SHA256SUMS.txt'] = ''.join(
+        hashlib.sha256(data).hexdigest()+'  '+path+'\n'
+        for path, data in sorted(sources.items())).encode()
+    destination = output.parent/name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='arcanum-sources-', dir=destination.parent) as temp:
+        archive = Path(temp)/name
+        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+            for path, data in sorted(sources.items()):
+                z.writestr(path, data)
+        archive.replace(destination)
+    for path in removed:
+        del files[path]
+    files.update(replacements)
+    print(f'Created optional dependency sources: {destination}')
 
 
 def launcher_files(target="windows", build_dir=None):
@@ -258,6 +309,7 @@ def package(exe, build_dir, output, include_game=None):
     dirty = bool(subprocess.check_output(git+['status','--porcelain'],text=True).strip())
     version = re.search(r'ARCANUM_RENAISSANCE_VERSION "([^"]+)"',
                         (ROOT/'source/src/ui/modern_version.h').read_text()).group(1)
+    separate_dependency_sources(files, output, 'windows-x64')
     write_archive(output, files, {'revision':revision,'working_tree_modified':dirty,
         'version':version,'launcher_format':1,
         'target':'windows-x86_64','imports':sorted(imports),'includes_game_data':bool(include_game)})

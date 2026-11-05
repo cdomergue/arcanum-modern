@@ -83,6 +83,7 @@ def package(exe, build_dir, output):
             files['ArcanumModern/licenses/'+name+'-'+Path(extra).parent.name+'.txt'] = (directory/extra).read_bytes()
     stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
     files['ArcanumModern/licenses/stb.txt'] = stb[stb.rindex('/*\n---'):].encode()
+    resources.separate_dependency_sources(files, output, 'linux-x64')
     git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]
     metadata = {'target': 'linux-x86_64', 'launcher_format': 1,
                 'version': re.search(r'ARCANUM_RENAISSANCE_VERSION "([^"]+)"', (ROOT/'source/src/ui/modern_version.h').read_text()).group(1), 'minimum_glibc': minimum_glibc,

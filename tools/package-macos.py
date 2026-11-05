@@ -74,6 +74,7 @@ def package(app, build_dir, output):
         movies.update(resources.house_files())
         movies.update(resources.tutorial_files())
         movies.update(resources.cinematic_files())
+        resources.separate_dependency_sources(movies, output, 'macos-arm64')
         for name, data in movies.items():
             destination = stage/name
             destination.parent.mkdir(parents=True, exist_ok=True)
