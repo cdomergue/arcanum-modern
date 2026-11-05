@@ -199,6 +199,7 @@ player and is saved between sessions.
 
 ## Compatibility
 
+- This mod is compatible with original save files. It shouldn't break them if you switch back to the classic game either (except for discrepancies between UAP and non-UAP installs).
 - The game uses its original sprites and terrain artwork.
 - Do not apply the original High Resolution Patch to the Renaissance executable.
 - AID descriptions cover the Arcanum campaign and UAP. Item rebalance mods may
