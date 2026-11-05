@@ -612,18 +612,33 @@ static void draw_written(void)
 }
 static SDL_FRect memo_map_rect;
 static ModernMap memo_map_state;
+static int memo_hover=-1;
+static SDL_FRect memo_hover_rect;
+static void draw_map_memo_hint(void)
+{
+    if(memo_hover<0 || memo_hover>=map_memo_count || memo_edit>=0)return;
+    const char* label=map_memos[memo_hover].text;
+    float width=fminf(fminf(520,canvas_w-16),ceilf(button_text_bounds(0,label).w)+24);
+    int rows=menu_paragraph(label,(SDL_FRect){0,0,width-24,0},0,GOLD);
+    SDL_FRect ink=button_text_bounds(0,"AgÉjy");
+    float height=(rows-1)*text_line_height()+ink.h+20;
+    float y=memo_hover_rect.y>canvas_h/2?memo_hover_rect.y-height-6:memo_hover_rect.y+memo_hover_rect.h+6;
+    SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,memo_hover_rect.x)),
+        fmaxf(8,fminf(canvas_h-height-8,y)),width,height};
+    hud_panel(tip);
+    menu_paragraph(label,(SDL_FRect){tip.x+12,tip.y+10-ink.y,width-24,rows*text_line_height()},0,GOLD);
+}
 static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)
 {
     notebook_sync();memo_map_rect=dest;memo_map_state=*map;
+    memo_hover=-1;
     if(memos_visible)for(int i=0;i<map_memo_count;i++) {
         MapMemo* memo=&map_memos[i];if(memo->mode!=map->mode || memo->map!=map->map)continue;
         float x=dest.x+(memo->x-map->offset_x)*scale,y=dest.y+(memo->y-map->offset_y)*scale;
         if(x<dest.x+12 || y<dest.y+12 || x>dest.x+dest.w-12 || y>dest.y+dest.h-12)continue;
         SDL_FRect r={x-12,y-12,24,24};button(r,2200+i,"*",-1,false,true);
         if(inside(r,mouse_x,mouse_y)) {
-            float width=fminf(420,text_measure(0,memo->text)+20),xx=fminf(canvas_w-width-10,x);
-            hud_panel((SDL_FRect){xx,y+17,width,32});
-            text_compact(memo->text,xx+10,y+24,width-20,false,GOLD);
+            memo_hover=i;memo_hover_rect=r;
         }
     }
 }
@@ -887,6 +902,8 @@ static void draw_map(void)
         hud_panel(tip);content.y=tip.y+8;content.h=rows*text_line_height();
         menu_paragraph(help,content,0,GOLD);
     }
+    /* Draw after restoring the map clip, so edge notes keep their full tooltip. */
+    draw_map_memo_hint();
     draw_memo_editor();
 }
 
