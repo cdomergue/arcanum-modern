@@ -3,6 +3,15 @@ static int sheet_detail_category=1, sheet_detail_index, sheet_degree=-1;
 static int sheet_scheme_page;
 static int64_t sheet_scheme_object;
 
+static const char* sheet_race_name(int64_t obj)
+{
+    /* Dog's campaign internal name, independent of the displayed/custom name.
+     * His prototype is shared with another NPC, so it cannot identify him. */
+    if(obj_field_int32_get(obj,OBJ_F_TYPE)==OBJ_TYPE_NPC
+        && obj_field_int32_get(obj,OBJ_F_NAME)==6636)return tr("Toutou","Good boy");
+    return game_text(race_name(stat_level_get(obj,STAT_RACE)));
+}
+
 static void sheet_scheme_focus(void)
 {
     sheet_scheme_object=modern_charedit_object();sheet_scheme_page=0;
@@ -149,7 +158,7 @@ static void draw_character_sheet(void)
     if(text_measure(3,display_name)<lw-110)text_draw(3,display_name,left+106,y+30,GOLD);
     else text_compact(display_name,left+106,y+38,lw-110,false,GOLD);
     char identity[512];snprintf(identity,sizeof(identity),"%s : %d  ·  %s  ·  %s  ·  %s : %d",
-        character_text(1),stat_level_get(obj,STAT_LEVEL),game_text(race_name(stat_level_get(obj,STAT_RACE))),
+        character_text(1),stat_level_get(obj,STAT_LEVEL),sheet_race_name(obj),
         game_text(gender_name(stat_level_get(obj,STAT_GENDER))),character_text(6),stat_level_get(obj,STAT_AGE));
     text_compact(identity,left+106,y+79,lw-110,false,MUTED);
     char points[160];snprintf(points,sizeof(points),"%s : %d",character_text(0),stat_level_get(obj,STAT_UNSPENT_POINTS));
