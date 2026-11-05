@@ -60,7 +60,8 @@ int main(int argc, char** argv) {
             check(read_file(root/"first/Proto/001020 - Wall.pro")==Bytes{1},"Copy modified source prototype");
         }
         {Bytes data;std::string magic="FacWalk V101  ";data.insert(data.end(),magic.begin(),magic.end());auto word=[&](unsigned v){for(int b=0;b<4;b++)data.push_back(v>>(8*b));};
-            for(unsigned v:{5,1,1,3,2,2,0,0,1,2,1,0})word(v);auto f=read_facade(data,263);
+            for(unsigned v:{5,1,1,3,2,2,0,0,1,2,1,0})word(v);
+            auto f=read_facade(data,263);
             check(f.width==3 && f.height==2 && f.tiles.size()==2,"Sparse facade footprint lost");check(f.tiles.at({0,0})==(0xb0000000u|(1u<<27)|(1u<<26)|(1u<<25)|(7u<<17)|(5u<<11)|1u),"Facade AID encoding incorrect");
             check((f.tiles.at({2,1})&2047)==2,"Facade frame/walkable bits confused");data.pop_back();bool rejected=false;try{read_facade(data,263);}catch(...){rejected=true;}check(rejected,"Truncated facade accepted");}
         QTemporaryDir engineFixtures;auto fixture=engineFixtures.filePath("engine");
@@ -688,13 +689,15 @@ int main(int argc, char** argv) {
         {auto next=window.building->objects;check(!next.empty(),"Object fixture missing");ObjectField field;field.name="SCRIPTS_IDX";field.kind="SCRIPT_ARRAY";field.present=true;Bytes first(12),second(12);first[8]=42;second[8]=43;field.elements={{0,first},{9,second}};
             auto previous=std::find_if(next[0].fields.begin(),next[0].fields.end(),[](const auto& f){return f.name=="SCRIPTS_IDX";});if(previous==next[0].fields.end())next[0].fields.push_back(field);else *previous=field;
             window.commitEdit("Add script fixture",next,{});window.editLayer->setCurrentIndex(4);auto beforeScript=window.building->sector().encode();int index=-1;
-            for(int i=0;i<int(window.activeContext.scripts.size());i++)if(window.activeContext.scripts[i].id==42 && window.activeContext.scripts[i].origin==0){index=i;break;}check(index>=0,"Object script not listed");
+            for(int i=0;i<int(window.activeContext.scripts.size());i++)if(window.activeContext.scripts[i].id==42 && window.activeContext.scripts[i].origin==0){index=i;break;}
+            check(index>=0,"Object script not listed");
             window.scriptsList->setCurrentRow(index);check(window.removeScript->isEnabled() && window.locateScript->isEnabled(),"Object script controls disabled");QTest::mouseClick(window.removeScript,Qt::LeftButton);
             const auto* result=window.building->objects[0].field("SCRIPTS_IDX");check(result && result->elements.size()==2 && word(result->elements[0].data,8)==0 && word(result->elements[1].data,8)==43,"Removal changed unrelated object scripts");
             window.history(false);check(window.building->sector().encode()==beforeScript,"Undo did not restore object script");window.history(false);window.editLayer->setCurrentIndex(0);}
         {auto next=window.building->objects;auto candidate=std::find_if(window.paletteObjects.begin(),window.paletteObjects.end(),[](const auto& o){return o.prototype_id==4027;});check(candidate!=window.paletteObjects.end(),"Inherited-script prototype missing");auto instance=clone_instance(*candidate);set_number(instance,"LOCATION",(20ull<<32)|20);next.push_back(instance);auto objectIndex=next.size()-1;
             window.commitEdit("Add inherited script fixture",next,{});window.editLayer->setCurrentIndex(4);auto beforeScript=window.building->sector().encode();int index=-1;
-            for(int i=0;i<int(window.activeContext.scripts.size());i++)if(window.activeContext.scripts[i].id==42 && window.activeContext.scripts[i].origin==0 && window.activeContext.scripts[i].inherited){index=i;break;}check(index>=0,"Inherited script not listed");
+            for(int i=0;i<int(window.activeContext.scripts.size());i++)if(window.activeContext.scripts[i].id==42 && window.activeContext.scripts[i].origin==0 && window.activeContext.scripts[i].inherited){index=i;break;}
+            check(index>=0,"Inherited script not listed");
             window.scriptsList->setCurrentRow(index);QTest::mouseClick(window.removeScript,Qt::LeftButton);auto effective=window.assets->effective(window.building->objects[objectIndex]);const auto* field=effective.field("SCRIPTS_IDX");
             check(field && word(field->elements[0].data,8)==0 && word(field->elements[1].data,8)==43,"Inherited attachment removal changed other scripts");
             auto prototype=read_objects(window.installation->read("proto/004027.pro"))[0];check(word(prototype.field("SCRIPTS_IDX")->elements[0].data,8)==42,"Prototype was modified");

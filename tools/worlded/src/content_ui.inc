@@ -6,7 +6,8 @@
         auto form=new QFormLayout(&dialog);QComboBox resource;resource.setObjectName("attachmentResource");
         for(auto path:contentPaths(".scr"))resource.addItem(path,contentNumber(path));
         int current=resource.findData(value.number);if(existing && current<0){resource.addItem(QString("%1 · missing SCR").arg(value.number),value.number);current=resource.count()-1;}
-        if(current>=0)resource.setCurrentIndex(current);form->addRow("Script",&resource);
+        if(current>=0)resource.setCurrentIndex(current);
+        form->addRow("Script",&resource);
         QLineEdit flags;flags.setObjectName("attachmentFlags");form->addRow("Flags (decimal or 0x hex)",&flags);
         QSpinBox counters[4];for(int i=0;i<4;i++){counters[i].setRange(0,255);counters[i].setObjectName(QString("attachmentCounter%1").arg(i));form->addRow(QString("Counter %1").arg(i+1),&counters[i]);}
         auto fill=[&](std::uint32_t f,std::uint32_t c){flags.setText(QString("0x%1").arg(f,8,16,QChar('0')));for(int i=0;i<4;i++)counters[i].setValue((c>>(8*i))&255);};

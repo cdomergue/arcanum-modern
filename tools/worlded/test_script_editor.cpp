@@ -13,7 +13,8 @@ static bool reward_trace(const Bytes& bytes,int& counter,int& gold,int row=0){
         if(action==3){row=value(p,0);continue;}
         if(action==10){check(bytes[p+4]==0 && word(bytes,p+12)==0,"Unexpected tutorial assignment");counter=value(p,1);}
         else if(action==35){check(bytes[p+4]==21,"Tutorial reward must target player");gold+=value(p,1);}
-        else check(action==0,"Unexpected tutorial action");++row;
+        else check(action==0,"Unexpected tutorial action");
+        ++row;
     }throw std::runtime_error("Tutorial example looped");
 }
 int main(int argc,char** argv){

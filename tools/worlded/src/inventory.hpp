@@ -22,7 +22,10 @@ inline std::string inventory_bytes_id(const Bytes& bytes) {
     for(unsigned i=0;i<24;i++){if(i>=2 && i<8)continue;result+=hex[bytes[i]>>4];result+=hex[bytes[i]&15];}return result;
 }
 inline void inventory_set_field(GameObject& object,ObjectField field) {
-    for(auto& previous:object.fields)if(previous.name==field.name){previous=std::move(field);return;}object.fields.push_back(std::move(field));
+    for(auto& previous:object.fields){
+        if(previous.name==field.name){previous=std::move(field);return;}
+    }
+    object.fields.push_back(std::move(field));
 }
 inline void inventory_set_handle(GameObject& object,const char* name,const std::string& id) {
     ObjectField field;field.name=name;field.kind="HANDLE";field.present=!id.empty();field.text=id;inventory_set_field(object,std::move(field));
@@ -33,7 +36,8 @@ inline std::vector<std::string> inventory_ids(const GameObject& owner) {
     if(field && field->present){auto elements=field->elements;std::sort(elements.begin(),elements.end(),[](const auto& a,const auto& b){return a.index<b.index;});
         for(const auto& entry:elements){if(entry.index!=result.size())throw std::runtime_error("Inventory contains a missing list entry");result.push_back(inventory_bytes_id(entry.data));}}
     auto count=owner.number(owner.type==2?"CONTAINER_INVENTORY_NUM":"CRITTER_INVENTORY_NUM");
-    if(count!=result.size())throw std::runtime_error("Inventory count does not match its references");return result;
+    if(count!=result.size())throw std::runtime_error("Inventory count does not match its references");
+    return result;
 }
 inline std::vector<GameObject> inventory_contents(const std::vector<GameObject>& objects,const GameObject& owner) {
     std::vector<GameObject> result;std::set<std::string> seen;
@@ -63,7 +67,8 @@ inline void inventory_validate_slots(const GameObject& owner,const std::vector<G
             if(owner.type==2)throw std::runtime_error("Containers cannot equip items");
             int expected=inventory_equipment_slot(resolved);if(expected!=int(slot) && !(expected==1001 && slot==1002))throw std::runtime_error("Item does not fit the selected equipment slot");
             if(!equipment.insert(unsigned(slot)).second)throw std::runtime_error("Two items use the same equipment slot");
-            if(slot==1005)shield=true;if(slot==1004 && (resolved.number("WEAPON_FLAGS")&0x0c)==0x0c)fixedTwoHands=true;
+            if(slot==1005)shield=true;
+            if(slot==1004 && (resolved.number("WEAPON_FLAGS")&0x0c)==0x0c)fixedTwoHands=true;
         }else{
             auto dimensions=size(resolved);unsigned width=dimensions.first,height=dimensions.second,rows=owner.type==2?96:12;
             if(!width || !height || slot>=rows*10 || slot%10+width>10 || slot/10+height>rows)throw std::runtime_error("Item extends beyond the inventory grid");
@@ -73,7 +78,8 @@ inline void inventory_validate_slots(const GameObject& owner,const std::vector<G
 }
 inline std::vector<GameObject> inventory_apply(const std::vector<GameObject>& objects,const std::string& ownerId,std::vector<GameObject> contents,const InventoryResolve& resolve,const InventorySize& size) {
     auto found=std::find_if(objects.begin(),objects.end(),[&](const auto& o){return o.id==ownerId;});
-    if(found==objects.end())throw std::runtime_error("Inventory owner is missing");auto owner=*found;
+    if(found==objects.end())throw std::runtime_error("Inventory owner is missing");
+    auto owner=*found;
     auto previous=inventory_contents(objects,owner);inventory_validate_slots(owner,contents,resolve,size);
     std::set<std::string> oldIds,newIds;for(const auto& item:previous)oldIds.insert(item.id);
     ObjectField list;list.name=inventory_list_field(owner);list.kind="HANDLE_ARRAY";

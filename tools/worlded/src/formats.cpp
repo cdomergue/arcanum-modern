@@ -323,7 +323,8 @@ std::vector<Bytes> Sector::lights() const {
     std::vector<Bytes> result;for(unsigned i=0;i<info_.lights;i++)result.emplace_back(original_.begin()+4+i*48,original_.begin()+4+(i+1)*48);return result;
 }
 void Sector::set_lights(const std::vector<Bytes>& lights) {
-    if(lights.size()>4096)fail("Too many lights");auto data=encode();Bytes header(4,0);put32(header,0,std::uint32_t(lights.size()));
+    if(lights.size()>4096)fail("Too many lights");
+    auto data=encode();Bytes header(4,0);put32(header,0,std::uint32_t(lights.size()));
     for(const auto& light:lights){if(light.size()!=48)fail("Invalid light record");header.insert(header.end(),light.begin(),light.end());}
     header.insert(header.end(),data.begin()+4+info_.lights*48,data.end());*this=Sector(std::move(header));
 }

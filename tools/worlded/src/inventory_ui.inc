@@ -1,5 +1,6 @@
     void editInventory() {
-        if(!editing())return;auto selected=selectedIds();if(selected.size()!=1){statusBar()->showMessage("Select one container or character to edit its inventory.");return;}
+        if(!editing())return;
+        auto selected=selectedIds();if(selected.size()!=1){statusBar()->showMessage("Select one container or character to edit its inventory.");return;}
         try{for(const auto& owner:building->objects)if(selected.count(objectKey(owner))){
             if(!inventory_owner(owner)){statusBar()->showMessage("Only containers and characters have an inventory.");return;}
             populatePalette();InventoryEditor dialog(building->objects,owner,paletteObjects,*assets,this);

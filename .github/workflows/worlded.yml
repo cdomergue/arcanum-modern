@@ -64,6 +64,8 @@ jobs:
           -DWORLDED_BUILD_GUI=ON
       - name: Configure Linux and macOS
         if: runner.os != 'Windows'
+        env:
+          CXXFLAGS: ${{ runner.os == 'Linux' && '-Werror=misleading-indentation -Werror=c++20-compat' || '' }}
         run: cmake -S tools/worlded -B build/worlded -DCMAKE_BUILD_TYPE=Release -DWORLDED_BUILD_GUI=ON
       - name: Build
         run: cmake --build build/worlded --config Release --parallel 4

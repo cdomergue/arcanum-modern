@@ -88,10 +88,12 @@ inline ScriptProjectBuild compile_script_project(const QString& directory) {
         auto path=natives.next();auto info=QFileInfo(path);auto stem=info.completeBaseName().toCaseFolded();bool script=info.suffix().compare("scr",Qt::CaseInsensitive)==0;
         if(script?scripts.contains(stem):seen.contains(stem))continue;
         auto key=(script?"scr/":"dlg/")+info.fileName();auto folded=key.toCaseFolded();
-        if(nativePaths.contains(folded))throw std::runtime_error(("Duplicate native resource: "+path+" and "+nativePaths[folded]).toStdString());nativePaths[folded]=path;
+        if(nativePaths.contains(folded))throw std::runtime_error(("Duplicate native resource: "+path+" and "+nativePaths[folded]).toStdString());
+        nativePaths[folded]=path;
         auto bytes=script_read_file(path);if(script)result.warnings+=script_warnings(bytes);else result.warnings+=validate_dialogue(parse_dialogue(bytes));result.files[key]=bytes;
     }
-    if(result.files.isEmpty())throw std::runtime_error("No script or dialogue found in the project");return result;
+    if(result.files.isEmpty())throw std::runtime_error("No script or dialogue found in the project");
+    return result;
 }
 inline void export_script_project(const QString& directory,const ScriptProjectBuild& build) {
     QDir folder(directory);if(folder.exists() && !folder.entryList(QDir::NoDotAndDotDot|QDir::AllEntries|QDir::Hidden).isEmpty())throw std::runtime_error("Choose a new or empty export folder");

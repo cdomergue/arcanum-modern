@@ -51,13 +51,17 @@ public:
     }
     void readRows() {
         for(int row=0;row<table->rowCount();row++){auto& item=items[row];auto placement=qobject_cast<QComboBox*>(table->cellWidget(row,1));int slot=placement->currentData().toInt();if(slot<0)slot=qobject_cast<QSpinBox*>(table->cellWidget(row,2))->value();worlded::set_number(item,"ITEM_INV_LOCATION",slot);
-            if(auto field=quantityField(item))worlded::set_number(item,field,qobject_cast<QSpinBox*>(table->cellWidget(row,3))->value());auto flags=assets.effective(item).number("ITEM_FLAGS");worlded::set_number(item,"ITEM_FLAGS",(flags&~1ull)|(qobject_cast<QCheckBox*>(table->cellWidget(row,4))->isChecked()?1:0));}
+            if(auto field=quantityField(item))worlded::set_number(item,field,qobject_cast<QSpinBox*>(table->cellWidget(row,3))->value());
+            auto flags=assets.effective(item).number("ITEM_FLAGS");worlded::set_number(item,"ITEM_FLAGS",(flags&~1ull)|(qobject_cast<QCheckBox*>(table->cellWidget(row,4))->isChecked()?1:0));}
     }
     void arrangeItems(std::vector<worlded::GameObject>& next) {
         std::set<unsigned> occupied;unsigned capacity=owner.type==2?960:120;
         for(auto& item:next){if(item.number("ITEM_INV_LOCATION")>=1000)continue;auto size=dimensions(assets.effective(item));bool placed=false;
             for(unsigned cell=0;cell<capacity;cell++){if(cell%10+size.first>10 || cell/10+size.second>capacity/10)continue;bool free=true;for(unsigned y=0;y<size.second;y++)for(unsigned x=0;x<size.first;x++)if(occupied.count(cell+y*10+x))free=false;if(!free)continue;
-                for(unsigned y=0;y<size.second;y++)for(unsigned x=0;x<size.first;x++)occupied.insert(cell+y*10+x);worlded::set_number(item,"ITEM_INV_LOCATION",cell);placed=true;break;}
+                for(unsigned y=0;y<size.second;y++){
+                    for(unsigned x=0;x<size.first;x++)occupied.insert(cell+y*10+x);
+                }
+                worlded::set_number(item,"ITEM_INV_LOCATION",cell);placed=true;break;}
             if(!placed)throw std::runtime_error("No room in this inventory. Remove an item or equip it first.");
         }
     }
