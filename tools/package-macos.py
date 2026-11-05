@@ -84,7 +84,6 @@ def package(app, build_dir, output):
             subprocess.run(['codesign', '--force', '--sign', '-', str(stage/name)], check=True)
         shutil.copyfile(stage/'renaissance-launcher', bundle/'Contents/MacOS/renaissance-launcher')
         (bundle/'Contents/MacOS/renaissance-launcher').chmod(0o755)
-        subprocess.run(['codesign', '--force', '--sign', '-', str(bundle/'Contents/MacOS'/executable)], check=True)
         info['CFBundleExecutable'] = 'renaissance-launcher'
         info['CFBundleName'] = 'Arcanum Renaissance'
         info['CFBundleDisplayName'] = 'Arcanum Renaissance'
@@ -93,6 +92,9 @@ def package(app, build_dir, output):
         info['SDL_FILESYSTEM_BASE_DIR_TYPE'] = 'parent'
         (bundle/'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         (bundle/'Contents/MacOS'/executable).chmod(0o755)
+        # Sign the engine only after it stops being the bundle's main executable.
+        # Otherwise its signature seals the old Info.plist and fails verification.
+        subprocess.run(['codesign', '--force', '--sign', '-', str(bundle/'Contents/MacOS'/executable)], check=True)
         # Apple Silicon requires signed code. This is an ad-hoc signature,
         # not Developer ID signing or notarization.
         subprocess.run(['codesign', '--force', '--sign', '-', str(bundle)], check=True)
