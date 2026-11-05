@@ -43,6 +43,7 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
 - Books, letters, newspapers, inscriptions, telegrams and floating dialogue
   using the installed game's text, plus playback of its original cinematics.
 - Optional unlimited companions; disabled by default. Recruitment conditions apply.
+- Various bug fixes not covered by UAP.
 
 Game text follows the installed game's language. Additional interface text has
 partial French and English support.
