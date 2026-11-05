@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,15 +36,23 @@ def download(cache, name, url, digest):
     cache.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=cache, delete=False) as output:
         temporary = Path(output.name)
+    try:
         try:
-            with urllib.request.urlopen(url, timeout=60) as source:
+            with urllib.request.urlopen(url, timeout=60) as source, temporary.open('wb') as output:
                 shutil.copyfileobj(source, output)
-            output.flush()
-            if hashlib.sha256(temporary.read_bytes()).hexdigest() != digest:
-                raise ValueError('Download checksum mismatch: '+name)
-            temporary.replace(path)
-        finally:
-            temporary.unlink(missing_ok=True)
+        except (urllib.error.URLError, OSError):
+            curl = shutil.which('curl')
+            if not curl:
+                raise
+            print('Retrying download with curl: '+name, flush=True)
+            subprocess.run([curl, '--fail', '--location', '--retry', '3',
+                            '--retry-all-errors', '--connect-timeout', '20',
+                            '--max-time', '180', '--output', str(temporary), url], check=True)
+        if hashlib.sha256(temporary.read_bytes()).hexdigest() != digest:
+            raise ValueError('Download checksum mismatch: '+name)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
     return path
 
 
