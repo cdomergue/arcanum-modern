@@ -56,19 +56,20 @@ type drawItem struct {
 }
 
 type launcherWindow struct {
-	app                                *application
-	prefs                              preferences
-	hwnd, notes, play, auto, language  uintptr
-	font, titleFont, smallFont, brush  uintptr
-	width, height                      int32
-	scale                              float64
-	pixels                             []byte
-	bitmap                             bitmapInfo
-	view                               view
-	lastNotes                          string
-	lastButton, lastAuto, lastLanguage string
-	readyAt                            time.Time
-	wantPlay, closing                  bool
+	app                                             *application
+	prefs                                           preferences
+	hwnd, notes, play, auto, language, install      uintptr
+	font, titleFont, smallFont, brush               uintptr
+	width, height                                   int32
+	scale                                           float64
+	pixels                                          []byte
+	bitmap                                          bitmapInfo
+	view                                            view
+	lastNotes                                       string
+	lastOffer                                       int
+	lastInstall, lastButton, lastAuto, lastLanguage string
+	readyAt                                         time.Time
+	wantPlay, closing                               bool
 }
 
 var activeWindow *launcherWindow
@@ -108,7 +109,7 @@ func (w *launcherWindow) paint() {
 	track := rect{w.s(80), w.s(282), w.s(820), w.s(287)}
 	w.box(memory, track, 0x26303c)
 	if !w.view.Ready {
-		if w.view.Phase == "download" {
+		if w.view.Phase == "download" || w.view.Phase == "uap-install" {
 			track.R = track.L + int32(int64(track.R-track.L)*int64(w.view.Percent)/100)
 		} else {
 			width := track.R - track.L
@@ -119,13 +120,10 @@ func (w *launcherWindow) paint() {
 		track.R = track.L + (track.R - track.L)
 	}
 	w.box(memory, track, 0x6199c1)
-	label := w.tr("NOTES DE VERSION", "RELEASE NOTES")
-	if w.view.Tag != "" {
-		label += "  ·  " + w.view.Tag
-	}
+	label := w.view.heading(w.prefs.Language)
 	w.text(memory, label, rect{w.s(82), w.s(307), w.s(820), w.s(332)}, w.smallFont, muted, 0x20)
 	w.text(memory, fmt.Sprintf(w.tr("Version installée : %s", "Installed version: %s"), w.view.Installed), rect{w.s(80), w.s(576), w.s(820), w.s(600)}, w.smallFont, muted, 0x20)
-	if !w.readyAt.IsZero() && w.prefs.AutoPlay && !w.view.Fatal {
+	if !w.readyAt.IsZero() && w.prefs.AutoPlay && w.view.autoStart() {
 		remaining := 4 - int(time.Since(w.readyAt).Seconds())
 		if remaining < 0 {
 			remaining = 0
@@ -151,10 +149,9 @@ func (w *launcherWindow) drawButton(d *drawItem) {
 	text := ""
 	switch d.ID {
 	case 101:
-		text = w.tr("Jouer", "Play")
-		if !w.view.Ready {
-			text = w.tr("Jouer sans mise à jour", "Play without updating")
-		}
+		text = w.view.playLabel(w.prefs.Language)
+	case 105:
+		text = w.tr("Installer", "Install")
 	case 103:
 		text = "FR  /  EN"
 	}
@@ -174,10 +171,10 @@ func (w *launcherWindow) drawButton(d *drawItem) {
 func (w *launcherWindow) refresh() {
 	previous := w.view
 	w.view = w.app.snapshot()
-	note := w.view.Notes
-	if note == "" {
-		note = w.tr("Les notes de la dernière release s’afficheront ici.", "The latest release notes will appear here.")
+	if w.view.Phase == "uap-failed" && previous.Phase != "uap-failed" {
+		w.wantPlay = false
 	}
+	note := w.view.notes(w.prefs.Language)
 	if note != w.lastNotes {
 		user.NewProc("SetWindowTextW").Call(w.notes, ptr(note))
 		w.lastNotes = note
@@ -187,19 +184,34 @@ func (w *launcherWindow) refresh() {
 		user.NewProc("SetWindowTextW").Call(w.auto, ptr(autoText))
 		w.lastAuto = autoText
 	}
-	button := w.tr("Jouer", "Play")
-	if !w.view.Ready {
-		button = w.tr("Jouer sans mise à jour", "Play without updating")
-	}
+	button := w.view.playLabel(w.prefs.Language)
 	if button != w.lastButton {
 		user.NewProc("SetWindowTextW").Call(w.play, ptr(button))
 		w.lastButton = button
 	}
 	enabled := uintptr(1)
-	if w.view.Phase == "install" || w.view.Fatal {
+	if w.view.busy() || w.view.Fatal {
 		enabled = 0
 	}
 	user.NewProc("EnableWindow").Call(w.play, enabled)
+	if w.lastOffer != w.view.Offer {
+		showAuto, showInstall := uintptr(1), uintptr(0)
+		if w.view.Offer != 0 {
+			showAuto, showInstall = 0, 1
+			w.wantPlay = false
+		}
+		user.NewProc("ShowWindow").Call(w.auto, showAuto)
+		user.NewProc("ShowWindow").Call(w.install, showInstall)
+		w.lastOffer = w.view.Offer
+	}
+	installText := w.tr("Installer", "Install")
+	if w.lastInstall != installText {
+		user.NewProc("SetWindowTextW").Call(w.install, ptr(installText))
+		w.lastInstall = installText
+	}
+	if !w.view.Ready {
+		w.readyAt = time.Time{}
+	}
 	if w.view.Ready && w.readyAt.IsZero() {
 		w.readyAt = time.Now()
 	}
@@ -211,7 +223,7 @@ func (w *launcherWindow) refresh() {
 		user.NewProc("DestroyWindow").Call(w.hwnd)
 		return
 	}
-	if w.view.Ready && !w.view.Fatal && (w.wantPlay || (w.prefs.AutoPlay && time.Since(w.readyAt) >= 4*time.Second)) {
+	if w.view.Ready && !w.view.Fatal && (w.wantPlay || (w.view.autoStart() && w.prefs.AutoPlay && time.Since(w.readyAt) >= 4*time.Second)) {
 		user.NewProc("KillTimer").Call(w.hwnd, 1)
 		user.NewProc("ShowWindow").Call(w.hwnd, 0)
 		if err := w.app.launch(); err != nil {
@@ -245,12 +257,16 @@ func windowProcedure(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
 	case 0x111:
 		switch wp & 0xffff {
 		case 1, 101:
-			if !w.view.Fatal && w.view.Phase != "install" {
+			if w.view.Offer != 0 {
+				w.app.respond(false)
+			} else if !w.view.Fatal && !w.view.busy() {
 				w.wantPlay = true
 				w.app.cancel()
 			}
 		case 2:
 			user.NewProc("PostMessageW").Call(hwnd, 0x10, 0, 0)
+		case 105:
+			w.app.respond(true)
 		case 102:
 			w.prefs.AutoPlay = !w.prefs.AutoPlay
 			if !w.app.preview {
@@ -270,11 +286,11 @@ func windowProcedure(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
 		w.refresh()
 		return 0
 	case 0x10:
-		if w.view.Phase == "install" {
+		if w.view.busy() {
 			return 0
 		}
 		w.closing = true
-		w.app.cancel()
+		w.app.stop()
 		if w.app.preview {
 			user.NewProc("DestroyWindow").Call(hwnd)
 		} else {
@@ -292,7 +308,7 @@ func showLauncher(a *application, p preferences) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	user.NewProc("SetProcessDPIAware").Call()
-	w := &launcherWindow{app: a, prefs: p, scale: 1, view: a.snapshot()}
+	w := &launcherWindow{app: a, prefs: p, scale: 1, view: a.snapshot(), lastOffer: -1}
 	activeWindow = w
 	defer func() { activeWindow = nil }()
 	image, err := png.Decode(bytes.NewReader(backdrop))
@@ -364,6 +380,8 @@ func showLauncher(a *application, p preferences) error {
 	w.notes = create("EDIT", "", 0x00200000|0x00010000|0x0800|0x0040|0x0004, 82, 343, 736, 164, 104)
 	user.NewProc("SendMessageW").Call(w.notes, 0x00d3, 3, uintptr(w.s(10))|(uintptr(w.s(10))<<16))
 	w.play = create("BUTTON", w.tr("Jouer sans mise à jour", "Play without updating"), 0x00010000|0x000b, 562, 525, 256, 42, 101)
+	w.install = create("BUTTON", w.tr("Installer", "Install"), 0x00010000|0x000b, 82, 525, 210, 42, 105)
+	user.NewProc("ShowWindow").Call(w.install, 0)
 	w.auto = create("BUTTON", w.tr("Lancer le jeu automatiquement", "Launch the game automatically"), 0x00010000|0x0003, 82, 535, 370, 24, 102)
 	checked := uintptr(0)
 	if p.AutoPlay {

@@ -166,7 +166,7 @@ func main() {
 	a := newApplication(root, args, preview)
 	if e = showLauncher(a, p); e != nil {
 		fmt.Fprintln(os.Stderr, e)
-		a.cancel()
+		a.stop()
 		<-a.done
 	}
 }

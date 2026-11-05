@@ -11,6 +11,25 @@ GitHub release and retain their original language. Players can scroll the notes,
 turn off automatic game startup, or play without updating. Checking the release
 service has a six-second timeout. The game has no separate update notification.
 
+## UAP and Hotfix preparation
+
+Before starting the game, the launcher checks for an optional UAP 2.0.2 Base +
+Race Mod installation or UAP Hotfixes 1.1.0. Offers require an explicit choice;
+automatic game startup pauses while an offer is shown. Skipping a Renaissance
+update does not skip this check. Closing an unanswered offer does not remember
+a refusal. A failed preparation leaves manual game startup available.
+
+The bundled UAP helper detects the game edition, preserves existing choices,
+verifies downloads, backs up saves and activates completed overlays. Its existing
+English/French paths and markers are unchanged. The launcher's display language
+does not select the language of game data. macOS automatic preparation requires
+version 13 or later, as do the bundled extraction tools.
+
+The initial check is logged in `modern-ui/uap-probe.log`; installation progress
+and logs remain under `modern-ui/uap-en`, `modern-ui/uap-fr` or
+`modern-ui/uap-hotfix/en` and `fr`. Preparation is completed before the engine
+starts and loads these overlays. HD map preparation remains in the game.
+
 ## Update boundaries
 
 Only newer stable releases from `cdomergue/arcanum-modern` are eligible. The

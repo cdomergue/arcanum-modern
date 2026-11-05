@@ -1,18 +1,18 @@
 # French UAP installation
 
 Renaissance can install **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0** over recognized original
-French 1.0.7.4 game files. A **Yes / No** prompt appears before the game loads.
+French 1.0.7.4 game files. The launcher offers **Install** and **Continue without installing** before starting the game.
 This is an experimental French adaptation, separate from the official English
 [Unofficial Arcanum Patch](https://terra-arcanum.com/drog/uap.html).
 
-**Yes** downloads the official installer (about 485 MB), verifies its checksum,
+**Install** downloads the official installer (about 485 MB), verifies its checksum,
 extracts the selected data and prepares French text. The game keeps UAP scripts,
 quest conditions, item and character data, race rules, animations and audio.
 French dialogue conditions and actions use the UAP versions; translated text is
 assembled from your installed French game and the adaptation's translations.
 The original Windows executable and the UAP interface are not installed.
 
-**No** keeps the game without this UAP adaptation and remembers your answer.
+**Continue without installing** keeps the game without this UAP adaptation and remembers your answer.
 To display the offer again, close the game and delete
 `modern-ui/uap-fr/choice` inside the game folder.
 
@@ -22,10 +22,16 @@ automatic installer on macOS 11 and 12. Allow about **2 GB of temporary space**,
 plus space for your saved-game backup. HD maps are generated from the active
 UAP data and need preparation when the installed data changes.
 
+The launcher detects the game language from its installed files. Changing the
+launcher interface between English and French does not change the UAP or
+Hotfix language. Existing installations and remembered refusals are preserved.
+Close the launcher while an offer is displayed to leave the choice undecided.
+Once installation starts, wait for preparation to finish before closing it.
+
 ## Post-UAP hotfixes in French
 
 The [post-UAP hotfix integration](uap.md#post-uap-hotfixes) also supports a
-recognized existing French UAP overlay. Its separate startup offer preserves the
+recognized existing French UAP overlay. Its separate launcher offer preserves the
 base installation and creates a verified backup before adding the hotfix.
 Dialogue text comes from the installed French game and the existing adaptation;
 two new Magnus player responses are translated separately. Conditions, actions,
@@ -35,7 +41,7 @@ text archive is loaded after the English hotfix and the base French adaptation.
 Prepared files live in `modern-ui/uap-fr/active/hotfix`. Rename only that directory
 to disable these fixes while keeping UAP. Delete `modern-ui/uap-hotfix/fr/choice`
 to reconsider a refused offer. See `modern-ui/uap-hotfix/fr/preparation.log` if
-preparation fails or the startup log if conflicting resources suppress the offer.
+preparation fails or `modern-ui/uap-probe.log` if conflicting resources suppress the offer.
 
 ## Existing campaigns and backups
 

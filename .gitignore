@@ -63,8 +63,6 @@
 !/source/src/ui/modern_map_camera.inc
 !/source/src/ui/modern_map_travel.inc
 !/source/src/ui/modern_map_bitmap.inc
-!/source/src/ui/modern_uap_startup.c
-!/source/src/ui/modern_uap_startup.h
 !/source/src/ui/modern_map_generator.c
 !/source/src/ui/modern_map_generator.h
 !/source/src/ui/modern_map_startup.inc

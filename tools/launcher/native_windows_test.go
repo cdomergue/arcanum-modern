@@ -177,6 +177,7 @@ func TestNativeLauncherBootstrap(t *testing.T) {
 	}
 	put(t, root, "arcanum-modern.exe", game)
 	put(t, root, "arcanum1.dat", []byte("test"))
+	uapFixture(t, root, 0, false)
 	put(t, root, "modern-ui/launcher.json", []byte(`{"language":"en","auto_play":true}`))
 	cmd := exec.Command(filepath.Join(root, "renaissance-launcher.exe"), "-window", "-geometry=1280x720")
 	cmd.Env = append(os.Environ(), "RENAISSANCE_TEST_GAME=1")

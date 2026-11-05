@@ -11,11 +11,13 @@ parser.add_argument('renderer', type=Path)
 args = parser.parse_args()
 with tempfile.TemporaryDirectory(prefix='renaissance-ui-test-') as directory:
     state = Path(directory)/'state.txt'
-    for language, status, play, auto in (
-        ('fr', 'Téléchargement de v2.0.2 · 64 %', 'Jouer sans mise à jour', 'Lancer le jeu automatiquement'),
-        ('en', 'Downloading v2.0.2 · 64%', 'Play without updating', 'Launch the game automatically'),
+    for language, offer, status, play, auto in (
+        ('fr', 0, 'Téléchargement de v2.0.2 · 64 %', 'Jouer sans mise à jour', 'Lancer le jeu automatiquement'),
+        ('en', 0, 'Downloading v2.0.2 · 64%', 'Play without updating', 'Launch the game automatically'),
+        ('fr', 20, 'Installation facultative : choisissez une option.', 'Continuer sans installer', 'Installer'),
+        ('en', 23, 'Optional installation: choose an option.', 'Continue without installing', 'Install'),
     ):
-        state.write_text('64 true true true\n'+status+'\nVersion: 2.0.1\nRELEASE NOTES · v2.0.2\n'+play+'\n'+auto+'\n'
+        state.write_text(f'64 true true true {offer}\n'+status+'\nVersion: 2.0.1\nRELEASE NOTES · v2.0.2\n'+play+'\n'+auto+'\n'
                          + ('Portraits personnalisés, compétences et antécédents. A long release note wraps across the panel.\n'*25), encoding='utf-8')
         subprocess.run([str(args.renderer.resolve()), str(state), str(ROOT/'tools/launcher/assets/background.png'),
                         str(ROOT/'game/modern-ui/Book.ttf'), '--check-render'], check=True,

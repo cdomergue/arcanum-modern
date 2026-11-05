@@ -198,6 +198,8 @@ func main() {
 	a := newApplication(root, args, preview)
 	if err = showLauncher(a, p); err != nil {
 		message(err.Error())
+		a.stop()
+		<-a.done
 	}
 }
 

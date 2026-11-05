@@ -15,8 +15,8 @@ static SDL_Renderer* renderer;
 static SDL_Texture *background, *font;
 static stbtt_bakedchar glyphs[224];
 static char *state, *status_text, *version_text, *heading, *play_text, *auto_text, *notes;
-static int percent, automatic, playable, closable = 1, scroll_line, focus_item;
-static SDL_FRect play_button = {562,525,256,42}, auto_button = {82,530,430,32}, language_button = {735,33,82,28};
+static int percent, automatic, playable, closable = 1, offer, scroll_line, focus_item;
+static SDL_FRect play_button = {562,525,256,42}, auto_button = {82,530,430,32}, language_button = {735,33,82,28}, install_button = {82,525,210,42};
 
 static unsigned codepoint(const char** p)
 {
@@ -59,7 +59,8 @@ static void read_state(const char* path)
     SDL_free(state);state=data;SDL_free(parsed);parsed=SDL_strdup(data);if(!parsed)return;
     char* fields[7];char* cursor=parsed;
     for(int i=0;i<6;i++){fields[i]=cursor;char* newline=strchr(cursor,'\n');if(!newline)return;*newline=0;cursor=newline+1;}fields[6]=cursor;
-    char a[8],p[8],c[8];if(sscanf(fields[0],"%d %7s %7s %7s",&percent,a,p,c)!=4)return;
+    char a[8],p[8],c[8];int old_offer=offer;offer=0;if(sscanf(fields[0],"%d %7s %7s %7s %d",&percent,a,p,c,&offer)<4)return;
+    if(old_offer!=offer){scroll_line=0;focus_item=0;}
     automatic=strcmp(a,"true")==0;playable=strcmp(p,"true")==0;closable=strcmp(c,"true")==0;
     status_text=fields[1];version_text=fields[2];heading=fields[3];play_text=fields[4];auto_text=fields[5];notes=fields[6];
 }
@@ -86,8 +87,9 @@ static void draw(void)
     fill((SDL_FRect){80,282,740,5},(SDL_Color){60,48,38,255});if(percent>0)fill((SDL_FRect){80,282,740*(percent>100?100:percent)/100.0f,5},(SDL_Color){193,153,97,255});
     if(heading)text(heading,82,308,muted);draw_notes();
     button(play_button,play_text?play_text:"Play",focus_item==0,playable);button(language_button,"FR / EN",focus_item==2,1);
+    if(offer)button(install_button,auto_text?auto_text:"Install",focus_item==1,1);else {
     fill((SDL_FRect){82,540,14,14},(SDL_Color){50,41,28,255});SDL_SetRenderDrawColor(renderer,193,153,97,255);SDL_FRect box={82,540,14,14};SDL_RenderRect(renderer,&box);if(automatic)text("x",84,535,gold);
-    if(auto_text)text(auto_text,104,535,focus_item==1?gold:muted);if(version_text)text(version_text,80,578,muted);
+    if(auto_text)text(auto_text,104,535,focus_item==1?gold:muted);}if(version_text)text(version_text,80,578,muted);
     SDL_RenderPresent(renderer);
 }
 int main(int argc,char** argv)
@@ -111,7 +113,7 @@ int main(int argc,char** argv)
         while(SDL_PollEvent(&event)){SDL_ConvertEventToRenderCoordinates(renderer,&event);
             if(event.type==SDL_EVENT_QUIT){if(closable){action("quit");running=false;}}
             else if(event.type==SDL_EVENT_MOUSE_WHEEL){scroll_line-=(int)(event.wheel.y*3);if(scroll_line<0)scroll_line=0;}
-            else if(event.type==SDL_EVENT_MOUSE_BUTTON_UP&&event.button.button==SDL_BUTTON_LEFT){float x=event.button.x,y=event.button.y;if(inside(play_button,x,y)&&playable)action("play");else if(inside(auto_button,x,y))action("auto");else if(inside(language_button,x,y))action("language");}
+            else if(event.type==SDL_EVENT_MOUSE_BUTTON_UP&&event.button.button==SDL_BUTTON_LEFT){float x=event.button.x,y=event.button.y;if(inside(play_button,x,y)&&playable)action("play");else if(inside(offer?install_button:auto_button,x,y))action("auto");else if(inside(language_button,x,y))action("language");}
             else if(event.type==SDL_EVENT_KEY_DOWN){switch(event.key.key){case SDLK_ESCAPE:if(closable){action("quit");running=false;}break;case SDLK_TAB:focus_item=(focus_item+1)%3;break;case SDLK_RETURN:case SDLK_SPACE:if(focus_item==0){if(playable)action("play");}else action(focus_item==1?"auto":"language");break;case SDLK_DOWN:scroll_line++;break;case SDLK_UP:if(scroll_line>0)scroll_line--;break;case SDLK_PAGEDOWN:scroll_line+=6;break;case SDLK_PAGEUP:scroll_line-=6;if(scroll_line<0)scroll_line=0;break;}}
         }
         draw();if(check){if(!status_text||!notes)return 1;puts("PASS: launcher background, UTF-8 text, notes and controls rendered");running=false;}SDL_Delay(33);

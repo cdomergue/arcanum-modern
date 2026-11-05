@@ -31,19 +31,13 @@ func showLauncher(a *application, p preferences) error {
 	exited := make(chan error, 1)
 	writeState := func(v view, seconds int) error {
 		tr := func(fr, en string) string { return localized(p.Language, fr, en) }
-		play := tr("Jouer", "Play")
-		if !v.Ready {
-			play = tr("Jouer sans mise à jour", "Play without updating")
-		}
-		notes := v.Notes
-		if notes == "" {
-			notes = tr("Les notes de la dernière release s’afficheront ici.", "The latest release notes will appear here.")
-		}
+		play := v.playLabel(p.Language)
+		notes := v.notes(p.Language)
 		status := statusText(v, p.Language)
-		if v.Ready && p.AutoPlay && !v.Fatal {
+		if v.autoStart() && p.AutoPlay {
 			status += fmt.Sprintf(" (%d s)", seconds)
 		}
-		text := fmt.Sprintf("%d %t %t %t\n%s\n%s\n%s\n%s\n%s\n%s", v.Percent, p.AutoPlay, v.Phase != "install" && !v.Fatal, v.Phase != "install", status, tr("Version installée : ", "Installed version: ")+v.Installed, tr("NOTES DE VERSION", "RELEASE NOTES")+" · "+v.Tag, play, tr("Lancer le jeu automatiquement", "Launch the game automatically"), strings.ReplaceAll(notes, "\r", ""))
+		text := fmt.Sprintf("%d %t %t %t %d\n%s\n%s\n%s\n%s\n%s\n%s", v.Percent, p.AutoPlay, !v.busy() && !v.Fatal, !v.busy(), v.Offer, status, tr("Version installée : ", "Installed version: ")+v.Installed, v.heading(p.Language), play, v.secondaryLabel(p.Language), strings.ReplaceAll(notes, "\r", ""))
 		if e := os.WriteFile(statePath+".new", []byte(text), 0600); e != nil {
 			return e
 		}
@@ -76,26 +70,35 @@ func showLauncher(a *application, p preferences) error {
 	ready := time.Time{}
 	play, closing := false, false
 	last := ""
+	lastPhase := ""
 	for {
 		select {
 		case e := <-exited:
-			a.cancel()
+			a.stop()
 			<-a.done
 			return e
 		case action := <-events:
 			v := a.snapshot()
 			switch action {
 			case "play":
-				if v.Phase != "install" && !v.Fatal {
+				if v.Offer != 0 {
+					play = false
+					a.respond(false)
+				} else if !v.busy() && !v.Fatal {
 					play = true
 					a.cancel()
 				}
 			case "quit":
-				if v.Phase != "install" {
+				if !v.busy() {
 					closing = true
-					a.cancel()
+					a.stop()
 				}
 			case "auto":
+				if v.Offer != 0 {
+					play = false
+					a.respond(true)
+					break
+				}
 				p.AutoPlay = !p.AutoPlay
 				ready = time.Now()
 			case "language":
@@ -111,6 +114,16 @@ func showLauncher(a *application, p preferences) error {
 		case <-tick.C:
 		}
 		v := a.snapshot()
+		if v.Phase == "uap-failed" && lastPhase != "uap-failed" {
+			play = false
+		}
+		lastPhase = v.Phase
+		if v.Offer != 0 {
+			play = false
+		}
+		if !v.Ready {
+			ready = time.Time{}
+		}
 		if v.Ready && ready.IsZero() {
 			ready = time.Now()
 		}
@@ -133,7 +146,7 @@ func showLauncher(a *application, p preferences) error {
 			stop()
 			return nil
 		}
-		if v.Ready && !v.Fatal && (play || (p.AutoPlay && time.Since(ready) >= 4*time.Second)) {
+		if v.Ready && !v.Fatal && (play || (v.autoStart() && p.AutoPlay && time.Since(ready) >= 4*time.Second)) {
 			stop()
 			return a.launch()
 		}

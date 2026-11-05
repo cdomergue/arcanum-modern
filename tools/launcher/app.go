@@ -18,6 +18,8 @@ type view struct {
 	Percent               int
 	Tag, Notes, Installed string
 	Ready, Fatal          bool
+	Offer                 int
+	GameLanguage, Stage   string
 }
 type application struct {
 	mu      sync.Mutex
@@ -27,6 +29,8 @@ type application struct {
 	cancel  context.CancelFunc
 	done    chan struct{}
 	preview bool
+	stop    context.CancelFunc
+	answer  chan bool
 }
 
 func (a *application) snapshot() view    { a.mu.Lock(); defer a.mu.Unlock(); return a.state }
@@ -40,10 +44,17 @@ func (a *application) record(err error) {
 	}
 }
 func (a *application) finish(phase string, fatal bool) {
-	a.set(func(v *view) { v.Phase = phase; v.Ready = true; v.Fatal = fatal })
+	a.set(func(v *view) { v.Phase = phase; v.Fatal = fatal })
 }
-func (a *application) run(ctx context.Context) {
+func (a *application) run(ctx, preparation context.Context) {
 	defer close(a.done)
+	a.update(ctx)
+	if !a.snapshot().Fatal && preparation.Err() == nil {
+		a.prepareUAP(preparation)
+	}
+	a.set(func(v *view) { v.Ready = true })
+}
+func (a *application) update(ctx context.Context) {
 	if err := recoverInstall(a.root); err != nil {
 		a.record(err)
 		a.finish("recovery", true)
@@ -120,7 +131,7 @@ func (a *application) run(ctx context.Context) {
 	a.finish("failed", false)
 }
 func newApplication(root string, args []string, preview bool) *application {
-	a := &application{root: root, args: args, done: make(chan struct{}), preview: preview, state: view{Phase: "check", Installed: buildVersion}}
+	a := &application{root: root, args: args, done: make(chan struct{}), answer: make(chan bool, 1), preview: preview, state: view{Phase: "check", Installed: buildVersion}}
 	if m, e := readManifest(root); e == nil {
 		if _, valid := version(m.Version); valid {
 			a.state.Installed = m.Version
@@ -135,11 +146,13 @@ func newApplication(root string, args []string, preview bool) *application {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel
+	preparation, stop := context.WithCancel(context.Background())
+	a.stop = func() { cancel(); stop() }
 	if preview {
 		a.state = view{Phase: "download", Percent: 64, Installed: buildVersion, Tag: "v2.0.2", Notes: releaseText("## Arcanum Renaissance\n\n### Character creation\n- Import a custom portrait, crop it and convert it in game.\n- Create backgrounds with native effects and advanced editing.\n\n### Improvements\n- Various bug fixes not covered by UAP.\n\nRelease notes are displayed in their published language.\n\n### Compatibility\nYour saves, settings and custom content are preserved.\n\n### Installation\nBoth the setup and the ZIP include the Renaissance launcher.\n\n### Credits\nBased on Arcanum Community Edition.")}
 		close(a.done)
 	} else {
-		go a.run(ctx)
+		go a.run(ctx, preparation)
 	}
 	return a
 }

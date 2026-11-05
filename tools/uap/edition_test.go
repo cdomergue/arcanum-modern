@@ -128,3 +128,32 @@ func TestOverlayMarkers(t *testing.T) {
 		}
 	}
 }
+
+// Optional read-only check against an installed game, including Steam's real
+// archive fingerprints. Never calls preparation or writes choice/progress files.
+func TestInstalledGameEdition(t *testing.T) {
+	root := os.Getenv("UAP_TEST_GAME")
+	if root == "" {
+		t.Skip("set UAP_TEST_GAME for read-only installed-game detection")
+	}
+	want := os.Getenv("UAP_TEST_LANGUAGE")
+	if want != "en" && want != "fr" {
+		t.Fatal("set UAP_TEST_LANGUAGE to en or fr")
+	}
+	c, err := loadCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	lang, err := detectEdition(root, c)
+	if err != nil || lang != want {
+		t.Fatalf("installed edition: %q, %v (wanted %s)", lang, err, want)
+	}
+	if overlayReady(root, want) {
+		base, err := inspectHotfixBase(root, "", "", c)
+		if err != nil || base.language != want {
+			t.Fatalf("existing overlay: %+v, %v", base, err)
+		}
+		t.Log("Existing UAP overlay recognized in", want)
+	}
+	t.Log("Original game archives recognized in", lang)
+}

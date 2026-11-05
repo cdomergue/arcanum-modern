@@ -6,17 +6,23 @@ Arcanum Renaissance can use an English installation with
 [Unofficial Arcanum Patch 2.0.2](https://terra-arcanum.com/drog/uap.html).
 The UAP is optional; an unmodified Arcanum 1.0.7.4 installation also works.
 
+The launcher detects the game language from its installed files. Changing the
+launcher interface between English and French does not change the UAP or
+Hotfix language. Existing installations and remembered refusals are preserved.
+Close the launcher while an offer is displayed to leave the choice undecided.
+Once installation starts, wait for preparation to finish before closing it.
+
 ## Automatic installation
 
 On eligible English installations without UAP, Renaissance offers to download
-and prepare **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0** at startup. **Yes** downloads the official
+and prepare **UAP 2.0.2 Base + Race Mod with hotfixes 1.1.0** in the launcher. **Install** downloads the official
 installer (about 485 MB), verifies its checksum, extracts the selected data and
 backs up existing saves before activation. English text is used directly, with
 no French translation. Allow about **2 GB of temporary space**, plus the save
 backup. Automatic preparation is available on Windows 10+, Linux x64 and Apple
 Silicon Macs with macOS 13+.
 
-**No** continues without UAP and remembers the answer. Delete
+**Continue without installing** continues without UAP and remembers the answer. Delete
 `modern-ui/uap-en/choice` to display the offer again. The installer checks the
 shared original art archives, required game archives and English interface text;
 it skips unrecognized installations and additional gameplay patches. An existing
@@ -46,8 +52,8 @@ They restore companion travelogues, correct dialogue conditions and training,
 repair the Great Helm and Morning Star Perfume, and adjust travel locations and
 the Torin Quarry map. See the [author’s complete changelog](https://github.com/Dergash/arcanum-uap-hotfixes/blob/1.1.0/CHANGELOG.md).
 
-Recognized existing UAP 2.0.2 installations receive a separate **Yes / No** offer
-at startup. The two downloads total less than 1 MB; pinned SHA-256 checksums are
+Recognized existing UAP 2.0.2 installations receive a separate installation offer
+in the launcher. The two downloads total less than 1 MB; pinned SHA-256 checksums are
 verified before use. This installs data only, without a replacement executable
 or `dinput.dll`. English uses the original hotfix text. French reuses the
 installed French dialogue while preserving the hotfix's conditions and actions.
@@ -55,7 +61,7 @@ No original game text or hotfix archive is bundled with Renaissance.
 
 Preparation checks the affected resources before installation. Unknown changes
 from other mods, unsupported UAP data, or an unrecognized existing hotfix prevent
-automatic installation. Read the startup log for the affected file. A manually
+automatic installation. Read `modern-ui/uap-probe.log` for the affected file. A manually
 installed English hotfix is kept as installed; automatic French adaptation
 requires recognized original French archives.
 
@@ -73,7 +79,7 @@ the game and rename **only the hotfix directory**, keeping UAP installed. Keep
 newer saves separately before restoring the pre-hotfix backup. The backup's
 `RESTORE.txt` gives the matching path.
 
-**No** remembers the refusal for this hotfix version. Delete
+**Continue without installing** remembers the refusal for this hotfix version. Delete
 `modern-ui/uap-hotfix/en/choice` (or `fr/choice`) to see the offer again. Its
 installation log is `modern-ui/uap-hotfix/en/preparation.log` (or `fr`). During a
 fresh UAP installation, the combined operation uses the existing UAP log.
