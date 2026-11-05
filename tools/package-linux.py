@@ -67,6 +67,7 @@ def package(exe, build_dir, output):
     files.update(resources.uap_files('linux'))
     files.update(resources.house_files())
     files.update(resources.tutorial_files())
+    files.update(resources.cinematic_files())
     for name in resources.ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
     cache = (build_dir/'CMakeCache.txt').read_text()

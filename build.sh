@@ -36,4 +36,6 @@ mkdir -p "$arcanum_project/game/ArcanumModern/licenses"
 cp "$arcanum_project/resources/aid/LICENSE.txt" "$arcanum_project/game/ArcanumModern/licenses/aid.txt"
 python3 "$arcanum_project/tools/house/build-content.py" --output "$arcanum_project/game/ArcanumModern/house"
 python3 "$arcanum_project/tools/tutorial/build-content.py" --output "$arcanum_project/game/ArcanumModern/tutorial"
+mkdir -p "$arcanum_project/game/ArcanumModern/movies"
+cp "$arcanum_project/resources/movies/train_leaving.bik" "$arcanum_project/game/ArcanumModern/movies/train_leaving.bik"
 printf '%s\n' 'Compilation installée. Elle sera utilisée au prochain lancement.'

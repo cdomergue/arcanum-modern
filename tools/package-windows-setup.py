@@ -30,7 +30,7 @@ REQUIRED_FILES = {'arcanum-modern.exe', 'Play Arcanum Renaissance.bat',
                   'uap/uap-helper.exe', 'uap/7z.exe', 'uap/7z.dll',
                   'docs/uap.md', 'docs/uap-fr.md', 'licenses/Go.txt',
                   'licenses/7zip/LICENSE.txt', 'licenses/7zip/README.txt',
-                  'licenses/7zip/7z2604-src.tar.xz')} | set(package.house_files()) | set(package.tutorial_files())
+                  'licenses/7zip/7z2604-src.tar.xz')} | set(package.house_files()) | set(package.tutorial_files()) | set(package.cinematic_files())
 
 
 def extract_payload(archive, target):

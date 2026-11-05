@@ -70,6 +70,7 @@ def package(app, build_dir, output):
         movies.update(resources.uap_files('macos'))
         movies.update(resources.house_files())
         movies.update(resources.tutorial_files())
+        movies.update(resources.cinematic_files())
         for name, data in movies.items():
             destination = stage/name
             destination.parent.mkdir(parents=True, exist_ok=True)

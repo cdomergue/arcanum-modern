@@ -5113,7 +5113,25 @@ diff --git a/src/game/teleport.c b/src/game/teleport.c
      current_teleport_data = *teleport_data;
      teleport_pending = true;
  
-@@ -285,8 +291,16 @@
+@@ -171,6 +177,17 @@
+ 
+     if ((teleport_data->flags & TELEPORT_SOUND) != 0) {
+         gsound_play_sfx_on_obj(teleport_data->sound_id, 1, teleport_data->obj);
++    }
++
++    // The intercity train scripts use departure sound 8810 and advance time.
++    // This also covers the mage carriage and connecting services, without
++    // affecting the Steam Rail subway, spells, or cave entrances.
++    if ((teleport_data->flags & (TELEPORT_SOUND | TELEPORT_TIME)) == (TELEPORT_SOUND | TELEPORT_TIME)
++        && teleport_data->sound_id == 8810
++        && teleport_data->time > 0
++        && (teleport_data->flags & (TELEPORT_MOVIE1 | TELEPORT_MOVIE2)) == 0
++        && player_is_local_pc_obj(teleport_data->obj)) {
++        gmovie_play_path("ArcanumModern\\movies\\train_leaving.bik", GAME_MOVIE_NO_FINAL_FLIP, 0);
+     }
+ 
+     if ((teleport_data->flags & TELEPORT_MOVIE1) != 0) {
+@@ -285,8 +302,16 @@
      int inventory_list_fld;
      TeleportObjectNode* node;
  

@@ -81,6 +81,11 @@ def tutorial_files():
                 for path in sorted(target.rglob('*')) if path.is_file()}
 
 
+def cinematic_files():
+    return {'ArcanumModern/movies/train_leaving.bik':
+            (ROOT/'resources/movies/train_leaving.bik').read_bytes()}
+
+
 def validate_pe_dependencies(files):
     bundled = {Path(name).name.lower() for name in files if name.lower().endswith('.dll')}
     for name, data in files.items():
@@ -211,6 +216,7 @@ def package(exe, build_dir, output, include_game=None):
     files.update(uap_files('windows'))
     files.update(house_files())
     files.update(tutorial_files())
+    files.update(cinematic_files())
     validate_pe_dependencies(files)
     for name in ASSETS:
         files['modern-ui/'+name] = (ROOT/'game/modern-ui'/name).read_bytes()
