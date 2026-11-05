@@ -47,6 +47,17 @@ static void sheet_value(const char* label,int value,SDL_FRect r)
     button_label(0,label,(SDL_FRect){r.x,r.y,r.w-nw-12,r.h},false,MUTED);
     button_label(1,number,(SDL_FRect){r.x+r.w-nw,r.y,nw,r.h},true,GOLD);
 }
+static SDL_Color sheet_stat_color(int64_t obj,int stat)
+{
+    /* Match charedit_refresh_stat: innate race/background/class/gender effects
+     * do not mark a value as externally modified. Keep the displayed total. */
+    int base=stat_base_get(obj,stat);
+    int adjusted=effect_adjust_stat_level_no_innate(obj,stat,base);
+    if(adjusted>base)return (SDL_Color){124,194,94,255};
+    if(adjusted<base)return (SDL_Color){236,128,95,255};
+    return GOLD;
+}
+
 static void sheet_stat_control(int64_t obj,int index,SDL_FRect r)
 {
     int value;const char *name,*description;
@@ -56,7 +67,7 @@ static void sheet_stat_control(int64_t obj,int index,SDL_FRect r)
     button_label(BUTTON_FONT,name,(SDL_FRect){r.x+9,r.y+3,r.w-18,24},false,GOLD);
     char number[32];snprintf(number,sizeof(number),"%d",value);
     button((SDL_FRect){r.x,r.y+36,32,32},620+index*2,"-",-1,false,modern_charedit_editable());
-    centered(2,number,r.x+r.w/2,r.y+39,GOLD);
+    centered(2,number,r.x+r.w/2,r.y+39,index>=2?sheet_stat_color(obj,sheet_stats[index]):GOLD);
     button((SDL_FRect){r.x+r.w-32,r.y+36,32,32},621+index*2,"+",-1,false,
         modern_charedit_editable() && stat_level_get(obj,STAT_UNSPENT_POINTS)>0);
     rule(r.x,r.y+r.h-1,r.w,(SDL_Color){99,73,41,255});

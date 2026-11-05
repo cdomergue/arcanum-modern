@@ -105,9 +105,7 @@ static void draw_top_bar(bool available)
     if(inside(clock_rect,mouse_x,mouse_y)) {
         char raw[256],label[1024];datetime_format_datetime(&now,raw,sizeof(raw));
         SDL_strlcpy(label,game_text(raw),sizeof(label));
-        float width=fminf(540,text_measure(0,label)+28);
-        SDL_FRect tip={fminf(canvas_w-width-8,clock_rect.x),r.y+r.h+12,width,30};
-        hud_panel(tip);button_label(0,label,tip,true,GOLD);
+        hud_control_hint(label,clock_rect,clock_rect.x+clock_rect.w/2,540);
     }
 }
 

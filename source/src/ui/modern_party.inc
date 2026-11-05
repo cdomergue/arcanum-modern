@@ -76,14 +76,20 @@ static void draw_party(void)
         char values[60];snprintf(values,sizeof(values),"%d / %d",hp,max);
         button_label(0,values,(SDL_FRect){r.x+4,bar_y+12,r.w-8,text_line_height()},true,GOLD);
         if(inside(r,mouse_x,mouse_y) && !party_menu_obj){
+            /* This complete description also covers truncated names/values. */
+            button_overflow_hint[0]=0;
             char detail[1200];snprintf(detail,sizeof(detail),"%s  ·  %s : %d / %d  ·  %s : %d / %d%s%s",game_text(name),character_text(106),hp,max,character_text(107),ft,ftmax,tactical_active()?"":"  ·  ",tactical_active()?"":modern_party_detached(obj)?tr("Détaché — cliquer / pour regrouper","Ungrouped — click / to group"):tr("Groupé — cliquer = pour détacher","Grouped — click = to ungroup"));
             if(has_points) {
                 size_t used=strlen(detail);
                 snprintf(detail+used,sizeof(detail)-used,"  ·  %s : %d (+)",character_text(0),stat_level_get(obj,STAT_UNSPENT_POINTS));
             }
-            float width=fminf(canvas_w-138,text_measure(0,detail)+24);
-            SDL_FRect tip={114,r.y+15,width,40};hud_panel(tip);
-            text_compact(detail,tip.x+12,tip.y+12,tip.w-24,false,GOLD);
+            float width=fminf(fminf(canvas_w-138,720),text_measure(0,detail)+24);
+            SDL_FRect content={126,0,width-24,0};
+            int rows=menu_paragraph(detail,content,0,GOLD);
+            float height=rows*text_line_height()+16;
+            SDL_FRect tip={114,fmaxf(8,fminf(canvas_h-height-8,r.y+15)),width,height};
+            hud_panel(tip);content.y=tip.y+8;content.h=height-16;
+            menu_paragraph(detail,content,0,GOLD);
         }
     }
     if(party_count>party_rows()){

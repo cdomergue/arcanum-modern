@@ -467,6 +467,19 @@ static void hud_panel(SDL_FRect rect)
     }
 }
 
+/* Size short HUD hints from the visible glyphs, not a fixed-height plaque. */
+static void hud_control_hint(const char* label,SDL_FRect anchor,float center_x,float max_width)
+{
+    float width=fminf(fminf(max_width,canvas_w-16),ceilf(button_text_bounds(0,label).w)+24);
+    ButtonTextLayout layout=button_text_layout(0,label,width-24,2*text_line_height());
+    float height=ceilf(layout.height)+20;
+    float y=anchor.y>canvas_h/2?anchor.y-height-6:anchor.y+anchor.h+6;
+    SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,center_x-width/2)),
+        fmaxf(8,fminf(canvas_h-height-8,y)),width,height};
+    hud_panel(tip);
+    button_label(0,label,(SDL_FRect){tip.x+12,tip.y+10,tip.w-24,tip.h-20},true,GOLD);
+}
+
 static SDL_Color menu_control_color(SDL_FRect rect,bool selected,bool available)
 {
     if(!available)return MUTED;
@@ -604,6 +617,26 @@ static void draw_art(int number, SDL_FRect rect, bool fit)
 /* Generated brass atlas: source bounds exclude transparent cell padding. */
 static bool control_symbol(SDL_FRect rect,const char* label,bool available,bool highlighted)
 {
+    /* Party grouping marks are icons: they must fit the 22 px control even
+     * when the reading font is enlarged, and must not create overflow hints. */
+    if(label && (!strcmp(label,"=") || !strcmp(label,"/"))) {
+        SDL_Color color=available?(highlighted?UI_RED:GOLD):MUTED;
+        /* Use the interface typeface, with a fixed optical size and enough
+         * clearance from the brass bevel. Center the visible glyph itself. */
+        NativeFont* font=&fonts[BUTTON_FONT];
+        if(!font->texture)return true;
+        stbtt_packedchar* g=&font->glyphs[(unsigned char)*label-GLYPH_FIRST];
+        float scale=16/(font->size*font->density);
+        float w=(g->xoff2-g->xoff)*scale,h=(g->yoff2-g->yoff)*scale;
+        float fit=fminf(1,fminf(rect.w*.45f/w,rect.h*.45f/h));
+        w*=fit;h*=fit;
+        SDL_FRect src={g->x0,g->y0,g->x1-g->x0,g->y1-g->y0};
+        SDL_FRect dst={rect.x+(rect.w-w)/2,rect.y+(rect.h-h)/2,w,h};
+        SDL_SetTextureColorMod(font->texture,color.r,color.g,color.b);
+        SDL_SetTextureAlphaMod(font->texture,color.a);
+        SDL_RenderTexture(renderer,font->texture,&src,&dst);
+        return true;
+    }
     static const char* labels[]={"<","^","v",">","+","-","<<",">>"};
     static const SDL_FRect cells[]={
         {93,98,236,310},{527,105,305,268},{948,141,320,245},{1447,97,233,311},
@@ -971,9 +1004,7 @@ static void gauge_value(float x,float y,int value,int maximum,bool fatigue)
     SDL_SetRenderScale(renderer,old_x,old_y);
     if(inside((SDL_FRect){x,y-88,94,112},mouse_x,mouse_y)) {
         char hint[256];snprintf(hint,sizeof(hint),"%s : %d / %d",character_text(fatigue?107:106),value,maximum);
-        float width=text_measure(0,hint)+24;
-        SDL_FRect tip={fmaxf(8,fminf(x,canvas_w-width-8)),y-128,width,fonts[0].size+16};
-        hud_panel(tip);text_draw(0,hint,tip.x+12,tip.y+6,GOLD);
+        hud_control_hint(hint,(SDL_FRect){x,y-88,94,112},x+47,540);
     }
 }
 
@@ -1068,9 +1099,7 @@ static void draw_experience_gauge(int64_t actor,SDL_FRect rect)
         if(capped)snprintf(hint,sizeof(hint),"%s : %d (100%%)",game_text(stat_name(STAT_EXPERIENCE_POINTS)),xp);
         else snprintf(hint,sizeof(hint),"%s : %d / %d (%.1f%%)",game_text(stat_name(STAT_EXPERIENCE_POINTS)),
             xp,xp+level_experience_points_to_next_level(actor),progress/10.f);
-        float width=fminf(canvas_w-24,text_measure(0,hint)+40);
-        SDL_FRect tip={fminf(canvas_w-width-12,fmaxf(12,rect.x+(rect.w-width)/2)),rect.y-38,width,30};
-        hud_panel(tip);text_compact(hint,tip.x+12,tip.y+6,width-24,true,GOLD);
+        hud_control_hint(hint,rect,rect.x+rect.w/2,canvas_w-24);
     }
 }
 
@@ -2444,12 +2473,7 @@ static void render_overlay(SDL_Renderer* target)
     if(key_edit<0 && !*button_overflow_hint)for(int i=button_count-1;i>=0;i--)if(inside(buttons[i].rect,mouse_x,mouse_y)) {
         int action=buttons[i].action,binding=key_for_action(action);char hint[256]="";
         if(binding>=0)snprintf(hint,sizeof(hint),"%s [%s]",key_label(binding),key_name(binding));
-        if(*hint) {
-            float width=fminf(450,ceilf(text_measure(0,hint))+24),xx=fminf(canvas_w-width-8,fmaxf(8,mouse_x-width/2));
-            float yy=buttons[i].rect.y>canvas_h/2?buttons[i].rect.y-34:buttons[i].rect.y+buttons[i].rect.h+6;
-            hud_panel((SDL_FRect){xx,yy,width,28});
-            text_compact(hint,xx+12,yy+6,width-24,true,GOLD);
-        }
+        if(*hint)hud_control_hint(hint,buttons[i].rect,mouse_x,450);
         break;
     }
     if(!menu && !journal)draw_quickslot_hint();

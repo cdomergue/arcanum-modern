@@ -88,9 +88,7 @@ static void bottom_bar_resource(int value,int maximum,bool fatigue)
     SDL_FRect hover=bottom_bar_rect(fatigue?1928:14,12,142,412);
     if(inside(hover,mouse_x,mouse_y)) {
         char hint[256];snprintf(hint,sizeof(hint),"%s : %d / %d",character_text(fatigue?107:106),value,maximum);
-        float width=ceilf(text_measure(0,hint))+24;
-        SDL_FRect tip={fmaxf(8,fminf(hover.x,canvas_w-width-8)),bottom_bar_rect(0,0,0,0).y-34,width,30};
-        hud_panel(tip);button_label(0,hint,tip,true,GOLD);
+        hud_control_hint(hint,bottom_bar_rect(0,0,0,0),hover.x+hover.w/2,540);
     }
 }
 

@@ -15,6 +15,7 @@
 #include <unistd.h>
 #endif
 #include <tig/tig.h>
+#include "game/descriptions.h"
 #include "game/gamelib.h"
 #include "game/gsound.h"
 #include "game/highres_config.h"
@@ -91,6 +92,156 @@ static void check_settings(void)
 }
 #include "check-portrait-in-game.inc"
 
+static void check_party_hints(void)
+{
+    const int sizes[][2]={{2560,1440},{800,600}};
+    const int scales[]={75,100,125,150};
+    for(int size=0;size<2;size++)for(int s=0;s<4;s++) {
+        assert(SDL_SetWindowSize(window,sizes[size][0],sizes[size][1]));
+        text_scale=scales[s];capture_frame(NULL);assert(party_count>0);
+        assert(control_symbol((SDL_FRect){0,0,22,22},"=",true,false));
+        assert(control_symbol((SDL_FRect){0,0,22,22},"/",true,false));
+        SDL_FRect card=party_rect(0);
+        SDL_WarpMouseInWindow(window,sizes[size][0]/2,sizes[size][1]/2);
+        char name[80];snprintf(name,sizeof(name),"party-idle-%dx%d-%d",sizes[size][0],sizes[size][1],scales[s]);
+        capture_frame(name);
+        SDL_WarpMouseInWindow(window,(card.x+15)*sizes[size][0]/canvas_w,
+            (card.y+15)*sizes[size][1]/canvas_h);
+        snprintf(name,sizeof(name),"party-grouped-%dx%d-%d",sizes[size][0],sizes[size][1],scales[s]);
+        capture_frame(name);
+        assert(!*button_overflow_hint);
+        assert(!modern_party_detached(party_members[0]));
+        click_action(2600);assert(modern_party_detached(party_members[0]));
+        snprintf(name,sizeof(name),"party-detached-%dx%d-%d",sizes[size][0],sizes[size][1],scales[s]);
+        capture_frame(name);assert(!*button_overflow_hint);
+        click_action(2600);assert(!modern_party_detached(party_members[0]));
+        /* A truncated name already has the complete party tooltip. */
+        for(int row=0;row<party_rows() && row<party_count;row++) {
+            char label[1024];object_examine(party_members[row],player_get_local_pc_obj(),label);
+            if(text_measure(0,game_text(label))>party_rect(row).w-14){card=party_rect(row);break;}
+        }
+        SDL_WarpMouseInWindow(window,(card.x+card.w/2)*sizes[size][0]/canvas_w,
+            (card.y+56+text_line_height()/2)*sizes[size][1]/canvas_h);
+        capture_frame(NULL);assert(!*button_overflow_hint);
+    }
+    puts("PASS: party symbols, one descriptive tooltip, grouping clicks, 75-150%, 2560x1440 and 800x600");
+}
+
+static void check_hud_hints(void)
+{
+    const int sizes[][2]={{2560,1440},{800,600}},scales[]={75,100,125,150};
+    const int actions[]={0,1,2,3,9,5,6,8};
+    for(int size=0;size<2;size++)for(int s=0;s<4;s++) {
+        assert(SDL_SetWindowSize(window,sizes[size][0],sizes[size][1]));
+        text_scale=scales[s];capture_frame(NULL);
+        for(int a=0;a<=SDL_arraysize(actions);a++) {
+            SDL_FRect r=top_bar_rect(1076,17,250,57);
+            if(a<SDL_arraysize(actions)) {
+                bool found=false;
+                for(int b=0;b<button_count;b++)if(buttons[b].action==actions[a]){r=buttons[b].rect;found=true;break;}
+                assert(found);
+            }
+            SDL_WarpMouseInWindow(window,(r.x+r.w/2)*sizes[size][0]/canvas_w,(r.y+r.h/2)*sizes[size][1]/canvas_h);
+            char name[80];snprintf(name,sizeof(name),"hud-hint-%d-%dx%d-%d",a,sizes[size][0],sizes[size][1],scales[s]);
+            capture_frame(name);assert(!*button_overflow_hint);
+        }
+    }
+    puts("PASS: HUD shortcut and clock hints, 75-150%, 2560x1440 and 800x600");
+}
+
+static void check_combat_hints(void)
+{
+    int64_t pc=player_get_local_pc_obj();
+    combat_tactical_enable();combat_critter_activate_combat_mode(pc);
+    combat_turn_based_whos_turn_set(pc);capture_frame(NULL);assert(tactical_active());
+    const int sizes[][2]={{2560,1440},{800,600}},scales[]={75,100,125,150};
+    for(int size=0;size<2;size++)for(int s=0;s<4;s++) {
+        assert(SDL_SetWindowSize(window,sizes[size][0],sizes[size][1]));
+        text_scale=scales[s];SDL_WarpMouseInWindow(window,0,0);capture_frame(NULL);
+        modern_ui_message(tr("Un vieil autel de pierre.","An old stone altar."));
+        char name[80];snprintf(name,sizeof(name),"combat-message-%dx%d-%d",sizes[size][0],sizes[size][1],scales[s]);
+        capture_frame(name);assert(!*button_overflow_hint);
+        modern_ui_message(tr("Un vieil autel de pierre. Une longue inscription couvre la pierre, presque effacee par le temps.",
+            "An old stone altar. A long inscription covers the stone, almost worn away by the passage of time."));
+        snprintf(name,sizeof(name),"combat-long-message-%dx%d-%d",sizes[size][0],sizes[size][1],scales[s]);
+        capture_frame(name);message_text[0]=0;
+        for(int a=0;a<3;a++) {
+            SDL_FRect r=bottom_bar_rect(14,12,142,412);
+            if(a) {
+                int action=a==1?1109:1200;bool found=false;
+                for(int b=0;b<button_count;b++)if(buttons[b].action==action){r=buttons[b].rect;found=true;break;}
+                assert(found);
+            }
+            SDL_WarpMouseInWindow(window,(r.x+r.w/2)*sizes[size][0]/canvas_w,(r.y+r.h/2)*sizes[size][1]/canvas_h);
+            snprintf(name,sizeof(name),"combat-hint-%d-%dx%d-%d",a,sizes[size][0],sizes[size][1],scales[s]);
+            capture_frame(name);assert(!*button_overflow_hint);
+        }
+    }
+    puts("PASS: combat messages, gauges, companion AI and initiative hints, 75-150%, 2560x1440 and 800x600");
+}
+
+static void check_stat_colors(void)
+{
+    int64_t pc=player_get_local_pc_obj();
+    SDL_Color neutral=sheet_stat_color(pc,STAT_CONSTITUTION);
+    assert(!memcmp(&neutral,&GOLD,sizeof(GOLD)));
+    assert(effect_is_single_stat_adjustment(160,STAT_CONSTITUTION,1));
+    assert(effect_is_single_stat_adjustment(141,STAT_PERCEPTION,-1));
+    assert(effect_is_single_stat_adjustment(140,STAT_PERCEPTION,1));
+    const int innate[]={EFFECT_CAUSE_RACE,EFFECT_CAUSE_BACKGROUND,EFFECT_CAUSE_CLASS,EFFECT_CAUSE_GENDER};
+    int initial=stat_level_get(pc,STAT_CONSTITUTION);
+    for(int i=0;i<4;i++) {
+        effect_add(pc,160,innate[i]);
+        assert(stat_level_get(pc,STAT_CONSTITUTION)==initial+1);
+        SDL_Color color=sheet_stat_color(pc,STAT_CONSTITUTION);
+        assert(!memcmp(&color,&neutral,sizeof(color)));
+        assert(effect_remove_one_with_cause(pc,160,innate[i]));
+    }
+    effect_add(pc,160,EFFECT_CAUSE_ITEM);
+    effect_add(pc,141,EFFECT_CAUSE_SPELL);
+    SDL_Color positive=sheet_stat_color(pc,STAT_CONSTITUTION),negative=sheet_stat_color(pc,STAT_PERCEPTION);
+    assert(positive.g>positive.r && negative.r>negative.g);
+    assert(charedit_open(pc,CHAREDIT_MODE_ACTIVE));
+    const int scales[]={75,100,125,150};
+    assert(SDL_SetWindowSize(window,1920,1080));
+    for(int i=0;i<4;i++) {
+        text_scale=scales[i];char name[60];snprintf(name,sizeof(name),"sheet-effects-%d",scales[i]);capture_frame(name);
+    }
+    /* Opposite external effects cancel, and removing equipment/spells restores
+     * the ordinary color without reopening the sheet. */
+    effect_add(pc,140,EFFECT_CAUSE_SPELL);
+    SDL_Color cancelled=sheet_stat_color(pc,STAT_PERCEPTION);
+    assert(!memcmp(&cancelled,&neutral,sizeof(cancelled)));
+    assert(effect_remove_one_with_cause(pc,140,EFFECT_CAUSE_SPELL));
+    assert(effect_remove_one_with_cause(pc,141,EFFECT_CAUSE_SPELL));
+    assert(effect_remove_one_with_cause(pc,160,EFFECT_CAUSE_ITEM));
+    for(int stat=STAT_STRENGTH;stat<=STAT_CHARISMA;stat++) {
+        SDL_Color color=sheet_stat_color(pc,stat);assert(!memcmp(&color,&neutral,sizeof(color)));
+    }
+    capture_frame("sheet-effects-removed");charedit_close();
+    int64_t followers[1];assert(modern_followers_get(followers,1)==1);
+    effect_add(followers[0],160,EFFECT_CAUSE_ITEM);
+    assert(charedit_open(followers[0],CHAREDIT_MODE_PASSIVE));
+    SDL_Color follower=sheet_stat_color(followers[0],STAT_CONSTITUTION);
+    assert(!memcmp(&follower,&positive,sizeof(follower)));
+    text_scale=100;capture_frame("sheet-follower-effects");charedit_close();
+    assert(effect_remove_one_with_cause(followers[0],160,EFFECT_CAUSE_ITEM));
+    puts("PASS: external bonuses/penalties, innate effects excluded, cancellation/removal, companion sheet, 75-150%");
+}
+
+static void create_party_fixture(void)
+{
+    /* English installations need their own objects, not a French UAP save. */
+    assert(map_preprocess_mobile("ShopMap"));
+    assert(map_open("maps\\ShopMap","party-hint-fixture",false));
+    PlayerCreateInfo info;player_create_info_init(&info);
+    info.basic_prototype=16066;info.loc=location_make(30,30);
+    assert(player_obj_create_player(&info));
+    int64_t follower;
+    assert(object_create(sub_4685A0(BP_BASIC_MALE_NPC),location_make(31,30),&follower));
+    assert(critter_follow(follower,info.obj,true));
+}
+
 int main(int argc,char** argv)
 {
     if((argc!=3&&argc!=4)||chdir(argv[1])||access(".map-export-sandbox",R_OK))return 2;
@@ -113,10 +264,17 @@ int main(int argc,char** argv)
     printf("Test process %ld, SDL window %u, isolated directory %s\n",(long)getpid(),SDL_GetWindowID(window),argv[1]);
 
     capture_dir=argv[2];
-    assert(gamelib_load(argc==4?argv[3]:"Slot0002"));sub_5412D0();in_game=true;
+    if(argc==4 && !strcmp(argv[3],"--party-fixture"))create_party_fixture();
+    else assert(gamelib_load(argc==4?argv[3]:"Slot0002"));
+    sub_5412D0();in_game=true;
     intgame_mode_set(INTGAME_MODE_MAIN);
     int64_t pc=player_get_local_pc_obj();object_flags_unset(pc,OF_OFF);
     location_origin_set(obj_field_int64_get(pc,OBJ_F_LOCATION));iso_interface_refresh();
+
+    if(SDL_getenv("ARCANUM_CHECK_PARTY_HINTS")){check_party_hints();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_HUD_HINTS")){check_hud_hints();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_COMBAT_HINTS")){check_combat_hints();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_STAT_COLORS")){check_stat_colors();return 0;}
 
 
 
