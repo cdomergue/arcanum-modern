@@ -94,6 +94,7 @@ jobs:
         run: |
           python3 tests/test_windows_full_package.py
           python3 tests/test_windows_setup.py
+          python3 tests/test_ffmpeg_download.py
       - name: Build Windows ZIP
         run: |
           docker run --rm \

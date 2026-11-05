@@ -7,11 +7,32 @@ from pathlib import Path
 import shutil
 import subprocess
 import tarfile
+import urllib.error
 import urllib.request
 
 VERSION = '8.1.3'
 SHA256 = '7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3'
 URL = f'https://ffmpeg.org/releases/ffmpeg-{VERSION}.tar.xz'
+
+
+def download_source(archive):
+    temporary = archive.with_suffix('.download')
+    try:
+        try:
+            urllib.request.urlretrieve(URL, temporary)
+        except (urllib.error.URLError, OSError):
+            curl = shutil.which('curl')
+            if not curl:
+                raise
+            print('Retrying FFmpeg source download with curl', flush=True)
+            subprocess.run([curl, '--fail', '--location', '--retry', '3',
+                            '--retry-all-errors', '--connect-timeout', '20',
+                            '--max-time', '180', '--output', str(temporary), URL], check=True)
+        if hashlib.sha256(temporary.read_bytes()).hexdigest() != SHA256:
+            raise ValueError('FFmpeg source checksum mismatch')
+        temporary.replace(archive)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def build(args):
@@ -20,9 +41,7 @@ def build(args):
     work.mkdir(parents=True, exist_ok=True)
     archive = work/f'ffmpeg-{VERSION}.tar.xz'
     if not archive.exists():
-        temporary = archive.with_suffix('.download')
-        urllib.request.urlretrieve(URL, temporary)
-        temporary.replace(archive)
+        download_source(archive)
     if hashlib.sha256(archive.read_bytes()).hexdigest() != SHA256:
         raise ValueError('FFmpeg source checksum mismatch')
     source = work/f'ffmpeg-{VERSION}'
