@@ -186,11 +186,12 @@ Paths are relative to the game folder.
 
 In **Options → Graphics**, set **Camera** to **Follow Camera** to keep your character centered as you move with the keyboard. Select **Free** to pan manually. During turn-based combat, the tactical camera follows the active turn.
 
-In **Options → Graphics**, **Button text size** adjusts button labels from 75%
-to 150%, including character sheet and journal tabs. The choice is saved
-automatically. Long labels wrap or show their full text on hover. The journal's
-**A− / A+** controls adjust reading text separately; F9's original interface
-keeps its native fonts.
+In **Options → Graphics**, **Text size** adjusts interface text from 75% to
+150%, including the HUD, dialogues, descriptions, journal and button labels.
+The journal's **A− / A+** controls use the same setting. The choice is saved
+automatically. Long labels wrap or show their full text on hover, and reading
+panels adjust their line spacing and pagination. F9's original interface keeps
+its native fonts.
 
 | Path | Contents |
 | --- | --- |

@@ -214,7 +214,7 @@ static void draw_background_history(float x,float y,float w)
     if(focused)SDL_strlcat(visible,"|",sizeof(visible));
     const char* display=*visible?visible:tr("Écrivez ici l’histoire de votre personnage…","Write your character's history here…");
     int rows=menu_paragraph(display,(SDL_FRect){content.x,content.y,content.w,0},0,GOLD);
-    background_story_max=rows-6;if(background_story_max<0)background_story_max=0;
+    background_story_max=rows-(int)(content.h/text_line_height());if(background_story_max<0)background_story_max=0;
     if(background_story_follow)background_story_scroll=background_story_max;
     background_story_follow=false;
     if(background_story_scroll>background_story_max)background_story_scroll=background_story_max;

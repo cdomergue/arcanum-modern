@@ -79,7 +79,7 @@ int main(int argc,char** argv)
     ready=true;assert(prepare_maps("unused",true));assert(starts==3);
     mainmenu_ui_window_type_set(MM_WINDOW_OPTIONS);mainmenu_ui_open();modern_ui_menu_tick();
     for(int scale=100;scale<=150;scale+=50){
-        button_text_scale=scale;button_count=0;draw_menu();
+        text_scale=scale;button_count=0;draw_menu();
         bool found=false;for(int i=0;i<button_count;i++)if(buttons[i].action==446)found=true;
         assert(found);
         char path[128];snprintf(path,sizeof(path),"/tmp/maps-options-%d.png",scale);

@@ -12,8 +12,9 @@ static bool party_visible(void)
 {
     return enabled && hud && visible() && !native_menu() && !native_panel() && !journal;
 }
-static int party_rows(void){return (int)fmaxf(1,fminf(6,(canvas_h-236)/108));}
-static SDL_FRect party_rect(int row){return (SDL_FRect){12,88+row*108,94,106};}
+static float party_row_height(void){return 78+2*text_line_height();}
+static int party_rows(void){return (int)fmaxf(1,fminf(6,(bottom_bar_rect(0,0,0,0).y-152)/party_row_height()));}
+static SDL_FRect party_rect(int row){return (SDL_FRect){12,88+row*party_row_height(),94,party_row_height()-2};}
 static bool party_can_dismiss(int64_t obj)
 {
     return !tactical_active() && !combat_turn_based_is_active() && !tig_net_is_active()
@@ -26,7 +27,7 @@ static bool party_region(float x,float y)
     if(!party_visible())return false;
     /* Keep the footer inside the input region on partially filled pages. */
     int count=party_count>party_rows()?party_rows():party_count;
-    return (count>0 && inside((SDL_FRect){12,88,94,count*108+(party_count>party_rows()?28:0)+(modern_party_selected()?30:0)},x,y))
+    return (count>0 && inside((SDL_FRect){12,88,94,count*party_row_height()+(party_count>party_rows()?28:0)+(modern_party_selected()?30:0)},x,y))
         || (party_menu_obj && inside(party_menu_rect(),x,y));
 }
 static void party_tick(void)
@@ -63,16 +64,17 @@ static void draw_party(void)
             fill((SDL_FRect){badge.x+4,badge.y+8,11,3},GOLD);
         }
         char name[1024];object_examine(obj,player_get_local_pc_obj(),name);
-        text_compact(game_text(name),r.x+7,r.y+57,r.w-14,true,menu_control_color(r,selected,true));
+        button_label(0,game_text(name),(SDL_FRect){r.x+7,r.y+56,r.w-14,text_line_height()},true,menu_control_color(r,selected,true));
+        float bar_y=r.y+58+text_line_height();
         int hp=object_hp_current(obj),max=object_hp_max(obj);
         int ft=critter_fatigue_current(obj),ftmax=critter_fatigue_max(obj);
         SDL_Color health=stat_level_get(obj,STAT_POISON_LEVEL)>=20?(SDL_Color){90,174,75,255}:(SDL_Color){192,54,42,255};
-        fill((SDL_FRect){r.x+6,r.y+73,82,4},(SDL_Color){49,30,25,255});
-        fill((SDL_FRect){r.x+6,r.y+73,82*fmaxf(0,fminf(1,max>0?(float)hp/max:0)),4},health);
-        fill((SDL_FRect){r.x+6,r.y+79,82,3},(SDL_Color){29,30,49,255});
-        fill((SDL_FRect){r.x+6,r.y+79,82*fmaxf(0,fminf(1,ftmax>0?(float)ft/ftmax:0)),3},(SDL_Color){83,113,213,255});
+        fill((SDL_FRect){r.x+6,bar_y,82,4},(SDL_Color){49,30,25,255});
+        fill((SDL_FRect){r.x+6,bar_y,82*fmaxf(0,fminf(1,max>0?(float)hp/max:0)),4},health);
+        fill((SDL_FRect){r.x+6,bar_y+6,82,3},(SDL_Color){29,30,49,255});
+        fill((SDL_FRect){r.x+6,bar_y+6,82*fmaxf(0,fminf(1,ftmax>0?(float)ft/ftmax:0)),3},(SDL_Color){83,113,213,255});
         char values[60];snprintf(values,sizeof(values),"%d / %d",hp,max);
-        text_compact(values,r.x+4,r.y+84,r.w-8,true,GOLD);
+        button_label(0,values,(SDL_FRect){r.x+4,bar_y+12,r.w-8,text_line_height()},true,GOLD);
         if(inside(r,mouse_x,mouse_y) && !party_menu_obj){
             char detail[1200];snprintf(detail,sizeof(detail),"%s  ·  %s : %d / %d  ·  %s : %d / %d%s%s",game_text(name),character_text(106),hp,max,character_text(107),ft,ftmax,tactical_active()?"":"  ·  ",tactical_active()?"":modern_party_detached(obj)?tr("Détaché — cliquer / pour regrouper","Ungrouped — click / to group"):tr("Groupé — cliquer = pour détacher","Grouped — click = to ungroup"));
             if(has_points) {
@@ -85,13 +87,13 @@ static void draw_party(void)
         }
     }
     if(party_count>party_rows()){
-        float y=88+party_rows()*108;
+        float y=88+party_rows()*party_row_height();
         button((SDL_FRect){12,y,43,27},1930,"<",-1,false,party_page>0);
         button((SDL_FRect){63,y,43,27},1931,">",-1,false,(party_page+1)*party_rows()<party_count);
     }
     if(modern_party_selected()){
         int rows=party_count>party_rows()?party_rows():party_count;
-        button((SDL_FRect){12,88+rows*108+(party_count>party_rows()?28:0),94,28},2730,tr("Personnage","Player"),-1,false,true);
+        button((SDL_FRect){12,88+rows*party_row_height()+(party_count>party_rows()?28:0),94,28},2730,tr("Personnage","Player"),-1,false,true);
     }
     if(party_menu_obj){
         SDL_FRect r=party_menu_rect();hud_panel(r);

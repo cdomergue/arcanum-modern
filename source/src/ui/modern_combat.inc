@@ -365,7 +365,8 @@ static void draw_tactical_preview(void)
         snprintf(health,sizeof(health),"%s  ·  %s : %d / %d",game_text(name),character_text(106),current,maximum);
         if(current<maximum){char deficit[40];snprintf(deficit,sizeof(deficit),"  (−%d)",maximum-current);SDL_strlcat(health,deficit,sizeof(health));}
     }
-    float height=31+(*health?24:0)+(*detail?24:0);
+    float step=text_line_height();
+    float height=step*(1+(int)(*health!=0)+(int)(*detail!=0))+12;
     float width=fminf(900,fmaxf(text_measure(0,detail),fmaxf(text_measure(0,line),text_measure(0,health)))+42);
     float x=fminf(canvas_w-width-12,fmaxf(12,mouse_x-width/2)),y=fminf(bottom_bar_rect(0,0,0,0).y-12-height,mouse_y+36);
     /* Keep action cost/chance feedback clear of the character inspection card. */
@@ -374,8 +375,8 @@ static void draw_tactical_preview(void)
         y=fmaxf(8,world_hover_rect.y-height-8);
     fill((SDL_FRect){x,y,width,height},(SDL_Color){16,12,9,225});outline((SDL_FRect){x,y,width,height},p->affordable?green:red);
     text_compact(line,x+10,y+6,width-20,false,p->affordable?GOLD:red);
-    if(*detail)text_compact(detail,x+10,y+30,width-20,false,p->affordable?MUTED:red);
-    if(*health)text_compact(health,x+10,y+30+(*detail?24:0),width-20,false,GOLD);
+    if(*detail)text_compact(detail,x+10,y+6+step,width-20,false,p->affordable?MUTED:red);
+    if(*health)text_compact(health,x+10,y+6+step*(1+(int)(*detail!=0)),width-20,false,GOLD);
 }
 static void tactical_button(SDL_FRect r,int action,const char* label,bool selected,bool available)
 {
@@ -387,32 +388,34 @@ static void tactical_button(SDL_FRect r,int action,const char* label,bool select
 static void draw_tactical_bottom_content(int64_t actor,bool ready,SDL_FRect content)
 {
     /* Inspection occupies only the upper part: turn controls never disappear. */
-    SDL_FRect info=content;info.h-=34;
+    float control_height=fmaxf(28,text_size()+6),step=text_line_height();
+    SDL_FRect info=content;info.h-=control_height+6;
+    step=fminf(step,(info.h-12)/2);
     if(!draw_bottom_hover(info)) {
         tactical_portrait(actor,(SDL_FRect){info.x,info.y+2,42,55});
         float x=info.x+52,width=info.w-52;
         char name[1024];object_examine(actor,player_get_local_pc_obj(),name);
-        button_label(0,game_text(name),(SDL_FRect){x,info.y,width,17},false,GOLD);
+        button_label(0,game_text(name),(SDL_FRect){x,info.y,width,step},false,GOLD);
         int pa=combat_action_points_get(),maximum=SDL_max(5,stat_level_get(actor,STAT_SPEED));
         char points[96];snprintf(points,sizeof(points),"%s  %d / %d",tactical_text(TC_AP),pa,maximum);
-        button_label(1,points,(SDL_FRect){x,info.y+19,width*.46f,24},false,GOLD);
+        button_label(1,points,(SDL_FRect){x,info.y+step,width*.46f,step},false,GOLD);
         bool preview=tactical_has_preview && tactical_preview.actor==actor && !native_panel() && !tactical_region(mouse_x,mouse_y);
         int after=preview?pa-tactical_preview.cost:pa;
         char status[128]="";
         if(!ready)SDL_strlcpy(status,!combat_player_controls(actor) && player_is_local_pc_obj(critter_pc_leader_get(actor))
             ?tr("Tour du compagnon","Companion turn"):tactical_text(combat_player_controls(actor)?TC_BUSY:TC_WAIT),sizeof(status));
         else if(preview)snprintf(status,sizeof(status),"%s %s%d %s",tr("Après :","After:"),tactical_preview.count>1?"~":"",SDL_max(0,after),tactical_text(TC_AP));
-        button_label(0,status,(SDL_FRect){x+width*.47f,info.y+19,width*.53f,24},true,
+        button_label(0,status,(SDL_FRect){x+width*.47f,info.y+step,width*.53f,step},true,
             preview && !tactical_preview.affordable?(SDL_Color){236,128,95,255}:MUTED);
         int cells=SDL_min(maximum,30);
         for(int i=0;i<cells;i++)fill((SDL_FRect){x+i*width/cells,info.y+info.h-10,width/cells-3,8},
             i*maximum<pa*cells?(preview && i*maximum>=after*cells?(SDL_Color){215,157,70,255}:(SDL_Color){126,173,108,255}):(SDL_Color){57,49,35,255});
     }
-    float y=content.y+content.h-28,gap=6;
+    float y=content.y+content.h-control_height,gap=6;
     float ai_width=content.w*.37f,log_width=content.w*.25f;
-    SDL_FRect ai={content.x,y,ai_width,28};
-    SDL_FRect log={ai.x+ai.w+gap,y,log_width,28};
-    SDL_FRect end={log.x+log.w+gap,y,content.x+content.w-log.x-log.w-gap,28};
+    SDL_FRect ai={content.x,y,ai_width,control_height};
+    SDL_FRect log={ai.x+ai.w+gap,y,log_width,control_height};
+    SDL_FRect end={log.x+log.w+gap,y,content.x+content.w-log.x-log.w-gap,control_height};
     bool automatic=combat_companion_ai_get();char label[128];
     snprintf(label,sizeof(label),"%s%s",automatic?tr("Compagnons : auto","Companions: auto"):tr("Compagnons : manuel","Companions: manual"),combat_companion_ai_pending()?" *":"");
     tactical_button(ai,1109,label,automatic,!tig_net_is_active());

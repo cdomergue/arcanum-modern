@@ -3,7 +3,17 @@
 #undef NDEBUG
 #include <assert.h>
 #include <stdio.h>
+#ifdef _WIN32
+#include <io.h>
+#include <direct.h>
+#include <process.h>
+#define chdir _chdir
+#define access _access
+#define getpid _getpid
+#define R_OK 4
+#else
 #include <unistd.h>
+#endif
 #include <tig/tig.h>
 #include "game/gamelib.h"
 #include "game/gsound.h"
@@ -13,7 +23,11 @@
 #include "ui/sleep_ui.h"
 #include "ui/fate_ui.h"
 #include "../source/src/ui/modern_ui.c"
+/* Avoid a modal CRT assertion dialog in unattended native capture jobs. */
+#undef assert
+#define assert(condition) do { if(!(condition)){fprintf(stderr,"FAIL line %d: %s\n",__LINE__,#condition);exit(3);} } while(0)
 void sub_549A70(void);
+void sub_5412D0(void);
 
 
 
@@ -64,19 +78,25 @@ static void check_labels(void)
 static void check_settings(void)
 {
     FILE* file=fopen("modern-ui/settings.ini","w");assert(file);fputs("TextSize=24\n",file);fclose(file);
-    load_settings();assert(body_size==24&&button_text_scale==100);
+    load_settings();assert(text_scale==125);
     file=fopen("modern-ui/settings.ini","w");assert(file);fputs("ButtonTextScale=150\nTextSize=22\n",file);fclose(file);
-    load_settings();assert(body_size==22&&button_text_scale==150);
-    file=fopen("modern-ui/settings.ini","w");assert(file);fputs("ButtonTextScale=10000\nTextSize=-2\n",file);fclose(file);
-    load_settings();assert(body_size==20&&button_text_scale==100);
-    body_size=24;button_text_scale=125;save_settings();body_size=16;button_text_scale=75;
-    load_settings();assert(body_size==24&&button_text_scale==125);
-    body_size=20;button_text_scale=100;save_settings();
+    load_settings();assert(text_scale==150);
+    file=fopen("modern-ui/settings.ini","w");assert(file);fputs("TextScale=75\nButtonTextScale=150\nTextSize=26\n",file);fclose(file);
+    load_settings();assert(text_scale==75);
+    file=fopen("modern-ui/settings.ini","w");assert(file);fputs("ButtonTextScale=10000\nTextSize=-2\nTextScale=88\n",file);fclose(file);
+    load_settings();assert(text_scale==100);
+    text_scale=125;save_settings();text_scale=75;
+    load_settings();assert(text_scale==125);
+    text_scale=100;save_settings();
 }
 int main(int argc,char** argv)
 {
     if((argc!=3&&argc!=4)||chdir(argv[1])||access(".map-export-sandbox",R_OK))return 2;
-    setvbuf(stdout,NULL,_IOLBF,0);
+    setvbuf(stdout,NULL,_IONBF,0);
+#ifdef _WIN32
+    _set_error_mode(_OUT_TO_STDERR);
+#endif
+    puts("Starting isolated typography capture");
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER,"software",SDL_HINT_OVERRIDE);
@@ -84,10 +104,10 @@ int main(int argc,char** argv)
     TigInitInfo init={0};init.width=1360;init.height=768;init.bpp=32;
     init.texture_width=init.texture_height=2048;init.flags=TIG_INITIALIZE_WINDOWED|TIG_INITIALIZE_NO_SOUND;
     init.art_file_path_resolver=name_resolve_path;init.art_id_reset_func=name_normalize_aid;init.sound_file_path_resolver=gsound_resolve_path;
-    assert(tig_init(&init)==TIG_OK);intgame_set_iso_window_width(init.width);intgame_set_iso_window_height(init.height);
-    GameInitInfo game={0};assert(intgame_create_iso_window(&game.iso_window_handle)&&gamelib_init(&game));
+    puts("Initialize TIG");assert(tig_init(&init)==TIG_OK);intgame_set_iso_window_width(init.width);intgame_set_iso_window_height(init.height);
+    puts("Initialize game");GameInitInfo game={0};assert(intgame_create_iso_window(&game.iso_window_handle)&&gamelib_init(&game));
     sub_549A70();assert(gameuilib_init(&game)&&gamelib_mod_load("Arcanum")&&gameuilib_mod_load());
-    gamelib_splash_clear();assert(modern_ui_init());
+    puts("Initialize native interface");gamelib_splash_clear();assert(modern_ui_init());
     printf("Test process %ld, SDL window %u, isolated directory %s\n",(long)getpid(),SDL_GetWindowID(window),argv[1]);
 
     capture_dir=argv[2];
@@ -101,10 +121,18 @@ int main(int argc,char** argv)
     check_settings();
     const int scales[]={75,100,125,150};
     for(int s=0;s<4;s++){
-        button_text_scale=scales[s];update_geometry();check_labels();
-        assert(fonts[0].size==14&&fonts[1].size==20&&fonts[2].size==22&&fonts[3].size==30);
-        assert(fonts[BUTTON_FONT].size==14*scales[s]/100.0f);
+        text_scale=scales[s];update_geometry();check_labels();
+        assert(fonts[0].size==text_size()&&fonts[1].size==text_size());
+        assert(fonts[2].size==24*scales[s]/100.0f&&fonts[3].size==30*scales[s]/100.0f);
+        assert(fonts[BUTTON_FONT].size==text_size()&&fonts[MENU_BUTTON_FONT].size==text_size());
         char name[80];
+        int64_t followers[128];int follower_count=modern_followers_get(followers,128);
+        int64_t inspected=follower_count?followers[0]:pc;
+        char object_name[MAX_STRING];object_examine(inspected,pc,object_name);object_hover_obj_set(inspected);
+        assert(modern_examine_begin(pc,inspected));intgame_examine_object(pc,inspected,object_name);modern_examine_end();
+        assert(modern_hover_details());
+        snprintf(name,sizeof(name),"hud-%d",scales[s]);capture_frame(name);
+        object_hover_obj_set(OBJ_HANDLE_NULL);
         assert(charedit_open(pc,CHAREDIT_MODE_ACTIVE));
         snprintf(name,sizeof(name),"sheet-%d",scales[s]);capture_frame(name);charedit_close();
         logbook_ui_open(pc);assert(journal);
@@ -118,28 +146,54 @@ int main(int argc,char** argv)
             assert(!strcmp(button_overflow_hint,game_text(modern_logbook_tab_label(3))));
             SDL_WarpMouseInWindow(window,0,0);
         }
+        if(scales[s]==125){
+            click_action(203);assert(text_scale==150);capture_frame(NULL);assert(fonts[0].size==30);
+            click_action(202);assert(text_scale==125);
+            text_scale=75;load_settings();assert(text_scale==125);
+        }
         logbook_ui_close();
+        assert(inven_ui_create(pc,OBJ_HANDLE_NULL,INVEN_UI_MODE_INVENTORY));
+        snprintf(name,sizeof(name),"inventory-%d",scales[s]);capture_frame(name);inven_ui_destroy();
+        if(follower_count){
+            dialog_ui_start_dialog(pc,followers[0],1079,0,1);
+            assert(modern_dialog_state() && modern_dialog_state()->num_options>0);
+            if(modern_dialog_state()){
+                snprintf(name,sizeof(name),"dialogue-%d",scales[s]);capture_frame(name);
+                assert(dialogue_view.y+dialogue_view.h+16<bottom_bar_rect(0,0,0,0).y);
+                dialog_ui_end_dialog(pc,0);
+            }
+        }
     }
     mainmenu_ui_start(MM_TYPE_IN_PLAY);modern_ui_tick();click_action(502);
     assert(mainmenu_ui_window_type_get()==MM_WINDOW_OPTIONS);capture_frame("graphics-150");
-    click_action(426);assert(button_text_scale==125);
-    click_action(426);assert(button_text_scale==100);
-    click_action(426);assert(button_text_scale==75);capture_frame("graphics-75");
-    click_action(428);assert(button_text_scale==100);
-    click_action(427);assert(button_text_scale==125);
-    click_action(427);assert(button_text_scale==150);
-    button_text_scale=100;load_settings();assert(button_text_scale==150&&body_size==20);
+    click_action(426);assert(text_scale==125);
+    click_action(426);assert(text_scale==100);
+    click_action(426);assert(text_scale==75);capture_frame("graphics-75");
+    click_action(428);assert(text_scale==100);
+    click_action(427);assert(text_scale==125);
+    click_action(427);assert(text_scale==150);
+    text_scale=100;load_settings();assert(text_scale==150);
     capture_frame("graphics-persisted-150");
-    click_action(428);assert(button_text_scale==100);capture_frame("graphics-default");
+    click_action(428);assert(text_scale==100);capture_frame("graphics-default");
     /* Check atlas packing and logical bounds at common low/high DPI outputs. */
     const int sizes[][2]={{800,600},{1920,1080},{3840,2160}};
     for(int i=0;i<3;i++) {
         assert(SDL_SetWindowSize(window,sizes[i][0],sizes[i][1]));
-        button_text_scale=150;update_geometry();check_labels();
+        text_scale=150;update_geometry();check_labels();
         for(int f=0;f<FONT_COUNT;f++)assert(fonts[f].texture&&fonts[f].density==density);
-        assert(fonts[4].size==63&&fonts[MENU_BUTTON_FONT].size==33);
+        SDL_FRect content=bottom_bar_message_rect();
+        assert(content.h>=3*text_line_height());
+        assert(bottom_bar_rect(0,0,BOTTOM_BAR_SOURCE_WIDTH,BOTTOM_BAR_SOURCE_HEIGHT).x>=0);
+        char size_name[80];snprintf(size_name,sizeof(size_name),"graphics-%dx%d-150",sizes[i][0],sizes[i][1]);capture_frame(size_name);
+        assert(fonts[4].size==63&&fonts[MENU_BUTTON_FONT].size==30);
     }
-    button_text_scale=100;save_settings();
-    puts("PASS: real font bounds, French/English wrapping, complete hover labels, 75–150%, click holds, persisted preferences and independent body fonts");
+    /* Inspect the narrowest supported canvas as well as the options screen. */
+    assert(SDL_SetWindowSize(window,800,600));text_scale=150;update_geometry();
+    mainmenu_ui_close(false);intgame_mode_set(INTGAME_MODE_MAIN);
+    logbook_ui_open(pc);capture_frame("journal-800x600-150");logbook_ui_close();
+    assert(inven_ui_create(pc,OBJ_HANDLE_NULL,INVEN_UI_MODE_INVENTORY));
+    capture_frame("inventory-800x600-150");inven_ui_destroy();
+    text_scale=100;save_settings();
+    puts("PASS: real font bounds, French/English wrapping, complete hover labels, 75–150%, click holds, persisted preferences and shared reading fonts");
     return 0;
 }

@@ -42,7 +42,8 @@ static void bottom_bar_load(void)
 
 static SDL_FRect bottom_bar_rect(float x,float y,float w,float h)
 {
-    float width=fminf(BOTTOM_BAR_WIDTH,canvas_w-16);
+    /* Larger reading text needs room for the title, facts and gauges together. */
+    float width=fminf(BOTTOM_BAR_WIDTH*fmaxf(1,text_scale/100.0f),canvas_w-16);
     float scale=width/BOTTOM_BAR_SOURCE_WIDTH;
     return (SDL_FRect){(canvas_w-width)/2+x*scale,
         canvas_h-10-BOTTOM_BAR_SOURCE_HEIGHT*scale+y*scale,w*scale,h*scale};
@@ -51,7 +52,7 @@ static SDL_FRect bottom_bar_rect(float x,float y,float w,float h)
 static SDL_FRect bottom_bar_message_rect(void)
 {
     SDL_FRect r=bottom_bar_rect(558,174,963,229);
-    r.x+=8;r.y+=6;r.w-=16;r.h-=12;
+    r.x+=8;r.y+=4;r.w-=16;r.h-=8;
     return r;
 }
 
@@ -112,14 +113,15 @@ static bool draw_bottom_hover(SDL_FRect content)
         if(written<0 || (size_t)written>=sizeof(description)-used)break;
         used+=(size_t)written;
     }
-    /* HUD text uses the same compact font as its counters. Leave permanent
-     * room for the gauges and effect icons even with long translated names. */
-    float bar_height=detail->bar_count?19:0,extra_height=detail->extra_count?24:0;
+    /* Use the common reading size. Reserve scaled rows for numeric gauges;
+     * long translated descriptions paginate inside the black panel. */
+    float line_height=text_line_height();
+    float bar_height=detail->bar_count?line_height:0,extra_height=detail->extra_count?24:0;
     SDL_FRect text={content.x,content.y,content.w,content.h-bar_height-extra_height};
     char body[45000];snprintf(body,sizeof(body),"%s%s%s",detail->title,*description?"\n":"",description);
     const char* translated=game_text(body);
-    int rows=text_paragraph(0,18,translated,(SDL_FRect){0,0,text.w,0},0,GOLD,false);
-    int visible_rows=(int)(text.h/18);
+    int rows=text_paragraph(0,line_height,translated,(SDL_FRect){0,0,text.w,0},0,GOLD,false);
+    int visible_rows=(int)(text.h/line_height);
     /* Long descriptions cycle inside the panel instead of spilling over its
      * frame. Reset the cycle when a different object is inspected. */
     static char previous[45000];static Uint64 since;
@@ -127,7 +129,7 @@ static bool draw_bottom_hover(SDL_FRect content)
     int offset=0;
     if(rows>visible_rows && visible_rows>0)
         offset=((SDL_GetTicks()-since)/3500)%((rows+visible_rows-1)/visible_rows)*visible_rows;
-    text_paragraph(0,18,translated,text,offset,GOLD,false);
+    text_paragraph(0,line_height,translated,text,offset,GOLD,false);
     float y=content.y+content.h-bar_height-extra_height;
     float gap=12,column=(content.w-gap*(detail->bar_count-1))/fmaxf(1,detail->bar_count);
     for(int j=0;j<detail->bar_count;j++) {
@@ -136,11 +138,11 @@ static bool draw_bottom_hover(SDL_FRect content)
         SDL_Color color=kind==1?(SDL_Color){105,136,244,255}:kind==2?(SDL_Color){124,194,94,255}:(SDL_Color){216,65,53,255};
         const char* value=game_text(detail->lines[i]);float value_width=ceilf(button_text_bounds(0,value).w)+4;
         float x=content.x+j*(column+gap);
-        SDL_FRect bar={x,y+5,fmaxf(4,column-value_width-6),9};
+        SDL_FRect bar={x,y+(bar_height-9)/2,fmaxf(4,column-value_width-6),9};
         fill(bar,(SDL_Color){35,30,25,255});outline(bar,MUTED);
         float fraction=fmaxf(0,fminf(1,detail->bar_values[j]/100.f));
         fill((SDL_FRect){bar.x+1,bar.y+1,(bar.w-2)*fraction,bar.h-2},color);
-        button_label(0,value,(SDL_FRect){x+bar.w+6,y,column-bar.w-6,18},true,color);
+        button_label(0,value,(SDL_FRect){x+bar.w+6,y,column-bar.w-6,bar_height},true,color);
     }
     for(int i=0;i<detail->extra_count;i++)
         draw_art(detail->extra_icons[i],(SDL_FRect){content.x+i*24,y+bar_height,22,22},true);
@@ -192,8 +194,8 @@ static void draw_bottom_bar(int64_t pc,bool available,bool combat)
         /* Hover inspection has priority over transient messages. */
     } else if(hud_message_visible()) {
         int rows=menu_paragraph(message_text,(SDL_FRect){0,0,content.w,0},0,GOLD);
-        if(rows*27<=content.h) {
-            content.y+=(content.h-rows*27)/2;content.h=rows*27;
+        if(rows*text_line_height()<=content.h) {
+            content.y+=(content.h-rows*text_line_height())/2;content.h=rows*text_line_height();
             menu_paragraph_aligned(message_text,content,0,GOLD,true);
         } else if(!journal && !native_panel())draw_hud_message();
     } else {

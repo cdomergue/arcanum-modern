@@ -1,4 +1,4 @@
-/* Button text has its own font scale: body text and native UI stay independent.
+/* Buttons use the same reading font and scale as other interface text.
  * Fit by wrapping/truncating, never by shrinking the requested character size. */
 static char button_overflow_hint[1024];
 

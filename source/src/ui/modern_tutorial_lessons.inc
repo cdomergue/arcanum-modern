@@ -374,10 +374,10 @@ static void tutorial_draw_lesson(void)
     else SDL_strlcpy(hint,line,sizeof(hint));
     float text_width=width-(optional?145:24);
     int rows=menu_paragraph(hint,(SDL_FRect){0,0,text_width,0},0,GOLD);
-    float height=fmaxf(60.0f,rows*27.0f+16.0f);
+    float height=fmaxf(60.0f,rows*text_line_height()+16.0f);
     SDL_FRect note={(canvas_w-width)/2,panel||journal?canvas_h-height-5:112,width,height};
     fill(note,(SDL_Color){28,21,15,245});outline(note,GOLD);
-    menu_paragraph(hint,(SDL_FRect){note.x+12,note.y+8,text_width,rows*27.0f},0,GOLD);
+    menu_paragraph(hint,(SDL_FRect){note.x+12,note.y+8,text_width,rows*text_line_height()},0,GOLD);
     if(optional){
         tutorial_next_rect=(SDL_FRect){note.x+note.w-117,note.y+9,106,42};
         menu_plaque(tutorial_next_rect,true,false);

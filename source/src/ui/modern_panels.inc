@@ -352,7 +352,7 @@ static int inventory_detail_card(SDL_FRect r,ModernDetails* details,int scroll,i
     }
     SDL_FRect content={r.x+20,r.y+126,r.w-58,r.h-150};
     int rows=menu_paragraph(body,(SDL_FRect){0,0,content.w,0},0,GOLD);
-    int maximum=rows-(int)(content.h/27);if(maximum<0)maximum=0;
+    int maximum=rows-(int)(content.h/text_line_height());if(maximum<0)maximum=0;
     if(scroll>maximum)scroll=maximum;
     menu_paragraph(body,content,scroll,GOLD);
     if(maximum) {
@@ -376,12 +376,12 @@ static void draw_inventory(void)
     inventory_detail_rect=(SDL_FRect){x+830,y+214,w-855,516};
     SDL_FRect query={x+830,y+83,w-855,34};
     button(query,2400,"",-1,inventory_searching,true);
-    text_compact(*inventory_query?inventory_query:tr("Rechercher un objet...","Find an item..."),query.x+10,query.y+8,query.w-20,false,GOLD);
+    button_label(0,*inventory_query?inventory_query:tr("Rechercher un objet...","Find an item..."),(SDL_FRect){query.x+10,query.y+2,query.w-20,query.h-4},false,GOLD);
     const char* filters[]={tr("Tous","All"),tr("Armes","Weapons"),tr("Armures","Armor"),tr("Consomm.","Consumables"),tr("Autres","Other")};
     for(int i=0;i<5;i++)button((SDL_FRect){query.x+i*(query.w+4)/5,y+127,(query.w-16)/5,34},2401+i,filters[i],-1,inventory_filter==i,true);
     button((SDL_FRect){query.x,y+170,query.w,32},2406,tr("Comparer l'équipement","Compare equipment"),-1,inventory_compare,true);
     char info[320];snprintf(info,sizeof(info),"%s : %d / %d   ·   %s : %d",game_text(modern_inventory_text(9)),item_total_weight(inv.pc),stat_level_get(inv.pc,STAT_CARRY_WEIGHT),game_text(stat_name(STAT_SPEED)),stat_level_get(inv.pc,STAT_SPEED));
-    text_draw(0,info,right,y+93,MUTED);
+    button_label(0,info,(SDL_FRect){right,y+83,cw,34},false,MUTED);
     char gold[80];snprintf(gold,sizeof(gold),"%d",item_gold_get(inv.pc));
     int64_t gold_obj=item_find_first_of_type(inv.pc,OBJ_TYPE_GOLD);
     if(gold_obj)draw_art_id(obj_field_int32_get(gold_obj,OBJ_F_ITEM_INV_AID),(SDL_FRect){x+w-165,y+24,40,32},true);
@@ -492,7 +492,7 @@ static void written_book_picture(const char* text,SDL_FRect rect,int offset,int 
     ArtTexture* art=art_get(tig_art_id_frame_set(id,(unsigned char)*text-31));
     if(!art || !art->texture)return;
     float scale=fminf(rect.w/art->width,162.0f/art->height);
-    SDL_FRect dst={rect.x+(rect.w-art->width*scale)/2,rect.y-offset*27+(162-art->height*scale)/2,art->width*scale,art->height*scale};
+    SDL_FRect dst={rect.x+(rect.w-art->width*scale)/2,rect.y-offset*text_line_height()+(162-art->height*scale)/2,art->width*scale,art->height*scale};
     float top=fmaxf(dst.y,rect.y),bottom=fminf(dst.y+dst.h,rect.y+rect.h);
     if(bottom<=top)return;
     SDL_FRect src={0,(top-dst.y)/scale,art->width,(bottom-top)/scale};
@@ -503,16 +503,16 @@ static void written_book_picture(const char* text,SDL_FRect rect,int offset,int 
 }
 static int written_document_page(SDL_FRect rect,int offset,SDL_Color color)
 {
-    int row=0,visible_rows=(int)(rect.h/27);
+    int row=0,visible_rows=(int)(rect.h/text_line_height());
     for(int i=0;i<modern_written_paragraph_count();i++) {
         bool centered_text=false;int font=0;
         const char* source=modern_written_book_paragraph(i,&centered_text,&font);
         if(!source)continue;
         const char* text=game_text(source);
-        int rows=(font==744 || font==488)?6:menu_paragraph(text,(SDL_FRect){0,0,rect.w,0},0,INK);
+        int rows=(font==744 || font==488)?(int)ceilf(162/text_line_height()):menu_paragraph(text,(SDL_FRect){0,0,rect.w,0},0,INK);
         int skip=offset>row?offset-row:0,start=row>offset?row-offset:0;
         if(start<visible_rows && skip<rows) {
-            SDL_FRect part={rect.x,rect.y+start*27,rect.w,(visible_rows-start)*27};
+            SDL_FRect part={rect.x,rect.y+start*text_line_height(),rect.w,(visible_rows-start)*text_line_height()};
             if(font==744 || font==488)written_book_picture(source,part,skip,font);
             else menu_paragraph_aligned(text,part,skip,color,centered_text);
         }
@@ -548,7 +548,7 @@ static void draw_written_document(void)
     int columns=news?3:1;
     float column_width=(w-80-(columns-1)*44)/columns;
     SDL_FRect page={x+40,y+top,column_width,h-top-25};
-    int rows=(int)(page.h/27);if(rows<1)rows=1;
+    int rows=(int)(page.h/text_line_height());if(rows<1)rows=1;
     written_step=rows*columns;
     int total=written_document_page((SDL_FRect){0,0,column_width,0},0,ink);
     written_max=total>0?((total-1)/written_step)*written_step:0;
@@ -572,7 +572,7 @@ static void draw_written_book(void)
     material(paper_texture,(SDL_FRect){x+w/2+5,y,w/2-5,h});
     fill((SDL_FRect){x+w/2-5,y,10,h},(SDL_Color){50,32,17,255});
     SDL_FRect page={x+40,y+35,w/2-80,h-85};
-    int page_rows=(int)(page.h/27);
+    int page_rows=(int)(page.h/text_line_height());
     written_step=page_rows*2;
     int total=written_book_page((SDL_FRect){0,0,page.w,0},0);
     written_max=total>0?((total-1)/written_step)*written_step:0;
@@ -601,7 +601,7 @@ static void draw_written(void)
     material(paper_texture,(SDL_FRect){x,y,w,h-66});
     SDL_FRect content={x+55,y+38,w-110,h-145};
     int rows=menu_paragraph(text,(SDL_FRect){0,0,content.w,0},0,INK);
-    written_max=rows-(int)(content.h/27);if(written_max<0)written_max=0;
+    written_max=rows-(int)(content.h/text_line_height());if(written_max<0)written_max=0;
     if(written_scroll>written_max)written_scroll=written_max;
     menu_paragraph(text,content,written_scroll,INK);
     if(written_max) {
@@ -883,8 +883,8 @@ static void draw_map(void)
         float width=fminf(560,w-60);
         SDL_FRect content={fmaxf(x+30,navigation.x+navigation.w-width)+14,0,width-28,0};
         int rows=menu_paragraph(help,content,0,GOLD);
-        SDL_FRect tip={content.x-14,navigation.y-rows*27-28,width,rows*27+20};
-        hud_panel(tip);content.y=tip.y+8;content.h=rows*27;
+        SDL_FRect tip={content.x-14,navigation.y-rows*text_line_height()-28,width,rows*text_line_height()+20};
+        hud_panel(tip);content.y=tip.y+8;content.h=rows*text_line_height();
         menu_paragraph(help,content,0,GOLD);
     }
     draw_memo_editor();
@@ -923,7 +923,7 @@ static void draw_world_hover(void)
     }
     int title_rows=menu_paragraph(game_text(detail->title),(SDL_FRect){0,0,text_width,0},0,GOLD);
     int rows=*description?menu_paragraph(game_text(description),(SDL_FRect){0,0,text_width,0},0,GOLD):0;
-    float height=20+(title_rows+rows)*27+(detail->bar_count?26:0)+(detail->extra_count?28:0);
+    float height=20+(title_rows+rows)*text_line_height()+(detail->bar_count?26:0)+(detail->extra_count?28:0);
     if(height<86)height=86;
     float x=(canvas_w-width)/2,y=canvas_h-136-height;
     world_hover_rect=(SDL_FRect){x,y,width,height};
@@ -931,9 +931,9 @@ static void draw_world_hover(void)
     if(detail->portrait>=0)draw_portrait(detail->portrait,(SDL_FRect){x+10,y+10,56,65});
     else if(detail->icon>=0)draw_art(detail->icon,(SDL_FRect){x+10,y+10,56,56},true);
     float tx=x+78,ty=y+10;
-    menu_paragraph(game_text(detail->title),(SDL_FRect){tx,ty,text_width,title_rows*27},0,GOLD);ty+=title_rows*27;
+    menu_paragraph(game_text(detail->title),(SDL_FRect){tx,ty,text_width,title_rows*text_line_height()},0,GOLD);ty+=title_rows*text_line_height();
     if(rows) {
-        menu_paragraph(game_text(description),(SDL_FRect){tx,ty,text_width,rows*27},0,GOLD);ty+=rows*27;
+        menu_paragraph(game_text(description),(SDL_FRect){tx,ty,text_width,rows*text_line_height()},0,GOLD);ty+=rows*text_line_height();
     }
     float column_width=(text_width-20*(detail->bar_count-1))/fmaxf(1,detail->bar_count);
     for(int j=0;j<detail->bar_count;j++) {
@@ -961,11 +961,11 @@ static void draw_world_bubbles(void)
         ModernBubble* b=&bubbles[i];const char* text=game_text(b->text);
         float width=fminf(420,fmaxf(180,text_measure(1,text)+8));
         int rows=menu_paragraph(text,(SDL_FRect){0,0,width,0},0,GOLD);
-        float height=rows*27;
+        float height=rows*text_line_height();
         /* Let unusually long script lines use more width instead of clipping. */
         while(height>canvas_h-250 && width<canvas_w-80) {
             width=fminf(canvas_w-80,width+120);
-            rows=menu_paragraph(text,(SDL_FRect){0,0,width,0},0,GOLD);height=rows*27;
+            rows=menu_paragraph(text,(SDL_FRect){0,0,width,0},0,GOLD);height=rows*text_line_height();
         }
         float x=(b->x+b->width/2.0f)*sx-width/2,y=(b->y+b->height)*sy-height;
         x=fmaxf(20,fminf(canvas_w-width-20,x));
@@ -985,25 +985,27 @@ static void draw_dialogue(void)
     float width=fminf(1000,canvas_w-140),x=(canvas_w-width)/2;
     float choices_height=0;
     for(int i=0;i<state->num_options && i<5;i++)
-        choices_height+=menu_paragraph(game_text(state->options[i]),(SDL_FRect){0,0,width-48,0},0,GOLD)*27+12;
-    dialogue_view=(SDL_FRect){x,canvas_h-345,width,fminf(195,choices_height)};
+        choices_height+=menu_paragraph(game_text(state->options[i]),(SDL_FRect){0,0,width-48,0},0,GOLD)*text_line_height()+12;
+    float view_height=fminf(195,choices_height);
+    float footer_top=bottom_bar_rect(0,0,BOTTOM_BAR_SOURCE_WIDTH,BOTTOM_BAR_SOURCE_HEIGHT).y;
+    dialogue_view=(SDL_FRect){x,footer_top-view_height-32,width,view_height};
     if(choices_height>0)hud_panel((SDL_FRect){x-18,dialogue_view.y-16,width+76,dialogue_view.h+32});
     int ax=0,ay=0;modern_dialog_anchor(&ax,&ay);
     float rx=ax*canvas_w/hrp_iso_window_width_get()-190;
     float ry=ay*canvas_h/hrp_iso_window_height_get();
     const char* reply=game_text(state->reply);
     int rows=menu_paragraph(reply,(SDL_FRect){0,0,380,0},0,GOLD);
-    float reply_height=fminf(243,rows*27);
+    float reply_height=fminf(243,rows*text_line_height());
     rx=fmaxf(26,fminf(canvas_w-444,rx));ry=fmaxf(160,fminf(dialogue_view.y-reply_height-48,ry));
     dialogue_reply_view=(SDL_FRect){rx,ry,380,reply_height};
-    dialogue_reply_max=rows-(int)(reply_height/27);if(dialogue_reply_max<0)dialogue_reply_max=0;
+    dialogue_reply_max=rows-(int)(reply_height/text_line_height());if(dialogue_reply_max<0)dialogue_reply_max=0;
     if(dialogue_reply_scroll>dialogue_reply_max)dialogue_reply_scroll=dialogue_reply_max;
     hud_panel((SDL_FRect){rx-16,ry-74,444,reply_height+94});
     SDL_FRect portrait={rx,ry-60,40,48};
     fill(portrait,(SDL_Color){12,9,6,255});outline(portrait,MUTED);
     draw_portrait(portrait_get(state->npc_obj),(SDL_FRect){portrait.x+3,portrait.y+3,34,42});
     char speaker[1024];object_examine(state->npc_obj,state->pc_obj,speaker);
-    text_compact(game_text(speaker),rx+54,ry-47,346,false,GOLD);
+    button_label(0,game_text(speaker),(SDL_FRect){rx+54,ry-60,346,36},false,GOLD);
     rule(rx+54,ry-20,346,MUTED);
     dialogue_paragraph(reply,dialogue_reply_view,dialogue_reply_scroll,(SDL_Color){245,237,216,255});
     dialogue_scroll_button((SDL_FRect){rx+389,ry,30,30},822,"^",dialogue_reply_scroll>0);
@@ -1013,12 +1015,12 @@ static void draw_dialogue(void)
     for(int i=0;i<state->num_options && i<5;i++) {
         const char* option=game_text(state->options[i]);
         int lines=menu_paragraph(option,(SDL_FRect){0,0,width-48,0},0,GOLD);
-        float h=lines*27+12;SDL_FRect r={x,cy,width,h};
+        float h=lines*text_line_height()+12;SDL_FRect r={x,cy,width,h};
         bool hovered=inside(r,mouse_x,mouse_y) && inside(dialogue_view,mouse_x,mouse_y);
         SDL_Color color=hovered?UI_RED:(SDL_Color){245,237,216,255};
         if(hovered){fill(r,UI_RED_WASH);outline(r,UI_RED_BORDER);}
         char number[8];snprintf(number,sizeof(number),"%d",i+1);
-        dialogue_paragraph(number,(SDL_FRect){x,cy+4,28,27},0,color);
+        dialogue_paragraph(number,(SDL_FRect){x,cy+4,28,text_line_height()},0,color);
         dialogue_paragraph(option,(SDL_FRect){x+40,cy+4,width-48,h-8},0,color);
         float top=fmaxf(r.y,dialogue_view.y),bottom=fminf(r.y+r.h,dialogue_view.y+dialogue_view.h);
         if(bottom>top && button_count<MAX_BUTTONS)buttons[button_count++]=(Button){{r.x,top,r.w,bottom-top},800+i,true};

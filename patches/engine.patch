@@ -36,7 +36,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +354,69 @@
+@@ -333,7 +354,81 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -99,6 +99,18 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:check-campaign>" VERBATIM)
 +endif()
 +
++# Typography captures use an isolated game and the real native renderer.
++set(TEXT_CHECK_SRCS ${HOUSE_CHECK_SRCS})
++list(REMOVE_ITEM TEXT_CHECK_SRCS "src/ui/modern_ui.c")
++add_executable(check-text-size EXCLUDE_FROM_ALL "../tools/check-button-text.c" ${TEXT_CHECK_SRCS})
++target_include_directories(check-text-size PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
++target_link_libraries(check-text-size PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
++add_dependencies(check-text-size arcanum-ffmpeg)
++if(WIN32)
++    add_custom_command(TARGET check-text-size POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:check-text-size>" VERBATIM)
++endif()
++
 +add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
 +target_include_directories(check-movie PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 +target_link_libraries(check-movie PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
@@ -106,7 +118,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # SDL HID on Android requires C++ linker.
  if(ANDROID)
-@@ -401,3 +484,9 @@
+@@ -401,3 +496,9 @@
  
      include(CPack)
  endif()

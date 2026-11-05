@@ -113,8 +113,8 @@ static const int chapter_art[] = {265, 267, 271, 266, 270, 268, 269};
 static SDL_Renderer* renderer;
 static SDL_Window* window;
 static NativeFont fonts[FONT_COUNT];
-static unsigned char *book_font_data, *heading_font_data;
-static size_t book_font_size, heading_font_size;
+static unsigned char* book_font_data;
+static size_t book_font_size;
 static ArtTexture arts[512];
 static int art_count;
 static SDL_Texture *wood_texture, *paper_texture;
@@ -151,8 +151,10 @@ static int entry_count, matched_count;
 static int output_width, output_height;
 static float canvas_w = 1600, canvas_h = 900, density = 1;
 static float mouse_x, mouse_y, text_width;
-static int body_size = 20;
-static int button_text_scale = 100;
+static int text_scale = 100;
+/* One reading font and one scale for controls, descriptions and the HUD. */
+static float text_size(void) { return 20*text_scale/100.0f; }
+static float text_line_height(void) { return 27*text_scale/100.0f; }
 static bool follow_camera;
 /* The selected page is transient; deferred actions carry an absolute slot. */
 static SDL_Keymod hotbar_mods;
@@ -782,26 +784,26 @@ static void update_geometry(void)
     SDL_GetCurrentRenderOutputSize(renderer,&w,&h);
     float next_density=(float)h/900.0f;
     if(next_density<0.5f) next_density=0.5f;
-    bool rebuild=w!=output_width || h!=output_height || fonts[1].size!=body_size;
+    bool rebuild=w!=output_width || h!=output_height || fonts[1].size!=text_size();
     if(rebuild) {
         output_width=w;output_height=h;density=next_density;
         canvas_w=w/density;canvas_h=h/density;
-        make_font(&fonts[0],book_font_data,14);
-        make_font(&fonts[1],book_font_data,(float)body_size);
-        make_font(&fonts[2],heading_font_data,22);
-        make_font(&fonts[3],heading_font_data,30);
+        make_font(&fonts[0],book_font_data,text_size());
+        make_font(&fonts[1],book_font_data,text_size());
+        make_font(&fonts[2],book_font_data,24*text_scale/100.0f);
+        make_font(&fonts[3],book_font_data,30*text_scale/100.0f);
         dirty=true;
     }
-    if(rebuild || fonts[BUTTON_FONT].size!=14*button_text_scale/100.0f) {
-        make_font(&fonts[BUTTON_FONT],book_font_data,14*button_text_scale/100.0f);
-        make_font(&fonts[MENU_BUTTON_FONT],heading_font_data,22*button_text_scale/100.0f);
-        make_font(&fonts[4],book_font_data,42*button_text_scale/100.0f);
+    if(rebuild) {
+        make_font(&fonts[BUTTON_FONT],book_font_data,text_size());
+        make_font(&fonts[MENU_BUTTON_FONT],book_font_data,text_size());
+        make_font(&fonts[4],book_font_data,42*text_scale/100.0f);
     }
     float width=fminf(1270,canvas_w-56);
     panel=(SDL_FRect){(canvas_w-width)/2,90,width,650};
     book=(SDL_FRect){panel.x+219,panel.y+65,panel.w-251,panel.h-118};
     text_width=(book.w-104)/2-70;
-    lines_per_page=(int)((book.h-115)/(body_size*1.48f));
+    lines_per_page=(int)((book.h-115)/(text_line_height()));
     if(lines_per_page<1) lines_per_page=1;
 }
 
@@ -851,21 +853,21 @@ static void draw_journal(void)
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){8,6,4,160});
     frame(panel);
     text_draw(3,game_text(modern_intgame_text(1004)),panel.x+26,panel.y+17,GOLD);
-    text_draw(0,tr("CARNET DE VOYAGE","TRAVEL JOURNAL"),panel.x+27,panel.y+56,MUTED);
+    button_label(0,tr("CARNET DE VOYAGE","TRAVEL JOURNAL"),(SDL_FRect){panel.x+27,panel.y+56,174,34},false,MUTED);
     for(int i=0;i<7;i++) {
         SDL_FRect r={panel.x+21,panel.y+100+i*57,180,48};
         button(r,100+i,game_text(modern_logbook_tab_label(i)),chapter_art[i],chapter==i,true);
     }
     rule(panel.x+27,panel.y+520,163,(SDL_Color){121,86,44,255});
     text_draw(0,tr("Taille du texte","Text size"),panel.x+28,panel.y+535,MUTED);
-    button((SDL_FRect){panel.x+28,panel.y+565,64,34},202,"A-",-1,false,body_size>16);
-    button((SDL_FRect){panel.x+103,panel.y+565,64,34},203,"A+",-1,false,body_size<26);
+    button((SDL_FRect){panel.x+28,panel.y+565,64,34},202,"A-",-1,false,text_scale>75);
+    button((SDL_FRect){panel.x+103,panel.y+565,64,34},203,"A+",-1,false,text_scale<150);
     button((SDL_FRect){panel.x+panel.w-49,panel.y+16,30,30},200,"X",-1,false,true);
     SDL_FRect sr={book.x+18,panel.y+20,book.w-80,33};
     fill(sr,(SDL_Color){19,14,10,255});outline(sr,searching || inside(sr,mouse_x,mouse_y)?UI_RED_BORDER:(SDL_Color){113,85,47,255});
-    text_draw(0,*search?search:tr("Rechercher dans cette rubrique...","Search this section..."),sr.x+12,sr.y+6,*search?GOLD:MUTED);
+    button_label(0,*search?search:tr("Rechercher dans cette rubrique...","Search this section..."),(SDL_FRect){sr.x+12,sr.y+2,sr.w-24,sr.h-4},false,*search?GOLD:MUTED);
     if(searching) {
-        float caret=sr.x+12+text_measure(0,search);
+        float caret=fminf(sr.x+sr.w-6,sr.x+12+text_measure(0,search));
         if((SDL_GetTicks()/450)%2==0) fill((SDL_FRect){caret,sr.y+7,1,18},GOLD);
     }
     buttons[button_count++]=(Button){sr,201,true};
@@ -900,7 +902,7 @@ static void draw_journal(void)
             else if(l->style==1) c=(SDL_Color){34,63,78,255};
             else if(l->style==2) c=(SDL_Color){49,84,47,255};
             else if(l->style==3) c=(SDL_Color){121,44,36,255};
-            float x=pages[side].x+22,y=book.y+80+row*body_size*1.48f;
+            float x=pages[side].x+22,y=book.y+80+row*text_line_height();
             text_draw(l->heading?0:1,l->text,x,y,c);
             if(l->entry_start && l->entry>=0 && journal_target_count<64){
                 int index=journal_target_count++;journal_targets[index]=(JournalMark){chapter,l->entry};
@@ -915,20 +917,20 @@ static void draw_journal(void)
                     if(inside(pin,mouse_x,mouse_y)){symbol_hover=pin;symbol_hint=tracked?tr("Ne plus suivre cette quête","Stop tracking quest"):can_track?tr("Suivre cette quête","Track quest"):tr("Cette quête n’est pas en cours","This quest is not in progress");}
                 }
             }
-            if(l->style==4 && !l->heading) rule(x,y+body_size*.65f,text_measure(1,l->text),c);
+            if(l->style==4 && !l->heading) rule(x,y+text_size()*.65f,text_measure(1,l->text),c);
         }
         char number[32];snprintf(number,sizeof(number),"- %d -",spread*2+side+1);
-        centered(0,number,pages[side].x+pages[side].w/2,book.y+book.h-40,INK);
+        button_label(0,number,(SDL_FRect){pages[side].x,book.y+book.h-43,pages[side].w,27},true,INK);
     }
     button((SDL_FRect){book.x+20,panel.y+panel.h-44,110,28},204,tr("< Précédentes","< Previous"),-1,false,spread>0);
     button((SDL_FRect){book.x+book.w-130,panel.y+panel.h-44,110,28},205,tr("Suivantes >","Next >"),-1,false,spread+1<spread_count);
     char footer[100];snprintf(footer,sizeof(footer),"%d %s   ·   %d / %d",matched_count,matched_count==1?tr("entrée","entry"):tr("entrées","entries"),spread+1,spread_count);
-    centered(0,footer,book.x+book.w/2,panel.y+panel.h-40,GOLD);
+    button_label(0,footer,(SDL_FRect){book.x+140,panel.y+panel.h-44,book.w-280,28},true,GOLD);
     float filter_y=panel.y+panel.h+14;
     SDL_FRect favorites={book.x+book.w-155,filter_y,140,30};
     button(favorites,2300,"",-1,journal_favorites,true);
     journal_symbol((SDL_FRect){favorites.x+5,favorites.y+2,26,26},false,journal_favorites,true);
-    text_compact(tr("Favoris","Favorites"),favorites.x+36,favorites.y+6,favorites.w-42,false,menu_control_color(favorites,journal_favorites,true));
+    button_label(0,tr("Favoris","Favorites"),(SDL_FRect){favorites.x+36,favorites.y+2,favorites.w-42,favorites.h-4},false,menu_control_color(favorites,journal_favorites,true));
     if(chapter==1) {
         const char* filters[]={tr("Toutes","All"),tr("En cours","In progress"),game_text(modern_logbook_state_label(QUEST_STATE_COMPLETED)),game_text(modern_logbook_state_label(QUEST_STATE_BOTCHED)),game_text(modern_logbook_state_label(QUEST_STATE_MENTIONED))};
         float width=(book.w-190)/5;
@@ -936,9 +938,9 @@ static void draw_journal(void)
     }
     if(symbol_hint){
         float width=fminf(canvas_w-16,text_measure(0,symbol_hint)+36);
-        SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,symbol_hover.x)),symbol_hover.y+32,width,31};
+        SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,symbol_hover.x)),symbol_hover.y+32,width,text_line_height()+12};
         hud_panel(tip);
-        text_compact(symbol_hint,tip.x+12,tip.y+6,tip.w-24,false,GOLD);
+        button_label(0,symbol_hint,(SDL_FRect){tip.x+12,tip.y+4,tip.w-24,tip.h-8},false,GOLD);
     }
 }
 
@@ -1090,7 +1092,7 @@ static bool hud_message_expanded(void)
 {
     if(!hud_message_visible())return false;
     SDL_FRect content=bottom_bar_message_rect();
-    return menu_paragraph(message_text,(SDL_FRect){0,0,content.w,0},0,GOLD)*27>content.h;
+    return menu_paragraph(message_text,(SDL_FRect){0,0,content.w,0},0,GOLD)*text_line_height()>content.h;
 }
 
 static void draw_hud_message(void)
@@ -1098,7 +1100,7 @@ static void draw_hud_message(void)
     float width=fminf(940,canvas_w-80);
     SDL_FRect content={(canvas_w-width)/2+16,0,width-32,0};
     int rows=menu_paragraph(message_text,content,0,GOLD);
-    content.h=rows*27;
+    content.h=rows*text_line_height();
     content.y=bottom_bar_rect(0,0,0,0).y-28-content.h;
     SDL_FRect box={content.x-16,content.y-12,width,content.h+24};
     hud_panel(box);
@@ -1240,7 +1242,7 @@ static void main_menu_label(SDL_FRect rect,const char* label,SDL_Color color,boo
         if(g->y1>g->y0){top=fminf(top,font->size+g->yoff/font->density);bottom=fmaxf(bottom,font->size+g->yoff2/font->density);}
     }
     if(bottom<=top)return;
-    float requested=title?1:button_text_scale/100.0f;
+    float requested=title?1:text_scale/100.0f;
     float scale=fminf(requested*42/font->size,
         fminf((rect.w-rect.h*.65f)/width,rect.h*.46f*requested/(bottom-top)));
     float x=rect.x+(rect.w-width*scale)/2;
@@ -1387,7 +1389,7 @@ static void draw_portrait(int number,SDL_FRect rect)
  * Return the full line count so long translations remain reachable by scrolling. */
 static int text_paragraph(int font,float line_height,const char* text,SDL_FRect rect,int offset,SDL_Color color,bool align_center)
 {
-    int row=0, visible_rows=(int)(rect.h/line_height);
+    int row=0, visible_rows=rect.h>0?SDL_max(1,(int)(rect.h/line_height)):0;
     while(*text) {
         while(*text==' ' || *text=='\t' || *text=='\r') text++;
         if(!*text) break;
@@ -1413,7 +1415,7 @@ static int text_paragraph(int font,float line_height,const char* text,SDL_FRect 
 }
 
 static int menu_paragraph_aligned(const char* text,SDL_FRect rect,int offset,SDL_Color color,bool align_center)
-{return text_paragraph(1,27,text,rect,offset,color,align_center);}
+{return text_paragraph(1,text_line_height(),text,rect,offset,color,align_center);}
 
 static int menu_paragraph(const char* text,SDL_FRect rect,int offset,SDL_Color color)
 {return menu_paragraph_aligned(text,rect,offset,color,false);}
@@ -1423,7 +1425,7 @@ static void description_panel(const char* text,SDL_FRect rect)
     fill(rect,(SDL_Color){20,14,10,210});outline(rect,(SDL_Color){116,85,43,255});
     SDL_FRect content={rect.x+20,rect.y+16,rect.w-82,rect.h-28};
     int rows=menu_paragraph(text,content,description_scroll,GOLD);
-    description_max=rows-(int)(content.h/27);if(description_max<0)description_max=0;
+    description_max=rows-(int)(content.h/text_line_height());if(description_max<0)description_max=0;
     if(description_scroll>description_max)description_scroll=description_max;
     menu_button((SDL_FRect){rect.x+rect.w-49,rect.y+12,36,46},540,"^",description_scroll>0);
     menu_button((SDL_FRect){rect.x+rect.w-49,rect.y+rect.h-58,36,46},541,"v",description_scroll<description_max);
@@ -1468,7 +1470,7 @@ static void option_choice(float x,float y,float w,const char* label,const char* 
 
 static void option_section(float x,float y,float w,const char* title)
 {
-    text_draw(2,title,x,y,GOLD);
+    button_label(2,title,(SDL_FRect){x,y-4,w,33},false,GOLD);
     rule(x,y+31,w,(SDL_Color){151,114,65,210});
 }
 
@@ -1829,10 +1831,10 @@ static void draw_menu(void)
         text_draw(0,follow_camera?tr("Les touches de direction configurées déplacent le personnage.","Your movement keys move the character."):
             tr("Les touches de direction configurées déplacent la caméra.","Your movement keys pan the camera."),ox,y+491,MUTED);
         option_section(ox,y+527,ow,tr("Lisibilité","Readability"));
-        char scale[32];snprintf(scale,sizeof(scale),"%d %%",button_text_scale);
-        option_choice(ox,y+571,ow,tr("Taille du texte des boutons","Button text size"),scale,426,427,!pending && button_text_scale>75,!pending && button_text_scale<150,true);
+        char scale[32];snprintf(scale,sizeof(scale),"%d %%",text_scale);
+        option_choice(ox,y+571,ow,tr("Taille du texte","Text size"),scale,426,427,!pending && text_scale>75,!pending && text_scale<150,true);
         button_label(MENU_BUTTON_FONT,tr("Aperçu du texte","Text preview"),(SDL_FRect){ox,y+627,option_label_width(ow)-12,42},false,GOLD);
-        option_button((SDL_FRect){ox+option_label_width(ow),y+630,206,36},428,tr("Par défaut","Defaults"),false,!pending && button_text_scale!=100);
+        option_button((SDL_FRect){ox+option_label_width(ow),y+630,206,36},428,tr("Par défaut","Defaults"),false,!pending && text_scale!=100);
     }
     rule(ox,y+h-116,ow,(SDL_Color){151,114,65,210});
     if(pending){
@@ -2179,9 +2181,9 @@ void modern_ui_menu_tick(void)
         break;
     case 426:case 427:case 428:
         if(type==MM_WINDOW_OPTIONS && options_tab<0 && !modern_graphics.deadline) {
-            button_text_scale=action==428?100:button_text_scale+(action==426?-25:25);
-            if(button_text_scale<75)button_text_scale=75;
-            if(button_text_scale>150)button_text_scale=150;
+            text_scale=action==428?100:text_scale+(action==426?-25:25);
+            if(text_scale<75)text_scale=75;
+            if(text_scale>150)text_scale=150;
             save_settings();
         }
         break;
@@ -2274,10 +2276,10 @@ static void draw_maintained_spells(void)
         float w=fminf(540,fmaxf(260,text_measure(1,name)+24)),xx=fmaxf(8,fminf(canvas_w-w-8,hover.x));
         SDL_FRect content={xx+14,y+86,w-28,0};int lines=menu_paragraph(name,content,0,GOLD);
         if(lines>3)lines=3;
-        float h=lines*27+50;
+        float h=lines*text_line_height()+50;
         hud_panel((SDL_FRect){xx,y+74,w,h});
-        content.h=lines*27;menu_paragraph(name,content,0,GOLD);
-        text_compact(ready?tr("Cliquer pour arrêter le sort","Click to stop the spell"):tactical_text(actor==combat_input_actor()?TC_BUSY:TC_WAIT),xx+14,y+94+lines*27,w-28,false,MUTED);
+        content.h=lines*text_line_height();menu_paragraph(name,content,0,GOLD);
+        text_compact(ready?tr("Cliquer pour arrêter le sort","Click to stop the spell"):tactical_text(actor==combat_input_actor()?TC_BUSY:TC_WAIT),xx+14,y+94+lines*text_line_height(),w-28,false,MUTED);
     }
 }
 
@@ -2385,7 +2387,7 @@ static void draw_quickslot_hint(void)
     float xx=fmaxf(12,fminf(canvas_w-width-12,anchor.x+anchor.w/2-width/2));
     SDL_FRect content={xx+14,0,width-28,0};
     int lines=menu_paragraph(hint,content,0,GOLD);if(lines>4)lines=4;
-    float height=lines*27+18,yy=fmaxf(8,anchor.y-height-8);
+    float height=lines*text_line_height()+18,yy=fmaxf(8,anchor.y-height-8);
     SDL_FRect box={xx,yy,width,height};hud_panel(box);
     content.y=yy+9;content.h=height-18;menu_paragraph(hint,content,0,GOLD);
 }
@@ -2457,7 +2459,7 @@ static void render_overlay(SDL_Renderer* target)
         SDL_FRect content={box.x+12,0,width-24,0};
         int rows=menu_paragraph(button_overflow_hint,content,0,GOLD);
         if(rows>4)rows=4;
-        box.h=rows*27+16;box.y=fmaxf(8,fminf(canvas_h-box.h-8,mouse_y+24));
+        box.h=rows*text_line_height()+16;box.y=fmaxf(8,fminf(canvas_h-box.h-8,mouse_y+24));
         hud_panel(box);content.y=box.y+8;content.h=box.h-16;
         menu_paragraph(button_overflow_hint,content,0,GOLD);
     }
@@ -2495,24 +2497,27 @@ static void save_settings(void)
 {
     FILE* f=fopen("modern-ui/settings.ini.tmp","w");
     if(f) {
-        fprintf(f,"TextSize=%d\nButtonTextScale=%d\nFollowCamera=%d\nSkipMapGeneration=%d\n",body_size,button_text_scale,(int)follow_camera,(int)skip_map_generation);
+        fprintf(f,"TextScale=%d\nFollowCamera=%d\nSkipMapGeneration=%d\n",text_scale,(int)follow_camera,(int)skip_map_generation);
         if(fclose(f)==0) SDL_RenamePath("modern-ui/settings.ini.tmp","modern-ui/settings.ini");
     }
 }
 
 static void load_settings(void)
 {
-    body_size=20;button_text_scale=100;follow_camera=false;skip_map_generation=false;
+    text_scale=100;follow_camera=false;skip_map_generation=false;
     FILE* file=fopen("modern-ui/settings.ini","r");
     if(!file)return;
-    char line[128];int value;
+    char line[128];int value,legacy_buttons=0,legacy_book=0;bool explicit_scale=false;
     while(fgets(line,sizeof(line),file)) {
-        if(sscanf(line,"TextSize=%d",&value)==1 && value>=16 && value<=26)body_size=value;
-        else if(sscanf(line,"ButtonTextScale=%d",&value)==1 && value>=75 && value<=150 && value%25==0)button_text_scale=value;
+        if(sscanf(line,"TextScale=%d",&value)==1 && value>=75 && value<=150 && value%25==0){text_scale=value;explicit_scale=true;}
+        else if(sscanf(line,"TextSize=%d",&value)==1 && value>=16 && value<=26)legacy_book=25*((value+2)/5);
+        else if(sscanf(line,"ButtonTextScale=%d",&value)==1 && value>=75 && value<=150 && value%25==0)legacy_buttons=value;
         else if(sscanf(line,"SkipMapGeneration=%d",&value)==1)skip_map_generation=value==1;
         else if(sscanf(line,"FollowCamera=%d",&value)==1)follow_camera=value==1;
     }
     fclose(file);
+    /* Keep the larger previous reading preference when migrating two controls. */
+    if(!explicit_scale){text_scale=legacy_buttons?legacy_buttons:legacy_book?legacy_book:100;if(legacy_book>text_scale)text_scale=legacy_book;}
 }
 
 static void activate(int action)
@@ -2537,8 +2542,8 @@ static void activate(int action)
     }
     case 200: logbook_ui_close();break;
     case 201: search_focus(true);break;
-    case 202: if(body_size>16) {body_size-=2;dirty=true;spread=0;save_settings();} break;
-    case 203: if(body_size<26) {body_size+=2;dirty=true;spread=0;save_settings();} break;
+    case 202: if(text_scale>75) {text_scale-=25;dirty=true;spread=0;save_settings();} break;
+    case 203: if(text_scale<150) {text_scale+=25;dirty=true;spread=0;save_settings();} break;
     case 204: if(spread>0) spread--;break;
     case 205: if(spread+1<spread_count) spread++;break;
     case 210:case 211:case 212:case 213:case 214:quest_filter=action-210;spread=0;dirty=true;break;
@@ -2839,8 +2844,7 @@ bool modern_ui_init(void)
     if(SDL_getenv("ARCANUM_LEGACY_UI")) return false;
     if(tig_video_renderer_get(&renderer)!=TIG_OK || tig_video_window_get(&window)!=TIG_OK) return false;
     book_font_data=SDL_LoadFile("modern-ui/Book.ttf",&book_font_size);
-    heading_font_data=SDL_LoadFile("modern-ui/Heading.ttf",&heading_font_size);
-    if(!book_font_data || !heading_font_data) {modern_ui_exit();return false;}
+    if(!book_font_data) {modern_ui_exit();return false;}
     load_settings();
     key_load();
     update_geometry();
@@ -3095,8 +3099,8 @@ void modern_ui_exit(void)
     SDL_DestroyTexture(portrait_texture);portrait_texture=NULL;portrait_number=-1;
     SDL_DestroyTexture(save_texture);save_texture=NULL;thumbnail_index=-2;
     wood_texture=paper_texture=NULL;
-    SDL_free(book_font_data);SDL_free(heading_font_data);
-    book_font_data=heading_font_data=NULL;
+    SDL_free(book_font_data);
+    book_font_data=NULL;
     free(lines);lines=NULL;line_count=line_capacity=0;
     enabled=false;
 }

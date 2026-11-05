@@ -139,7 +139,7 @@ static void draw_background_rules(int64_t obj,float x,float y,float w)
         if(!*visible)SDL_strlcpy(visible,editable?tr("Exemple : reaction -20, alignment max -200","Example: reaction -20, alignment max -200"):tr("Aucun effet numérique.","No numeric effects."),sizeof(visible));
         SDL_FRect content={x+12,y+192,w-66,218};
         int rows=menu_paragraph(visible,(SDL_FRect){content.x,content.y,content.w,0},0,GOLD);
-        background_rules_max_scroll=rows>8?rows-8:0;
+        background_rules_max_scroll=SDL_max(0,rows-(int)(content.h/text_line_height()));
         if(background_rules_scroll>background_rules_max_scroll)background_rules_scroll=background_rules_max_scroll;
         if(focused && background_text_replace && *text)fill(content,(SDL_Color){110,80,34,100});
         menu_paragraph(visible,content,background_rules_scroll,GOLD);
