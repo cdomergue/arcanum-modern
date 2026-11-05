@@ -102,3 +102,9 @@ worlded.local.json
 !/source/src/game/modern_world_updates_internal.h
 !/source/src/game/modern_world_state.c
 !/source/src/game/modern_world_operations.c
+!/source/src/ui/modern_background.inc
+!/source/src/ui/modern_background_profile.inc
+!/source/src/ui/modern_creation_draft.inc
+!/source/src/ui/modern_background_loadout.inc
+!/source/src/ui/modern_background_choices.inc
+!/source/src/game/modern_background_effects.h

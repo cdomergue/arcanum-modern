@@ -7,6 +7,8 @@
 #include "ui/modern_version.h"
 
 #include <math.h>
+#include <limits.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +17,7 @@
 #include "../../third_party/stb/stb_truetype.h"
 
 #include "game/anim.h"
+#include "game/background.h"
 #include "game/critter.h"
 #include "game/combat.h"
 #include "game/location.h"
@@ -41,12 +44,15 @@
 #include "game/item.h"
 #include "game/mt_item.h"
 #include "game/stat.h"
+#include "game/effect.h"
+#include "game/modern_background_effects.h"
 #include "game/level.h"
 #include "game/modern_compat.h"
 #include "game/resistance.h"
 #include "game/player.h"
 #include "game/quest.h"
 #include "game/portrait.h"
+#include "game/proto.h"
 #include "game/skill.h"
 #include "game/spell.h"
 #include "game/tech.h"
@@ -642,6 +648,7 @@ static void button(SDL_FRect rect, int action, const char* label, int icon, bool
 }
 
 #include "modern_notebook.inc"
+#include "modern_background_profile.inc"
 
 static void add_line(const char* text,int style,bool heading)
 {
@@ -725,6 +732,9 @@ static void rebuild_book(void)
     notebook_sync();
     line_count=0;matched_count=0;
     entry_count=modern_logbook_select(chapter);
+    char profile_title[96],profile_story[1024];
+    bool personal_background=chapter==5 && background_profile_read(player_get_local_pc_obj(),profile_title,sizeof(profile_title),profile_story,sizeof(profile_story));
+    if(personal_background && entry_count==0)entry_count=1;
     fold(search,needle,sizeof(needle));
     for(int i=0;i<entry_count;i++) {
         int style=modern_logbook_entry(i,raw,sizeof(raw));
@@ -732,6 +742,7 @@ static void rebuild_book(void)
         if(journal_favorites && journal_mark_index(chapter,current_entry)<0)continue;
         if(chapter==1 && !quest_filter_matches(quest_filter,quest_state_get(player_get_local_pc_obj(),current_entry)))continue;
         from_game(raw,utf8,sizeof(utf8));
+        if(personal_background)snprintf(utf8,sizeof(utf8),"%s\n%s",profile_title,profile_story);
         fold(utf8,haystack,sizeof(haystack));
         if(*needle && !strstr(haystack,needle)) continue;
         if(!*utf8) continue;
@@ -1461,6 +1472,8 @@ static void option_section(float x,float y,float w,const char* title)
 
 #include "modern_keys.inc"
 
+#include "modern_background.inc"
+
 static void draw_character_menu(void)
 {
     ModernCharacter c;if(!modern_mainmenu_character(&c,description_tab))return;
@@ -1469,6 +1482,16 @@ static void draw_character_menu(void)
     centered(3,menu_text(c.editable?421:420),canvas_w/2,y+22,GOLD);
     rule(x+30,y+75,w-60,MUTED);
     float left=x+30,lw=360,right=left+lw+35,rw=w-lw-95;
+    if(background_editor && c.editable) {
+        draw_portrait(c.portrait,(SDL_FRect){left+98,y+97,164,164});
+        text_draw(2,game_text(c.name),left,y+303,GOLD);
+        text_draw(0,tr("Nom de l’antécédent","Background name"),left,y+360,MUTED);
+        text_in_button((SDL_FRect){left,y+389,lw,58},589,background_title,background_text_field==1,true);
+        text_draw(0,tr("Histoire personnelle","Personal history"),left,y+469,MUTED);
+        draw_background_history(left,y+500,lw);
+        draw_background_editor(&c,right,y+92,rw);
+        return;
+    }
     draw_portrait(c.portrait,(SDL_FRect){left+98,y+97,164,164});
     menu_button((SDL_FRect){left,y+153,66,52},502,"<",true);
     menu_button((SDL_FRect){left+lw-66,y+153,66,52},503,">",true);
@@ -1493,11 +1516,14 @@ static void draw_character_menu(void)
         menu_button((SDL_FRect){left+lw-42,y+504,42,52},505,">",true);
     }
     text_draw(0,menu_text(800),left,y+570,MUTED);
-    text_in_button((SDL_FRect){left+48,y+596,lw-96,72},532,game_text(c.background),description_tab==2,true);
+    char personal_title[96],personal_story[1024];
+    bool personal=background_profile_read(c.object,personal_title,sizeof(personal_title),personal_story,sizeof(personal_story));
+    text_in_button((SDL_FRect){left+48,y+596,lw-96,72},532,personal?personal_title:game_text(c.background),description_tab==2,true);
     if(c.editable) {
         menu_button((SDL_FRect){left,y+606,42,52},506,"<",true);
         menu_button((SDL_FRect){left+lw-42,y+606,42,52},507,">",true);
     }
+    if(c.editable) menu_button((SDL_FRect){left,y+675,lw,32},588,tr("Personnaliser…","Customize…"),true);
     text_in_button((SDL_FRect){right,y+92,rw/2-8,44},533,menu_text(739),!derived_stats,true);
     text_in_button((SDL_FRect){right+rw/2,y+92,rw/2,44},534,character_text(7),derived_stats,true);
     const int stats[]={STAT_STRENGTH,STAT_CONSTITUTION,STAT_DEXTERITY,STAT_BEAUTY,
@@ -1509,9 +1535,17 @@ static void draw_character_menu(void)
         text_draw(derived_stats?0:1,game_text(stat_name(stat)),sx,sy,GOLD);
         text_draw(2,value,sx+rw/2-55,sy,GOLD);
     }
-    const char* heading=c.description_kind==0?character_text(5):c.description_kind==1?menu_text(745):menu_text(800);
+    const char* heading=personal && description_tab==2?menu_text(800):c.description_kind==0?character_text(5):c.description_kind==1?menu_text(745):menu_text(800);
     text_draw(2,heading,right,y+325,GOLD);
-    description_panel(game_text(c.description),(SDL_FRect){right,y+368,rw,300});
+    char personal_description[8192];
+    if(personal && description_tab==2)snprintf(personal_description,sizeof(personal_description),"%s\n%s",personal_title,personal_story);
+    description_panel(personal && description_tab==2?personal_description:game_text(c.description),(SDL_FRect){right,y+368,rw,300});
+    if(background_pending_profile.active && background_pending_profile.object==c.object)
+        text_draw(0,tr("Texte non enregistré : vérifiez le dossier modern-ui et réessayez.",
+            "Text not saved: check the modern-ui folder and try again."),right,y+683,GOLD);
+    else if(background_loadout.failed && background_loadout.object==c.object)
+        text_draw(0,tr("Équipement impossible à ajouter : réduisez les quantités et réessayez.",
+            "Could not add equipment: reduce quantities and try again."),right,y+683,GOLD);
     menu_button((SDL_FRect){left,y+716,280,54},501,menu_text(7002),true);
     bool valid=!c.editable || (*c.name && strcmp(game_text(c.name),menu_text(500))!=0);
     menu_button((SDL_FRect){x+w-310,y+716,280,54},500,menu_text(7003),valid);
@@ -1820,6 +1854,12 @@ static void menu_name_focus(bool focus)
 static bool creation_menu_action(int action)
 {
     MainMenuWindowType type=mainmenu_ui_window_type_get();
+    if(background_editor) return background_editor_action(action);
+    if(action==588 && type==MM_WINDOW_NEW_CHAR) {
+        ModernCharacter c;
+        if(modern_mainmenu_character(&c,2) && c.editable) {menu_name_focus(false);background_editor_open(c.object);}
+        return true;
+    }
     if(action!=522 && name_focused)menu_name_focus(false);
     if(action>=500 && action<=510) {
         if(name_focused)menu_name_focus(false);
@@ -2064,6 +2104,7 @@ void modern_ui_menu_tick(void)
     int type=mainmenu_ui_is_active() ? (int)mainmenu_ui_window_type_get() : -1;
     if (type != menu_previous_type) {
         modern_graphics_cancel();
+        if(background_editor) {background_editor=false;background_text_field=0;SDL_StopTextInput(window);}
         if(name_focused)menu_name_focus(false);
         description_scroll=0;description_tab=2;derived_stats=false;
         sheet_category=1;sheet_page=sheet_selected=0;sheet_select_detail(1,0);message_text[0]=0;
@@ -2658,6 +2699,30 @@ static bool handle_ui_event(SDL_Event* event)
                 if(event->key.scancode==SDL_SCANCODE_ESCAPE)pending_action=681;
                 if(event->key.scancode==SDL_SCANCODE_RETURN)pending_action=680;
             }
+            return true;
+        }
+        if(background_editor && event->type==SDL_EVENT_TEXT_INPUT) {background_editor_text(event->text.text,false);return true;}
+        if(background_editor && (event->type==SDL_EVENT_KEY_DOWN || event->type==SDL_EVENT_KEY_UP)) {
+            if(event->type==SDL_EVENT_KEY_DOWN && event->key.scancode==SDL_SCANCODE_BACKSPACE)background_editor_text("",true);
+            if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
+                if(event->key.scancode==SDL_SCANCODE_ESCAPE) pending_action=586;
+                else if(event->key.scancode==SDL_SCANCODE_RETURN) {
+                    if(background_text_field==2)background_editor_text("\n",false);
+                    else {background_text_field=0;SDL_StopTextInput(window);}
+                }
+                else if(event->key.scancode==SDL_SCANCODE_TAB)pending_action=background_text_field==1?590:589;
+                else if(background_text_field && (event->key.mod&SDL_KMOD_CTRL)) {
+                    if(event->key.key==SDLK_A)background_text_replace=true;
+                    else if(event->key.key==SDLK_V) {
+                        char* pasted=SDL_GetClipboardText();
+                        if(pasted){background_editor_text(pasted,false);SDL_free(pasted);}
+                    }
+                }
+            }
+            return true;
+        }
+        if(background_editor && event->type==SDL_EVENT_MOUSE_WHEEL) {
+            if(inside(background_story_rect,mouse_x,mouse_y))pending_action=event->wheel.y>0?591:592;
             return true;
         }
         if(!confirming_menu && event->type==SDL_EVENT_TEXT_INPUT && name_focused) {

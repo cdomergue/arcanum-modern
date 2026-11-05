@@ -1214,12 +1214,10 @@ diff --git a/src/game/background.c b/src/game/background.c
  #include "game/background.h"
  
  #include <stdio.h>
-@@ -22,20 +23,6 @@
- 
- static int background_get_base_money(void);
+@@ -24,20 +25,6 @@
  static bool background_is_legal(int64_t obj, char* str);
--
--/**
+ 
+ /**
 - * 0x5B6AEC
 - */
 -static const char* background_race_specifiers[] = {
@@ -1232,10 +1230,38 @@ diff --git a/src/game/background.c b/src/game/background.c
 -    /*  RACE_HALF_ORC */ "HO",
 -    /* RACE_HALF_OGRE */ "HG",
 -};
+-
+-/**
+  * 0x5B6B0C
+  */
+ static char background_gender_specifiers[GENDER_COUNT] = {
+@@ -258,7 +245,9 @@
+     char* pch;
+ 
+     text = background_description_get_text(num);
+-    strncpy(background_description_name, text, BACKGROUND_NAME_LENGTH);
++    // A missing optional background must not dereference a null description.
++    if (text == NULL) text = "";
++    snprintf(background_description_name, BACKGROUND_NAME_LENGTH, "%s", text);
+ 
+     // Find the newline to terminate the name.
+     pch = strchr(background_description_name, '\n');
+@@ -299,9 +288,13 @@
+  */
+ void background_clear(int64_t obj)
+ {
++    MesFileEntry entry;
++    entry.num = BACKGROUND_BLOCK_SIZE * background_get(obj) + BACKGROUND_F_EFFECT;
++    mes_get_msg(background_mes_file, &entry);
+     obj_field_int32_set(obj, OBJ_F_PC_BACKGROUND, 0);
+     obj_field_int32_set(obj, OBJ_F_PC_BACKGROUND_TEXT, 0);
+-    effect_remove_one_caused_by(obj, EFFECT_CAUSE_BACKGROUND);
++    // Preserve additional innate adjustments when changing the named background.
++    effect_remove_one_with_cause(obj, atoi(entry.str), EFFECT_CAUSE_BACKGROUND);
+ }
  
  /**
-  * 0x5B6B0C
-@@ -380,9 +367,7 @@
+@@ -380,9 +373,7 @@
  }
  
  /**
@@ -1246,7 +1272,7 @@ diff --git a/src/game/background.c b/src/game/background.c
   *
   * 0x4C2950
   */
-@@ -394,9 +379,8 @@
+@@ -394,9 +385,8 @@
      int educator_training;
      int follower_training;
  
@@ -1257,7 +1283,7 @@ diff --git a/src/game/background.c b/src/game/background.c
          return;
      }
  
-@@ -405,12 +389,11 @@
+@@ -405,12 +395,11 @@
      // Update basic skills for all followers.
      for (skill = 0; skill < BASIC_SKILL_COUNT; skill++) {
          educator_training = basic_skill_training_get(obj, skill);
@@ -1272,7 +1298,7 @@ diff --git a/src/game/background.c b/src/game/background.c
                      basic_skill_training_set(node->obj, skill, follower_training);
                      follower_training++;
                  }
-@@ -422,12 +405,11 @@
+@@ -422,12 +411,11 @@
      // Update tech skills for all followers.
      for (skill = 0; skill < TECH_SKILL_COUNT; skill++) {
          educator_training = tech_skill_training_get(obj, skill);
@@ -1287,7 +1313,7 @@ diff --git a/src/game/background.c b/src/game/background.c
                      tech_skill_training_set(node->obj, skill, follower_training);
                      follower_training++;
                  }
-@@ -507,7 +489,7 @@
+@@ -507,7 +495,7 @@
          // Construct the exact background prefix.
          snprintf(buffer, sizeof(buffer),
              "%s%c",
@@ -2605,6 +2631,52 @@ diff --git a/src/game/effect.c b/src/game/effect.c
          if (mes_search(mes_file, &mes_file_entry)) {
              effect_parse(mes_file_entry.num, mes_file_entry.str);
          }
+@@ -561,6 +560,33 @@
+     anim_speed_recalc(obj);
+ }
+ 
++bool effect_is_single_stat_adjustment(int effect, int stat, int adjustment)
++{
++    if (!effect_initialized || effect < 0 || effect >= EFFECT_LIST_CAPACITY) return false;
++    Effect* entry = &effect_stat_effects[effect];
++    return entry->count == 1 && entry->ids[0] == stat
++        && entry->operators[0] == EFFECT_OPERATOR_ADD && entry->params[0] == adjustment
++        && effect_basic_skill_effects[effect].count == 0
++        && effect_tech_skill_effects[effect].count == 0
++        && effect_resistance_effects[effect].count == 0
++        && effect_tech_effects[effect].count == 0 && effect_special_effects[effect].count == 0;
++}
++
++bool effect_remove_one_with_cause(int64_t obj, int effect, int cause)
++{
++    if (!obj_type_is_critter(obj_field_int32_get(obj, OBJ_F_TYPE))) return false;
++    int count = obj_arrayfield_length_get(obj, OBJ_F_CRITTER_EFFECTS_IDX);
++    for (int i = 0; i < count; i++) {
++        if (obj_arrayfield_uint32_get(obj, OBJ_F_CRITTER_EFFECTS_IDX, i) == (unsigned)effect
++            && obj_arrayfield_uint32_get(obj, OBJ_F_CRITTER_EFFECT_CAUSE_IDX, i) == (unsigned)cause) {
++            effect_remove_internal(obj, i);
++            anim_speed_recalc(obj);
++            return true;
++        }
++    }
++    return false;
++}
++
+ /**
+  * Removes all instances of a specific effect from a critter.
+  *
+diff --git a/src/game/effect.h b/src/game/effect.h
+--- a/src/game/effect.h
++++ b/src/game/effect.h
+@@ -32,6 +32,8 @@
+ bool effect_mod_load(void);
+ void effect_mod_unload(void);
+ void effect_add(int64_t obj, int effect, int cause);
++bool effect_is_single_stat_adjustment(int effect, int stat, int adjustment);
++bool effect_remove_one_with_cause(int64_t obj, int effect, int cause);
+ void effect_remove_one_typed(int64_t obj, int effect);
+ void effect_remove_all_typed(int64_t obj, int effect);
+ void effect_remove_one_caused_by(int64_t obj, int cause);
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
@@ -8143,7 +8215,18 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  };
  
  // 0x5C51B0
-@@ -1740,6 +1747,8 @@
+@@ -1389,6 +1396,10 @@
+ 
+ // 0x64C468
+ static int dword_64C468;
++
++#include "game/modern_background_effects.h"
++#include "modern_creation_draft.inc"
++static bool modern_creation_loadout_return;
+ 
+ // 0x540930
+ bool mainmenu_ui_init(GameInitInfo* init_info)
+@@ -1740,6 +1751,8 @@
      broadcast_ui_close();
  
      while (mainmenu_ui_active) {
@@ -8152,7 +8235,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          tig_ping();
          tig_timer_now(&timestamp);
          timeevent_ping(timestamp);
-@@ -1781,6 +1790,151 @@
+@@ -1781,6 +1794,151 @@
      return mainmenu_ui_active;
  }
  
@@ -8304,7 +8387,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  // 0x541690
  TigWindowModalDialogChoice mainmenu_ui_confirm_quit(void)
  {
-@@ -1796,6 +1950,11 @@
+@@ -1796,6 +1954,11 @@
  
      mes_file_entry.num = num;
      mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
@@ -8316,7 +8399,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      modal_info.type = TIG_WINDOW_MODAL_DIALOG_TYPE_OK_CANCEL;
      modal_info.x = 237;
-@@ -1806,7 +1965,9 @@
+@@ -1806,7 +1969,9 @@
      modal_info.process = NULL;
      modal_info.redraw = gamelib_redraw;
      hrp_center(&(modal_info.x), &(modal_info.y));
@@ -8326,7 +8409,35 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
      return choice;
  }
-@@ -2022,7 +2183,7 @@
+@@ -1843,12 +2008,27 @@
+         }
+ 
+         dword_64C38C = false;
++        // A shop refresh runs inside init_func, before the shop is on the
++        // navigation stack. Defer Back until that stack entry exists.
++        if (modern_creation_loadout_return && mainmenu_ui_window_type == MM_WINDOW_SHOP) {
++            modern_creation_loadout_return = false;
++            mainmenu_ui_start_new_game = false;
++            mainmenu_ui_close(true);
++            if (mainmenu_ui_window_type == MM_WINDOW_CHAREDIT) {
++                mainmenu_ui_close(true);
++            }
++        }
+     }
+ }
+ 
+ // 0x5417A0
+ void mainmenu_ui_close(bool back)
+ {
++    if (back && mainmenu_ui_window_type == MM_WINDOW_CHAREDIT
++        && mainmenu_ui_num_windows >= 2
++        && mainmenu_ui_window_stack[mainmenu_ui_num_windows - 2] == MM_WINDOW_NEW_CHAR) {
++        modern_creation_draft.resume = true;
++    }
+     if (main_menu_window_info[mainmenu_ui_window_type]->exit_func != NULL) {
+         main_menu_window_info[mainmenu_ui_window_type]->exit_func();
+     }
+@@ -2022,7 +2202,7 @@
      MainMenuWindowInfo* window;
  
      window = main_menu_window_info[mainmenu_ui_window_type];
@@ -8335,7 +8446,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (mainmenu_ui_confirm_quit() != TIG_WINDOW_MODAL_DIALOG_CHOICE_OK) {
              return false;
          }
-@@ -2032,7 +2193,7 @@
+@@ -2032,7 +2212,7 @@
          return sub_549310(button_handle);
      }
  
@@ -8344,7 +8455,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stru_5C36B0[mainmenu_ui_type][0]) {
              sub_5412D0();
              return false;
-@@ -2851,7 +3012,7 @@
+@@ -2851,7 +3031,7 @@
  
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -8353,7 +8464,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -2917,11 +3078,14 @@
+@@ -2917,11 +3097,14 @@
          mainmenu_ui_reset();
      }
  
@@ -8369,7 +8480,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      ui_display_msg(&ui_message);
  
      return false;
-@@ -3018,6 +3182,7 @@
+@@ -3018,6 +3201,7 @@
  // 0x5435D0
  bool mainmenu_ui_save_game_execute(int btn)
  {
@@ -8377,7 +8488,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      int v1;
      char fname[COMPAT_MAX_FNAME];
      const char* name;
-@@ -3032,53 +3197,31 @@
+@@ -3032,53 +3216,31 @@
          return false;
      }
  
@@ -8451,7 +8562,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      }
  
      sub_542200();
-@@ -3099,11 +3242,14 @@
+@@ -3099,11 +3261,14 @@
      }
  
      if (!gamelib_save(name, mainmenu_ui_textedit_buffer)) {
@@ -8467,7 +8578,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          ui_display_msg(&ui_message);
  
          return false;
-@@ -3533,7 +3679,7 @@
+@@ -3533,7 +3698,7 @@
      gamelib_savelist_create(&mainmenu_ui_gsl);
      gamelib_savelist_sort(&mainmenu_ui_gsl, GAME_SAVE_LIST_ORDER_DATE, false);
      window->selected_index = -1;
@@ -8476,7 +8587,79 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
      window->refresh_func(NULL);
  
      return true;
-@@ -4073,7 +4219,7 @@
+@@ -3657,6 +3822,9 @@
+ {
+     PlayerCreateInfo player_create_info;
+     MesFileEntry mes_file_entry;
++    int64_t previous = player_get_local_pc_obj();
++    bool restore = modern_creation_draft_take(previous);
++    modern_background_creation_begin(restore ? previous : OBJ_HANDLE_NULL);
+ 
+     mainmenu_ui_new_char_hover_mode = MMUI_NEW_CHAR_HOVER_MODE_BACKGROUND;
+     mainmenu_ui_window_type = MM_WINDOW_NEW_CHAR;
+@@ -3669,12 +3837,17 @@
+         exit(EXIT_FAILURE);
+     }
+ 
+-    // CE: There's a bug in the original game — the name persists when
+-    // navigating back and forth to the "New Char" screen. Everything else
+-    // (gender/race/background, just a moment above) resets, but not the name.
+-    mes_file_entry.num = 500; // "Choose Name"
+-    mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
+-    strncpy(mainmenu_ui_textedit_buffer, mes_file_entry.str, 23);
++    if (restore) {
++        modern_creation_draft_restore(player_create_info.obj);
++        modern_background_creation_finish(player_create_info.obj);
++    } else {
++        mes_file_entry.num = 500; // "Choose Name"
++        mes_get_msg(mainmenu_ui_mainmenu_mes_file, &mes_file_entry);
++        SDL_strlcpy(mainmenu_ui_textedit_buffer, mes_file_entry.str,
++            sizeof(mainmenu_ui_textedit_buffer));
++    }
++    modern_background_loadout_begin(restore ? previous : OBJ_HANDLE_NULL, player_create_info.obj);
++    modern_background_choices_begin(restore ? previous : OBJ_HANDLE_NULL, player_create_info.obj);
+ 
+     mainmenu_ui_create_window();
+     if (!main_menu_button_create(&mainmenu_ui_new_char_name_button, mainmenu_ui_new_char_name_rect.width + 2, mainmenu_ui_new_char_name_rect.height + 2)) {
+@@ -3940,6 +4113,10 @@
+         return true;
+     case 6:
+         background = background_get(pc_obj);
++        if (modern_background_choice_cycle(pc_obj, -1)) {
++            window->refresh_func(NULL);
++            return true;
++        }
+         if (mainmenu_ui_new_char_prev_background(pc_obj, &background)) {
+             background_clear(pc_obj);
+             background_set(pc_obj, background, background_get_description(background));
+@@ -3948,6 +4125,10 @@
+         return true;
+     case 7:
+         background = background_get(pc_obj);
++        if (modern_background_choice_cycle(pc_obj, 1)) {
++            window->refresh_func(NULL);
++            return true;
++        }
+         if (mainmenu_ui_new_char_next_background(pc_obj, &background)) {
+             background_clear(pc_obj);
+             background_set(pc_obj, background, background_get_description(background));
+@@ -3999,6 +4180,7 @@
+ // 0x545350
+ bool mainmenu_ui_new_char_prev_gender(int64_t obj)
+ {
++    modern_background_choice_leave(obj);
+     if (stat_level_get(obj, STAT_GENDER) == GENDER_FEMALE) {
+         background_clear(obj);
+         return mainmenu_ui_new_char_set_gender(obj, GENDER_MALE);
+@@ -4037,6 +4219,7 @@
+ // 0x545440
+ bool mainmenu_ui_new_char_next_gender(int64_t obj)
+ {
++    modern_background_choice_leave(obj);
+     if (stat_level_get(obj, STAT_GENDER) == GENDER_MALE) {
+         background_clear(obj);
+         return mainmenu_ui_new_char_set_gender(obj, GENDER_FEMALE);
+@@ -4073,7 +4256,7 @@
              return false;
          }
      } else {
@@ -8485,7 +8668,15 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          if (stat_level_get(obj, STAT_GENDER) == GENDER_FEMALE) {
              while (race >= 0 && !stru_5C5170[race].available_for_female) {
                  race--;
-@@ -4122,13 +4268,13 @@
+@@ -4089,6 +4272,7 @@
+         }
+     }
+ 
++    modern_background_choice_leave(obj);
+     background_clear(obj);
+     mainmenu_ui_new_char_set_race(obj, race);
+ 
+@@ -4122,13 +4306,13 @@
      int race;
  
      race = stat_level_get(obj, STAT_RACE);
@@ -8503,7 +8694,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4146,7 +4292,7 @@
+@@ -4146,7 +4330,7 @@
                  race++;
              }
  
@@ -8512,16 +8703,42 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  // FIXME: Unreachable.
                  return false;
              }
-@@ -4157,7 +4303,7 @@
+@@ -4157,7 +4341,8 @@
          }
      }
  
 -    if (race < 8) {
 +    if (race < (modern_compat_get()->races ? RACE_COUNT : 8)) {
++        modern_background_choice_leave(obj);
          background_clear(obj);
          mainmenu_ui_new_char_set_race(obj, race);
          return true;
-@@ -4602,7 +4748,7 @@
+@@ -4231,6 +4416,13 @@
+         return false;
+     }
+ 
++    if (!modern_background_creation_ready(pc_obj)) {
++        return false;
++    }
++    modern_creation_draft_capture(pc_obj);
++    // Rebuild the refund floor after returning to the first creation page.
++    dword_64C454 = CHAREDIT_MODE_CREATE;
++
+     obj_field_string_set(pc_obj, OBJ_F_PC_PLAYER_NAME, mainmenu_ui_textedit_buffer);
+     ui_spell_maintain_refresh();
+     mainmenu_ui_auto_equip_items_on_start = true;
+@@ -4447,6 +4639,10 @@
+ 
+     pc_obj = player_get_local_pc_obj();
+     item_generate_inventory(pc_obj);
++    if (!modern_background_loadout_generate(pc_obj)) {
++        modern_creation_loadout_return = true;
++        return;
++    }
+     if (map_by_type(MAP_TYPE_SHOPPING_MAP) == 0) {
+         sub_5412D0();
+         return;
+@@ -4602,7 +4798,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -8530,7 +8747,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_window_rect.x;
              src_rect.y = 0;
-@@ -4645,7 +4791,7 @@
+@@ -4645,7 +4841,7 @@
                  window_data.rect.y = mainmenu_ui_bottom_bar_cover_rects[idx].y;
                  window_data.rect.width = mainmenu_ui_bottom_bar_cover_rects[idx].width;
                  window_data.rect.height = mainmenu_ui_bottom_bar_cover_rects[idx].height;
@@ -8539,7 +8756,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
                  src_rect.x = mainmenu_ui_bottom_bar_cover_rects[idx].x;
                  src_rect.y = 0;
-@@ -4681,7 +4827,7 @@
+@@ -4681,7 +4877,7 @@
              window_data.background_color = art_anim_data.color_key;
              window_data.color_key = art_anim_data.color_key;
              window_data.message_filter = mainmenu_ui_message_filter;
@@ -8548,7 +8765,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
  
              src_rect.x = mainmenu_ui_top_bar_cover_rect.x;
              src_rect.y = 0;
-@@ -4832,6 +4978,9 @@
+@@ -4832,6 +5028,9 @@
          if (!main_menu_button_create(button, font_desc.width, font_desc.height)) {
              tig_debug_printf("mainmenu_ui_create_window_func: ERROR: main_menu_button_create failed!\n");
              exit(EXIT_FAILURE);
@@ -8558,7 +8775,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
          }
      }
  
-@@ -5133,6 +5282,9 @@
+@@ -5133,6 +5332,9 @@
              for (idx = 0; idx < window->num_buttons; idx++) {
                  if (msg->data.button.button_handle == window->buttons[idx].button_handle) {
                      if (window->buttons[idx].field_10 > 0) {
@@ -8568,7 +8785,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                          if (window->execute_func != NULL) {
                              dword_5C3FB8 = window->execute_func(idx);
                              if (dword_5C3FB8 == 0) {
-@@ -5397,6 +5549,9 @@
+@@ -5397,6 +5599,9 @@
              }
  
              if (window->buttons[idx].field_10 > 0) {
@@ -8578,7 +8795,7 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  if (window->execute_func != NULL) {
                      dword_5C3FB8 = window->execute_func(idx);
                      if (!dword_5C3FB8) {
-@@ -6046,10 +6201,22 @@
+@@ -6046,10 +6251,22 @@
          if (obj != OBJ_HANDLE_NULL
              && tig_art_exists(obj_field_int32_get(obj, OBJ_F_CURRENT_AID)) == TIG_OK) {
              dword_5C3620 = false;

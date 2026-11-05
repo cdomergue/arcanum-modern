@@ -17,6 +17,8 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
   Arcanum's rules.
 - Redesigned HUD, character sheet, inventory, trading, dialogue, journal, maps,
   spell and skill panels, save/load menus and display options.
+- [Custom backgrounds](docs/backgrounds.md) in character creation, with a name,
+  personal history, attribute adjustments, starting money and equipment.
 - Interactive voiced tutorial on a dedicated island, offered on first launch and
   replayable anytime from **Single Player → Tutorial** (with French or English
   subtitles).

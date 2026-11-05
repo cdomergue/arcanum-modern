@@ -68,6 +68,15 @@ typedef struct ModernCharacter {
 bool modern_mainmenu_character(ModernCharacter* character, int description);
 void modern_mainmenu_gender(int direction);
 void modern_mainmenu_name(const char* name);
+/* Preserve optional prose when the creation wizard rebuilds its draft PC. */
+void modern_background_creation_begin(int64_t previous);
+void modern_background_creation_finish(int64_t current);
+bool modern_background_creation_ready(int64_t current);
+void modern_background_loadout_begin(int64_t previous, int64_t current);
+bool modern_background_loadout_generate(int64_t current);
+void modern_background_choices_begin(int64_t previous, int64_t current);
+bool modern_background_choice_cycle(int64_t current, int direction);
+void modern_background_choice_leave(int64_t current);
 const char* modern_mainmenu_save_name(int index);
 void modern_mainmenu_save_select(int index);
 const char* modern_mainmenu_save_description(void);
