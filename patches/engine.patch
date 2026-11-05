@@ -9,7 +9,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # ------------------------------------------------------------------------------
  # ARCANUM
-@@ -24,6 +25,26 @@
+@@ -24,6 +25,27 @@
  
  # Keep alphabetically sorted.
  set(SRCS
@@ -22,6 +22,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +    "src/game/modern_house.c"
 +    "src/game/modern_house.h"
 +    "src/game/modern_compat.c"
++    "src/game/modern_progression.c"
 +    "src/game/modern_compat.h"
 +    "src/game/modern_autosave.c"
 +    "src/game/modern_autosave.h"
@@ -36,7 +37,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +354,81 @@
+@@ -333,7 +355,81 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -118,7 +119,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # SDL HID on Android requires C++ linker.
  if(ANDROID)
-@@ -401,3 +496,9 @@
+@@ -401,3 +497,9 @@
  
      include(CPack)
  endif()
@@ -1392,16 +1393,17 @@ diff --git a/src/game/broadcast.c b/src/game/broadcast.c
 diff --git a/src/game/combat.c b/src/game/combat.c
 --- a/src/game/combat.c
 +++ b/src/game/combat.c
-@@ -1,4 +1,8 @@
+@@ -1,4 +1,9 @@
 +#include "game/modern_compat.h"
  #include "game/combat.h"
 +#include "ui/modern_ui.h"
 +#include "ui/follower_ui.h"
 +#include "game/modern_autosave.h"
++#include "game/modern_progression.h"
  
  #define _USE_MATH_DEFINES
  #include <math.h>
-@@ -195,6 +199,128 @@
+@@ -195,6 +200,128 @@
  static CombatCallbacks combat_callbacks;
  
  // 0x4B1D50
@@ -1530,7 +1532,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  bool combat_init(GameInitInfo* init_info)
  {
      combat_editor = init_info->editor;
-@@ -215,7 +341,7 @@
+@@ -215,7 +342,7 @@
          }
      }
  
@@ -1539,7 +1541,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based = settings_get_value(&settings, TURN_BASED_KEY);
  
      settings_register(&settings, FAST_TURN_BASED_KEY, "0", fast_turn_based_changed);
-@@ -256,7 +382,7 @@
+@@ -256,7 +383,7 @@
      if (tig_file_fwrite(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, stream) != 1) return false;
  
      if (!combat_turn_based_active) {
@@ -1548,7 +1550,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      }
  
      if (tig_file_fwrite(&combat_action_points, sizeof(combat_action_points), 1, stream) != 1) return false;
-@@ -276,13 +402,13 @@
+@@ -276,13 +403,13 @@
      oid = obj_get_id(qword_5FC248);
      if (tig_file_fwrite(&oid, sizeof(oid), 1, stream) != 1) return false;
  
@@ -1564,7 +1566,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      ObjectID oid;
      int64_t obj;
      ObjectNode* node;
-@@ -292,10 +418,12 @@
+@@ -292,10 +419,12 @@
      if (tig_file_fread(&combat_turn_based_active, sizeof(combat_turn_based_active), 1, load_info->stream) != 1) return false;
      if (tig_file_fread(&combat_turn_based_turn, sizeof(combat_turn_based_turn), 1, load_info->stream) != 1) return false;
  
@@ -1580,7 +1582,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_callbacks.field_4();
  
      if (tig_file_fread(&combat_action_points, sizeof(combat_action_points), 1, load_info->stream) != 1) return false;
-@@ -307,6 +435,7 @@
+@@ -307,6 +436,7 @@
      }
  
      combat_action_points = saved_action_points;
@@ -1588,7 +1590,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (tig_file_fread(&oid, sizeof(oid), 1, load_info->stream) != 1) return false;
      qword_5FC238 = obj_pool_perm_lookup(oid);
-@@ -343,7 +472,7 @@
+@@ -343,7 +473,7 @@
  
      combat_callbacks.field_C(combat_action_points);
  
@@ -1597,7 +1599,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B2210
-@@ -422,7 +551,7 @@
+@@ -422,7 +552,7 @@
  // 0x4B2410
  void fast_turn_based_changed(void)
  {
@@ -1606,7 +1608,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B24F0
-@@ -783,12 +912,52 @@
+@@ -783,12 +913,52 @@
      }
  }
  
@@ -1659,7 +1661,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if (combat->target_obj != OBJ_HANDLE_NULL
          && obj_field_int32_get(combat->target_obj, OBJ_F_TYPE) == OBJ_TYPE_SCENERY) {
-@@ -924,6 +1093,10 @@
+@@ -924,6 +1094,10 @@
                  return 0;
              }
  
@@ -1670,7 +1672,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              if ((skill_invocation.flags & SKILL_INVOCATION_SUCCESS) != 0) {
                  combat->flags |= CF_HIT;
              }
-@@ -941,7 +1114,10 @@
+@@ -941,7 +1115,10 @@
                      return 0;
                  }
  
@@ -1681,7 +1683,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
                      MesFileEntry mes_file_entry;
  
                      mes_file_entry.num = 11; // "Dodge!"
-@@ -973,6 +1149,8 @@
+@@ -973,6 +1150,8 @@
              combat->flags |= CF_CRITICAL;
          }
      }
@@ -1690,7 +1692,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if ((combat->flags & CF_HIT) == 0
          && (combat->flags & CF_CRITICAL) != 0) {
-@@ -1223,6 +1401,47 @@
+@@ -1223,6 +1402,47 @@
      return ret;
  }
  
@@ -1738,7 +1740,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  // 0x4B3F20
  void combat_critter_deactivate_combat_mode(int64_t obj)
  {
-@@ -1237,6 +1456,7 @@
+@@ -1237,6 +1457,7 @@
      if (!combat_critter_is_combat_mode_active(obj)) {
          combat_critter_toggle_combat_mode(obj);
      }
@@ -1746,7 +1748,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B3F80
-@@ -1316,6 +1536,7 @@
+@@ -1316,6 +1537,7 @@
              object_flags_set(obj, OF_INVISIBLE);
          }
      } else {
@@ -1754,7 +1756,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          obj_field_int32_set(obj, OBJ_F_CRITTER_FLAGS, critter_flags | OCF_COMBAT_MODE_ACTIVE);
  
          art_id = tig_art_critter_id_weapon_set(art_id, TIG_ART_WEAPON_TYPE_UNARMED);
-@@ -1813,6 +2034,7 @@
+@@ -1813,6 +2035,7 @@
              }
          }
  
@@ -1762,7 +1764,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -1833,7 +2055,8 @@
+@@ -1833,7 +2056,8 @@
              tf_add(combat->target_obj, TF_TYPE_GREEN, str);
          }
  
@@ -1772,7 +1774,18 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              && obj_type == OBJ_TYPE_NPC
              && (spell_flags & OSF_STONED) == 0) {
              int remaining_experience = obj_field_int32_get(combat->target_obj, OBJ_F_NPC_EXPERIENCE_POOL);
-@@ -2857,12 +3080,19 @@
+@@ -1845,9 +2069,7 @@
+                 }
+                 obj_field_int32_set(combat->target_obj, OBJ_F_NPC_EXPERIENCE_POOL, remaining_experience - awarded_experience);
+ 
+-                if (obj_field_int32_get(combat->field_30, OBJ_F_TYPE) == OBJ_TYPE_PC) {
+-                    critter_give_xp(combat->field_30, awarded_experience);
+-                }
++                modern_combat_xp_add(combat->field_30, awarded_experience);
+             }
+         }
+ 
+@@ -2857,12 +3079,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -1792,7 +1805,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3188,7 @@
+@@ -2958,7 +3187,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -1801,7 +1814,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2990,14 +3220,20 @@
+@@ -2990,14 +3219,20 @@
          }
      }
  
@@ -1826,7 +1839,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3023,10 +3259,18 @@
+@@ -3023,10 +3258,18 @@
  // 0x4B7010
  void sub_4B7010(int64_t obj)
  {
@@ -1846,7 +1859,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              ai_process(obj);
          }
  
-@@ -3054,8 +3298,9 @@
+@@ -3054,8 +3297,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -1858,7 +1871,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3329,10 @@
+@@ -3084,9 +3328,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -1871,7 +1884,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3160,10 +3406,15 @@
+@@ -3160,10 +3405,15 @@
  {
      ObjectNode* node;
  
@@ -1887,7 +1900,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
          sub_423FE0(NULL);
  
-@@ -3189,6 +3440,7 @@
+@@ -3189,6 +3439,7 @@
  
      dword_5FC250 = 0;
      pc_obj = player_get_local_pc_obj();
@@ -1895,7 +1908,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based_turn++;
      pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
      combat_recalc_perception_range();
-@@ -3205,7 +3457,7 @@
+@@ -3205,7 +3456,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1904,7 +1917,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3243,6 +3495,9 @@
+@@ -3243,6 +3494,9 @@
          return true;
      }
  
@@ -1914,7 +1927,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!critter_is_active(object_node->obj)) {
          sub_427000(object_node->obj);
          return true;
-@@ -3286,6 +3541,7 @@
+@@ -3286,6 +3540,7 @@
  
      dword_5FC250++;
      combat_turn_based_subturn_end();
@@ -1922,7 +1935,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      dword_5FC240 = dword_5FC240->next;
      if (dword_5FC240 == NULL) {
-@@ -3549,6 +3805,8 @@
+@@ -3549,6 +3804,8 @@
          return true;
      }
  
@@ -1931,7 +1944,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3574,6 +3832,7 @@
+@@ -3574,6 +3831,7 @@
          return true;
      }
  
@@ -1939,7 +1952,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_action_points = 0;
      combat_turn_based_next_subturn();
  
-@@ -3741,6 +4000,12 @@
+@@ -3741,6 +3999,12 @@
          return false;
      }
  
@@ -1992,12 +2005,13 @@ diff --git a/src/game/combat.h b/src/game/combat.h
 diff --git a/src/game/critter.c b/src/game/critter.c
 --- a/src/game/critter.c
 +++ b/src/game/critter.c
-@@ -1,3 +1,4 @@
+@@ -1,3 +1,5 @@
++#include "game/modern_progression.h"
 +#include "game/modern_compat.h"
  #include "game/critter.h"
  
  #include "game/ai.h"
-@@ -14,6 +15,7 @@
+@@ -14,6 +16,7 @@
  #include "game/mes.h"
  #include "game/monstergen.h"
  #include "game/mt_item.h"
@@ -2005,7 +2019,7 @@ diff --git a/src/game/critter.c b/src/game/critter.c
  #include "game/object.h"
  #include "game/object_node.h"
  #include "game/party.h"
-@@ -560,6 +562,29 @@
+@@ -560,6 +563,29 @@
      return true;
  }
  
@@ -2035,18 +2049,18 @@ diff --git a/src/game/critter.c b/src/game/critter.c
  /**
   * Checks if a critter is active (not dead, unconscious, stunned, paralyzed, or
   * stoned).
-@@ -698,8 +723,8 @@
+@@ -698,8 +724,8 @@
                  ObjectList followers;
                  ObjectNode* node;
  
 -                // 20% of the experience cost for killing.
 -                critter_give_xp(pc_killer_obj, 20 * obj_field_int32_get(victim_obj, OBJ_F_NPC_EXPERIENCE_WORTH) / 100);
 +                int worth = obj_field_int32_get(victim_obj, OBJ_F_NPC_EXPERIENCE_WORTH);
-+                critter_give_xp(pc_killer_obj, modern_compat_get()->no_xp_per_hit ? worth : 20 * worth / 100);
++                modern_combat_xp_add(pc_killer_obj, modern_compat_get()->no_xp_per_hit ? worth : (int)((int64_t)20 * worth / 100));
                  obj_field_int32_set(victim_obj, OBJ_F_NPC_EXPERIENCE_WORTH, 0);
  
                  // Adjust alignment.
-@@ -969,45 +994,16 @@
+@@ -969,45 +995,16 @@
   *
   * 0x45E040
   */
@@ -2101,7 +2115,7 @@ diff --git a/src/game/critter.c b/src/game/critter.c
  
      critter_leader_set(obj, OBJ_HANDLE_NULL);
  
-@@ -1028,6 +1024,22 @@
+@@ -1028,6 +1025,22 @@
      if (critter_is_concealed(obj)) {
          critter_set_concealed(obj, false);
      }
@@ -2124,7 +2138,50 @@ diff --git a/src/game/critter.c b/src/game/critter.c
  }
  
  /**
-@@ -2457,3 +2469,17 @@
+@@ -1834,6 +1847,17 @@
+  *
+  * 0x45F110
+  */
++int critter_adjust_xp_gain(int64_t obj, int amount)
++{
++    int64_t adjusted = amount;
++    switch (gamelib_game_difficulty_get()) {
++    case GAME_DIFFICULTY_EASY: adjusted += adjusted / 2; break;
++    case GAME_DIFFICULTY_HARD: adjusted -= adjusted / 2; break;
++    }
++    adjusted = SDL_min((int64_t)2000000000, SDL_max((int64_t)-2000000000, adjusted));
++    return effect_adjust_xp_gain(obj, (int)adjusted);
++}
++
+ void critter_give_xp(int64_t obj, int xp_gain)
+ {
+     int xp;
+@@ -1844,22 +1868,13 @@
+ 
+     if (xp_gain == 0) {
+         return;
+-    }
+-
+-    // Adjust reward based on game difficulty.
+-    switch (gamelib_game_difficulty_get()) {
+-    case GAME_DIFFICULTY_EASY:
+-        xp_gain += xp_gain / 2;
+-        break;
+-    case GAME_DIFFICULTY_HARD:
+-        xp_gain -= xp_gain / 2;
+-        break;
+     }
+ 
+     // Single-player game - just give all reward to the local PC.
+     if (!critter_is_dead(obj)) {
+         xp = stat_base_get(obj, STAT_EXPERIENCE_POINTS);
+-        xp += effect_adjust_xp_gain(obj, xp_gain);
++        int64_t total = (int64_t)xp + critter_adjust_xp_gain(obj, xp_gain);
++        xp = (int)SDL_min((int64_t)2000000000, SDL_max((int64_t)0, total));
+         stat_base_set(obj, STAT_EXPERIENCE_POINTS, xp);
+ 
+         if (player_is_local_pc_obj(obj)) {
+@@ -2457,3 +2472,17 @@
      // Print effects.
      effect_debug_obj(obj);
  }
@@ -2155,7 +2212,15 @@ diff --git a/src/game/critter.h b/src/game/critter.h
  bool critter_is_unconscious(int64_t obj);
  bool critter_is_sleeping(int64_t obj);
  bool critter_is_dead(int64_t obj);
-@@ -110,4 +113,7 @@
+@@ -86,6 +89,7 @@
+ bool critter_check_stat(int64_t obj, int stat, int mod);
+ int critter_xp_worth(int64_t obj);
+ void critter_give_xp(int64_t obj, int a2);
++int critter_adjust_xp_gain(int64_t obj, int amount);
+ bool critter_enter_bed(int64_t obj, int64_t bed);
+ void critter_leave_bed(int64_t obj, int64_t bed);
+ bool critter_has_bad_associates(int64_t obj);
+@@ -110,4 +114,7 @@
  bool critter_is_dumb(int64_t obj);
  void critter_debug_obj(int64_t obj);
  
@@ -2931,11 +2996,12 @@ diff --git a/src/game/effect.h b/src/game/effect.h
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -1,4 +1,11 @@
+@@ -1,4 +1,12 @@
 +#include "game/modern_background_rules.h"
 +#include "game/modern_house.h"
 +#include "game/modern_world_updates_internal.h"
 +#include "game/modern_compat.h"
++#include "game/modern_progression.h"
 +#include "game/modern_uap.h"
 +#include "game/modern_autosave.h"
  #include "game/gamelib.h"
@@ -2943,7 +3009,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
  #include <stdio.h>
  
-@@ -121,7 +128,7 @@
+@@ -121,7 +129,7 @@
  static void gamelib_draw_editor(GameDrawInfo* draw_info);
  static void gamelib_logo(void);
  static void gamelib_splash(tig_window_handle_t window_handle);
@@ -2952,7 +3018,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  static bool gamelib_load_module_data(const char* module_name);
  static void gamelib_unload_module_data(void);
  
-@@ -324,10 +331,13 @@
+@@ -324,10 +332,13 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -2967,17 +3033,18 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (!init_info->editor) {
          if (highres_config_get()->logos) {
-@@ -410,6 +420,9 @@
+@@ -410,6 +421,10 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
 +    modern_autosave_reset();
 +    modern_world_updates_reset();
++    modern_progression_reset();
 +    sector_save_error_reset();
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -448,6 +461,7 @@
+@@ -448,6 +463,7 @@
  
      sector_art_cache_enable();
      in_reset = false;
@@ -2985,7 +3052,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      duration = tig_timer_elapsed(reset_started_at);
      tig_debug_printf("gamelib_reset(): Done.  Total time: %d ms.\n", duration);
-@@ -456,6 +470,7 @@
+@@ -456,6 +472,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2993,16 +3060,17 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -501,6 +516,8 @@
+@@ -501,6 +518,9 @@
              gamelib_modules[index].ping_func(gamelib_ping_time);
          }
      }
 +    modern_world_updates_tick();
 +    modern_house_tick();
++    modern_progression_tick();
  }
  
  // 0x4025C0
-@@ -671,6 +688,17 @@
+@@ -671,6 +691,17 @@
          return false;
      }
  
@@ -3020,7 +3088,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      if (gamelib_mod_dat_path[0] != '\0') {
          tig_file_repository_guid(gamelib_mod_dat_path, &gamelib_mod_guid);
      }
-@@ -755,6 +783,7 @@
+@@ -755,6 +786,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -3028,7 +3096,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -939,6 +968,10 @@
+@@ -939,6 +971,10 @@
      unsigned int sentinel = 0xBEEFCAFE;
      int version;
      GameSaveInfo save_info;
@@ -3039,7 +3107,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
-@@ -949,6 +982,7 @@
+@@ -949,6 +985,7 @@
  
      if (!tig_file_is_directory("Save\\Current")) {
          tig_debug_printf("gamelib_save(): Error finding folder %s\n", "Save\\Current");
@@ -3047,7 +3115,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -959,6 +993,7 @@
+@@ -959,6 +996,7 @@
      stream = tig_file_fopen(path, "wb");
      if (stream == NULL) {
          tig_debug_printf("gamelib_save(): Error creating %s\n", path);
@@ -3055,7 +3123,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -968,6 +1003,7 @@
+@@ -968,6 +1006,7 @@
          tig_debug_printf("gamelib_save(): Error writing version\n");
          tig_file_fclose(stream);
          tig_file_remove(path);
@@ -3063,7 +3131,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1004,10 +1040,11 @@
+@@ -1004,10 +1043,11 @@
          }
      }
  
@@ -3076,7 +3144,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1017,6 +1054,7 @@
+@@ -1017,6 +1057,7 @@
          tig_timer_now(&time);
          if (!gamelib_extra_save_func()) {
              tig_file_remove(path);
@@ -3084,12 +3152,12 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_save = false;
              return false;
          }
-@@ -1024,8 +1062,15 @@
+@@ -1024,8 +1065,15 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
 -    if (!gamelib_saveinfo_init(name, description, &save_info)) {
-+    if (!modern_world_updates_save() || sector_save_failed()) {
++    if (!modern_world_updates_save() || !modern_progression_save() || sector_save_failed()) {
 +        rw_save_discard(stage);
 +        in_save = false;
 +        return false;
@@ -3101,7 +3169,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1033,23 +1078,31 @@
+@@ -1033,23 +1081,31 @@
      if (!gamelib_saveinfo_save(&save_info)) {
          tig_debug_printf("gamelib_save(): error saving saveinfo\n");
          gamelib_saveinfo_exit(&save_info);
@@ -3134,12 +3202,13 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      ui_progressbar_update(MODULE_COUNT + 2);
  
-@@ -1078,12 +1131,16 @@
+@@ -1078,12 +1134,17 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
 +    modern_autosave_reset();
 +    modern_world_updates_reset();
++    modern_progression_reset();
 +    sector_save_error_reset();
      in_load = true;
  
@@ -3151,7 +3220,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1094,6 +1151,7 @@
+@@ -1094,6 +1155,7 @@
      tig_timer_now(&time);
      if (!tig_file_empty_directory("Save\\Current")) {
          tig_debug_printf("gamelib_load(): Error clearing folder %s\n", "Save\\Current");
@@ -3159,7 +3228,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1104,21 +1162,31 @@
+@@ -1104,21 +1166,31 @@
      tig_timer_now(&time);
      if (!tig_file_unarchive(path, "Save\\Current")) {
          tig_debug_printf("gamelib_load(): error restoring archive %s to save\\test\n", path);
@@ -3191,7 +3260,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1165,6 +1233,7 @@
+@@ -1165,6 +1237,7 @@
      tig_file_fclose(stream);
  
      if (index < MODULE_COUNT) {
@@ -3199,7 +3268,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1173,6 +1242,7 @@
+@@ -1173,6 +1246,7 @@
          tig_debug_printf("gamelib_load: Begin gamelib_extra_load_func()...");
          tig_timer_now(&time);
          if (!gamelib_extra_load_func()) {
@@ -3207,11 +3276,11 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_load = false;
              return false;
          }
-@@ -1180,6 +1250,12 @@
+@@ -1180,6 +1254,12 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
-+    if (!background_rules_saved_objects_valid() || !modern_world_updates_finish_load()) {
++    if (!background_rules_saved_objects_valid() || !modern_world_updates_finish_load() || !modern_progression_load()) {
 +        modern_world_updates_abort_load();
 +        in_load = false;
 +        return false;
@@ -3220,7 +3289,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      ui_progressbar_update(MODULE_COUNT + 2);
  
      in_load = false;
-@@ -1200,7 +1276,7 @@
+@@ -1200,7 +1280,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -3229,7 +3298,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1470,9 @@
+@@ -1394,13 +1474,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -3246,7 +3315,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1627,7 @@
+@@ -1555,7 +1631,7 @@
          } while (0);
      }
  
@@ -3255,7 +3324,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1824,81 @@
+@@ -1752,11 +1828,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -3338,7 +3407,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1942,7 @@
+@@ -1800,6 +1946,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -3346,7 +3415,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1960,7 @@
+@@ -1817,7 +1964,7 @@
  }
  
  // 0x404A20
@@ -3355,7 +3424,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1975,12 @@
+@@ -1832,6 +1979,12 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
@@ -3368,7 +3437,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x404C10
-@@ -1874,6 +2023,7 @@
+@@ -1874,6 +2027,7 @@
      }
  
      path1[end] = '\0';
@@ -3376,11 +3445,12 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +2056,9 @@
+@@ -1906,6 +2060,10 @@
  void gamelib_unload_module_data(void)
  {
      int index;
 +    modern_world_updates_reset();
++    modern_progression_reset();
 +    sector_save_error_reset();
 +    modern_uap_module_unload();
  
@@ -3664,12 +3734,17 @@ diff --git a/src/game/item.c b/src/game/item.c
 diff --git a/src/game/level.c b/src/game/level.c
 --- a/src/game/level.c
 +++ b/src/game/level.c
-@@ -1,3 +1,4 @@
+@@ -1,6 +1,9 @@
++#include "game/modern_progression.h"
 +#include "game/modern_compat.h"
  #include "game/level.h"
  
  #include <stdio.h>
-@@ -14,13 +15,7 @@
++#include <stdlib.h>
+ 
+ #include "game/background.h"
+ #include "game/critter.h"
+@@ -14,13 +17,9 @@
  #include "game/tech.h"
  #include "game/ui.h"
  
@@ -3680,10 +3755,217 @@ diff --git a/src/game/level.c b/src/game/level.c
 - * and populate `xp_level.mes` accordingly.
 - */
 -#define LEVEL_MAX 51
-+#define LEVEL_MAX (modern_compat_get()->level_limit)
++#define LEVEL_MAX (level_maximum())
++#define LEVEL_TABLE_CAPACITY 65536
++static int level_count = 50;
  
  /**
   * The size of log during auto level up.
+@@ -270,27 +269,37 @@
+         return false;
+     }
+ 
+-    level_xp_tbl = (int*)CALLOC(LEVEL_MAX, sizeof(*level_xp_tbl));
++    level_xp_tbl = (int*)CALLOC(LEVEL_TABLE_CAPACITY, sizeof(*level_xp_tbl));
+ 
+     // NOTE: Unclear why log strs have static storage duration, but associated
+     // values are dynamically allocated on heap.
+     auto_level_log_values = (int*)CALLOC(AUTO_LEVEL_LOG_SIZE, sizeof(*auto_level_log_values));
+ 
+-    // Populate experience points table for each level.
+-    for (index = 0; index < LEVEL_MAX; index++) {
++    /* Preserve authored thresholds, then continue the last increase in level
++     * cost. Stop only at the XP field's representable ceiling, not level 50.
++     * The old 2-billion sentinel is not an actual level requirement. */
++    level_xp_tbl[0] = 0;
++    level_count = 1;
++    int64_t cost = 2100, increase = 400;
++    bool extending = false;
++    for (index = 1; index < LEVEL_TABLE_CAPACITY; index++) {
+         msg.num = index + 1;
+-        if (mes_search(xp_level_mes_file, &msg)) {
+-            level_xp_tbl[index] = atoi(msg.str);
++        int64_t next = 0;
++        if (!extending && mes_search(xp_level_mes_file, &msg)) next = atoll(msg.str);
++        if (next <= level_xp_tbl[index - 1] || next >= 2000000000) {
++            extending = true;
++            cost += increase;
++            next = (int64_t)level_xp_tbl[index - 1] + cost;
+         } else {
+-            level_xp_tbl[index] = 0;
+-        }
+-    }
+-
++            int64_t new_cost = next - level_xp_tbl[index - 1];
++            if (index > 1) increase = SDL_max((int64_t)1, new_cost - cost);
++            cost = new_cost;
++        }
++        if (next > 2000000000) break;
++        level_xp_tbl[index] = (int)next;
++        level_count++;
++    }
+     mes_unload(xp_level_mes_file);
+-
+-    // Level 1 must always be 0 experience points, no matter what was specified
+-    // in the file. This requirement is also mentioned in `xp_level.mes` itself.
+-    level_xp_tbl[0] = 0;
+ 
+     // Load system-defined advancement scheme rules (required).
+     if (!mes_load("rules\\gamelevel.mes", &game_level_mes_file)) {
+@@ -363,6 +372,14 @@
+  *
+  * 0x4A68B0
+  */
++int level_maximum(void) { return level_count; }
++
++int level_experience_for_level(int level)
++{
++    if (!level_xp_tbl || level <= 1) return 0;
++    return level_xp_tbl[SDL_min(level, level_count) - 1];
++}
++
+ int level_experience_points_to_next_level(int64_t obj)
+ {
+     int level;
+@@ -374,7 +391,10 @@
+         return 999999;
+     }
+ 
+-    return level_xp_tbl[level] - stat_level_get(obj, STAT_EXPERIENCE_POINTS);
++    int xp = stat_level_get(obj, STAT_EXPERIENCE_POINTS);
++    if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_NPC)
++        xp = SDL_max(xp, level_experience_for_level(level));
++    return level_xp_tbl[level] - xp;
+ }
+ 
+ /**
+@@ -404,7 +424,7 @@
+     if (level != 0 && level_xp_tbl[level] != 0) {
+         xp = level_experience_points_to_next_level(obj);
+         if (xp >= 0) {
+-            return 1000 - 1000 * xp / (level_xp_tbl[level] - level_xp_tbl[level - 1]);
++            return 1000 - (int)((int64_t)1000 * xp / (level_xp_tbl[level] - level_xp_tbl[level - 1]));
+         }
+     }
+ 
+@@ -464,10 +484,9 @@
+     int unspent_points;
+     MesFileEntry mes_file_entry;
+ 
+-    // Make sure `pc_obj` is PC.
+-    if (obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_PC) {
+-        return;
+-    }
++    bool is_pc = obj_field_int32_get(pc_obj, OBJ_F_TYPE) == OBJ_TYPE_PC;
++    if (!is_pc && (obj_field_int32_get(pc_obj, OBJ_F_TYPE) != OBJ_TYPE_NPC
++        || critter_pc_leader_get(pc_obj) == OBJ_HANDLE_NULL)) return;
+ 
+     // Get current and maximum levels.
+     cur_level = stat_base_get(pc_obj, STAT_LEVEL);
+@@ -492,46 +511,43 @@
+     while (cur_level < max_level && exp_to_next_level <= 0) {
+         cur_level++;
+ 
+-        if (cur_level == max_level) {
+-            // Max level reached - cap experience at the maximum level's requirement.
+-            stat_base_set(pc_obj, STAT_EXPERIENCE_POINTS, level_xp_tbl[cur_level - 1]);
++        // Update level.
++        stat_base_set(pc_obj, STAT_LEVEL, cur_level);
++
++        // Grant character points for level up.
++        unspent_points = stat_base_get(pc_obj, STAT_UNSPENT_POINTS);
++        unspent_points += calculate_bonus_character_points(cur_level - 1, cur_level);
++        stat_base_set(pc_obj, STAT_UNSPENT_POINTS, unspent_points);
++
++        ui_message.field_8 = cur_level;
++
++        if (auto_level_scheme_get(pc_obj) != 0) {
++            // Apply auto-leveling scheme.
++            ui_message.field_C = -1;
++            if (auto_level_apply(pc_obj, str)) {
++                mes_file_entry.num = 1; // "Your auto-level scheme has completed."
++                mes_get_msg(level_mes_file, &mes_file_entry);
++                strcat(str, " ");
++                strcat(str, mes_file_entry.str);
++            }
+         } else {
+-            // Update level.
+-            stat_base_set(pc_obj, STAT_LEVEL, cur_level);
+-
+-            // Grant character points for level up.
+-            unspent_points = stat_base_get(pc_obj, STAT_UNSPENT_POINTS);
+-            unspent_points += calculate_bonus_character_points(cur_level - 1, cur_level);
+-            stat_base_set(pc_obj, STAT_UNSPENT_POINTS, unspent_points);
+-
+-            ui_message.field_8 = cur_level;
+-
+-            if (auto_level_scheme_get(pc_obj) != 0) {
+-                // Apply auto-leveling scheme.
+-                ui_message.field_C = -1;
+-                if (auto_level_apply(pc_obj, str)) {
+-                    mes_file_entry.num = 1; // "Your auto-level scheme has completed."
+-                    mes_get_msg(level_mes_file, &mes_file_entry);
+-                    strcat(str, " ");
+-                    strcat(str, mes_file_entry.str);
+-                }
+-            } else {
+-                // No auto-leveling scheme.
+-                ui_message.field_C = unspent_points;
+-                str[0] = '\0';
+-            }
+-
+-            // Notify UI for local player characters.
+-            if (player_is_local_pc_obj(pc_obj)) {
+-                ui_display_msg(&ui_message);
+-                ui_toggle_primary_button(UI_PRIMARY_BUTTON_CHAR, true);
+-                ui_refresh_health_bar(pc_obj);
+-                ui_refresh_fatigue_bar(pc_obj);
+-            }
+-
+-            exp_to_next_level = level_experience_points_to_next_level(pc_obj);
+-        }
+-    }
++            // No auto-leveling scheme.
++            ui_message.field_C = unspent_points;
++            str[0] = '\0';
++        }
++
++        // Notify UI for local player characters.
++        if (player_is_local_pc_obj(pc_obj)) {
++            ui_display_msg(&ui_message);
++            ui_toggle_primary_button(UI_PRIMARY_BUTTON_CHAR, true);
++            ui_refresh_health_bar(pc_obj);
++            ui_refresh_fatigue_bar(pc_obj);
++        }
++
++        exp_to_next_level = level_experience_points_to_next_level(pc_obj);
++    }
++
++    if (!is_pc || modern_combat_xp_sharing()) return;
+ 
+     // Level up current followers.
+     object_list_all_followers(pc_obj, &objects);
+@@ -587,7 +603,7 @@
+ 
+     // Cap the new level to avoid exceeding maximum level.
+     if (new_level >= max_level) {
+-        new_level = max_level - 1;
++        new_level = max_level;
+     }
+ 
+     if (new_level > curr_level) {
+diff --git a/src/game/level.h b/src/game/level.h
+--- a/src/game/level.h
++++ b/src/game/level.h
+@@ -5,6 +5,8 @@
+ 
+ bool level_init(GameInitInfo* init_info);
+ void level_exit(void);
++int level_maximum(void);
++int level_experience_for_level(int level);
+ int level_experience_points_to_next_level(int64_t obj);
+ int level_progress_towards_next_level(int64_t obj);
+ void level_recalc(int64_t pc_obj);
 diff --git a/src/game/magictech.c b/src/game/magictech.c
 --- a/src/game/magictech.c
 +++ b/src/game/magictech.c
@@ -5404,7 +5686,7 @@ diff --git a/src/game/stat.c b/src/game/stat.c
          break;
      }
  
-+    if (stat == STAT_LEVEL) return modern_compat_get()->level_limit;
++    if (stat == STAT_LEVEL) return level_maximum();
      return stat_max_values[stat];
  }
  
@@ -5577,6 +5859,23 @@ diff --git a/src/game/tf.c b/src/game/tf.c
      TextFloaterList* list;
      TextFloaterList* prev_list;
      TextFloaterEntry* entry;
+diff --git a/src/game/timeevent.c b/src/game/timeevent.c
+--- a/src/game/timeevent.c
++++ b/src/game/timeevent.c
+@@ -1,4 +1,5 @@
+ #include "game/timeevent.h"
++#include "game/modern_progression.h"
+ 
+ #include <stdio.h>
+ 
+@@ -820,6 +821,7 @@
+     }
+ 
+     timeevent_in_ping = true;
++    modern_encounter_advance(delta);
+     datetime_add_milliseconds(&timeevent_real_time, delta);
+ 
+     if (tig_net_is_active()
 diff --git a/src/game/townmap.c b/src/game/townmap.c
 --- a/src/game/townmap.c
 +++ b/src/game/townmap.c
@@ -9609,11 +9908,39 @@ diff --git a/src/ui/tech_ui.c b/src/ui/tech_ui.c
  
      // Attempt to decrease the technology degree.
      if (tech_degree_dec(obj, tech) < degree) {
+diff --git a/src/ui/wmap_rnd.c b/src/ui/wmap_rnd.c
+--- a/src/ui/wmap_rnd.c
++++ b/src/ui/wmap_rnd.c
+@@ -1,4 +1,5 @@
+ #include "ui/wmap_rnd.h"
++#include "game/modern_progression.h"
+ 
+ #include "game/area.h"
+ #include "game/map.h"
+@@ -988,6 +989,9 @@
+         return false;
+     }
+ 
++    /* Grace only suppresses travel encounters; resting keeps its own risk. */
++    if (wmap_ui_is_created() && modern_encounter_grace_remaining() != 0) return false;
++
+     // Cache location components for later use by the spawn routines.
+     wmap_rnd_loc = loc;
+     wmap_rnd_loc_x = LOCATION_GET_X(loc);
+@@ -1043,6 +1047,7 @@
+         return false;
+     }
+ 
++    modern_encounter_started();
+     return true;
+ }
+ 
 diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 --- a/src/ui/wmap_ui.c
 +++ b/src/ui/wmap_ui.c
-@@ -1,12 +1,19 @@
+@@ -1,12 +1,20 @@
 +#include "game/modern_house.h"
++#include "game/modern_progression.h"
  #include "ui/wmap_ui.h"
  
 +#include "ui/modern_ui.h"
@@ -9632,7 +9959,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  #include "game/gamelib.h"
  #include "game/gsound.h"
  #include "game/hrp.h"
-@@ -15,6 +22,7 @@
+@@ -15,6 +23,7 @@
  #include "game/map.h"
  #include "game/mes.h"
  #include "game/obj.h"
@@ -9640,7 +9967,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  #include "game/path.h"
  #include "game/player.h"
  #include "game/sector.h"
-@@ -25,6 +33,8 @@
+@@ -25,6 +34,8 @@
  #include "ui/intgame.h"
  #include "ui/textedit_ui.h"
  #include "ui/types.h"
@@ -9649,7 +9976,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  typedef enum WmapUiMode {
      WMAP_UI_MODE_WORLD,
-@@ -170,7 +180,9 @@
+@@ -170,7 +181,9 @@
  } WmapRouteWaypoint;
  
  typedef struct WmapRoute {
@@ -9660,7 +9987,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      /* 03C0 */ int length;
      /* 03C4 */ int field_3C4;
      /* 03C8 */ int field_3C8;
-@@ -212,6 +224,8 @@
+@@ -212,6 +225,8 @@
  static bool sub_5627B0(WmapCoords* coords);
  static bool sub_5627F0(int64_t loc);
  static void sub_562800(int id);
@@ -9669,7 +9996,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  static void wmap_ui_draw_coords(WmapCoords* coords);
  static void wmap_ui_navigate(int x, int y);
  static void sub_562AF0(int x, int y);
-@@ -314,6 +328,12 @@
+@@ -314,6 +329,12 @@
  
  // 0x5C9B00
  static tig_window_handle_t wmap_ui_window = TIG_WINDOW_HANDLE_INVALID;
@@ -9682,7 +10009,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x5C9B08
  static TigRect wmap_ui_window_frame = { 0, 41, 800, 400 };
-@@ -435,6 +455,7 @@
+@@ -435,6 +456,7 @@
  
  // 0x66D864
  static bool wmap_ui_created;
@@ -9690,7 +10017,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
  // 0x66D868
  static WmapUiMode wmap_ui_mode;
-@@ -748,7 +769,7 @@
+@@ -748,7 +770,7 @@
  
      wmap_ui_note_bounds.x = wmap_note_type_icon_max_width + 3;
  
@@ -9699,7 +10026,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          || tig_art_frame_data(art_id, &art_frame_data) != TIG_OK) {
          return false;
      }
-@@ -775,6 +796,8 @@
+@@ -775,6 +797,8 @@
      wmap_ui_compass_arrow_num_frames = art_anim_data.num_frames;
  
      for (index = 0; index < WMAP_ROUTE_TYPE_COUNT; index++) {
@@ -9708,7 +10035,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          wmap_ui_routes[index].length = 0;
          wmap_ui_routes[index].field_3C4 = 1;
          wmap_ui_routes[index].field_3C8 = 1;
-@@ -789,6 +812,16 @@
+@@ -789,6 +813,16 @@
  {
      int mode;
      int tile;
@@ -9725,7 +10052,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      wmap_ui_mode = WMAP_UI_MODE_WORLD;
      wmap_ui_state = WMAP_UI_STATE_NORMAL;
-@@ -911,6 +944,7 @@
+@@ -911,6 +945,7 @@
  // 0x560200
  void wmap_ui_reset(void)
  {
@@ -9733,7 +10060,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int index;
  
      if (wmap_ui_initialized) {
-@@ -1017,6 +1051,7 @@
+@@ -1017,6 +1052,7 @@
  // 0x5604B0
  bool wmap_ui_load(GameLoadInfo* load_info)
  {
@@ -9741,7 +10068,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int mode;
      int cnt;
      int note;
-@@ -1411,6 +1446,9 @@
+@@ -1411,6 +1447,9 @@
      if (!wmap_ui_created) {
          return;
      }
@@ -9751,7 +10078,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      pc_obj = player_get_local_pc_obj();
      if (pc_obj != OBJ_HANDLE_NULL
-@@ -1523,6 +1561,7 @@
+@@ -1523,6 +1562,7 @@
      }
  
      wmap_ui_textedit_focused = false;
@@ -9759,7 +10086,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      tig_art_interface_id_create(138, 0, 0, 0, &art_id);
  
-@@ -1600,6 +1639,8 @@
+@@ -1600,6 +1640,8 @@
          }
      }
  
@@ -9768,7 +10095,15 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      sub_561430(loc);
      sub_563590(&(wmap_ui_mode_info[wmap_ui_mode].field_3C), false);
  
-@@ -2188,18 +2229,7 @@
+@@ -1737,6 +1779,7 @@
+         }
+ 
+         wmap_ui_state = state;
++        modern_encounter_travel(state == WMAP_UI_STATE_MOVING);
+ 
+         if (refresh) {
+             sub_5649C0();
+@@ -2188,18 +2231,7 @@
                          }
                      } else {
                          if (wmap_ui_mode == WMAP_UI_MODE_TOWN && wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN].length > 0) {
@@ -9788,7 +10123,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
                          }
                      }
                      return true;
-@@ -2395,6 +2425,57 @@
+@@ -2395,6 +2427,57 @@
          sub_561490(area_get_location(id), &(note.coords));
          sub_563C60(&note);
      }
@@ -9846,7 +10181,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  }
  
  // 0x562880
-@@ -3569,6 +3650,9 @@
+@@ -3569,6 +3652,9 @@
      return false;
  }
  
@@ -9856,7 +10191,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  // 0x5643E0
  bool sub_5643E0(WmapCoords* coords)
  {
-@@ -3594,6 +3678,10 @@
+@@ -3594,6 +3680,10 @@
          route_type = WMAP_ROUTE_TYPE_TOWN;
      }
  
@@ -9867,7 +10202,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      wp_idx = wmap_ui_routes[route_type].length;
      if (wp_idx >= 30) {
          return false;
-@@ -3601,60 +3689,30 @@
+@@ -3601,60 +3691,30 @@
  
      wp = &(wmap_ui_routes[route_type].waypoints[wp_idx]);
  
@@ -9951,7 +10286,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      dword_5C9AD8 = wmap_ui_routes[route_type].length;
-@@ -4212,7 +4270,7 @@
+@@ -4212,7 +4272,7 @@
      tmp_rect.height = 3;
      tig_window_fill(wmap_ui_window, &tmp_rect, tig_color_make(0, 255, 0));
  
@@ -9960,7 +10295,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          && tig_art_frame_data(art_blit_info.art_id, &art_frame_data) == TIG_OK) {
          src_rect.x = 0;
          src_rect.y = 0;
-@@ -4376,6 +4434,11 @@
+@@ -4376,6 +4436,11 @@
          }
      }
  
@@ -9972,7 +10307,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      art_blit_info.flags = 0;
      art_blit_info.src_rect = &src_rect;
      art_blit_info.dst_rect = &dst_rect;
-@@ -4390,8 +4453,10 @@
+@@ -4390,8 +4455,10 @@
          note = &(wmap_info->notes[idx]);
          if (wmap_note_type_info[note->type].enabled
              && sub_565CF0(note)) {
@@ -9985,7 +10320,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          }
      }
  
-@@ -4402,7 +4467,7 @@
+@@ -4402,7 +4469,7 @@
          WmapCoords coords;
  
          sub_561490(area_get_location(area), &coords);
@@ -9994,7 +10329,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      }
  
      offset_x = wmap_info->field_3C.x - wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width / 2 - wmap_info->field_34;
-@@ -4413,7 +4478,7 @@
+@@ -4413,7 +4480,7 @@
      vb_dst_rect.width = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].width;
      vb_dst_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].height;
  
@@ -10003,7 +10338,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          dst_rect = vb_dst_rect;
          vb_dst_rect.x -= tmp_rect.x + offset_x;
          vb_dst_rect.y -= tmp_rect.y + offset_y;
-@@ -4426,7 +4491,7 @@
+@@ -4426,7 +4493,7 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  
@@ -10012,7 +10347,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          src_rect.x = wmap_ui_nav_cvr_frame.x - dst_rect.x;
          src_rect.y = wmap_ui_nav_cvr_frame.y - dst_rect.y;
          src_rect.width = wmap_ui_nav_cvr_width - (wmap_ui_nav_cvr_frame.x - dst_rect.x);
-@@ -4671,7 +4736,8 @@
+@@ -4671,7 +4738,8 @@
      dirty_rect.y = rect->y;
      dirty_rect.width = rect->width;
      dirty_rect.height = rect->height;
@@ -10022,7 +10357,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
  
      min_x = offset_x / wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tile_width;
      if (min_x < 0) {
-@@ -4696,7 +4762,7 @@
+@@ -4696,7 +4764,7 @@
          max_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_vert_tiles;
      }
  
@@ -10031,7 +10366,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          for (col = min_x; col < max_x; col++) {
              idx = col + row * wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_hor_tiles;
              entry = &(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].tiles[idx]);
-@@ -4851,7 +4917,7 @@
+@@ -4851,7 +4919,7 @@
          object_list_destroy(&objects);
      }
  
@@ -10040,7 +10375,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
          art_src_rect.x = art_dst_rect.x - wmap_ui_nav_cvr_frame.x;
          art_src_rect.y = art_dst_rect.y - wmap_ui_nav_cvr_frame.y;
          art_src_rect.width = art_dst_rect.width;
-@@ -4929,7 +4995,7 @@
+@@ -4929,7 +4997,7 @@
          src_rect.height = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].height;
          art_blit_info.art_id = wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].art_id;
  
@@ -10049,7 +10384,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
              dst_rect = src_rect;
  
              src_rect.x -= x2 - wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].width / 2;
-@@ -4984,3 +5050,311 @@
+@@ -4984,3 +5052,311 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }

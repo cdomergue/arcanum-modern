@@ -478,6 +478,15 @@ NoCombatMusic and `8` for NoXPPerHit; combine them by addition.
 The probe checks character selection, portraits, backgrounds, animation
 rotations, rendered cursors and level progression using the installed assets.
 
+For combat progression checks, build `check-text-size` and set
+`ARCANUM_CHECK_PROGRESSION=1`. Run it with the absolute paths to an isolated game
+and a capture directory, followed by `--party-fixture`. The game copy must have
+a `.map-export-sandbox` marker. This creates a test party and writes slots
+`SlotP001` and `SlotP002` in that copy. Run with both French and English assets.
+It checks delayed damage/kill rewards, equal companion XP, real-time and
+turn-based combat, difficulty modifiers, saving during combat, travel grace,
+legacy saves and progression beyond levels 50 and 100.
+
 `tools/check-map-first-launch.py ENGINE GAME` checks each installed campaign
 separately and all campaigns together, including interrupted preparation and
 resume. For a complete generation check, run `ENGINE --modern-generate-maps GAME`

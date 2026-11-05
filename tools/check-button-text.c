@@ -91,6 +91,7 @@ static void check_settings(void)
     text_scale=100;save_settings();
 }
 #include "check-portrait-in-game.inc"
+#include "check-progression.inc"
 
 static void check_party_hints(void)
 {
@@ -275,6 +276,7 @@ int main(int argc,char** argv)
     if(SDL_getenv("ARCANUM_CHECK_HUD_HINTS")){check_hud_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_COMBAT_HINTS")){check_combat_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_STAT_COLORS")){check_stat_colors();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_PROGRESSION")){check_progression();return 0;}
 
 
 

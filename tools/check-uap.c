@@ -123,7 +123,7 @@ int main(int argc, char** argv)
     assert(options->master_educator == !!(flags & 2));
     assert(options->no_combat_music == !!(flags & 4));
     assert(options->no_xp_per_hit == !!(flags & 8));
-    assert(stat_level_max(hero, STAT_LEVEL) == options->level_limit);
+    assert(stat_level_max(hero, STAT_LEVEL) == level_maximum() && level_maximum() > 100);
     level_set(hero, (flags & 1) ? 75 : 25);
     assert(stat_base_get(hero, STAT_LEVEL) == ((flags & 1) ? 75 : 25));
     assert(level_experience_points_to_next_level(hero) > 0);

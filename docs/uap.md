@@ -121,15 +121,17 @@ applied by Renaissance on Windows, macOS and Linux:
 
 | Option | Effect |
 | --- | --- |
-| LevelCap100 | Uses the extended level progression. |
+| LevelCap100 | Detected for compatibility; Renaissance continues progression beyond both level 50 and level 100 regardless of this option. |
 | MasterEducator | Allows the hero to teach followers up to the hero's own training rank, without requiring the Educator background. |
 | NoCombatMusic | Keeps the area's music during combat. |
-| NoXPPerHit | Awards combat experience on kills rather than individual hits. |
+| NoXPPerHit | Uses kill rewards only when calculating combat XP. Renaissance pays the accumulated reward equally to the hero and living companions at the end of combat. |
 
 Restart Renaissance after applying an option. Keep `Arcanum.exe` in the game
 folder: the presence of an EnginePatcher script alone does not enable its option.
-Without a recognized patched executable, these settings retain Arcanum's normal
-behavior.
+Without a recognized patched executable, MasterEducator and NoCombatMusic stay
+disabled. Combat XP includes native damage and kill rewards; its payment is
+deferred until combat ends. Level progression continues using the installed XP
+curve and extends its increasing costs up to the native XP storage limit.
 
 Renaissance supplies its own interface and combat controls. UAP changes embedded
 only in the original executable are not automatically inherited; the table above

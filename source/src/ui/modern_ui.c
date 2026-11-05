@@ -1066,7 +1066,7 @@ static void gauge(float x,float y,int value,int maximum,bool fatigue)
 
 static void draw_experience_gauge(int64_t actor,SDL_FRect rect)
 {
-    bool capped=stat_level_get(actor,STAT_LEVEL)>=modern_compat_get()->level_limit;
+    bool capped=stat_level_get(actor,STAT_LEVEL)>=level_maximum();
     int progress=capped?1000:level_progress_towards_next_level(actor);
     if(progress<0)progress=0;
     if(progress>1000)progress=1000;
