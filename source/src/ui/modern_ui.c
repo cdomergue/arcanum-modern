@@ -15,6 +15,7 @@
 #include <SDL3/SDL.h>
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../third_party/stb/stb_truetype.h"
+#include "modern_portrait_image.inc"
 
 #include "game/anim.h"
 #include "game/background.h"
@@ -1474,10 +1475,16 @@ static void option_section(float x,float y,float w,const char* title)
 #include "modern_keys.inc"
 
 #include "modern_background.inc"
+#include "modern_portrait_import.inc"
 
 static void draw_character_menu(void)
 {
+    portrait_editor_poll();
     ModernCharacter c;if(!modern_mainmenu_character(&c,description_tab))return;
+    if(portrait_editor.active) {
+        if(c.editable && c.object==portrait_editor.object){draw_portrait_editor();return;}
+        portrait_editor_close();
+    }
     float w=fminf(1360,canvas_w-40),h=800,x=(canvas_w-w)/2,y=(canvas_h-h)/2;
     frame((SDL_FRect){x,y,w,h});
     centered(3,menu_text(c.editable?421:420),canvas_w/2,y+22,GOLD);
@@ -1503,7 +1510,7 @@ static void draw_character_menu(void)
     char name[160];SDL_strlcpy(name,game_text(c.name),sizeof(name));
     if(name_focused && !name_replace && (SDL_GetTicks()/500)%2==0)SDL_strlcat(name," |",sizeof(name));
     text_in_button((SDL_FRect){left,y+303,lw,58},522,name,name_focused,c.editable);
-    if(c.editable) text_draw(0,menu_text(2210),left,y+278,MUTED);
+    if(c.editable) menu_button((SDL_FRect){left,y+267,lw,30},512,tr("Importer un portrait…","Import portrait…"),true);
     text_draw(0,character_text(5),left,y+386,MUTED);
     text_in_button((SDL_FRect){left+48,y+412,lw-96,52},530,game_text(c.gender),description_tab==0,true);
     if(c.editable) {
@@ -1855,6 +1862,7 @@ static void menu_name_focus(bool focus)
 static bool creation_menu_action(int action)
 {
     MainMenuWindowType type=mainmenu_ui_window_type_get();
+    if(portrait_editor_action(action))return true;
     if(background_editor) return background_editor_action(action);
     if(action==588 && type==MM_WINDOW_NEW_CHAR) {
         ModernCharacter c;
@@ -2662,6 +2670,7 @@ static bool handle_ui_event(SDL_Event* event)
     if(!menu && (!visible() || (!hud && !journal))) return false;
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);
     if(ww<=0 || wh<=0) return false;
+    if(portrait_editor_event(event,ww,wh))return true;
     if(event->type==SDL_EVENT_MOUSE_MOTION) {
         mouse_x=event->motion.x*canvas_w/ww;mouse_y=event->motion.y*canvas_h/wh;
         if(menu)menu_hover_sound(hit(mouse_x,mouse_y));
@@ -3060,6 +3069,11 @@ void modern_ui_exit(void)
 {
     tutorial_exit();
     update_close();
+    SDL_SetAtomicInt(&portrait_picker.alive,0);
+    if(SDL_GetAtomicInt(&portrait_picker.state)==2) {
+        SDL_free(portrait_picker.path);portrait_picker.path=NULL;SDL_SetAtomicInt(&portrait_picker.state,0);
+    }
+    portrait_editor_close();
     tactical_portraits_clear();
     if(option_boolean_file!=MES_FILE_HANDLE_INVALID){mes_unload(option_boolean_file);option_boolean_file=MES_FILE_HANDLE_INVALID;}
     modern_graphics_cancel();

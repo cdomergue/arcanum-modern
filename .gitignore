@@ -112,3 +112,8 @@ worlded.local.json
 !/source/src/game/modern_background_rules.h
 !/source/src/game/modern_background_rules.inc
 !/source/src/ui/modern_background_rules.inc
+
+!/source/src/game/modern_portrait_import.inc
+!/source/src/ui/modern_portrait_import.inc
+!/source/src/ui/modern_portrait_image.inc
+!/source/third_party/stb/stb_image.h
