@@ -37,9 +37,9 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
   Your character and companions avoid detected ground traps and stop if no safe route is available.
 - Select automatic level-up schemes for your character and companions.
   Choose None for a companion to assign their available points yourself.
-- Combat XP is awarded when the fight ends, with the same amount for the hero
-  and each living companion. Progression continues beyond level 50, and random
-  encounters are separated by at least five seconds of world-map travel.
+- Equal combat XP for the hero and living companions at the end of each fight;
+  progression beyond level 50.
+- Five seconds of world-map travel between random encounters.
 - Three rotating autosaves before and after combat and before eligible area
   transitions, separate from manual saves. Automatic saves can be disabled in the game options.
 - Journal search, quest filters, favorites, quest tracking and personal map notes.
