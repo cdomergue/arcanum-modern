@@ -38,7 +38,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
      "src/game/a_name.c"
      "src/game/a_name.h"
      "src/game/ai.c"
-@@ -333,7 +356,60 @@
+@@ -333,7 +356,69 @@
  
  target_link_libraries(arcanum-ce PUBLIC
      ${TIG_LIBRARY}
@@ -90,6 +90,15 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +if(WIN32)
 +    add_custom_command(TARGET probe-world-updates POST_BUILD
 +        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:probe-world-updates>" VERBATIM)
++endif()
++
++add_executable(check-campaign EXCLUDE_FROM_ALL "../tools/check-campaign.c" ${HOUSE_CHECK_SRCS})
++target_include_directories(check-campaign PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
++target_link_libraries(check-campaign PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
++add_dependencies(check-campaign arcanum-ffmpeg)
++if(WIN32)
++    add_custom_command(TARGET check-campaign POST_BUILD
++        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:check-campaign>" VERBATIM)
 +endif()
 +
 +add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
@@ -2143,7 +2152,16 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
  
  #include <stdio.h>
  
-@@ -24,6 +25,22 @@
+@@ -6,6 +7,8 @@
+ #include "game/anim.h"
+ #include "game/area.h"
+ #include "game/critter.h"
++#include "game/gamelib.h"
++#include "game/modern_campaign_fixes.h"
+ #include "game/item.h"
+ #include "game/magictech.h"
+ #include "game/mes.h"
+@@ -24,6 +27,22 @@
  #include "game/tc.h"
  #include "game/timeevent.h"
  #include "game/ui.h"
@@ -2166,7 +2184,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
  
  typedef enum GeneratedDialog {
      GD_PC2M,
-@@ -420,6 +437,10 @@
+@@ -420,6 +439,10 @@
  {
      int index;
      DialogFile dialog;
@@ -2177,7 +2195,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
  
      if (find_dialog(path, &index)) {
          dialog_files[index].refcount++;
-@@ -484,7 +505,7 @@
+@@ -484,7 +507,7 @@
  
      if (critter_is_dead(state->npc_obj) || ai_check_kos(state->npc_obj, state->pc_obj) == AI_KOS_NO) {
          if (player_is_local_pc_obj(state->pc_obj)) {
@@ -2186,7 +2204,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              npc_loc = obj_field_int64_get(state->npc_obj, OBJ_F_LOCATION);
              location_xy(pc_loc, &tmp, &pc_loc_y);
              location_xy(npc_loc, &tmp, &npc_loc_y);
-@@ -1317,11 +1338,11 @@
+@@ -1317,11 +1340,11 @@
      int cnt;
  
      key.num = a1->field_17EC;
@@ -2201,7 +2219,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          intelligence = 1;
      }
  
-@@ -1407,66 +1428,66 @@
+@@ -1407,66 +1430,66 @@
          switch (cond) {
          case DIALOG_COND_PS:
              if (value < 0) {
@@ -2280,7 +2298,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1547,11 +1568,11 @@
+@@ -1547,11 +1570,11 @@
              break;
          case DIALOG_COND_HA:
              if (value < 0) {
@@ -2294,7 +2312,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1570,21 +1591,21 @@
+@@ -1570,21 +1593,21 @@
              training = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
                  if (training < 0) {
@@ -2320,7 +2338,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                          return false;
                      }
                  }
-@@ -1594,21 +1615,21 @@
+@@ -1594,21 +1617,21 @@
              level = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
                  if (level < 0) {
@@ -2346,7 +2364,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                          return false;
                      }
                  }
-@@ -1649,11 +1670,11 @@
+@@ -1649,11 +1672,11 @@
              break;
          case DIALOG_COND_LE:
              if (value < 0) {
@@ -2360,7 +2378,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1713,11 +1734,11 @@
+@@ -1713,11 +1736,11 @@
              break;
          case DIALOG_COND_RA:
              if (value > 0) {
@@ -2374,7 +2392,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -1794,11 +1815,11 @@
+@@ -1794,11 +1817,11 @@
              break;
          case DIALOG_COND_NA:
              if (value < 0) {
@@ -2388,7 +2406,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                      return false;
                  }
              }
-@@ -2066,9 +2087,9 @@
+@@ -2066,9 +2089,9 @@
  
              training = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
@@ -2400,7 +2418,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              }
              break;
          }
-@@ -2196,11 +2217,11 @@
+@@ -2196,11 +2219,11 @@
  
              v50 = sub_4167C0(pch);
              if (IS_TECH_SKILL(value)) {
@@ -2416,7 +2434,21 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              }
  
              if (level < training_min_skill_level_required(TRAINING_EXPERT)) {
-@@ -2330,7 +2351,7 @@
+@@ -2273,7 +2296,12 @@
+     a1->speech_id = sub_4189C0(entry.conditions, a1->script_num);
+ 
+     if (!a2) {
+-        sub_415BA0(a1, entry.actions, 0);
++        const char* actions = modern_campaign_reward_actions(
++            gamelib_current_module_name_get(), a1->script_num, entry.num,
++            a1->script_num == 1565 ? quest_state_get(a1->pc_obj, 1098) : QUEST_STATE_UNKNOWN,
++            entry.actions);
++        // The legacy action interpreter only reads this borrowed string.
++        sub_415BA0(a1, (char*)actions, 0);
+     }
+ 
+     if (SDL_strncasecmp(entry.str, "g:", 2) == 0) {
+@@ -2330,7 +2358,7 @@
      }
  
      if (obj_type_is_critter(obj_field_int32_get(a1->pc_obj, OBJ_F_TYPE))
@@ -2425,7 +2457,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          sub_416B00(a1->reply, entry.data.female_str, a1);
      } else {
          sub_416B00(a1->reply, entry.str, a1);
-@@ -3051,7 +3072,7 @@
+@@ -3051,7 +3079,7 @@
      int cnt;
      MesFileEntry mes_file_entry;
  
@@ -2434,7 +2466,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          gd = stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE
              ? GD_DUMB_PC2M
              : GD_DUMB_PC2F;
-@@ -3077,7 +3098,7 @@
+@@ -3077,7 +3105,7 @@
      int cnt;
      MesFileEntry mes_file_entry;
  
@@ -2443,7 +2475,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          gd = stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE
              ? GD_CLS_DUMB_PC2M
              : GD_CLS_DUMB_PC2F;
-@@ -3118,21 +3139,21 @@
+@@ -3118,21 +3146,21 @@
  
      if (critter_is_dumb(state->npc_obj)) {
          if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2469,7 +2501,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
                  ? GD_CLS_F2M
                  : GD_CLS_F2F;
          }
-@@ -3164,26 +3185,26 @@
+@@ -3164,26 +3192,26 @@
  
      if (critter_is_dumb(state->npc_obj)) {
          if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2501,7 +2533,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          if (race != stat_level_get(state->npc_obj, STAT_RACE)) {
              num += 50 * (race + 1);
          }
-@@ -3211,11 +3232,11 @@
+@@ -3211,11 +3239,11 @@
      }
  
      if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -2515,7 +2547,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              ? GD_NPC_F2M
              : GD_NPC_F2F;
      }
-@@ -3263,7 +3284,7 @@
+@@ -3263,7 +3291,7 @@
  
      if (state->pc_obj != OBJ_HANDLE_NULL
          && obj_type_is_critter(obj_field_int32_get(state->pc_obj, OBJ_F_TYPE))
@@ -2524,7 +2556,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          strcpy(buffer, entry.str);
      } else {
          strcpy(buffer, entry.data.female_str);
-@@ -3389,7 +3410,7 @@
+@@ -3389,7 +3417,7 @@
      index = state->num_options - 1;
      if (IS_TECH_SKILL(skill)) {
          // Check if PC is already trained.
@@ -2533,7 +2565,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
              // "You already have received apprentice training in that skill."
              sub_418C40(4000, state->field_17F0[index], state->field_1804[index], state);
              return;
-@@ -3397,30 +3418,30 @@
+@@ -3397,30 +3425,30 @@
  
          // Check if PC can be trained - attempt to temporarily grant apprentice
          // training.
@@ -2569,7 +2601,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          dialog_ask_money(100, 7, skill, state->field_17F0[index], state->field_1804[index], state);
      }
  }
-@@ -3429,9 +3450,9 @@
+@@ -3429,9 +3457,9 @@
  void dialog_perform_training(int skill, DialogState* state)
  {
      if (IS_TECH_SKILL(skill)) {
@@ -2582,7 +2614,7 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
      }
  
      // "Your apprentice training is complete."
-@@ -4162,11 +4183,11 @@
+@@ -4162,11 +4190,11 @@
      }
  
      if (stat_level_get(state->npc_obj, STAT_GENDER) == GENDER_MALE) {
@@ -3513,7 +3545,15 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 diff --git a/src/game/map.c b/src/game/map.c
 --- a/src/game/map.c
 +++ b/src/game/map.c
-@@ -33,6 +33,7 @@
+@@ -15,6 +15,7 @@
+ #include "game/location.h"
+ #include "game/magictech.h"
+ #include "game/mes.h"
++#include "game/modern_campaign_fixes.h"
+ #include "game/obj_file.h"
+ #include "game/obj_private.h"
+ #include "game/object.h"
+@@ -33,6 +34,7 @@
  #include "game/tile.h"
  #include "game/timeevent.h"
  #include "game/townmap.h"
@@ -3521,7 +3561,7 @@ diff --git a/src/game/map.c b/src/game/map.c
  #include "game/ui.h"
  #include "game/wall.h"
  #include "game/wallcheck.h"
-@@ -361,7 +362,7 @@
+@@ -361,7 +363,7 @@
  
      tig_debug_printf("map_save: flushing map...");
      tig_timer_now(&start);
@@ -3530,7 +3570,7 @@ diff --git a/src/game/map.c b/src/game/map.c
      tig_debug_printf("done.  Time (ms): %d\n", tig_timer_elapsed(start));
  
      tig_debug_printf("map_save: saving map names...");
-@@ -399,7 +400,7 @@
+@@ -399,7 +401,7 @@
  
              if (!map_modules[index].save_func(stream)) {
                  tig_debug_printf("map_save: save function %d (%s) failed\n", index, map_modules[index].name);
@@ -3539,7 +3579,7 @@ diff --git a/src/game/map.c b/src/game/map.c
              }
  
              int pos;
-@@ -412,7 +413,7 @@
+@@ -412,7 +414,7 @@
  
              if (tig_file_fwrite(&sentinel, sizeof(sentinel), 1, stream) != 1) {
                  tig_debug_printf("map_save(): ERROR: Sentinel Failed to Save!");
@@ -3548,7 +3588,7 @@ diff --git a/src/game/map.c b/src/game/map.c
              }
          }
      }
-@@ -805,7 +806,7 @@
+@@ -805,7 +807,7 @@
  
      info = &(map_list_info[map - 1]);
      if (map_valid && !a3) {
@@ -3557,7 +3597,7 @@ diff --git a/src/game/map.c b/src/game/map.c
      }
  
      if (!obj_validate_system(1)) {
-@@ -949,53 +950,36 @@
+@@ -949,53 +951,36 @@
  }
  
  // 0x410070
@@ -3630,7 +3670,7 @@ diff --git a/src/game/map.c b/src/game/map.c
  }
  
  // 0x4101D0
-@@ -1271,19 +1255,19 @@
+@@ -1271,19 +1256,19 @@
          } while (obj_inst_next(&obj, &iter));
      }
  
@@ -3653,7 +3693,7 @@ diff --git a/src/game/map.c b/src/game/map.c
  }
  
  // 0x410B20
-@@ -1320,13 +1304,13 @@
+@@ -1320,13 +1305,13 @@
          } while (obj_inst_next(&obj, &iter));
      }
  
@@ -3669,7 +3709,27 @@ diff --git a/src/game/map.c b/src/game/map.c
  }
  
  // 0x410C50
-@@ -1444,6 +1428,20 @@
+@@ -1341,6 +1326,19 @@
+         do {
+             if (!object_is_static(obj)) {
+                 obj_load_postprocess(obj);
++            }
++
++            if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_NPC) {
++                ObjectID id = obj_get_id(obj);
++                ObjectID prototype = obj_get_id(obj_field_handle_get(obj, OBJ_F_PROTOTYPE_HANDLE));
++                if (id.type == OID_TYPE_GUID && prototype.type == OID_TYPE_A) {
++                    unsigned original = obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS);
++                    unsigned corrected = modern_campaign_critter_flags(
++                        gamelib_current_module_name_get(), prototype.d.a, id.d.g.data, original);
++                    if (corrected != original) {
++                        obj_field_int32_set(obj, OBJ_F_CRITTER_FLAGS, corrected);
++                    }
++                }
+             }
+ 
+             flags = obj_field_int32_get(obj, OBJ_F_FLAGS);
+@@ -1444,6 +1442,20 @@
  
      // FIX: Release `stream`.
      tig_file_fclose(stream);
@@ -4288,12 +4348,15 @@ diff --git a/src/game/rumor.c b/src/game/rumor.c
 diff --git a/src/game/script.c b/src/game/script.c
 --- a/src/game/script.c
 +++ b/src/game/script.c
-@@ -1,3 +1,4 @@
+@@ -1,4 +1,7 @@
 +#include "game/modern_house.h"
  #include "game/script.h"
++
++#include <limits.h>
  
  #include "game/ai.h"
-@@ -277,10 +278,13 @@
+ #include "game/anim.h"
+@@ -277,10 +280,13 @@
  // 0x4449B0
  bool script_execute(ScriptInvocation* invocation)
  {
@@ -4307,7 +4370,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      ScriptState state;
      ScriptFile* script_file;
      int iter;
-@@ -344,7 +348,8 @@
+@@ -344,7 +350,8 @@
      memset(state.lc_vars, 0, sizeof(state.lc_vars));
      memset(state.lc_objs, 0, sizeof(state.lc_objs));
  
@@ -4317,7 +4380,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      if (script_file != NULL) {
          line = invocation->line;
  
-@@ -380,7 +385,8 @@
+@@ -380,7 +387,8 @@
              }
          }
  
@@ -4327,7 +4390,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      } else {
          run_default = true;
      }
-@@ -972,14 +978,11 @@
+@@ -972,14 +980,11 @@
      case SCT_OBJ_HAS_MAX_FOLLOWERS: {
          // (obj) has maximum followers
  
@@ -4343,7 +4406,29 @@ diff --git a/src/game/script.c b/src/game/script.c
                      matched++;
                  }
              } else {
-@@ -1746,6 +1749,7 @@
+@@ -1520,7 +1525,7 @@
+ 
+             if (scr.hdr.flags != state->invocation->script->hdr.flags
+                 || scr.hdr.counters != state->invocation->script->hdr.counters) {
+-                scr.hdr.flags = state->invocation->script->hdr.counters;
++                scr.hdr.flags = state->invocation->script->hdr.flags;
+                 scr.hdr.counters = state->invocation->script->hdr.counters;
+                 obj_arrayfield_script_set(state->invocation->attachee_obj, OBJ_F_SCRIPTS_IDX, state->invocation->attachment_point, &scr);
+             }
+@@ -1586,10 +1591,11 @@
+         int value1 = script_get_value(action->op_type[1], action->op_value[1], state);
+         int value2 = script_get_value(action->op_type[2], action->op_value[2], state);
+         if (value2 != 0) {
++            // Keep native 32-bit wrap semantics without a signed division trap.
+             script_set_value(action->op_type[0],
+                 action->op_value[0],
+                 state,
+-                value1 + value2);
++                value1 == INT_MIN && value2 == -1 ? INT_MIN : value1 / value2);
+         }
+         return NEXT;
+     }
+@@ -1746,6 +1752,7 @@
      case SAT_GET_STAT: {
          int stat = script_get_value(action->op_type[0], action->op_value[0], state);
          int64_t critter_obj = script_get_obj(action->op_type[1], action->op_value[1], state);
@@ -4351,7 +4436,7 @@ diff --git a/src/game/script.c b/src/game/script.c
          int value = stat_level_get(critter_obj, stat);
          if (stat == STAT_INTELLIGENCE
              && value > LOW_INTELLIGENCE
-@@ -1912,10 +1916,12 @@
+@@ -1912,10 +1919,12 @@
      case SAT_GET_SKILL: {
          int skill = script_get_value(action->op_type[0], action->op_value[0], state);
          int64_t obj = script_get_obj(action->op_type[1], action->op_value[1], state);
@@ -4364,7 +4449,7 @@ diff --git a/src/game/script.c b/src/game/script.c
      }
      case SAT_CAST_SPELL: {
          int64_t source_obj = script_get_obj(action->op_type[0], action->op_value[0], state);
-@@ -3390,7 +3396,8 @@
+@@ -3390,7 +3399,8 @@
  {
      int cache_entry_id;
  
