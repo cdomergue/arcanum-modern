@@ -13,9 +13,14 @@ you trust, use the macOS Privacy & Security "Open Anyway" action if blocked.
 
 Game data, saved games and personal preferences are not included. Existing
 modern-ui settings and notebook files are retained when updating.
-Bink cinematics are unavailable. This port needs gameplay validation on a Mac.
+Bink cinematics use the bundled decoder. This port needs gameplay validation on a Mac.
 
 On first launch, HD local maps are generated from your installed game files.
 A progress bar shows preparation. Allow about 8 GB plus temporary working space
 for Arcanum and Vormantown. Choose "Play now" to skip preparation; it resumes
 next time. Completed maps are reused. No extra downloads or tools are needed.
+
+The included Renaissance launcher checks for stable updates, shows release notes
+and starts the game. Choose Play without updating to skip a download, or turn
+off automatic launch to read the notes. Playing offline is supported. Updates
+preserve saves, settings, portraits and custom backgrounds.

@@ -65,6 +65,7 @@ def package(exe, build_dir, output):
     minimum_glibc = max(glibc, key=lambda v: tuple(map(int, v.split('.'))))
     files.update(movies)
     files.update(resources.uap_files('linux'))
+    files.update(resources.launcher_files('linux', build_dir))
     files.update(resources.house_files())
     files.update(resources.tutorial_files())
     files.update(resources.cinematic_files())
@@ -83,7 +84,8 @@ def package(exe, build_dir, output):
     stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
     files['ArcanumModern/licenses/stb.txt'] = stb[stb.rindex('/*\n---'):].encode()
     git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]
-    metadata = {'target': 'linux-x86_64', 'minimum_glibc': minimum_glibc,
+    metadata = {'target': 'linux-x86_64', 'launcher_format': 1,
+                'version': re.search(r'ARCANUM_RENAISSANCE_VERSION "([^"]+)"', (ROOT/'source/src/ui/modern_version.h').read_text()).group(1), 'minimum_glibc': minimum_glibc,
                 'includes_game_data': False, 'imports': imports,
                 'revision': subprocess.check_output(git+['rev-parse', 'HEAD'], text=True).strip(),
                 'working_tree_modified': bool(subprocess.check_output(git+['status', '--porcelain'], text=True).strip()),
@@ -98,7 +100,7 @@ def package(exe, build_dir, output):
                 info = zipfile.ZipInfo(name)
                 info.create_system = 3
                 info.compress_type = zipfile.ZIP_DEFLATED
-                executable = name in {'arcanum-modern', 'Play Arcanum Renaissance.sh', 'ArcanumModern/uap/uap-helper', 'ArcanumModern/uap/7zz'}
+                executable = name in {'arcanum-modern', 'renaissance-launcher', 'ArcanumModern/launcher/renaissance-launcher-ui', 'Play Arcanum Renaissance.sh', 'ArcanumModern/uap/uap-helper', 'ArcanumModern/uap/7zz'}
                 info.external_attr = (0o100755 if executable else 0o100644) << 16
                 z.writestr(info, data)
         archive.replace(output)

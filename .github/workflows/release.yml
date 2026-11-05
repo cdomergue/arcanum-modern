@@ -64,6 +64,8 @@ jobs:
           build/linux-x64/check-name-input
           python3 tools/package-linux.py --exe build/linux-x64/arcanum-ce --build-dir build/linux-x64
           python3 tests/test_linux_package.py dist/ArcanumModern-linux-x64.zip
+          RENAISSANCE_LAUNCHER_PACKAGE="$PWD/dist/ArcanumModern-linux-x64.zip" build/launcher/launcher-tests-linux
+          python3 tests/test_launcher_ui.py build/linux-x64/renaissance-launcher-ui
       - name: Check extracted runtime
         run: |
           mkdir "$RUNNER_TEMP/linux-package"
@@ -120,6 +122,7 @@ jobs:
           path: |
             build/windows-x64/check-utf8-files.exe
             build/windows-x64/check-name-input.exe
+            build/launcher/launcher-tests.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
@@ -203,7 +206,7 @@ jobs:
   windows-install:
     needs: windows
     runs-on: windows-2022
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -233,6 +236,14 @@ jobs:
           Expand-Archive ./dist/ArcanumModern-windows-x64.zip "$env:RUNNER_TEMP/movie-runtime"
           $process = Start-Process "$env:RUNNER_TEMP/movie-runtime/arcanum-modern.exe" -ArgumentList '--check-movies' -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Movie decoder runtime failed: $($process.ExitCode)" }
+      - name: Verify launcher updates, recovery and game startup
+        shell: pwsh
+        run: |
+          $env:RENAISSANCE_LAUNCHER_BINARY = "$env:RUNNER_TEMP/movie-runtime/renaissance-launcher.exe"
+          $env:RENAISSANCE_ENGINE_BINARY = "$env:RUNNER_TEMP/movie-runtime/arcanum-modern.exe"
+          $env:RENAISSANCE_LAUNCHER_PACKAGE = (Resolve-Path ./dist/ArcanumModern-windows-x64.zip).Path
+          ./checks/launcher-tests.exe '-test.v=true'
+          if ($LASTEXITCODE -ne 0) { throw "Launcher regression tests failed: $LASTEXITCODE" }
 
   macos:
     runs-on: macos-15
@@ -251,6 +262,10 @@ jobs:
           python3 tools/build-map-exporter.py --source tools/check-cursor-scale.c --name check-cursor-scale
           build/macos-arm64/check-cursor-scale
       - run: python3 tests/test_macos_package.py
+      - name: Check macOS launcher and packaged update payload
+        run: |
+          RENAISSANCE_LAUNCHER_PACKAGE="$PWD/dist/ArcanumModern-macos-arm64.zip" build/launcher/launcher-tests-macos
+          python3 tests/test_launcher_ui.py build/macos-arm64/renaissance-launcher-ui
       - name: Check packaged movie decoder on macOS
         run: |
           ditto -x -k dist/ArcanumModern-macos-arm64.zip "$RUNNER_TEMP/movie-runtime"

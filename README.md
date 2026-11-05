@@ -84,10 +84,18 @@ Back up your saves before changing engines or installing game patches.
 
 ### Updates
 
-At startup, Renaissance checks for a newer published release in the background.
-If one is available, choose **View update** to open its download page or **Ignore**
-to continue playing. Ignoring dismisses the notice for this launch. An unavailable
-connection does not prevent the game from starting.
+The Windows setup and all three platform ZIPs include the Renaissance launcher.
+Desktop shortcuts, the macOS application and the Play scripts open it. It downloads
+and installs newer stable releases before starting the game. Release notes are
+displayed in a scrollable panel in their published language.
+
+Choose **Play without updating** to use the installed version, or turn off
+**Launch the game automatically** to keep reading. The launcher supports English
+and French. An unavailable connection does not prevent playing. Updates preserve
+saves, settings, custom portraits and backgrounds; failed installations are rolled
+back. Opening the game executable directly also opens the launcher. The game
+itself does not check for updates.
+
 
 ### Local maps
 

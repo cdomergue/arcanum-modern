@@ -13,9 +13,9 @@ if not exist "modern-ui\Book.ttf" (
 )
 for %%A in (%*) do if "%%~A"=="-window" set "ARCANUM_IGNORE_DISPLAY_SETTINGS=1"
 if "%~1"=="" (
-  start "" /wait "%~dp0arcanum-modern.exe" -geometry=1280x720
+  start "" /wait "%~dp0renaissance-launcher.exe" -geometry=1280x720
 ) else (
-  start "" /wait "%~dp0arcanum-modern.exe" %*
+  start "" /wait "%~dp0renaissance-launcher.exe" %*
 )
 if errorlevel 1 (
   echo Arcanum Renaissance stopped with an error. Please report the error and the version you installed.

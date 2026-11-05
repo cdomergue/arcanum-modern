@@ -86,9 +86,9 @@ Section "Arcanum Renaissance"
     RMDir "$SMPROGRAMS\Arcanum Modern"
   ${EndIf}
   ClearErrors
-  CreateShortcut "$DESKTOP\Arcanum Renaissance.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
+  CreateShortcut "$DESKTOP\Arcanum Renaissance.lnk" "$INSTDIR\renaissance-launcher.exe" "-geometry=1280x720" "$GameIcon" 0
   CreateDirectory "$SMPROGRAMS\Arcanum Renaissance"
-  CreateShortcut "$SMPROGRAMS\Arcanum Renaissance\Arcanum Renaissance.lnk" "$INSTDIR\arcanum-modern.exe" "-geometry=1280x720" "$GameIcon" 0
+  CreateShortcut "$SMPROGRAMS\Arcanum Renaissance\Arcanum Renaissance.lnk" "$INSTDIR\renaissance-launcher.exe" "-geometry=1280x720" "$GameIcon" 0
   CreateShortcut "$SMPROGRAMS\Arcanum Renaissance\Uninstall.lnk" "$INSTDIR\Uninstall Arcanum Modern.exe"
   WriteRegStr HKCU "Software\ArcanumModern" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArcanumModern" "DisplayName" "Arcanum Renaissance"

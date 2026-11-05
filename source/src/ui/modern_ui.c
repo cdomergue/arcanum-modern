@@ -2098,11 +2098,9 @@ static bool world_zoom_event(SDL_Event* event)
     return true;
 }
 
-#include "modern_update.inc"
 
 void modern_ui_menu_tick(void)
 {
-    update_tick();
     world_zoom_sync();
     if (!enabled) return;
     if(mainmenu_ui_is_active() && mainmenu_ui_window_type_get()==MM_WINDOW_SHOP) {
@@ -3068,7 +3066,6 @@ void modern_ui_message(const char* text)
 void modern_ui_exit(void)
 {
     tutorial_exit();
-    update_close();
     SDL_SetAtomicInt(&portrait_picker.alive,0);
     if(SDL_GetAtomicInt(&portrait_picker.state)==2) {
         SDL_free(portrait_picker.path);portrait_picker.path=NULL;SDL_SetAtomicInt(&portrait_picker.state,0);

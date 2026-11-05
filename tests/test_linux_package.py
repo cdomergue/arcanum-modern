@@ -64,11 +64,11 @@ class LinuxPackageTests(unittest.TestCase):
             (game/'arcanum1.dat').write_bytes(b'fixture')
             (game/'modern-ui').mkdir()
             (game/'modern-ui/Book.ttf').write_bytes(b'fixture')
-            engine = game/'arcanum-modern'
+            engine = game/'renaissance-launcher'
             engine.write_text('#!/bin/sh\npwd\nprintf "%s\\n" "$ARCANUM_IGNORE_DISPLAY_SETTINGS" "$@"\n')
             engine.chmod(0o755)
-            subprocess.run(['sh', str(launcher), '-window', '-geometry=1280x720', 'argument with spaces'], check=True)
-            lines = (game/'modern-launch.log').read_text().splitlines()
+            result = subprocess.run(['sh', str(launcher), '-window', '-geometry=1280x720', 'argument with spaces'], check=True, capture_output=True, text=True)
+            lines = result.stdout.splitlines()
             self.assertEqual(Path(lines[0]).resolve(), game.resolve())
             self.assertEqual(lines[1:], ['1', '-window', '-geometry=1280x720', 'argument with spaces'])
 
@@ -79,50 +79,18 @@ class LinuxPackageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.p.validate_dependencies('0x1 (RUNPATH) Library runpath: [$ORIGIN:/tmp/libraries]')
 
-    def test_launcher_crash_recovery(self):
-        for script in ('tools/linux/Play Arcanum Renaissance.sh', 'play.sh'):
-            for mode, renderer, attempts, status in (
-                ('crash', '', 2, 0), ('ready', '', 1, 139),
-                ('error', '', 1, 24), ('ok', '', 1, 0),
-                ('crash', 'vulkan', 1, 139), ('ok', 'software', 1, 0),
-                ('both_crash', '', 2, -11),
-            ):
-                with self.subTest(script=script, mode=mode, renderer=renderer), tempfile.TemporaryDirectory() as temp:
-                    root = Path(temp)
-                    game = root/'game'
-                    game.mkdir()
-                    (game/'modern-ui').mkdir()
-                    (game/'modern-ui/Book.ttf').touch()
-                    (game/'arcanum1.dat').touch()
-                    launcher = (root if script == 'play.sh' else game)/'launch.sh'
-                    launcher.write_bytes((ROOT/script).read_bytes())
-                    engine = game/'arcanum-modern'
-                    engine.write_text('''#!/bin/sh
-ulimit -c 0
-printf '%s|%s|%s|%s\\n' "$SDL_RENDER_DRIVER" "$SDL_VIDEO_DRIVER" "$SDL_FRAMEBUFFER_ACCELERATION" "$*" >> attempts
-echo "renderer=$SDL_RENDER_DRIVER"
-if [ "$SDL_RENDER_DRIVER" = software ] && [ "$TEST_MODE" != both_crash ]; then exit 0; fi
-case "$TEST_MODE" in
-    ready) echo 'Arcanum Modern: startup complete'; kill -SEGV $$ ;;
-    crash|both_crash) kill -SEGV $$ ;;
-    error) exit 24 ;;
-esac
-''')
-                    engine.chmod(0o755)
-                    env = {k: v for k, v in os.environ.items() if not k.startswith('SDL_')}
-                    env.update(TEST_MODE=mode)
-                    if renderer:
-                        env['SDL_RENDER_DRIVER'] = renderer
-                    result = subprocess.run(['sh', str(launcher), '-window', 'argument with spaces'], env=env, capture_output=True)
-                    self.assertEqual(result.returncode, status)
-                    calls = (game/'attempts').read_text().splitlines()
-                    self.assertEqual(len(calls), attempts)
-                    if attempts == 2 or renderer == 'software':
-                        self.assertEqual(calls[-1], 'software|x11|0|-window argument with spaces')
-                    self.assertEqual((game/'modern-launch-vulkan.log').exists(), attempts == 2)
-                    if attempts == 2:
-                        self.assertIn('renderer=vulkan', (game/'modern-launch-vulkan.log').read_text())
-                        self.assertIn('renderer=software', (game/'modern-launch.log').read_text())
+    def test_development_launcher_forwards_to_updater(self):
+        with tempfile.TemporaryDirectory(prefix='renaissance dev ') as temp:
+            root = Path(temp)
+            game = root/'game'
+            game.mkdir()
+            launcher = root/'play.sh'
+            launcher.write_bytes((ROOT/'play.sh').read_bytes())
+            helper = game/'renaissance-launcher'
+            helper.write_text('#!/bin/sh\npwd\nprintf "%s\\n" "$@"\n')
+            helper.chmod(0o755)
+            result = subprocess.run(['sh', str(launcher), '-window', 'argument with spaces'], capture_output=True, text=True, check=True)
+            self.assertEqual(result.stdout.splitlines(), [str(game), '-window', 'argument with spaces'])
 
 
 def verify_archive(path):
@@ -135,7 +103,7 @@ def verify_archive(path):
         metadata = json.loads(z.read('ArcanumModern/manifest.json'))
         assert metadata['target'] == 'linux-x86_64' and metadata['includes_game_data'] is False
         assert tuple(map(int, metadata['minimum_glibc'].split('.'))) <= (2, 35)
-        required = {'arcanum-modern', 'Play Arcanum Renaissance.sh'} | {'modern-ui/'+s for s in p.resources.ASSETS}
+        required = {'arcanum-modern', 'renaissance-launcher', 'ArcanumModern/launcher/renaissance-launcher-ui', 'ArcanumModern/launcher/background.png', 'Play Arcanum Renaissance.sh'} | {'modern-ui/'+s for s in p.resources.ASSETS}
         required |= {'ArcanumModern/lib/'+name for name in p.resources.MOVIE_LIBRARIES['linux']}
         assert required.issubset(names)
         for name in names:
@@ -146,7 +114,7 @@ def verify_archive(path):
         assert set(metadata['sha256']) == set(names) - {'ArcanumModern/manifest.json'}
         for name, digest in metadata['sha256'].items():
             assert hashlib.sha256(z.read(name)).hexdigest() == digest, name
-        for name in ('arcanum-modern', 'Play Arcanum Renaissance.sh'):
+        for name in ('arcanum-modern', 'renaissance-launcher', 'ArcanumModern/launcher/renaissance-launcher-ui', 'Play Arcanum Renaissance.sh'):
             assert (z.getinfo(name).external_attr >> 16) & 0o111 == 0o111, name
     print('PASS: Linux x64 package, glibc baseline, executable permissions, hashes and no game data')
 

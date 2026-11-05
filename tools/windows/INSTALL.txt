@@ -2,7 +2,7 @@ ARCANUM MODERN - WINDOWS x64
 
 1. Install your own copy of Arcanum (version 1.0.7.4).
 2. Extract this ZIP into its game folder, next to Arcanum.exe and arcanum1.dat.
-3. Open "Play Arcanum Renaissance.bat".
+3. Open "renaissance-launcher.exe" or "Play Arcanum Renaissance.bat".
 
 No compiler, Python, separate SDL installation or administrator rights are needed
 for players. Windows 10/11 x64 is the intended target. Use a writable game folder.
@@ -13,12 +13,16 @@ Open Options to change fullscreen, resolution, controls, gameplay and audio.
 The modern interface and turn-based combat are enabled by default. The world
 uses an independent rendering resolution; the interface stays sharp when zooming.
 
-To update, close the game, then extract a newer ZIP into the same folder.
-The package does not replace your modern-ui settings or notebook files.
+The launcher checks for stable releases, displays their release notes, and
+installs updates before starting the game. Choose "Play without updating" to
+skip, or disable automatic launch to read the notes. English and French are
+available. You can play without an internet connection. Updates preserve saves,
+settings, notebook files, custom portraits and backgrounds. Failed updates are
+rolled back; interrupted installations are recovered at the next launch.
+You can also update manually by extracting a newer ZIP while the game is closed.
 Back up saves before trying a different engine version. This version remains
 experimental; multiplayer and compatibility with other binary patches are untested.
-Bink cinematics require a compatible decoder; the original 32-bit binkw32.dll
-cannot be loaded by this 64-bit build, so cinematics are currently unavailable.
+Bink cinematics use the bundled 64-bit decoder.
 
 This is a modified version of Arcanum Community Edition by Alex Batalov:
 https://github.com/alexbatalov/arcanum-ce

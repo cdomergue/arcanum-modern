@@ -11,6 +11,7 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,6 +69,8 @@ def package(app, build_dir, output):
         if {p.name for p in frameworks.iterdir()} != set(resources.MOVIE_LIBRARIES['macos']):
             raise ValueError('Unexpected framework in app bundle')
         movies.update(resources.uap_files('macos'))
+        movies.update(resources.launcher_files('macos', build_dir))
+        movies['Play Arcanum Renaissance.command'] = (ROOT/'tools/macos/Play Arcanum Renaissance.command').read_bytes()
         movies.update(resources.house_files())
         movies.update(resources.tutorial_files())
         movies.update(resources.cinematic_files())
@@ -75,8 +78,14 @@ def package(app, build_dir, output):
             destination = stage/name
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(data)
-            if name in ('ArcanumModern/uap/uap-helper', 'ArcanumModern/uap/7zz'):
+            if name in ('renaissance-launcher', 'Play Arcanum Renaissance.command', 'ArcanumModern/launcher/renaissance-launcher-ui', 'ArcanumModern/uap/uap-helper', 'ArcanumModern/uap/7zz'):
                 destination.chmod(0o755)
+        for name in ('renaissance-launcher', 'ArcanumModern/launcher/renaissance-launcher-ui'):
+            subprocess.run(['codesign', '--force', '--sign', '-', str(stage/name)], check=True)
+        shutil.copyfile(stage/'renaissance-launcher', bundle/'Contents/MacOS/renaissance-launcher')
+        (bundle/'Contents/MacOS/renaissance-launcher').chmod(0o755)
+        subprocess.run(['codesign', '--force', '--sign', '-', str(bundle/'Contents/MacOS'/executable)], check=True)
+        info['CFBundleExecutable'] = 'renaissance-launcher'
         info['CFBundleName'] = 'Arcanum Renaissance'
         info['CFBundleDisplayName'] = 'Arcanum Renaissance'
         info['CFBundleIdentifier'] = 'org.arcanummodern.game'
@@ -115,7 +124,8 @@ def package(app, build_dir, output):
         (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(resources/aid/LICENSE.txt)', '(licenses/aid.txt)').replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
         git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]
         manifest = {
-            'target': 'macos-arm64', 'minimum_macos': '11.0', 'signature': 'ad-hoc',
+            'target': 'macos-arm64', 'includes_game_data': False, 'launcher_format': 1,
+            'version': re.search(r'ARCANUM_RENAISSANCE_VERSION "([^"]+)"', (ROOT/'source/src/ui/modern_version.h').read_text()).group(1), 'minimum_macos': '11.0', 'signature': 'ad-hoc',
             'revision': subprocess.check_output(git+['rev-parse', 'HEAD'], text=True).strip(),
             'working_tree_modified': bool(subprocess.check_output(git+['status', '--porcelain'], text=True).strip()),
             'imports': imports,
@@ -124,7 +134,10 @@ def package(app, build_dir, output):
         }
         (notices/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
         archive = Path(temporary)/'release.zip'
-        subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', str(stage), str(archive)], check=True)
+        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as package_zip:
+            for path in sorted(stage.rglob('*')):
+                if path.is_symlink(): raise ValueError('Unexpected bundle symlink: '+str(path))
+                if path.is_file(): package_zip.write(path, path.relative_to(stage).as_posix())
         archive.replace(output)
     print(f'Created {output} ({output.stat().st_size/1024/1024:.1f} MiB)')
 

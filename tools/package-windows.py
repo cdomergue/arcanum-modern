@@ -50,6 +50,13 @@ def uap_files(platform):
         return builder.build(platform, Path(directory), ROOT/'build/uap-tools')
 
 
+def launcher_files(target="windows", build_dir=None):
+    spec = importlib.util.spec_from_file_location('launcher_builder', ROOT/'tools/build-launcher.py')
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    return builder.files(target, build_dir)
+
+
 def house_files():
     spec = importlib.util.spec_from_file_location('house_builder', ROOT/'tools/house/build-content.py')
     builder = importlib.util.module_from_spec(spec)
@@ -214,6 +221,7 @@ def package(exe, build_dir, output, include_game=None):
              'ArcanumModern/licenses/aid.txt': (ROOT/'resources/aid/LICENSE.txt').read_bytes()}
     files.update(movie_files(build_dir, 'windows'))
     files.update(uap_files('windows'))
+    files.update(launcher_files())
     files.update(house_files())
     files.update(tutorial_files())
     files.update(cinematic_files())
@@ -248,7 +256,10 @@ def package(exe, build_dir, output, include_game=None):
     git = ['git','-c',f'safe.directory={ROOT}','-C',str(ROOT)]
     revision = subprocess.check_output(git+['rev-parse','HEAD'],text=True).strip()
     dirty = bool(subprocess.check_output(git+['status','--porcelain'],text=True).strip())
+    version = re.search(r'ARCANUM_RENAISSANCE_VERSION "([^"]+)"',
+                        (ROOT/'source/src/ui/modern_version.h').read_text()).group(1)
     write_archive(output, files, {'revision':revision,'working_tree_modified':dirty,
+        'version':version,'launcher_format':1,
         'target':'windows-x86_64','imports':sorted(imports),'includes_game_data':bool(include_game)})
     print(f'Created {output} ({output.stat().st_size/1024/1024:.1f} MiB, {len(files)+1} files)')
 

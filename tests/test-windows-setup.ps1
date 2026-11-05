@@ -56,7 +56,7 @@ try {
     foreach ($link in $links) {
         if (-not (Test-Path $link)) { throw "Missing shortcut: $link" }
         $shortcut = $shell.CreateShortcut($link)
-        if ($shortcut.TargetPath -ne (Join-Path $game 'arcanum-modern.exe') -or
+        if ($shortcut.TargetPath -ne (Join-Path $game 'renaissance-launcher.exe') -or
             $shortcut.WorkingDirectory -ne $game -or $shortcut.Arguments -ne '-geometry=1280x720') {
             throw "Invalid shortcut target, arguments or working directory: $link"
         }

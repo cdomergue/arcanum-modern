@@ -340,17 +340,13 @@ func prepare(game, installer, seven string, c catalog, language string, hotfixDo
 }
 func run() int {
 	game := flag.String("game", ".", "Installed game directory")
-	mode := flag.String("mode", "probe", "probe, install, decline, install-hotfix, decline-hotfix, localize or check-update")
-	currentVersion := flag.String("current-version", "", "Installed Arcanum Renaissance version")
+	mode := flag.String("mode", "probe", "probe, install, decline, install-hotfix, decline-hotfix, localize")
 	language := flag.String("language", "auto", "auto, fr or en")
 	hotfixDownloads := flag.String("hotfix-downloads", "", "Directory with the two verified hotfix release archives (offline installation)")
 	installer := flag.String("installer", "", "Optional local UAP installer")
 	extracted := flag.String("extracted", "", "Extracted UAP directory for localization checks")
 	output := flag.String("output", "", "Localization check output directory")
 	flag.Parse()
-	if *mode == "check-update" {
-		return checkUpdate(*currentVersion)
-	}
 	root, err := filepath.Abs(*game)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

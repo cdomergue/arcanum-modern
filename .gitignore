@@ -49,8 +49,8 @@
 !/source/src/ui/modern_bottom_bar.inc
 !/source/src/ui/modern_ui.c
 !/source/src/ui/modern_ui.h
+!/source/src/ui/modern_launcher.inc
 !/source/src/ui/modern_version.h
-!/source/src/ui/modern_update.inc
 !/source/src/ui/modern_hotkeys.inc
 !/source/src/ui/modern_inventory_transfer.inc
 !/source/src/ui/modern_name_input.inc

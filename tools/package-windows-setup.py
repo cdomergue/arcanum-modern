@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('windows_package', ROOT/'tools/package-windows.py')
 package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
-REQUIRED_FILES = {'arcanum-modern.exe', 'Play Arcanum Renaissance.bat',
+REQUIRED_FILES = {'arcanum-modern.exe', 'renaissance-launcher.exe', 'Play Arcanum Renaissance.bat',
                   'ArcanumModern/INSTALL.txt', 'ArcanumModern/README.md',
                   'ArcanumModern/licenses/arcanum-ce.md',
                   'ArcanumModern/licenses/aid.txt',
@@ -74,7 +74,7 @@ def build(archive, output, makensis):
         work = Path(temp)
         names = extract_payload(archive, work/'payload')
         package.validate_pe_dependencies({name: (work/'payload'/name).read_bytes()
-                                          for name in ('arcanum-modern.exe', *package.MOVIE_LIBRARIES['windows'])})
+                                          for name in ('arcanum-modern.exe', 'renaissance-launcher.exe', *package.MOVIE_LIBRARIES['windows'])})
         install = []
         uninstall = []
         directories = set()

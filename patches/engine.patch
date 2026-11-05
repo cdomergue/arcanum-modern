@@ -108,6 +108,16 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  
  # SDL HID on Android requires C++ linker.
  if(ANDROID)
+@@ -401,3 +486,9 @@
+ 
+     include(CPack)
+ endif()
++
++if(UNIX AND NOT ANDROID)
++    add_executable(renaissance-launcher-ui "../tools/launcher-ui/main.c")
++    target_include_directories(renaissance-launcher-ui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb")
++    target_link_libraries(renaissance-launcher-ui PRIVATE SDL3::SDL3 m)
++endif()
 diff --git a/first_party/tig/include/tig/art.h b/first_party/tig/include/tig/art.h
 --- a/first_party/tig/include/tig/art.h
 +++ b/first_party/tig/include/tig/art.h
@@ -6054,7 +6064,7 @@ diff --git a/src/main.c b/src/main.c
  #include "game/wallcheck.h"
  #include "ui/charedit_ui.h"
  #include "ui/dialog_ui.h"
-@@ -46,10 +49,14 @@
+@@ -46,10 +49,15 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
@@ -6066,13 +6076,16 @@ diff --git a/src/main.c b/src/main.c
  #include "ui/wmap_rnd.h"
  #include "ui/wmap_ui.h"
 +#include "ui/modern_movie.h"
++#include "ui/modern_launcher.inc"
  
  static void main_loop(void);
  static void handle_mouse_scroll(void);
-@@ -65,6 +72,33 @@
+@@ -65,6 +73,35 @@
  // 0x401000
  int main(int argc, char** argv)
  {
++    int launcher_result = modern_launcher_entry(&argc, argv);
++    if (launcher_result >= 0) return launcher_result;
 +    if (argc == 2 && strcmp(argv[1], "--check-movies") == 0) return modern_movie_check();
 +    if (argc >= 3 && strcmp(argv[1], "--modern-generate-maps") == 0)
 +        return modern_maps_generate(argv[2], argc > 3 ? atoi(argv[3]) : 0, argc > 4 ? atoi(argv[4]) : 0);
@@ -6103,7 +6116,7 @@ diff --git a/src/main.c b/src/main.c
      TigInitInfo init_info;
      TigVideoScreenshotSettings screenshotter;
      GameInitInfo game_init_info;
-@@ -205,11 +239,22 @@
+@@ -205,11 +242,22 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -6127,7 +6140,7 @@ diff --git a/src/main.c b/src/main.c
  
      screenshotter.key = SDL_SCANCODE_F12;
      screenshotter.field_4 = 0;
-@@ -290,11 +335,47 @@
+@@ -290,11 +338,47 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
@@ -6177,7 +6190,7 @@ diff --git a/src/main.c b/src/main.c
          gameuilib_exit();
          gamelib_exit();
          tig_exit();
-@@ -317,6 +398,7 @@
+@@ -317,6 +401,7 @@
  
      main_loop();
  
@@ -6185,7 +6198,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,8 +465,11 @@
+@@ -383,8 +468,11 @@
              output_profile_data = false;
          }
  
@@ -6197,7 +6210,7 @@ diff --git a/src/main.c b/src/main.c
          iso_redraw();
          tig_window_display();
  
-@@ -460,6 +545,7 @@
+@@ -460,6 +548,7 @@
                          }
                          break;
                      case SDL_SCANCODE_F7:
@@ -6205,7 +6218,7 @@ diff --git a/src/main.c b/src/main.c
                          if (!critter_is_dead(player_get_local_pc_obj())) {
                              if (wmap_ui_is_created()) {
                                  wmap_ui_close();
-@@ -698,6 +784,7 @@
+@@ -698,6 +787,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -6213,7 +6226,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +830,26 @@
+@@ -743,25 +833,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
