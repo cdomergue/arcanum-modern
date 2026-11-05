@@ -10,6 +10,7 @@ decode=ui[ui.index('static int codepoint('):ui.index('/* Game strings are Window
 bar=(bottom[bottom.index('#define BOTTOM_BAR_WIDTH'):bottom.index('\nstatic void bottom_bar_load(')]
     +bottom[bottom.index('\nstatic SDL_FRect bottom_bar_rect('):bottom.index('\n/* Counters must never truncate')])
 message=ui[ui.index('static bool hud_message_visible('):ui.index('#include "modern_top_bar.inc"')]
+line_height=next(line for line in ui.splitlines() if line.startswith('static float text_line_height('))
 code=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -17,6 +18,8 @@ code=r'''
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#define SDL_max(a,b) ((a)>(b)?(a):(b))
+static int text_scale=100;
 #define GLYPH_FIRST 32
 #define GLYPH_COUNT 352
 typedef struct {float x,y,w,h;} SDL_FRect;
@@ -38,7 +41,7 @@ static uint64_t SDL_GetTicks(void){return now;}
 static void fill(SDL_FRect r,SDL_Color c){(void)c;box=r;}
 static void outline(SDL_FRect r,SDL_Color c){(void)r;(void)c;}
 static void hud_panel(SDL_FRect r){fill(r,MUTED);outline(r,MUTED);}
-''' + decode + wrap + bar + message + r'''
+''' + line_height + '\n' + decode + wrap + bar + message + r'''
 
 static void compact(const char* src,char* dst){while(*src){if(*src!=' '&&*src!='\n')*dst++=*src;src++;}*dst=0;}
 static void check(const char* text){

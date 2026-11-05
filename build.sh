@@ -39,7 +39,7 @@ python3 "$arcanum_project/tools/tutorial/build-content.py" --output "$arcanum_pr
 mkdir -p "$arcanum_project/game/ArcanumModern/movies"
 cp "$arcanum_project/resources/movies/train_leaving.bik" "$arcanum_project/game/ArcanumModern/movies/train_leaving.bik"
 mkdir -p "$arcanum_project/game/ArcanumModern/launcher"
-"$arcanum_python" "$arcanum_project/tools/build-launcher.py" --target linux --output "$arcanum_project/game/renaissance-launcher"
+python3 "$arcanum_project/tools/build-launcher.py" --target linux --output "$arcanum_project/game/renaissance-launcher"
 cp "$arcanum_build/renaissance-launcher-ui" "$arcanum_project/game/ArcanumModern/launcher/"
 cp "$arcanum_project/tools/launcher/assets/background.png" "$arcanum_project/game/ArcanumModern/launcher/"
 printf '%s\n' 'Compilation installée. Elle sera utilisée au prochain lancement.'
