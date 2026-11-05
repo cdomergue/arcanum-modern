@@ -223,12 +223,12 @@ jobs:
       - name: Test accented Windows paths
         shell: pwsh
         run: |
-          ./checks/check-utf8-files.exe "$env:RUNNER_TEMP/Arcanum paths"
+          ./checks/windows-x64/check-utf8-files.exe "$env:RUNNER_TEMP/Arcanum paths"
           if ($LASTEXITCODE -ne 0) { throw "UTF-8 file test failed: $LASTEXITCODE" }
       - name: Test character and save names on Windows
         shell: pwsh
         run: |
-          ./checks/check-name-input.exe
+          ./checks/windows-x64/check-name-input.exe
           if ($LASTEXITCODE -ne 0) { throw "Name input test failed: $LASTEXITCODE" }
       - name: Check packaged movie decoder on Windows
         shell: pwsh
@@ -242,7 +242,7 @@ jobs:
           $env:RENAISSANCE_LAUNCHER_BINARY = "$env:RUNNER_TEMP/movie-runtime/renaissance-launcher.exe"
           $env:RENAISSANCE_ENGINE_BINARY = "$env:RUNNER_TEMP/movie-runtime/arcanum-modern.exe"
           $env:RENAISSANCE_LAUNCHER_PACKAGE = (Resolve-Path ./dist/ArcanumModern-windows-x64.zip).Path
-          ./checks/launcher-tests.exe '-test.v=true'
+          ./checks/launcher/launcher-tests.exe '-test.v=true'
           if ($LASTEXITCODE -ne 0) { throw "Launcher regression tests failed: $LASTEXITCODE" }
 
   macos:
