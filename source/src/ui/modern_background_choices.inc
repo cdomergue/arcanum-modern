@@ -1,13 +1,16 @@
-/* Renaissance's reusable definitions stay outside game saves. A character uses
- * the original background ID, raw attributes, stock effects and native items. */
+/* Reusable definitions stay outside game saves. Characters retain the original
+ * background ID and reference immutable native-format effects when needed. */
 typedef struct BackgroundChoice {
     int base, primary[8], bonuses[2];
+    BackgroundRules rules;
     char title[96], story[1024], money[11];
     int quantities[BACKGROUND_ITEM_LIMIT];
 } BackgroundChoice;
 static BackgroundChoice* background_choices;
 static int background_choice_count;
 static bool background_choices_loaded,background_choices_failed;
+static int background_choices_version=2;
+static BackgroundRules background_rules_draft={.inherit=true};
 static struct {
     int64_t object;
     int selected, applied[8];
@@ -52,6 +55,16 @@ static bool background_choice_record(FILE* f,BackgroundChoice* c,bool write)
             c->quantities[id]=n;
         }
     }
+    if(write || background_choices_version>=2) {
+        int inherit=c->rules.inherit?1:0;
+        if(!background_choice_number(f,&inherit,write) || inherit<0 || inherit>1)return false;
+        c->rules.inherit=inherit!=0;
+        if(!background_choice_number(f,&c->rules.count,write) || c->rules.count<0 || c->rules.count>BACKGROUND_RULE_IDS)return false;
+        for(int i=0;i<c->rules.count;i++)if(!background_choice_number(f,&c->rules.ids[i],write) || c->rules.ids[i]<50 || c->rules.ids[i]>=1000)return false;
+        if(write) {if(fwrite(c->rules.text,1,sizeof(c->rules.text),f)!=sizeof(c->rules.text))return false;}
+        else if(fread(c->rules.text,1,sizeof(c->rules.text),f)!=sizeof(c->rules.text) || !memchr(c->rules.text,0,sizeof(c->rules.text)))return false;
+        if(!background_rules_validate(c->rules.text,NULL,0))return false;
+    } else c->rules.inherit=true;
     int money;
     if(c->base<0 || !*c->title || !background_money_value(c->money,&money))return false;
     for(int i=0;i<8;i++)if(c->primary[i]<-100 || c->primary[i]>100)return false;
@@ -64,8 +77,9 @@ static void background_choices_load(void)
     FILE* f=fopen("modern-ui/backgrounds.dat","rb");
     if(!f){background_choices_failed=errno!=ENOENT;return;}
     char magic[8];int count=0;
-    bool ok=fread(magic,1,8,f)==8 && !memcmp(magic,"ARCBG01\n",8)
-        && background_choice_number(f,&count,false) && count>=0;
+    bool ok=fread(magic,1,8,f)==8 && (!memcmp(magic,"ARCBG01\n",8) || !memcmp(magic,"ARCBG02\n",8));
+    background_choices_version=ok && magic[6]=='2'?2:1;
+    ok=ok && background_choice_number(f,&count,false) && count>=0;
     /* Bound allocations by actual bytes, including the smallest empty record. */
     long start=ftell(f),end=-1;
     if(fseek(f,0,SEEK_END)==0)end=ftell(f);
@@ -84,7 +98,7 @@ static bool background_choices_save(BackgroundChoice* candidate,int replace)
     if(background_choices_failed)return false;
     int count=background_choice_count+(replace<0);
     FILE* f=fopen("modern-ui/backgrounds.dat.tmp","wb");if(!f)return false;
-    bool ok=fwrite("ARCBG01\n",1,8,f)==8 && background_choice_number(f,&count,true);
+    bool ok=fwrite("ARCBG02\n",1,8,f)==8 && background_choice_number(f,&count,true);
     for(int i=0;ok && i<count;i++)ok=background_choice_record(f,
         i==replace || i==background_choice_count?candidate:&background_choices[i],true);
     if(fclose(f)!=0)ok=false;
@@ -111,6 +125,12 @@ void modern_background_choices_begin(int64_t previous,int64_t current)
 void modern_background_choice_leave(int64_t obj)
 {
     if(background_choice_state.object!=obj || background_choice_state.selected<0)return;
+    const BackgroundRules* old_rules=&background_choices[background_choice_state.selected].rules;
+    background_rules_remove(obj,old_rules);
+    if(!old_rules->inherit) {
+        BackgroundRules original={.inherit=true};
+        background_rules_apply(obj,background_effect_get(background_get(obj)),&original);
+    }
     for(int i=0;i<8;i++)obj_arrayfield_int32_set(obj,OBJ_F_CRITTER_STAT_BASE_IDX,i,
         stat_base_get(obj,i)-background_choice_state.applied[i]);
     for(int i=0;i<2;i++)modern_background_bonus_set(obj,i,0);
@@ -121,6 +141,7 @@ void modern_background_choice_leave(int64_t obj)
 }
 static bool background_choice_usable(const BackgroundChoice* c)
 {
+    if(!background_rules_available(&c->rules))return false;
     if((c->bonuses[0] || c->bonuses[1]) && !modern_background_bonuses_available())return false;
     for(int i=0;i<BACKGROUND_ITEM_LIMIT;i++)if(c->quantities[i] && !background_item_allowed(i))return false;
     return true;
@@ -137,6 +158,7 @@ static void background_choice_select(int64_t obj,int base,int selected)
         background_choice_state.applied[i]=after-before;
     }
     for(int i=0;i<2;i++)modern_background_bonus_set(obj,i,c->bonuses[i]);
+    background_rules_apply(obj,background_effect_get(base),&c->rules);
     background_choice_state.selected=selected;
     SDL_strlcpy(background_loadout.money,c->money,sizeof(background_loadout.money));
     memcpy(background_loadout.quantities,c->quantities,sizeof(background_loadout.quantities));
@@ -182,6 +204,7 @@ static bool background_choice_commit(int64_t obj,const int delta[8],const int bo
     if(background_choice_state.object!=obj)modern_background_choices_begin(0,obj);
     BackgroundChoice* c=calloc(1,sizeof(*c));if(!c)return false;
     c->base=background_get(obj);
+    c->rules=background_rules_draft;
     for(int i=0;i<8;i++)c->primary[i]=background_choice_state.applied[i]+delta[i];
     memcpy(c->bonuses,bonuses,sizeof(c->bonuses));
     SDL_strlcpy(c->title,background_title,sizeof(c->title));

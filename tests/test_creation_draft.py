@@ -16,14 +16,16 @@ source = r'''
 #include <stdio.h>
 #include <string.h>
 STAT_ENUM
-enum { OBJ_F_CURRENT_AID, OBJ_F_CRITTER_STAT_BASE_IDX, OBJ_F_CRITTER_PORTRAIT, OBJ_F_PC_PLAYER_NAME };
+enum { OBJ_F_CURRENT_AID, OBJ_F_CRITTER_STAT_BASE_IDX, OBJ_F_CRITTER_PORTRAIT, OBJ_F_PC_PLAYER_NAME, OBJ_F_CRITTER_EFFECTS_IDX, OBJ_F_CRITTER_EFFECT_CAUSE_IDX };
+#define EFFECT_CAUSE_BACKGROUND 1
 #define OBJ_HANDLE_NULL 0
 static char mainmenu_ui_textedit_buffer[24];
 static struct { int body_type; } stru_5C5170[10];
-static struct { int stats[STAT_COUNT], portrait, bg, text, points, skills, bonuses[2]; char name[24]; } actors[4];
-static bool modern_background_bonuses_available(void){return true;}
-static int modern_background_bonus_get(int64_t o,int i){return actors[o].bonuses[i];}
-static void modern_background_bonus_set(int64_t o,int i,int value){actors[o].bonuses[i]=value;}
+static struct { int stats[STAT_COUNT], portrait, bg, text, points, skills, effect_count;unsigned effects[256]; char name[24]; } actors[4];
+static int obj_arrayfield_length_get(int64_t o,int f){(void)f;return actors[o].effect_count;}
+static unsigned obj_arrayfield_uint32_get(int64_t o,int f,int i){return f==OBJ_F_CRITTER_EFFECTS_IDX?actors[o].effects[i]:EFFECT_CAUSE_BACKGROUND;}
+static void effect_remove_all_caused_by(int64_t o,int c){assert(c==EFFECT_CAUSE_BACKGROUND);actors[o].effect_count=0;}
+static void effect_add(int64_t o,int id,int c){assert(c==EFFECT_CAUSE_BACKGROUND);actors[o].effects[actors[o].effect_count++]=id;}
 static int stat_base_get(int64_t o,int s){return actors[o].stats[s];}
 static int stat_level_get(int64_t o,int s){return actors[o].stats[s];}
 static int portrait_get(int64_t o){return actors[o].portrait;}
@@ -46,7 +48,7 @@ int main(void){
  actors[1].stats[0]=9;actors[1].stats[7]=7;
  actors[1].stats[STAT_RACE]=2;actors[1].stats[STAT_GENDER]=1;
  actors[1].bg=17;actors[1].text=1017;actors[1].portrait=42;
- actors[1].bonuses[0]=3;actors[1].bonuses[1]=-1;
+ effect_add(1,400,EFFECT_CAUSE_BACKGROUND);effect_add(1,399,EFFECT_CAUSE_BACKGROUND);effect_add(1,399,EFFECT_CAUSE_BACKGROUND);
  strcpy(mainmenu_ui_textedit_buffer,"Draft");modern_creation_draft_capture(1);
  /* Allocations made on the second page must not become the next refund floor. */
  actors[1].stats[0]=12;actors[1].skills=2;actors[1].points=0;
@@ -57,7 +59,7 @@ int main(void){
  assert(actors[2].bg==17 && actors[2].text==1017 && actors[2].portrait==42);
  assert(!strcmp(actors[2].name,"Draft") && !strcmp(mainmenu_ui_textedit_buffer,"Draft"));
  assert(actors[2].skills==0 && actors[2].points==5);
- assert(actors[2].bonuses[0]==3 && actors[2].bonuses[1]==-1);
+ assert(actors[2].effect_count==3 && actors[2].effects[0]==400 && actors[2].effects[1]==399 && actors[2].effects[2]==399);
  /* Consume once; a fresh character or stale handle cannot inherit a draft. */
  assert(!modern_creation_draft_take(2));
  modern_creation_draft_capture(2);modern_creation_draft.resume=true;assert(!modern_creation_draft_take(3));

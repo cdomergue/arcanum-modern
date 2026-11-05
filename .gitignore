@@ -108,3 +108,7 @@ worlded.local.json
 !/source/src/ui/modern_background_loadout.inc
 !/source/src/ui/modern_background_choices.inc
 !/source/src/game/modern_background_effects.h
+
+!/source/src/game/modern_background_rules.h
+!/source/src/game/modern_background_rules.inc
+!/source/src/ui/modern_background_rules.inc

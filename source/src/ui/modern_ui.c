@@ -46,6 +46,7 @@
 #include "game/stat.h"
 #include "game/effect.h"
 #include "game/modern_background_effects.h"
+#include "game/modern_background_rules.h"
 #include "game/level.h"
 #include "game/modern_compat.h"
 #include "game/resistance.h"
@@ -2707,7 +2708,7 @@ static bool handle_ui_event(SDL_Event* event)
             if(event->type==SDL_EVENT_KEY_DOWN && !event->key.repeat) {
                 if(event->key.scancode==SDL_SCANCODE_ESCAPE) pending_action=586;
                 else if(event->key.scancode==SDL_SCANCODE_RETURN) {
-                    if(background_text_field==2)background_editor_text("\n",false);
+                    if(background_text_field==2 || background_text_field==5)background_editor_text("\n",false);
                     else {background_text_field=0;SDL_StopTextInput(window);}
                 }
                 else if(event->key.scancode==SDL_SCANCODE_TAB)pending_action=background_text_field==1?590:589;
@@ -2722,7 +2723,8 @@ static bool handle_ui_event(SDL_Event* event)
             return true;
         }
         if(background_editor && event->type==SDL_EVENT_MOUSE_WHEEL) {
-            if(inside(background_story_rect,mouse_x,mouse_y))pending_action=event->wheel.y>0?591:592;
+            if(background_rules_mode>=2 && inside(background_rules_rect,mouse_x,mouse_y))pending_action=event->wheel.y>0?625:626;
+            else if(inside(background_story_rect,mouse_x,mouse_y))pending_action=event->wheel.y>0?591:592;
             return true;
         }
         if(!confirming_menu && event->type==SDL_EVENT_TEXT_INPUT && name_focused) {

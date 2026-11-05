@@ -1246,7 +1246,22 @@ diff --git a/src/game/background.c b/src/game/background.c
  
      // Find the newline to terminate the name.
      pch = strchr(background_description_name, '\n');
-@@ -299,9 +288,13 @@
+@@ -271,6 +260,14 @@
+     return background_description_name;
+ }
+ 
++/* Resolve the numeric effect independently of the background-specific rules. */
++int background_effect_get(int background)
++{
++    MesFileEntry entry;
++    entry.num = BACKGROUND_BLOCK_SIZE * background + BACKGROUND_F_EFFECT;
++    return mes_search(background_mes_file, &entry) ? atoi(entry.str) : 86;
++}
++
+ /**
+  * Assigns a background and its associated effect to a PC.
+  *
+@@ -299,9 +296,13 @@
   */
  void background_clear(int64_t obj)
  {
@@ -1261,7 +1276,7 @@ diff --git a/src/game/background.c b/src/game/background.c
  }
  
  /**
-@@ -380,9 +373,7 @@
+@@ -380,9 +381,7 @@
  }
  
  /**
@@ -1272,7 +1287,7 @@ diff --git a/src/game/background.c b/src/game/background.c
   *
   * 0x4C2950
   */
-@@ -394,9 +385,8 @@
+@@ -394,9 +393,8 @@
      int educator_training;
      int follower_training;
  
@@ -1283,7 +1298,7 @@ diff --git a/src/game/background.c b/src/game/background.c
          return;
      }
  
-@@ -405,12 +395,11 @@
+@@ -405,12 +403,11 @@
      // Update basic skills for all followers.
      for (skill = 0; skill < BASIC_SKILL_COUNT; skill++) {
          educator_training = basic_skill_training_get(obj, skill);
@@ -1298,7 +1313,7 @@ diff --git a/src/game/background.c b/src/game/background.c
                      basic_skill_training_set(node->obj, skill, follower_training);
                      follower_training++;
                  }
-@@ -422,12 +411,11 @@
+@@ -422,12 +419,11 @@
      // Update tech skills for all followers.
      for (skill = 0; skill < TECH_SKILL_COUNT; skill++) {
          educator_training = tech_skill_training_get(obj, skill);
@@ -1313,7 +1328,7 @@ diff --git a/src/game/background.c b/src/game/background.c
                      tech_skill_training_set(node->obj, skill, follower_training);
                      follower_training++;
                  }
-@@ -507,7 +495,7 @@
+@@ -507,7 +503,7 @@
          // Construct the exact background prefix.
          snprintf(buffer, sizeof(buffer),
              "%s%c",
@@ -1322,6 +1337,17 @@ diff --git a/src/game/background.c b/src/game/background.c
              background_gender_specifiers[gender]);
  
          // Convert the condition string to uppercase for comparison.
+diff --git a/src/game/background.h b/src/game/background.h
+--- a/src/game/background.h
++++ b/src/game/background.h
+@@ -31,6 +31,7 @@
+ void background_set(int64_t obj, int background, int background_text);
+ void background_clear(int64_t obj);
+ int background_get(int64_t obj);
++int background_effect_get(int background);
+ int background_text_get(int64_t obj);
+ void background_generate_inventory(int64_t obj);
+ void background_educate_followers(int64_t obj);
 diff --git a/src/game/broadcast.c b/src/game/broadcast.c
 --- a/src/game/broadcast.c
 +++ b/src/game/broadcast.c
@@ -2617,21 +2643,89 @@ diff --git a/src/game/effect.c b/src/game/effect.c
   * Defines the maximum number of effects per effect type.
   */
 -#define EFFECT_LIST_CAPACITY 400
-+#define EFFECT_LIST_CAPACITY 1000
++#define EFFECT_LIST_CAPACITY 1016 // 16 temporary, never-persisted preview slots
  
  typedef enum EffectSpecial {
      EFFECT_SPECIAL_MAX_HIT_POINTS,
-@@ -274,8 +274,7 @@
+@@ -249,6 +249,8 @@
+  */
+ static Effect* effect_special_effects;
+ 
++#include "modern_background_rules.inc"
++
+ /**
+  * Called when the game is initialized.
+  *
+@@ -260,6 +262,8 @@
+     MesFileEntry mes_file_entry;
+ 
+     (void)init_info;
++
++    background_rules_store_clear();
+ 
+     // Load engine-wide effects message file (required).
+     if (!mes_load("rules\\effect.mes", &mes_file)) {
+@@ -274,8 +278,7 @@
      effect_tech_effects = (Effect*)CALLOC(EFFECT_LIST_CAPACITY, sizeof(*effect_tech_effects));
      effect_special_effects = (Effect*)CALLOC(EFFECT_LIST_CAPACITY, sizeof(*effect_special_effects));
  
 -    // Parse effects from engine-wide range (50-400).
 -    for (mes_file_entry.num = 50; mes_file_entry.num < 400; mes_file_entry.num++) {
-+    for (mes_file_entry.num = 50; mes_file_entry.num < EFFECT_LIST_CAPACITY; mes_file_entry.num++) {
++    for (mes_file_entry.num = 50; mes_file_entry.num < 1000; mes_file_entry.num++) {
          if (mes_search(mes_file, &mes_file_entry)) {
              effect_parse(mes_file_entry.num, mes_file_entry.str);
          }
-@@ -561,6 +560,33 @@
+@@ -284,6 +287,11 @@
+     // Clean up.
+     mes_unload(mes_file);
+ 
++    background_effect_store_ok = background_rules_store_load();
++    if (!background_effect_store_ok) {
++        tig_debug_printf("Cannot load modern-ui/background-effects.mes: invalid or conflicting native effect IDs.\n");
++        return false;
++    }
+     effect_initialized = true;
+ 
+     return true;
+@@ -303,6 +311,7 @@
+     FREE(effect_tech_effects);
+     FREE(effect_special_effects);
+     effect_initialized = false;
++    background_rules_store_clear();
+ }
+ 
+ /**
+@@ -342,6 +351,7 @@
+ 
+     // Clear module-specific effects.
+     for (index = 0; index < 50; index++) {
++        background_effect_used[index] = false;
+         effect_stat_effects[index].count = 0;
+         effect_basic_skill_effects[index].count = 0;
+         effect_tech_skill_effects[index].count = 0;
+@@ -364,6 +374,7 @@
+     int type;
+     int index;
+ 
++    if (num >= 0 && num < 1000) background_effect_used[num] = true;
+     tok = strtok(text, " ,");
+     while (tok != NULL) {
+         // NOTE: Original code is different. Probably uses an inlined routine or
+@@ -467,10 +478,11 @@
+             }
+         } else if (tok[0] == '*') {
+             effect_info->operators[effect_info->count] = EFFECT_OPERATOR_MULTIPLY;
+-            effect_info->params[effect_info->count] = atoi(tok);
++            effect_info->params[effect_info->count] = atoi(tok + 1);
+         } else if (tok[0] == '/') {
+             effect_info->operators[effect_info->count] = EFFECT_OPERATOR_DIVIDE;
+-            effect_info->params[effect_info->count] = atoi(tok);
++            effect_info->params[effect_info->count] = atoi(tok + 1);
++            if (!effect_info->params[effect_info->count]) effect_info->params[effect_info->count] = 1;
+         } else {
+             tig_debug_printf("Effect: ERROR: Invalid symbol: %s.\n", tok);
+         }
+@@ -561,6 +573,33 @@
      anim_speed_recalc(obj);
  }
  
@@ -2665,6 +2759,111 @@ diff --git a/src/game/effect.c b/src/game/effect.c
  /**
   * Removes all instances of a specific effect from a critter.
   *
+@@ -739,6 +778,11 @@
+  *
+  * 0x4EA6C0
+  */
++static int effect_bounded(int64_t value)
++{
++    return value > INT_MAX ? INT_MAX : value < INT_MIN ? INT_MIN : (int)value;
++}
++
+ int effect_adjust_func(int64_t obj, int id, int value, Effect* tbl, bool ignore_innate_effects)
+ {
+     int cnt;
+@@ -750,8 +794,8 @@
+     int adds = 0;
+     int mults = 1;
+     int divs = 1;
+-    int min = -1;
+-    int max = -1;
++    int min = 0, max = 0;
++    bool has_min = false, has_max = false;
+     int percents = 0;
+ 
+     // Ensure the object is a critter.
+@@ -781,6 +825,8 @@
+             }
+         }
+ 
++        // Ignore invalid IDs before dereferencing; save validation reports missing rules.
++        if (effect < 0 || effect >= EFFECT_LIST_CAPACITY) continue;
+         // Get the effect metadata.
+         meta = &(tbl[effect]);
+ 
+@@ -790,26 +836,28 @@
+             if (meta->ids[change] == id) {
+                 switch (meta->operators[change]) {
+                 case EFFECT_OPERATOR_ADD:
+-                    adds += meta->params[change];
++                    adds = effect_bounded((int64_t)adds + meta->params[change]);
+                     break;
+                 case EFFECT_OPERATOR_MULTIPLY:
+-                    mults *= meta->params[change];
++                    mults = effect_bounded((int64_t)mults * meta->params[change]);
+                     break;
+                 case EFFECT_OPERATOR_DIVIDE:
+-                    divs *= meta->params[change];
++                    if (meta->params[change] != 0) divs = effect_bounded((int64_t)divs * meta->params[change]);
+                     break;
+                 case EFFECT_OPERATOR_MIN:
+-                    if (min == -1 || min < meta->params[change]) {
++                    if (!has_min || min < meta->params[change]) {
+                         min = meta->params[change];
++                        has_min = true;
+                     }
+                     break;
+                 case EFFECT_OPERATOR_MAX:
+-                    if (max == -1 || max > meta->params[change]) {
++                    if (!has_max || max > meta->params[change]) {
+                         max = meta->params[change];
++                        has_max = true;
+                     }
+                     break;
+                 case EFFECT_OPERATOR_PERCENT:
+-                    percents += meta->params[change];
++                    percents = effect_bounded((int64_t)percents + meta->params[change]);
+                     break;
+                 }
+             }
+@@ -818,31 +866,31 @@
+ 
+     // 1. Percentage.
+     if (percents != 0) {
+-        value = value * (percents + 100) / 100;
++        value = effect_bounded((int64_t)value * ((int64_t)percents + 100) / 100);
+     }
+ 
+     // 2. Multiply.
+     if (mults != 1) {
+-        value *= mults;
++        value = effect_bounded((int64_t)value * mults);
+     }
+ 
+     // 3. Divide.
+     if (divs != 1) {
+-        value /= divs;
++        value = effect_bounded((int64_t)value / divs);
+     }
+ 
+     // 4. Sum.
+     if (adds != 0) {
+-        value += adds;
++        value = effect_bounded((int64_t)value + adds);
+     }
+ 
+     // 5. Min.
+-    if (min != -1 && value < min) {
++    if (has_min && value < min) {
+         value = min;
+     }
+ 
+     // 6. Max
+-    if (max != -1 && value > max) {
++    if (has_max && value > max) {
+         value = max;
+     }
+ 
 diff --git a/src/game/effect.h b/src/game/effect.h
 --- a/src/game/effect.h
 +++ b/src/game/effect.h
@@ -2680,7 +2879,8 @@ diff --git a/src/game/effect.h b/src/game/effect.h
 diff --git a/src/game/gamelib.c b/src/game/gamelib.c
 --- a/src/game/gamelib.c
 +++ b/src/game/gamelib.c
-@@ -1,4 +1,10 @@
+@@ -1,4 +1,11 @@
++#include "game/modern_background_rules.h"
 +#include "game/modern_house.h"
 +#include "game/modern_world_updates_internal.h"
 +#include "game/modern_compat.h"
@@ -2691,7 +2891,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
  #include <stdio.h>
  
-@@ -121,7 +127,7 @@
+@@ -121,7 +128,7 @@
  static void gamelib_draw_editor(GameDrawInfo* draw_info);
  static void gamelib_logo(void);
  static void gamelib_splash(tig_window_handle_t window_handle);
@@ -2700,7 +2900,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  static bool gamelib_load_module_data(const char* module_name);
  static void gamelib_unload_module_data(void);
  
-@@ -324,10 +330,13 @@
+@@ -324,10 +331,13 @@
      settings_load(&settings);
  
      settings_register(&settings, DIFFICULTY_KEY, "1", difficulty_changed);
@@ -2715,7 +2915,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (!init_info->editor) {
          if (highres_config_get()->logos) {
-@@ -410,6 +419,9 @@
+@@ -410,6 +420,9 @@
      tig_debug_printf("gamelib_reset: Resetting.\n");
      tig_timer_now(&reset_started_at);
  
@@ -2725,7 +2925,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      in_reset = true;
      strcpy(gamelib_current_module_name, "Arcanum");
      sector_art_cache_disable();
-@@ -448,6 +460,7 @@
+@@ -448,6 +461,7 @@
  
      sector_art_cache_enable();
      in_reset = false;
@@ -2733,7 +2933,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      duration = tig_timer_elapsed(reset_started_at);
      tig_debug_printf("gamelib_reset(): Done.  Total time: %d ms.\n", duration);
-@@ -456,6 +469,7 @@
+@@ -456,6 +470,7 @@
  // 0x4024D0
  void gamelib_exit(void)
  {
@@ -2741,7 +2941,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      settings_save(&settings);
  
      for (int index = MODULE_COUNT - 1; index >= 0; index--) {
-@@ -501,6 +515,8 @@
+@@ -501,6 +516,8 @@
              gamelib_modules[index].ping_func(gamelib_ping_time);
          }
      }
@@ -2750,7 +2950,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x4025C0
-@@ -671,6 +687,17 @@
+@@ -671,6 +688,17 @@
          return false;
      }
  
@@ -2768,7 +2968,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      if (gamelib_mod_dat_path[0] != '\0') {
          tig_file_repository_guid(gamelib_mod_dat_path, &gamelib_mod_guid);
      }
-@@ -755,6 +782,7 @@
+@@ -755,6 +783,7 @@
              }
          }
          gamelib_mod_loaded = false;
@@ -2776,7 +2976,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -939,6 +967,10 @@
+@@ -939,6 +968,10 @@
      unsigned int sentinel = 0xBEEFCAFE;
      int version;
      GameSaveInfo save_info;
@@ -2787,7 +2987,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
-@@ -949,6 +981,7 @@
+@@ -949,6 +982,7 @@
  
      if (!tig_file_is_directory("Save\\Current")) {
          tig_debug_printf("gamelib_save(): Error finding folder %s\n", "Save\\Current");
@@ -2795,7 +2995,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -959,6 +992,7 @@
+@@ -959,6 +993,7 @@
      stream = tig_file_fopen(path, "wb");
      if (stream == NULL) {
          tig_debug_printf("gamelib_save(): Error creating %s\n", path);
@@ -2803,7 +3003,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -968,6 +1002,7 @@
+@@ -968,6 +1003,7 @@
          tig_debug_printf("gamelib_save(): Error writing version\n");
          tig_file_fclose(stream);
          tig_file_remove(path);
@@ -2811,7 +3011,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1004,10 +1039,11 @@
+@@ -1004,10 +1040,11 @@
          }
      }
  
@@ -2824,7 +3024,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1017,6 +1053,7 @@
+@@ -1017,6 +1054,7 @@
          tig_timer_now(&time);
          if (!gamelib_extra_save_func()) {
              tig_file_remove(path);
@@ -2832,7 +3032,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_save = false;
              return false;
          }
-@@ -1024,8 +1061,15 @@
+@@ -1024,8 +1062,15 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
@@ -2849,7 +3049,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1033,23 +1077,31 @@
+@@ -1033,23 +1078,31 @@
      if (!gamelib_saveinfo_save(&save_info)) {
          tig_debug_printf("gamelib_save(): error saving saveinfo\n");
          gamelib_saveinfo_exit(&save_info);
@@ -2882,7 +3082,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      ui_progressbar_update(MODULE_COUNT + 2);
  
-@@ -1078,12 +1130,16 @@
+@@ -1078,12 +1131,16 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
@@ -2899,7 +3099,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1094,6 +1150,7 @@
+@@ -1094,6 +1151,7 @@
      tig_timer_now(&time);
      if (!tig_file_empty_directory("Save\\Current")) {
          tig_debug_printf("gamelib_load(): Error clearing folder %s\n", "Save\\Current");
@@ -2907,7 +3107,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1104,21 +1161,31 @@
+@@ -1104,21 +1162,31 @@
      tig_timer_now(&time);
      if (!tig_file_unarchive(path, "Save\\Current")) {
          tig_debug_printf("gamelib_load(): error restoring archive %s to save\\test\n", path);
@@ -2939,7 +3139,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1165,6 +1232,7 @@
+@@ -1165,6 +1233,7 @@
      tig_file_fclose(stream);
  
      if (index < MODULE_COUNT) {
@@ -2947,7 +3147,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1173,6 +1241,7 @@
+@@ -1173,6 +1242,7 @@
          tig_debug_printf("gamelib_load: Begin gamelib_extra_load_func()...");
          tig_timer_now(&time);
          if (!gamelib_extra_load_func()) {
@@ -2955,11 +3155,11 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_load = false;
              return false;
          }
-@@ -1180,6 +1249,12 @@
+@@ -1180,6 +1250,12 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
-+    if (!modern_world_updates_finish_load()) {
++    if (!background_rules_saved_objects_valid() || !modern_world_updates_finish_load()) {
 +        modern_world_updates_abort_load();
 +        in_load = false;
 +        return false;
@@ -2968,7 +3168,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      ui_progressbar_update(MODULE_COUNT + 2);
  
      in_load = false;
-@@ -1200,7 +1275,7 @@
+@@ -1200,7 +1276,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -2977,7 +3177,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1469,9 @@
+@@ -1394,13 +1470,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -2994,7 +3194,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1626,7 @@
+@@ -1555,7 +1627,7 @@
          } while (0);
      }
  
@@ -3003,7 +3203,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1823,81 @@
+@@ -1752,11 +1824,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -3086,7 +3286,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1941,7 @@
+@@ -1800,6 +1942,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -3094,7 +3294,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1959,7 @@
+@@ -1817,7 +1960,7 @@
  }
  
  // 0x404A20
@@ -3103,7 +3303,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1974,12 @@
+@@ -1832,6 +1975,12 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
@@ -3116,7 +3316,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x404C10
-@@ -1874,6 +2022,7 @@
+@@ -1874,6 +2023,7 @@
      }
  
      path1[end] = '\0';
@@ -3124,7 +3324,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +2055,9 @@
+@@ -1906,6 +2056,9 @@
  void gamelib_unload_module_data(void)
  {
      int index;

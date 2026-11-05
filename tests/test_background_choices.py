@@ -42,6 +42,15 @@ static int background_get(int64_t obj){(void)obj;return native;}
 static bool background_find_first(int64_t obj,int* base){(void)obj;*base=0;return true;}
 static bool background_find_next(int64_t obj,int* base){(void)obj;int n=*base+1;if(restricted&&n==1)n++;if(n>2)return false;*base=n;return true;}
 static bool background_find_prev(int64_t obj,int* base){(void)obj;int n=*base-1;if(restricted&&n==1)n--;if(n<0)return false;*base=n;return true;}
+#define BACKGROUND_RULE_TEXT 2048
+#define BACKGROUND_RULE_IDS 16
+typedef struct {char text[2048];int ids[16],count;bool inherit;} BackgroundRules;
+static bool background_rules_validate(const char* t,char* e,size_t n){(void)t;(void)e;(void)n;return true;}
+static bool background_rules_available(const BackgroundRules* r){(void)r;return true;}
+static void background_rules_remove(int64_t o,const BackgroundRules* r){(void)o;(void)r;}
+static void background_rules_apply(int64_t o,int b,const BackgroundRules* r){(void)o;(void)b;(void)r;}
+static int background_effect_get(int b){return b;}
+
 IMPLEMENTATION
 static void forget(void){free(background_choices);background_choices=NULL;background_choice_count=0;background_choices_loaded=background_choices_failed=false;}
 static void draft(const char* name){strcpy(background_title,name);strcpy(background_story,"First\nSecond");strcpy(background_money,"12345");background_quantities[6029]=2;background_quantities[7038]=10;}
@@ -85,6 +94,18 @@ int main(void){
  native=0;restricted=true;modern_background_choice_cycle(3,1);assert(native==2);
  restricted=false;native=1;effects_ok=false;modern_background_choice_cycle(3,1);assert(native==2);
  effects_ok=true;
+ /* A v1 definition migrates without changing native behavior. */
+ modern_background_choice_leave(3);forget();
+ FILE* legacy=fopen("modern-ui/backgrounds.dat","wb");assert(legacy);
+ fputs("ARCBG01\n",legacy);int one=1;assert(background_choice_number(legacy,&one,true));
+ BackgroundChoice old={0};old.base=1;strcpy(old.title,"Legacy");strcpy(old.money,"0");
+ long record_start=ftell(legacy);assert(background_choice_record(legacy,&old,true));fclose(legacy);
+ /* Strip precisely the v2 extension from the fixture. */
+ legacy=fopen("modern-ui/backgrounds.dat","rb");assert(legacy);char legacy_data[1191];
+ assert(fread(legacy_data,1,sizeof(legacy_data),legacy)==sizeof(legacy_data));fclose(legacy);
+ legacy=fopen("modern-ui/backgrounds.dat","wb");assert(legacy);assert(record_start==12);
+ assert(fwrite(legacy_data,1,sizeof(legacy_data),legacy)==sizeof(legacy_data));fclose(legacy);
+ background_choices_load();assert(!background_choices_failed&&background_choice_count==1&&background_choices[0].rules.inherit);
  /* Truncated files are rejected as a whole and never overwritten by Apply. */
  forget();FILE* f=fopen("modern-ui/backgrounds.dat","wb");assert(f);fputs("ARCBG01\n\x01",f);fclose(f);
  background_choices_load();assert(background_choices_failed&&background_choice_count==0);

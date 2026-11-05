@@ -8,6 +8,7 @@ root=Path(__file__).resolve().parents[1]
 implementation=(root/'source/src/ui/modern_background.inc').read_text(encoding='utf-8').split('static void draw_background_history')[0]
 implementation=implementation.replace('#include "modern_background_loadout.inc"','')
 implementation=implementation.replace('#include "modern_background_choices.inc"','')
+implementation=implementation.replace('#include "modern_background_rules.inc"','')
 source=r'''
 #include <assert.h>
 #include <stdbool.h>
@@ -62,6 +63,22 @@ static const char* background_description_get_name(int n){(void)n;return "Native
 static const char* background_description_get_body(int n){(void)n;return "Native story";}
 static const char* game_text(const char* s){return s;}
 static bool background_choice_commit(int64_t o,const int d[8],const int b[2]){(void)o;(void)d;(void)b;return disk_ok;}
+#define BACKGROUND_RULE_TEXT 2048
+#define BACKGROUND_RULE_IDS 16
+typedef struct {char text[2048];int ids[16],count;bool inherit;} BackgroundRules;
+static BackgroundRules background_rules_draft;
+static int background_rules_mode,background_rules_page,background_rules_scroll;
+static char background_rules_error[256];
+static const BackgroundRules* background_current_rules(int64_t o){(void)o;return NULL;}
+static bool background_rules_action(int a){if(a==618){background_rules_mode=1;return true;}return false;}
+static bool background_rules_validate(const char* t,char* e,size_t n){(void)e;(void)n;return strcmp(t,"invalid")!=0;}
+static bool background_rules_prepare(BackgroundRules* r,char* e,size_t n){(void)r;(void)e;(void)n;return disk_ok;}
+static bool background_rules_preview_begin(int64_t o,int b,const BackgroundRules* r,const char* t,bool i){(void)o;(void)b;(void)r;(void)t;(void)i;return true;}
+static void background_rules_preview_end(int64_t o){(void)o;}
+static void background_rules_remove(int64_t o,const BackgroundRules* r){(void)o;(void)r;}
+static void background_rules_apply(int64_t o,int b,const BackgroundRules* r){(void)o;(void)b;(void)r;}
+static int background_effect_get(int b){return b;}
+
 IMPLEMENTATION
 int main(void){
  background_editor_open(1);background_editor_action(571);
@@ -76,6 +93,11 @@ int main(void){
  background_editor_open(1);background_editor_action(571);background_editor_action(584);
  disk_ok=false;background_editor_action(587);assert(actor_values[0]==8 && actor_values[7]==8 && background_editor);
  disk_ok=true;background_editor_action(587);assert(actor_values[0]==9 && actor_values[7]==7 && !background_editor);
+ /* Advanced multiline input and invalid rules cannot apply. */
+ background_editor_open(1);background_text_field=5;background_editor_text("reaction -20\nalignment max -200",false);
+ assert(!strcmp(background_rules_draft.text,"reaction -20\nalignment max -200"));
+ background_text_replace=true;background_editor_text("invalid",false);assert(!background_draft_valid(1));
+ background_editor_action(587);assert(background_editor);background_editor_action(586);
  /* A queued action cannot modify a different newly created actor. */
  background_editor_open(1);actor=2;background_editor_action(571);assert(!background_editor);
  actor=1;background_editor_open(1);mode=0;background_editor_action(587);assert(!background_editor);
@@ -111,13 +133,13 @@ int main(void){
  background_editor_action(600);assert(background_quantities[6029]==0);
  background_editor_action(586);
  /* Derived changes remain drafts until the complete transaction succeeds. */
- background_editor_open(1);background_editor_action(599);background_editor_action(615);background_editor_action(617);
+ background_editor_open(1);background_editor_action(618);background_editor_action(615);background_editor_action(617);
  assert(background_bonuses[0]==1 && background_bonuses[1]==1 && bonuses[0]==0 && bonuses[1]==0);
  background_editor_action(586);assert(bonuses[0]==0 && bonuses[1]==0);
- background_editor_open(1);background_editor_action(599);background_editor_action(615);
+ background_editor_open(1);background_editor_action(618);background_editor_action(615);
  disk_ok=false;background_editor_action(587);assert(bonuses[0]==0 && background_editor);
  disk_ok=true;background_editor_action(587);assert(bonuses[0]==1 && !background_editor);
- background_editor_open(1);assert(background_bonuses[0]==1);background_editor_action(599);
+ background_editor_open(1);assert(background_bonuses[0]==1);background_editor_action(618);
  background_editor_action(614);background_editor_action(587);assert(bonuses[0]==0);
  puts("PASS: free attributes, native bounds, cancellation, disk rollback, stale actor, UTF-8, numeric money and item actions");
 }

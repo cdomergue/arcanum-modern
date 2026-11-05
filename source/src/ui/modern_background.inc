@@ -1,5 +1,5 @@
 /* Creation-only customization. Native statistics, money and items enter the save.
- * No new effect, background, description, script or object identifiers.
+ * Additional native effects use immutable records kept with the saves.
  * Keep drafts separate from the character until the player applies them. */
 static bool background_editor;
 static int background_text_field;
@@ -10,21 +10,24 @@ static bool background_story_follow;
 static SDL_FRect background_story_rect;
 #include "modern_background_loadout.inc"
 #include "modern_background_choices.inc"
+static int background_bonuses[2];
+static bool background_bonus_step_allowed(int64_t obj,int which,int delta);
+#include "modern_background_rules.inc"
 static void background_editor_text(const char* text,bool backspace)
 {
     char* field=background_text_field==1?background_title:background_text_field==3?background_money:
-        background_text_field==4?background_item_search:background_story;
+        background_text_field==4?background_item_search:background_text_field==5?background_rules_draft.text:background_story;
     size_t cap=background_text_field==1?sizeof(background_title):background_text_field==3?sizeof(background_money):
-        background_text_field==4?sizeof(background_item_search):sizeof(background_story);
+        background_text_field==4?sizeof(background_item_search):background_text_field==5?sizeof(background_rules_draft.text):sizeof(background_story);
     if(!background_text_field)return;
-    char normalized[sizeof(background_story)];
+    char normalized[BACKGROUND_RULE_TEXT];
     if(!backspace) {
         if(!text || !*text)return;
         size_t used=0;
         for(const char* p=text;*p;p++) {
             char ch=*p;
             if(ch=='\r' || ch=='\n') {
-                if(background_text_field!=2)return;
+                if(background_text_field!=2 && background_text_field!=5)return;
                 if(ch=='\r' && p[1]=='\n')p++;
                 ch='\n';
             }
@@ -49,10 +52,9 @@ static void background_editor_text(const char* text,bool backspace)
     else SDL_strlcat(field,text,cap);
     if(background_text_field==2)background_story_follow=true;
     if(background_text_field==4)background_item_page=0;
+    if(background_text_field==5)background_rules_scroll=INT_MAX;
 }
 static int background_draft[8];
-static int background_bonuses[2];
-static bool background_derived;
 static int64_t background_editor_object;
 static const int background_stats[8] = {
     STAT_STRENGTH, STAT_CONSTITUTION, STAT_DEXTERITY, STAT_BEAUTY,
@@ -63,7 +65,10 @@ static void background_preview(int64_t obj,int values[16])
 {
     int primary[8];
     for(int i=0;i<8;i++)primary[background_stats[i]]=stat_base_get(obj,background_stats[i])+background_draft[i];
+    bool preview=background_rules_preview_begin(obj,background_effect_get(background_get(obj)),
+        background_current_rules(obj),background_rules_draft.text,background_rules_draft.inherit);
     modern_background_preview(obj,primary,background_bonuses,values);
+    if(preview)background_rules_preview_end(obj);
 }
 
 static bool background_bonus_step_allowed(int64_t obj,int which,int delta)
@@ -82,7 +87,7 @@ static bool background_bonus_step_allowed(int64_t obj,int which,int delta)
 
 static bool background_draft_valid(int64_t obj)
 {
-    if(!*background_title)return false;
+    if(!*background_title || !background_rules_validate(background_rules_draft.text,NULL,0))return false;
     int money;
     if(!background_money_value(background_money,&money))return false;
     for(int i=0;i<8;i++) {
@@ -97,7 +102,10 @@ static void background_editor_open(int64_t obj)
 {
     memset(background_draft,0,sizeof(background_draft));
     for(int i=0;i<2;i++)background_bonuses[i]=modern_background_bonus_get(obj,i);
-    background_derived=false;
+    background_rules_mode=background_rules_page=background_rules_scroll=0;
+    const BackgroundRules* current=background_current_rules(obj);
+    background_rules_draft=current?*current:(BackgroundRules){.inherit=true};
+    background_rules_error[0]=0;
     background_loadout_open(obj);
     background_profile_read(obj,background_title,sizeof(background_title),background_story,sizeof(background_story));
     if(background_choice_state.object!=obj || background_choice_state.selected<0) {
@@ -126,17 +134,20 @@ static bool background_editor_action(int action)
     }
     if(action==591 || action==592) {background_story_scroll+=action==591?-1:1;
         if(background_story_scroll<0)background_story_scroll=0;
-        if(background_story_scroll>background_story_max)background_story_scroll=background_story_max;return true;}
+        if(background_story_scroll>background_story_max)background_story_scroll=background_story_max;
+        return true;}
     if(action==589 || action==590 || action==595 || action==596) {
         background_text_field=action==589?1:action==590?2:action==595?3:4;
         if(background_text_field==2)background_story_follow=true;
         background_text_replace=false;SDL_StartTextInput(window);return true;
     }
     background_text_field=0;SDL_StopTextInput(window);
-    if(action==593 || action==594 || action==599) {
-        background_equipment=action==594;background_derived=action==599;return true;
+    if(background_rules_action(action))return true;
+    if(action==593 || action==594) {
+        background_rules_mode=0;
+        background_equipment=action==594;return true;
     }
-    if(action>=614 && action<618 && background_derived) {
+    if(action>=614 && action<618 && background_rules_mode==1) {
         int which=(action-614)/2,delta=action%2?1:-1;
         if(background_bonus_step_allowed(c.object,which,delta))background_bonuses[which]+=delta;
         return true;
@@ -162,6 +173,11 @@ static bool background_editor_action(int action)
     } else if(action==586) {
         background_editor=false;
     } else if(action==587 && background_draft_valid(c.object)) {
+        if(!background_rules_prepare(&background_rules_draft,background_rules_error,sizeof(background_rules_error))) {
+            background_write_failed=true;return true;
+        }
+        const BackgroundRules* current=background_current_rules(c.object);
+        BackgroundRules old=current?*current:(BackgroundRules){.inherit=true};
         int before[8];
         for(int i=0;i<8;i++) before[i]=stat_base_get(c.object,background_stats[i]);
         bool ok=true;
@@ -175,7 +191,9 @@ static bool background_editor_action(int action)
             background_write_failed=true;
             for(int i=0;i<8;i++) stat_base_set(c.object,background_stats[i],before[i]);
         } else {
+            background_rules_remove(c.object,&old);
             for(int i=0;i<2;i++)modern_background_bonus_set(c.object,i,background_bonuses[i]);
+            background_rules_apply(c.object,background_effect_get(background_get(c.object)),&background_rules_draft);
             background_loadout_commit();background_editor=false;
         }
     }
@@ -213,29 +231,13 @@ static void draw_background_history(float x,float y,float w)
 static void draw_background_editor(ModernCharacter* c,float x,float y,float w)
 {
     text_draw(2,tr("Personnaliser l’antécédent","Customize background"),x,y,GOLD);
-    float tab=(w-24)/3;
-    text_in_button((SDL_FRect){x,y+42,tab,38},593,tr("Initiales","Primary"),!background_equipment && !background_derived,true);
-    text_in_button((SDL_FRect){x+tab+12,y+42,tab,38},599,tr("Dérivées","Derived"),background_derived,true);
-    text_in_button((SDL_FRect){x+2*(tab+12),y+42,tab,38},594,tr("Équipement","Equipment"),background_equipment,true);
-    if(background_equipment)draw_background_equipment(x,y,w);
-    else if(background_derived) {
-        menu_paragraph(tr("Aperçu calculé. La vitesse et le nombre de compagnons acceptent aussi un bonus ou un malus, comme dans les antécédents d’origine.",
-            "Calculated preview. Speed and follower limit also support a bonus or penalty, as in the original backgrounds."),
-            (SDL_FRect){x,y+94,w,54},0,MUTED);
-        int values[16];background_preview(c->object,values);
-        for(int i=0;i<8;i++) {
-            int stat=STAT_CARRY_WEIGHT+i,which=stat==STAT_SPEED?0:stat==STAT_MAX_FOLLOWERS?1:-1;
-            float row=y+151+i*46;char value[64];
-            text_draw(0,game_text(stat_name(stat)),x,row+9,GOLD);
-            if(which>=0) {
-                snprintf(value,sizeof(value),"%d  (%+d)",values[stat],background_bonuses[which]);
-                menu_button((SDL_FRect){x+w-194,row,40,38},614+which*2,"-",background_bonus_step_allowed(c->object,which,-1));
-                menu_button((SDL_FRect){x+w-40,row,40,38},615+which*2,"+",background_bonus_step_allowed(c->object,which,1));
-            } else snprintf(value,sizeof(value),"%d",values[stat]);
-            text_draw(0,value,x+w-144,row+9,GOLD);
-        }
-        if(!modern_background_bonuses_available())text_draw(0,tr("Effets d’origine indisponibles : aperçu uniquement.","Original effects unavailable: preview only."),x,y+524,MUTED);
-    }
+    float tab=(w-24)/4;
+    text_in_button((SDL_FRect){x,y+42,tab,38},593,tr("Initiales","Primary"),!background_equipment && !background_rules_mode,true);
+    text_in_button((SDL_FRect){x+tab+8,y+42,tab,38},618,tr("Effets","Effects"),background_rules_mode==1,true);
+    text_in_button((SDL_FRect){x+2*(tab+8),y+42,tab,38},619,tr("Avancé","Advanced"),background_rules_mode>=2,true);
+    text_in_button((SDL_FRect){x+3*(tab+8),y+42,tab,38},594,tr("Objets","Items"),background_equipment,true);
+    if(background_rules_mode)draw_background_rules(c->object,x,y,w);
+    else if(background_equipment)draw_background_equipment(x,y,w);
     else {
     menu_paragraph(tr("Ajustez librement les valeurs dans les limites du moteur. Les règles de l’antécédent sélectionné restent actives.",
         "Adjust values freely within engine limits. The selected background's rules remain active."),
@@ -256,7 +258,11 @@ static void draw_background_editor(ModernCharacter* c,float x,float y,float w)
         menu_button((SDL_FRect){x+w-40,row,40,38},571+i*2,"+",base<stat_level_max(c->object,stat));
     }
     }
-    if(background_write_failed)text_draw(0,tr("Enregistrement impossible. Aucune modification appliquée.","Could not save. No changes applied."),x,y+554,GOLD);
+    if(background_write_failed) {
+        SDL_FRect feedback={x,y+515,w,57};
+        fill(feedback,(SDL_Color){12,9,6,255});
+        menu_paragraph(tr("Enregistrement impossible. Aucune modification appliquée.","Could not save. No changes applied."),feedback,0,UI_RED);
+    }
     menu_button((SDL_FRect){x,y+578,w/2-8,48},586,tr("Annuler","Cancel"),true);
     menu_button((SDL_FRect){x+w/2+8,y+578,w/2-8,48},587,tr("Appliquer","Apply"),background_draft_valid(c->object));
 }

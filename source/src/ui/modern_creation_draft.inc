@@ -4,7 +4,8 @@ static struct {
     bool valid, resume;
     int64_t object;
     int stats[8], race, gender, portrait, background, background_text;
-    int bonuses[2];
+    int effect_count;
+    unsigned effects[256];
     char name[sizeof(mainmenu_ui_textedit_buffer)];
 } modern_creation_draft;
 
@@ -16,12 +17,16 @@ static void modern_creation_draft_capture(int64_t obj)
     for (int i = 0; i < 8; i++) {
         modern_creation_draft.stats[i] = stat_base_get(obj, STAT_STRENGTH + i);
     }
+    modern_creation_draft.effect_count=0;
+    int n=obj_arrayfield_length_get(obj,OBJ_F_CRITTER_EFFECTS_IDX);
+    for(int i=0;i<n && modern_creation_draft.effect_count<256;i++)
+        if(obj_arrayfield_uint32_get(obj,OBJ_F_CRITTER_EFFECT_CAUSE_IDX,i)==EFFECT_CAUSE_BACKGROUND)
+            modern_creation_draft.effects[modern_creation_draft.effect_count++]=obj_arrayfield_uint32_get(obj,OBJ_F_CRITTER_EFFECTS_IDX,i);
     modern_creation_draft.race = stat_level_get(obj, STAT_RACE);
     modern_creation_draft.gender = stat_level_get(obj, STAT_GENDER);
     modern_creation_draft.portrait = portrait_get(obj);
     modern_creation_draft.background = background_get(obj);
     modern_creation_draft.background_text = background_text_get(obj);
-    for(int i=0;i<2;i++)modern_creation_draft.bonuses[i]=modern_background_bonus_get(obj,i);
     SDL_strlcpy(modern_creation_draft.name, mainmenu_ui_textedit_buffer,
         sizeof(modern_creation_draft.name));
 }
@@ -54,8 +59,9 @@ static void modern_creation_draft_restore(int64_t obj)
             STAT_STRENGTH + i, modern_creation_draft.stats[i]);
     }
     obj_field_int32_set(obj, OBJ_F_CRITTER_PORTRAIT, modern_creation_draft.portrait);
-    if(modern_background_bonuses_available())for(int i=0;i<2;i++)
-        modern_background_bonus_set(obj,i,modern_creation_draft.bonuses[i]);
+    effect_remove_all_caused_by(obj,EFFECT_CAUSE_BACKGROUND);
+    for(int i=0;i<modern_creation_draft.effect_count;i++)
+        effect_add(obj,modern_creation_draft.effects[i],EFFECT_CAUSE_BACKGROUND);
     SDL_strlcpy(mainmenu_ui_textedit_buffer, modern_creation_draft.name,
         sizeof(mainmenu_ui_textedit_buffer));
     obj_field_string_set(obj, OBJ_F_PC_PLAYER_NAME, mainmenu_ui_textedit_buffer);
