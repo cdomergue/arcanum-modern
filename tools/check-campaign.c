@@ -22,6 +22,8 @@
 #include "game/item.h"
 #include "game/name.h"
 #include "game/map.h"
+#include "game/sector.h"
+#include "game/modern_world_updates.h"
 #include "game/object.h"
 #include "game/player.h"
 #include "game/proto.h"
@@ -303,6 +305,57 @@ static int arachnid_roundtrip(const char* input, bool original)
     return 0;
 }
 
+static uint64_t save_archive_hash(const char* path)
+{
+    FILE* file = fopen(path, "rb");
+    if (!file) return 0;
+    uint64_t hash = UINT64_C(14695981039346656037);
+    int ch;
+    while ((ch = fgetc(file)) != EOF) hash = (hash ^ (unsigned char)ch) * UINT64_C(1099511628211);
+    bool ok = !ferror(file);
+    fclose(file);
+    return ok ? hash : 0;
+}
+
+static int save_retry_roundtrip(const char* input)
+{
+    REQUIRE(gamelib_load(input));
+    REQUIRE(modern_world_updates_finish_load());
+    Snapshot before = snapshot();
+    REQUIRE(gamelib_save("SlotSR01", "Save retry baseline"));
+    uint64_t archive = save_archive_hash("modules/Arcanum/Save/SlotSR01.tfaf");
+    uint64_t index = save_archive_hash("modules/Arcanum/Save/SlotSR01.tfai");
+    REQUIRE(archive && index);
+    int64_t id = sector_id_from_loc(before.location);
+    Sector* sector;
+    REQUIRE(sector_lock(id, &sector));
+    REQUIRE(!sector_flush(1));
+    REQUIRE(sector_save_failed());
+    // Retrying while the cause persists must retain the old published save.
+    for (int attempt = 0; attempt < 2; attempt++) {
+        REQUIRE(!gamelib_save("SlotSR01", "Must not replace the baseline"));
+        REQUIRE(sector_save_failed());
+        REQUIRE(save_archive_hash("modules/Arcanum/Save/SlotSR01.tfaf") == archive);
+        REQUIRE(save_archive_hash("modules/Arcanum/Save/SlotSR01.tfai") == index);
+    }
+    REQUIRE(sector_unlock(id));
+    // Only the production save entry point may clear the recovered failure.
+    REQUIRE(gamelib_save("SlotSR02", "Save after recovered sector failure"));
+    REQUIRE(!sector_save_failed());
+    REQUIRE(sector_lock(id, &sector));
+    REQUIRE(!sector_flush(1));
+    REQUIRE(!map_flush(1));
+    REQUIRE(sector_save_failed());
+    REQUIRE(sector_unlock(id));
+    REQUIRE(map_flush(1));
+    REQUIRE(!sector_save_failed());
+    REQUIRE(gamelib_load("SlotSR02"));
+    Snapshot after = snapshot();
+    REQUIRE(memcmp(&before, &after, sizeof(before)) == 0);
+    printf("PASS: persistent sector failure preserves published save; save and map flush recover after unlock; reload preserves player state\n");
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -314,7 +367,7 @@ int main(int argc, char** argv)
     if (!marked || (strcmp(argv[2], "--create") && strcmp(argv[2], "--prototypes") && strcmp(argv[2], "--actors") &&
         (strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)))) return 2;
     if (argc == 4 && strcmp(argv[3], "--roundtrip") && strcmp(argv[3], "--arachnid")
-        && strcmp(argv[3], "--arachnid-original")) return 2;
+        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry")) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
@@ -349,6 +402,7 @@ int main(int argc, char** argv)
     else if (!strcmp(argv[2], "--create")) result = create_fixture();
     else if (argc == 4 && !strcmp(argv[3], "--arachnid")) result = arachnid_roundtrip(argv[2], false);
     else if (argc == 4 && !strcmp(argv[3], "--arachnid-original")) result = arachnid_roundtrip(argv[2], true);
+    else if (argc == 4 && !strcmp(argv[3], "--save-retry")) result = save_retry_roundtrip(argv[2]);
     else if (argc == 4) result = roundtrip(argv[2]);
     else {
         result = reward(argv[2], 50, 7000, "SlotC050");

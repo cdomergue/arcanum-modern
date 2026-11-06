@@ -170,6 +170,7 @@ done:
             tig_file_remove(destination);
         }
         tig_debug_printf("modern_autosave: save failed; existing saves preserved\n");
+        mainmenu_ui_feedback_saving_failed();
     }
     autosave_remove_stage();
     autosave_running = false;

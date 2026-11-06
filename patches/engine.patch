@@ -3096,18 +3096,19 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  }
  
-@@ -939,6 +971,10 @@
+@@ -939,6 +971,11 @@
      unsigned int sentinel = 0xBEEFCAFE;
      int version;
      GameSaveInfo save_info;
 +    char stage[9] = "";
 +
-+    if (modern_tutorial_active() || modern_autosave_is_slot(name) || sector_save_failed()) return false;
++    if (modern_tutorial_active() || modern_autosave_is_slot(name)) return false;
++    if (!sector_save_retry()) return false;
 +    if (!rw_save_stage(stage)) return false;
  
      tig_debug_printf("\ngamelib_save(): Saving to File: %s.\n", name);
      tig_timer_now(&start_time);
-@@ -949,6 +985,7 @@
+@@ -949,6 +986,7 @@
  
      if (!tig_file_is_directory("Save\\Current")) {
          tig_debug_printf("gamelib_save(): Error finding folder %s\n", "Save\\Current");
@@ -3115,7 +3116,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -959,6 +996,7 @@
+@@ -959,6 +997,7 @@
      stream = tig_file_fopen(path, "wb");
      if (stream == NULL) {
          tig_debug_printf("gamelib_save(): Error creating %s\n", path);
@@ -3123,7 +3124,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -968,6 +1006,7 @@
+@@ -968,6 +1007,7 @@
          tig_debug_printf("gamelib_save(): Error writing version\n");
          tig_file_fclose(stream);
          tig_file_remove(path);
@@ -3131,7 +3132,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1004,10 +1043,11 @@
+@@ -1004,10 +1044,11 @@
          }
      }
  
@@ -3144,7 +3145,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1017,6 +1057,7 @@
+@@ -1017,6 +1058,7 @@
          tig_timer_now(&time);
          if (!gamelib_extra_save_func()) {
              tig_file_remove(path);
@@ -3152,7 +3153,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_save = false;
              return false;
          }
-@@ -1024,8 +1065,15 @@
+@@ -1024,8 +1066,15 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
@@ -3169,7 +3170,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_save = false;
          return false;
      }
-@@ -1033,23 +1081,31 @@
+@@ -1033,23 +1082,31 @@
      if (!gamelib_saveinfo_save(&save_info)) {
          tig_debug_printf("gamelib_save(): error saving saveinfo\n");
          gamelib_saveinfo_exit(&save_info);
@@ -3202,7 +3203,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      ui_progressbar_update(MODULE_COUNT + 2);
  
-@@ -1078,12 +1134,17 @@
+@@ -1078,12 +1135,17 @@
      tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
      tig_timer_now(&start_time);
  
@@ -3220,7 +3221,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1094,6 +1155,7 @@
+@@ -1094,6 +1156,7 @@
      tig_timer_now(&time);
      if (!tig_file_empty_directory("Save\\Current")) {
          tig_debug_printf("gamelib_load(): Error clearing folder %s\n", "Save\\Current");
@@ -3228,7 +3229,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1104,21 +1166,31 @@
+@@ -1104,21 +1167,31 @@
      tig_timer_now(&time);
      if (!tig_file_unarchive(path, "Save\\Current")) {
          tig_debug_printf("gamelib_load(): error restoring archive %s to save\\test\n", path);
@@ -3260,7 +3261,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1165,6 +1237,7 @@
+@@ -1165,6 +1238,7 @@
      tig_file_fclose(stream);
  
      if (index < MODULE_COUNT) {
@@ -3268,7 +3269,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          in_load = false;
          return false;
      }
-@@ -1173,6 +1246,7 @@
+@@ -1173,6 +1247,7 @@
          tig_debug_printf("gamelib_load: Begin gamelib_extra_load_func()...");
          tig_timer_now(&time);
          if (!gamelib_extra_load_func()) {
@@ -3276,7 +3277,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
              in_load = false;
              return false;
          }
-@@ -1180,6 +1254,12 @@
+@@ -1180,6 +1255,12 @@
          tig_debug_printf("done. Time (ms): %d\n", duration);
      }
  
@@ -3289,7 +3290,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      ui_progressbar_update(MODULE_COUNT + 2);
  
      in_load = false;
-@@ -1200,7 +1280,7 @@
+@@ -1200,7 +1281,7 @@
      }
  
      snprintf(path, sizeof(path), "save\\%s.gsi", name);
@@ -3298,7 +3299,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      snprintf(&(path[13]), sizeof(path) - 13, ".bmp");
      tig_file_remove(path);
-@@ -1394,13 +1474,9 @@
+@@ -1394,13 +1475,9 @@
      const GameSaveEntry* b = (const GameSaveEntry*)vb;
  
      if (gamelib_savelist_sort_check_autosave) {
@@ -3315,7 +3316,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      }
  
      if (a->modify_time < b->modify_time) {
-@@ -1555,7 +1631,7 @@
+@@ -1555,7 +1632,7 @@
          } while (0);
      }
  
@@ -3324,7 +3325,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      return success;
  }
-@@ -1752,11 +1828,81 @@
+@@ -1752,11 +1829,81 @@
      gmovie_play_path("movies\\TroikaLogo.bik", 0, 0);
  }
  
@@ -3407,7 +3408,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
      TigVideoBufferData vb_data;
      TigFileList file_list;
      TigWindowData window_data;
-@@ -1800,6 +1946,7 @@
+@@ -1800,6 +1947,7 @@
              tig_video_buffer_destroy(video_buffer);
          }
  
@@ -3415,7 +3416,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
          tig_window_invalidate_rect(NULL);
          tig_window_display();
  
-@@ -1817,7 +1964,7 @@
+@@ -1817,7 +1965,7 @@
  }
  
  // 0x404A20
@@ -3424,7 +3425,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  {
      TigFileList file_list;
      unsigned int index;
-@@ -1832,6 +1979,12 @@
+@@ -1832,6 +1980,12 @@
  
      tig_file_mkdir("data");
      tig_file_repository_add("data");
@@ -3437,7 +3438,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  }
  
  // 0x404C10
-@@ -1874,6 +2027,7 @@
+@@ -1874,6 +2028,7 @@
      }
  
      path1[end] = '\0';
@@ -3445,7 +3446,7 @@ diff --git a/src/game/gamelib.c b/src/game/gamelib.c
  
      if (tig_file_is_directory(path1)) {
          tig_file_repository_add(path1);
-@@ -1906,6 +2060,10 @@
+@@ -1906,6 +2061,10 @@
  void gamelib_unload_module_data(void)
  {
      int index;
@@ -4113,7 +4114,7 @@ diff --git a/src/game/map.c b/src/game/map.c
      char path[TIG_MAX_PATH];
      TigFile* stream;
 -
-+    if (sector_save_failed()) return false;
++    if (!sector_save_retry()) return false;
      wallcheck_flush();
 -
 -    if (!map_save_preprocess()) {
@@ -5022,7 +5023,7 @@ diff --git a/src/game/scroll.h b/src/game/scroll.h
 diff --git a/src/game/sector.c b/src/game/sector.c
 --- a/src/game/sector.c
 +++ b/src/game/sector.c
-@@ -1,4 +1,7 @@
+@@ -1,7 +1,11 @@
  #include "game/sector.h"
 +#include "game/modern_house.h"
 +#include "game/modern_uap.h"
@@ -5030,17 +5031,49 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  
  #include <inttypes.h>
  #include <stdio.h>
-@@ -91,6 +94,9 @@
++#include <stdarg.h>
+ 
+ #include "game/gamelib.h"
+ #include "game/li.h"
+@@ -91,6 +95,37 @@
  
  // 0x60178C
  static bool in_sector_lock;
 +static bool sector_save_error;
 +bool sector_save_failed(void) { return sector_save_error; }
 +void sector_save_error_reset(void) { sector_save_error = false; }
++
++// Persistence diagnostics must not latch a world-update validation error.
++static void sector_save_log(const char* format, ...)
++{
++    char message[512];
++    va_list args;
++    va_start(args, format);
++    vsnprintf(message, sizeof(message), format, args);
++    va_end(args);
++    tig_debug_printf("%s\n", message);
++    FILE* log = fopen("ArcanumModern/sector-save-errors.log", "ab");
++    if (log != NULL) {
++        fprintf(log, "%s\n", message);
++        fclose(log);
++    }
++}
++
++bool sector_save_retry(void)
++{
++    if (!sector_save_error) return true;
++    // Failed writes retain their dirty sectors. Retry without evicting them;
++    // a partial retry must never clear the failure or publish a save.
++    tig_debug_printf("sector_save_retry: retrying retained sectors\n");
++    if (!sector_flush(1)) return false;
++    sector_save_error = false;
++    tig_debug_printf("sector_save_retry: all retained sectors saved successfully\n");
++    return true;
++}
  
  // 0x601790
  static int sector_blocked_sectors_cnt;
-@@ -495,7 +501,7 @@
+@@ -495,7 +530,7 @@
          return false;
      }
  
@@ -5049,7 +5082,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  
      if (capacity < 8) {
          capacity = 8;
-@@ -863,6 +869,7 @@
+@@ -863,6 +898,7 @@
      unsigned int index;
      unsigned int oldest = -1;
      DateTime datetime;
@@ -5057,13 +5090,15 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  
      if (in_sector_lock) {
          tig_debug_printf("Warning: recursive sector lock detected\n");
-@@ -915,7 +922,12 @@
+@@ -915,7 +951,14 @@
              tig_debug_printf("Sector cache full, removing oldest (%I64u)...\n",
                  sector_cache_entries[sector_cache_indexes[oldest]].sector.id);
  
 -            sector_save_func(&(sector_cache_entries[sector_cache_indexes[oldest]].sector));
 +            modern_world_updates_capture_sector(&(sector_cache_entries[sector_cache_indexes[oldest]].sector));
 +            if (!sector_save_func(&(sector_cache_entries[sector_cache_indexes[oldest]].sector))) {
++                sector_save_log("Sector cache write failed: map=%s sector=%llu; dirty sector retained",
++                    sector_save_path, (unsigned long long)sector_cache_entries[sector_cache_indexes[oldest]].sector.id);
 +                sector_save_error = true;
 +                in_sector_lock = false;
 +                return false;
@@ -5071,7 +5106,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
              sector_cache_evict(&(sector_cache_entries[sector_cache_indexes[oldest]].sector));
              sector_cache_entries[sector_cache_indexes[oldest]].used = false;
  
-@@ -964,12 +976,14 @@
+@@ -964,12 +1007,14 @@
          cache_entry->refcount = 1;
          cache_entry->timestamp = dword_6017BC;
          cache_entry->sector.id = id;
@@ -5086,7 +5121,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  
      return true;
  }
-@@ -1003,28 +1017,33 @@
+@@ -1003,28 +1048,39 @@
  }
  
  // 0x4D0BC0
@@ -5116,11 +5151,14 @@ diff --git a/src/game/sector.c b/src/game/sector.c
 -    sector_block_save_internal();
 +        SectorCacheEntry* entry = &(sector_cache_entries[sector_cache_indexes[index]]);
 +        if (entry->refcount != 0) {
-+            tig_debug_printf("sector_flush: sector %llu still has %u references\n", (unsigned long long)entry->sector.id, entry->refcount);
++            sector_save_log("Sector flush blocked: map=%s sector=%llu references=%u",
++                sector_save_path, (unsigned long long)entry->sector.id, entry->refcount);
 +            success = false; continue;
 +        }
 +        modern_world_updates_capture_sector(&(entry->sector));
 +        if (!sector_save_func(&(entry->sector))) {
++            sector_save_log("Sector write failed: map=%s sector=%llu; dirty sector retained",
++                sector_save_path, (unsigned long long)entry->sector.id);
 +            success = false;
 +            continue; /* Dirty sector remains available for a retry. */
 +        }
@@ -5133,13 +5171,16 @@ diff --git a/src/game/sector.c b/src/game/sector.c
 +            sector_cache_size--;
 +        }
 +    }
-+    if (!sector_block_save_internal()) success = false;
++    if (!sector_block_save_internal()) {
++        sector_save_log("Sector block write failed: map=%s", sector_save_path);
++        success = false;
++    }
 +    if (!success) sector_save_error = true;
 +    return success;
  }
  
  // 0x4D0DE0
-@@ -1450,7 +1469,22 @@
+@@ -1450,7 +1506,22 @@
  // FIXME: There are many cleanup errors (mosty leaking `dif_stream`).
  //
  // 0x4D1A30
@@ -5162,7 +5203,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
  {
      bool generated = false;
      DifferenceFileFlags dif_flags = 0;
-@@ -1493,9 +1527,19 @@
+@@ -1493,9 +1564,19 @@
      sector_validate_game("sector pre-load");
      if (!generated) {
          li_update();
@@ -5183,7 +5224,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
          }
  
          strcpy(dif_path, sector_save_path);
-@@ -1581,119 +1625,63 @@
+@@ -1581,119 +1662,63 @@
              return false;
          }
  
@@ -5357,7 +5398,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
                  tig_file_fclose(sec_stream);
                  tig_file_fclose(dif_stream);
                  return false;
-@@ -1712,6 +1700,7 @@
+@@ -1712,6 +1737,7 @@
          }
      }
  
@@ -5365,7 +5406,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
      sector_validate_game("sector post-load (pre-fold)");
      li_update();
      objlist_fold(&(sector->objects), id, sub_45A9B0(&(sector->datetime), 3000));
-@@ -1981,7 +1970,6 @@
+@@ -1981,7 +2007,6 @@
      stream = tig_file_fopen(path, "wb");
      if (stream == NULL) {
          tig_debug_printf("Error creating differences file %s\n", path);
@@ -5373,7 +5414,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
          return false;
      }
  
-@@ -2082,7 +2070,10 @@
+@@ -2082,7 +2107,10 @@
          return false;
      }
  
@@ -5385,7 +5426,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
      sector_validate_game("sector post-save");
  
      return true;
-@@ -2310,7 +2301,7 @@
+@@ -2310,7 +2338,7 @@
                  return false;
              }
  
@@ -5394,7 +5435,7 @@ diff --git a/src/game/sector.c b/src/game/sector.c
          } else {
              snprintf(path, sizeof(path), "%s\\null.sbf", sector_save_path);
  
-@@ -2319,8 +2310,8 @@
+@@ -2319,8 +2347,8 @@
                  return false;
              }
  
@@ -5408,13 +5449,14 @@ diff --git a/src/game/sector.c b/src/game/sector.c
 diff --git a/src/game/sector.h b/src/game/sector.h
 --- a/src/game/sector.h
 +++ b/src/game/sector.h
-@@ -65,7 +65,9 @@
+@@ -65,7 +65,10 @@
  bool sector_lock(int64_t id, Sector** sector_ptr);
  bool sector_unlock(int64_t id);
  void sector_cache_reset(void);
 -void sector_flush(unsigned int flags);
 +bool sector_flush(unsigned int flags);
 +bool sector_save_failed(void);
++bool sector_save_retry(void);
 +void sector_save_error_reset(void);
  bool sector_check_demo_limits(int64_t id);
  void sector_art_cache_register(tig_art_id_t art_id);
@@ -6525,7 +6567,21 @@ diff --git a/src/main.c b/src/main.c
                          if (!critter_is_dead(player_get_local_pc_obj())) {
                              if (wmap_ui_is_created()) {
                                  wmap_ui_close();
-@@ -698,6 +784,7 @@
+@@ -473,8 +559,11 @@
+                                 intgame_mode_set(INTGAME_MODE_MAIN);
+                                 intgame_mode_set(INTGAME_MODE_MAIN);
+                                 mainmenu_ui_feedback_saving();
+-                                gamelib_save("SlotAuto", "Auto-Save");
+-                                mainmenu_ui_feedback_saving_completed();
++                                if (gamelib_save("SlotAuto", "Auto-Save")) {
++                                    mainmenu_ui_feedback_saving_completed();
++                                } else {
++                                    mainmenu_ui_feedback_saving_failed();
++                                }
+                             } else {
+                                 mainmenu_ui_feedback_cannot_save_in_tb();
+                             }
+@@ -698,6 +787,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -6533,7 +6589,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +830,26 @@
+@@ -743,25 +833,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
@@ -9434,7 +9490,19 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
                  if (window->execute_func != NULL) {
                      dword_5C3FB8 = window->execute_func(idx);
                      if (!dword_5C3FB8) {
-@@ -6046,10 +6251,22 @@
+@@ -5918,6 +6123,11 @@
+     mainmenu_ui_feedback(5062); // "Save completed."
+ }
+ 
++void mainmenu_ui_feedback_saving_failed(void)
++{
++    mainmenu_ui_feedback(5003); // Localized save failure from the installed game.
++}
++
+ // 0x549760
+ void mainmenu_ui_feedback_cannot_save_in_tb(void)
+ {
+@@ -6046,10 +6256,22 @@
          if (obj != OBJ_HANDLE_NULL
              && tig_art_exists(obj_field_int32_get(obj, OBJ_F_CURRENT_AID)) == TIG_OK) {
              dword_5C3620 = false;
@@ -9458,6 +9526,17 @@ diff --git a/src/ui/mainmenu_ui.c b/src/ui/mainmenu_ui.c
 +    if(mainmenu_ui_window_type==MM_WINDOW_OPTIONS)
 +        mainmenu_ui_press_options(mainmenu_ui_options_buttons[3].button_handle);
 +}
+diff --git a/src/ui/mainmenu_ui.h b/src/ui/mainmenu_ui.h
+--- a/src/ui/mainmenu_ui.h
++++ b/src/ui/mainmenu_ui.h
+@@ -89,6 +89,7 @@
+ MainMenuWindowType mainmenu_ui_window_type_get(void);
+ void mainmenu_ui_feedback_saving(void);
+ void mainmenu_ui_feedback_saving_completed(void);
++void mainmenu_ui_feedback_saving_failed(void);
+ void mainmenu_ui_feedback_cannot_save_in_tb(void);
+ void mainmenu_ui_feedback_loading(void);
+ void mainmenu_ui_feedback_loading_completed(void);
 diff --git a/src/ui/options_ui.c b/src/ui/options_ui.c
 --- a/src/ui/options_ui.c
 +++ b/src/ui/options_ui.c
