@@ -7888,7 +7888,17 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                          return true;
                      }
                  }
-@@ -977,6 +934,13 @@
+@@ -825,6 +782,9 @@
+                     if (tig_window_get_at_position(msg->data.mouse.x, msg->data.mouse.y, &window_handle) == TIG_OK
+                         && window_handle == follower_ui_windows[index]) {
+                         follower_ui_drop_down_menu_create(index);
++                        // Opening a portrait menu must not also deliver a
++                        // right-click to the world input handler (CE #68).
++                        return true;
+                     }
+                     break;
+                 }
+@@ -977,6 +937,13 @@
      intgame_mode_set(INTGAME_MODE_MAIN);
  }
  
@@ -7902,7 +7912,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  /**
   * Redraws all visible follower portrait slots.
   *
-@@ -1016,7 +980,9 @@
+@@ -1016,7 +983,9 @@
          sub_444130(&(follower_ui_followers[follower_ui_top_index + index]));
  
          follower_obj = follower_ui_followers[follower_ui_top_index + index].obj;
@@ -7913,7 +7923,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
              // Follower is no longer valid - rebuild the list and stop.
              follower_ui_refresh();
              break;
-@@ -1039,7 +1005,7 @@
+@@ -1039,7 +1008,7 @@
          }
  
          // Draw health bar.
@@ -7922,7 +7932,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          if (stat_level_get(follower_obj, STAT_POISON_LEVEL) > FOLLOWER_UI_POISON_LEVEL_THRESHOLD) {
              follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_POISON_BAR_ART, 3, 39, hp_percent, 100);
          } else {
-@@ -1052,7 +1018,7 @@
+@@ -1052,7 +1021,7 @@
          }
  
          // Draw fatigue bar.
@@ -7931,7 +7941,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_FATIGUE_BAR_ART, 3, 44, fatigue_percent, 100);
      }
  
-@@ -1139,7 +1105,7 @@
+@@ -1139,7 +1108,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -7940,7 +7950,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
  
          tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
-@@ -1212,7 +1178,7 @@
+@@ -1212,7 +1181,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -7949,7 +7959,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
      }
  
-@@ -1243,7 +1209,7 @@
+@@ -1243,7 +1212,7 @@
  void update_toggle_button_visibility(void)
  {
      if (follower_ui_followers_count > 0) {
@@ -7958,7 +7968,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
      }
-@@ -1271,7 +1237,7 @@
+@@ -1271,7 +1240,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
@@ -7967,7 +7977,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
          // Scroll-down button is active if not already at the bottom.
          if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
-@@ -1280,7 +1246,7 @@
+@@ -1280,7 +1249,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
@@ -7976,7 +7986,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          // Either all portraits fit into existing slots, or the follower UI is
          // hidden.
-@@ -1313,7 +1279,7 @@
+@@ -1313,7 +1282,7 @@
                  enabled = inven_ui_can_open_inven(follower_ui_commander_obj, follower_ui_subordinate_obj);
                  break;
              case FOLLOWER_UI_COMMAND_WAIT:
@@ -7985,7 +7995,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                  break;
              default:
                  enabled = true;
-@@ -1351,3 +1317,115 @@
+@@ -1351,3 +1320,115 @@
          follower_ui_refresh();
      }
  }
