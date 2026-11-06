@@ -9352,16 +9352,27 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      }
  
      mouse_art_id = tig_mouse_cursor_get_art_id();
-@@ -2233,6 +2238,8 @@
+@@ -2121,6 +2126,10 @@
+ // 0x573850
+ bool inven_ui_message_filter(TigMessage* msg)
+ {
++    // The quantity picker owns this transaction. Inventory input must not
++    // mutate its source stack before it is confirmed or cancelled (CE #64).
++    if (intgame_mode_get() == INTGAME_MODE_QUANTITY) return false;
++
+     bool v45 = false;
+     TigMessage tmp_msg = *msg;
+     msg = &tmp_msg;
+@@ -2232,6 +2241,8 @@
+     int64_t follower_obj;
      int64_t pc_obj;
      int mode;
- 
-+    if (combat_tactical_enabled() && combat_turn_based_is_active()) return;
 +
++    if (combat_tactical_enabled() && combat_turn_based_is_active()) return;
+ 
      sub_575770();
  
-     follower_obj = qword_6813A8;
-@@ -4595,3 +4602,64 @@
+@@ -4595,3 +4606,64 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }
