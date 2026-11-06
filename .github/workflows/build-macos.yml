@@ -8,10 +8,10 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Build and package arm64
         run: bash ./build-macos.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: ArcanumModern-macos-arm64
           path: dist/ArcanumModern-macos-arm64.zip

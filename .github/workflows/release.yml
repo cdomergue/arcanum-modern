@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
@@ -80,7 +80,7 @@ jobs:
           ./arcanum-modern --check-movies
           if ./"Play Arcanum Renaissance.sh" 2> missing-game.txt; then exit 1; fi
           grep -q arcanum1.dat missing-game.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: linux-release
           path: |
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Test package boundaries
         run: |
           python3 tests/test_windows_full_package.py
@@ -117,12 +117,12 @@ jobs:
           python3 tests/test_windows_package.py
           python3 tests/test_dependency_source_packages.py dist/ArcanumModern-windows-x64.zip dist/ArcanumModern-dependency-sources-windows-x64.zip
           python3 tools/package-windows-setup.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: worlded-native-runtime
           path: build/windows-x64/worlded-native-inventory.exe
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: windows-checks
           path: |
@@ -130,7 +130,7 @@ jobs:
             build/windows-x64/check-name-input.exe
             build/launcher/launcher-tests.exe
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: windows-release
           path: |
@@ -144,8 +144,8 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
       - uses: jurplel/install-qt-action@v4
@@ -166,11 +166,11 @@ jobs:
           if ($LASTEXITCODE) { throw 'WorldED build failed' }
           ctest --test-dir build/worlded-release -C Release --output-on-failure
           if ($LASTEXITCODE) { throw 'WorldED tests failed' }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: worlded-native-runtime
           path: build/worlded-native-runtime
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: windows-release
           path: dist/engine
@@ -185,7 +185,7 @@ jobs:
           foreach ($dll in $runtimeDlls) { $runtimeArgs += @('--extra-dll', $dll.FullName) }
           python tools/package-worlded-windows.py --build-dir build/worlded-release --inventory-helper build/worlded-native-runtime/worlded-native-inventory.exe --engine-package dist/engine/ArcanumModern-windows-x64.zip --qt-bin "$env:QT_ROOT_DIR/bin" @runtimeArgs --smoke-test
           if ($LASTEXITCODE) { throw 'WorldED package verification failed' }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: worlded-release
           path: dist/worlded-renaissance-win.zip
@@ -195,7 +195,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
@@ -215,15 +215,15 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: windows-release
           path: dist
       - name: Test installation and removal on Windows
         shell: pwsh
         run: ./tests/test-windows-setup.ps1 -Setup ./dist/ArcanumModern-windows-x64-setup.exe
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: windows-checks
           path: checks
@@ -256,7 +256,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - run: bash ./build-macos.sh
       - name: Test character and save names
         run: |
@@ -279,7 +279,7 @@ jobs:
         run: |
           ditto -x -k dist/ArcanumModern-macos-arm64.zip "$RUNNER_TEMP/movie-runtime"
           "$RUNNER_TEMP/movie-runtime/Arcanum Modern.app/Contents/MacOS/Arcanum Community Edition" --check-movies
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: macos-release
           path: |
@@ -294,8 +294,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
         with:
           pattern: '*-release'
           path: dist
