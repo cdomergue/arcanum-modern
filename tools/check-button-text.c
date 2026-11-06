@@ -92,6 +92,7 @@ static void check_settings(void)
 }
 #include "check-portrait-in-game.inc"
 #include "check-tutorial-portrait.inc"
+#include "check-maintained-scroll.inc"
 #include "check-progression.inc"
 
 static void check_party_hints(void)
@@ -280,6 +281,7 @@ int main(int argc,char** argv)
     if(SDL_getenv("ARCANUM_CHECK_STAT_COLORS")){check_stat_colors();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_PROGRESSION")){check_progression();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_TUTORIAL_PORTRAIT")){check_tutorial_portrait(pc);return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_MAINTAINED_SCROLL")){check_maintained_scroll(pc);return 0;}
 
 
 

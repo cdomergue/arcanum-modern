@@ -3984,7 +3984,7 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
              return false;
          }
      }
-@@ -7132,3 +7135,59 @@
+@@ -7132,3 +7135,61 @@
              obj_field_int64_get(obj, OBJ_F_LOCATION));
      }
  }
@@ -4023,7 +4023,9 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 +    if (!actor || !magictech_run_info || !magictech_spells) return 0;
 +    for (int i = 0; i < 512 && count < capacity; i++) {
 +        MagicTechRunInfo* run = &magictech_run_info[i];
-+        if ((run->flags & MAGICTECH_RUN_ACTIVE) && run->source_obj.obj == actor
++        /* Like the classic maintain bar, ownership follows the caster. The
++         * source may be a scroll or another spell-casting item. */
++        if ((run->flags & MAGICTECH_RUN_ACTIVE) && run->parent_obj.obj == actor
 +            && run->spell >= 0 && run->spell < SPELL_COUNT
 +            && magictech_spells[run->spell].maintenance.period > 0
 +            && run->action != MAGICTECH_ACTION_END) {
@@ -4039,7 +4041,7 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
 +    if (!magictech_spells || !magictech_run_info || id < 0 || id >= 512
 +        || !combat_input_ready(actor) || !magictech_id_to_run_info(id, &run)
 +        || !(run->flags & MAGICTECH_RUN_ACTIVE) || run->action == MAGICTECH_ACTION_END
-+        || run->source_obj.obj != actor || run->spell < 0 || run->spell >= SPELL_COUNT
++        || run->parent_obj.obj != actor || run->spell < 0 || run->spell >= SPELL_COUNT
 +        || magictech_spells[run->spell].maintenance.period <= 0) return false;
 +    magictech_interrupt(id);
 +    return true;
