@@ -1,7 +1,15 @@
 #include <stdio.h>
 #undef NDEBUG
 #include <assert.h>
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#define chdir _chdir
+#define access _access
+#define R_OK 4
+#else
 #include <unistd.h>
+#endif
 #include <tig/tig.h>
 #include "game/gamelib.h"
 #include "game/gsound.h"
@@ -47,6 +55,60 @@ int main(int argc,char** argv)
     object_flags_unset(pc,OF_OFF);
     int count=modern_followers_get(allies,8);
     assert(count>=3);
+
+    /* Reproduce a nearby attacker created after the initiative snapshot. It
+     * threatens the PC (or a follower), but has no turn and no tactical card. */
+    ObjectList nearby;
+    object_list_vicinity(pc,OBJ_TM_NPC,&nearby);
+    for(ObjectNode* n=nearby.head;n;n=n->next) {
+        obj_field_handle_set(n->obj,OBJ_F_NPC_COMBAT_FOCUS,OBJ_HANDLE_NULL);
+        obj_field_int32_set(n->obj,OBJ_F_NPC_FLAGS,
+            obj_field_int32_get(n->obj,OBJ_F_NPC_FLAGS)&~ONF_FIGHTING);
+    }
+    object_list_destroy(&nearby);
+    combat_critter_activate_combat_mode(pc);
+    assert(combat_turn_based_is_active() && combat_tactical_enabled());
+    sub_423FF0(pc);
+    combat_turn_based_whos_turn_set(pc);
+    combat_companion_ai_set(false);
+    combat_companion_ai_sync();
+    int64_t enemy=OBJ_HANDLE_NULL;
+    assert(object_create(obj_field_handle_get(allies[0],OBJ_F_PROTOTYPE_HANDLE),
+        obj_field_int64_get(pc,OBJ_F_LOCATION),&enemy));
+    assert(critter_is_active(enemy));
+    obj_field_handle_set(enemy,OBJ_F_NPC_COMBAT_FOCUS,pc);
+    obj_field_int32_set(enemy,OBJ_F_NPC_FLAGS,
+        obj_field_int32_get(enemy,OBJ_F_NPC_FLAGS)|ONF_FIGHTING);
+    assert(ai_is_fighting(enemy));
+    assert(combat_can_exit_combat_mode(pc));
+    /* Legacy real-time behavior must still reject a nearby active attacker. */
+    combat_turn_based_active=false;
+    assert(!combat_can_exit_combat_mode(pc));
+    combat_turn_based_active=true;
+    combat_turn_based_add_critter(enemy);
+    int64_t order[128];bool visible=false;
+    int ordered=combat_turn_order(order,128);
+    for(int i=0;i<ordered;i++)if(order[i]==enemy)visible=true;
+    assert(visible && !combat_can_exit_combat_mode(pc));
+    obj_field_handle_set(enemy,OBJ_F_NPC_COMBAT_FOCUS,allies[0]);
+    assert(!combat_can_exit_combat_mode(pc));
+    object_flags_set(enemy,OF_DONTDRAW);
+    assert(combat_can_exit_combat_mode(pc));
+    object_flags_unset(enemy,OF_DONTDRAW);
+    assert(!combat_can_exit_combat_mode(pc));
+    obj_field_handle_set(enemy,OBJ_F_NPC_COMBAT_FOCUS,OBJ_HANDLE_NULL);
+    obj_field_int32_set(enemy,OBJ_F_NPC_FLAGS,
+        obj_field_int32_get(enemy,OBJ_F_NPC_FLAGS)&~ONF_FIGHTING);
+    assert(combat_can_exit_combat_mode(pc));
+    combat_turn_based_whos_turn_set(pc);
+    sub_423FF0(pc);
+    for(int frame=0;frame<40;frame++){modern_ui_tick();SDL_Delay(25);}
+    TigMessage exit_click={.type=TIG_MESSAGE_MOUSE};
+    exit_click.data.mouse.event=TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP;
+    intgame_process_event(&exit_click);
+    assert(!combat_turn_based_is_active());
+    object_flags_set(enemy,OF_OFF);
+    puts("PASS: unlisted threat permits retreat; listed attacker blocks PC and follower; hidden threat does not trap party; real-time unchanged");
 
     for(int i=0;i<count;i++) {
         combat_critter_activate_combat_mode(pc);

@@ -1692,7 +1692,38 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      if ((combat->flags & CF_HIT) == 0
          && (combat->flags & CF_CRITICAL) != 0) {
-@@ -1223,6 +1402,47 @@
+@@ -1169,6 +1348,19 @@
+     }
+ }
+ 
++/* The tactical HUD and exit check must agree on who is taking part. A nearby
++ * NPC can retain a combat focus outside the initiative list's perception
++ * radius. It cannot take a turn there and must not trap the party in combat. */
++static bool combat_exit_threat_is_participant(int64_t obj)
++{
++    if (!combat_turn_based_active || !tactical_enabled) return true;
++    if (sub_4B7DC0(obj)) return false;
++    for (ObjectNode* node = combat_critter_list.head; node; node = node->next) {
++        if (node->obj == obj) return true;
++    }
++    return false;
++}
++
+ // 0x4B3D90
+ bool combat_can_exit_combat_mode(int64_t obj)
+ {
+@@ -1196,6 +1388,10 @@
+ 
+     npc_node = npcs.head;
+     while (npc_node != NULL && ret) {
++        if (!combat_exit_threat_is_participant(npc_node->obj)) {
++            npc_node = npc_node->next;
++            continue;
++        }
+         combat_focus_obj = obj_field_handle_get(npc_node->obj, OBJ_F_NPC_COMBAT_FOCUS);
+         if (combat_focus_obj == obj) {
+             if (critter_is_active(npc_node->obj) && ai_is_fighting(npc_node->obj)) {
+@@ -1223,6 +1419,47 @@
      return ret;
  }
  
@@ -1740,7 +1771,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  // 0x4B3F20
  void combat_critter_deactivate_combat_mode(int64_t obj)
  {
-@@ -1237,6 +1457,7 @@
+@@ -1237,6 +1474,7 @@
      if (!combat_critter_is_combat_mode_active(obj)) {
          combat_critter_toggle_combat_mode(obj);
      }
@@ -1748,7 +1779,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  }
  
  // 0x4B3F80
-@@ -1316,6 +1537,7 @@
+@@ -1316,6 +1554,7 @@
              object_flags_set(obj, OF_INVISIBLE);
          }
      } else {
@@ -1756,7 +1787,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          obj_field_int32_set(obj, OBJ_F_CRITTER_FLAGS, critter_flags | OCF_COMBAT_MODE_ACTIVE);
  
          art_id = tig_art_critter_id_weapon_set(art_id, TIG_ART_WEAPON_TYPE_UNARMED);
-@@ -1813,6 +2035,7 @@
+@@ -1813,6 +2052,7 @@
              }
          }
  
@@ -1764,7 +1795,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          if (tf_level_get() == TF_LEVEL_VERBOSE && str[0] != '\0') {
              tf_add(combat->target_obj, tf_type, str);
          }
-@@ -1833,7 +2056,8 @@
+@@ -1833,7 +2073,8 @@
              tf_add(combat->target_obj, TF_TYPE_GREEN, str);
          }
  
@@ -1774,7 +1805,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              && obj_type == OBJ_TYPE_NPC
              && (spell_flags & OSF_STONED) == 0) {
              int remaining_experience = obj_field_int32_get(combat->target_obj, OBJ_F_NPC_EXPERIENCE_POOL);
-@@ -1845,9 +2069,7 @@
+@@ -1845,9 +2086,7 @@
                  }
                  obj_field_int32_set(combat->target_obj, OBJ_F_NPC_EXPERIENCE_POOL, remaining_experience - awarded_experience);
  
@@ -1785,7 +1816,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              }
          }
  
-@@ -2857,12 +3079,19 @@
+@@ -2857,12 +3096,19 @@
  bool sub_4B6C90(bool turn_based)
  {
      int64_t pc;
@@ -1805,7 +1836,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!sub_424070(pc, 3, 0, 1)) {
          return false;
      }
-@@ -2958,7 +3187,7 @@
+@@ -2958,7 +3204,7 @@
  
      combat_debug(obj, "Whos Turn Set");
  
@@ -1814,7 +1845,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          sub_424070(qword_5FC248, 3, 0, 1);
      }
  
-@@ -2990,14 +3219,20 @@
+@@ -2990,14 +3236,20 @@
          }
      }
  
@@ -1839,7 +1870,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          combat_callbacks.field_C(combat_action_points);
  
          if (!sub_4BB900()) {
-@@ -3023,10 +3258,18 @@
+@@ -3023,10 +3275,18 @@
  // 0x4B7010
  void sub_4B7010(int64_t obj)
  {
@@ -1859,7 +1890,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
              ai_process(obj);
          }
  
-@@ -3054,8 +3297,9 @@
+@@ -3054,8 +3314,9 @@
      }
  
      if (dword_5FC240 != NULL) {
@@ -1871,7 +1902,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC240->obj == qword_5FC258) {
-@@ -3084,9 +3328,10 @@
+@@ -3084,9 +3345,10 @@
  
      if (combat_turn_based_active) {
          if (dword_5FC240 != NULL
@@ -1884,7 +1915,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          }
  
          if (dword_5FC264) {
-@@ -3160,10 +3405,15 @@
+@@ -3160,10 +3422,15 @@
  {
      ObjectNode* node;
  
@@ -1900,7 +1931,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
          sub_423FE0(NULL);
  
-@@ -3189,6 +3439,7 @@
+@@ -3189,6 +3456,7 @@
  
      dword_5FC250 = 0;
      pc_obj = player_get_local_pc_obj();
@@ -1908,7 +1939,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_turn_based_turn++;
      pc_loc = obj_field_int64_get(pc_obj, OBJ_F_LOCATION);
      combat_recalc_perception_range();
-@@ -3205,7 +3456,7 @@
+@@ -3205,7 +3473,7 @@
  
      dword_5FC250 = 0;
      dword_5FC240 = combat_critter_list.head;
@@ -1917,7 +1948,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
          dword_5FC250++;
          dword_5FC240 = dword_5FC240->next;
      }
-@@ -3243,6 +3494,9 @@
+@@ -3243,6 +3511,9 @@
          return true;
      }
  
@@ -1927,7 +1958,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      if (!critter_is_active(object_node->obj)) {
          sub_427000(object_node->obj);
          return true;
-@@ -3286,6 +3540,7 @@
+@@ -3286,6 +3557,7 @@
  
      dword_5FC250++;
      combat_turn_based_subturn_end();
@@ -1935,7 +1966,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
  
      dword_5FC240 = dword_5FC240->next;
      if (dword_5FC240 == NULL) {
-@@ -3549,6 +3804,8 @@
+@@ -3549,6 +3821,8 @@
          return true;
      }
  
@@ -1944,7 +1975,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      is_pc = player_is_local_pc_obj(obj);
      if (combat_action_points >= action_points) {
          combat_action_points -= action_points;
-@@ -3574,6 +3831,7 @@
+@@ -3574,6 +3848,7 @@
          return true;
      }
  
@@ -1952,7 +1983,7 @@ diff --git a/src/game/combat.c b/src/game/combat.c
      combat_action_points = 0;
      combat_turn_based_next_subturn();
  
-@@ -3741,6 +3999,12 @@
+@@ -3741,6 +4016,12 @@
          return false;
      }
  
