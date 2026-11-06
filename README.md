@@ -100,6 +100,17 @@ saves, settings, custom portraits and backgrounds; failed installations are roll
 back. Opening the game executable directly also opens the launcher. The game
 itself does not check for updates.
 
+### Crash reports on Windows
+
+Unhandled engine crashes create local reports in `ArcanumModern/CrashReports`
+inside the game folder. If that location is not writable, reports go to
+`%LOCALAPPDATA%/ArcanumRenaissance/CrashReports`. Keep the `.txt`, `.dmp` and
+available `.manifest.json` files together when reporting a crash, and include
+what you were doing. The minidump records thread stacks, registers and loaded
+modules; it may contain fragments of process data. Nothing is uploaded
+automatically. Forced termination, power loss and crashes before engine startup
+may leave no report.
+
 
 ### Local maps
 

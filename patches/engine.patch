@@ -695,6 +695,40 @@ diff --git a/first_party/tig/src/movie.c b/first_party/tig/src/movie.c
  }
  
  // 0x5317D0
+diff --git a/first_party/tig/src/rect.c b/first_party/tig/src/rect.c
+--- a/first_party/tig/src/rect.c
++++ b/first_party/tig/src/rect.c
+@@ -654,6 +654,10 @@
+     unsigned int flags2;
+     unsigned int flags;
+ 
++    if (rect->width <= 0 || rect->height <= 0) {
++        return TIG_ERR_NO_INTERSECTION;
++    }
++
+     x1 = (float)line->x1;
+     y1 = (float)line->y1;
+     x2 = (float)line->x2;
+@@ -664,8 +668,8 @@
+ 
+     temp_line.x1 = rect->x;
+     temp_line.y1 = rect->y;
+-    temp_line.x2 = rect->x + rect->width;
+-    temp_line.y2 = rect->y + rect->height;
++    temp_line.x2 = rect->x + rect->width - 1;
++    temp_line.y2 = rect->y + rect->height - 1;
+ 
+     sub_52DC90(x1, y1, &temp_line, &flags1);
+     sub_52DC90(x2, y2, &temp_line, &flags2);
+@@ -676,7 +680,7 @@
+             break;
+         }
+ 
+-        if (flags1 != 0 && flags2 != 0) {
++        if ((flags1 & flags2) != 0) {
+             break;
+         }
+ 
 diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 --- a/first_party/tig/src/video.c
 +++ b/first_party/tig/src/video.c
@@ -752,7 +786,20 @@ diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
  
      SDL_RenderPresent(tig_video_state.renderer);
  
-@@ -1447,3 +1480,25 @@
+@@ -652,6 +685,12 @@
+     int y;
+ 
+     (void)a3;
++
++    // Rasterization includes both endpoints. Guard direct buffer calls too.
++    TigRect bounds = { 0, 0, video_buffer->surface->w, video_buffer->surface->h };
++    TigLine clipped = *line;
++    if (tig_line_intersection(&bounds, &clipped) != TIG_OK) return TIG_OK;
++    line = &clipped;
+ 
+     if (tig_video_buffer_lock(video_buffer) != TIG_OK) {
+         return TIG_ERR_DIRECTX;
+@@ -1447,3 +1486,25 @@
  
      return rc;
  }
@@ -6448,7 +6495,7 @@ diff --git a/src/main.c b/src/main.c
  #include "game/wallcheck.h"
  #include "ui/charedit_ui.h"
  #include "ui/dialog_ui.h"
-@@ -46,10 +49,14 @@
+@@ -46,10 +49,15 @@
  #include "ui/intgame.h"
  #include "ui/iso.h"
  #include "ui/logbook_ui.h"
@@ -6460,13 +6507,15 @@ diff --git a/src/main.c b/src/main.c
  #include "ui/wmap_ui.h"
 +#include "ui/modern_movie.h"
 +#include "ui/modern_launcher.inc"
++#include "ui/modern_crash.inc"
  
  static void main_loop(void);
  static void handle_mouse_scroll(void);
-@@ -65,6 +72,35 @@
+@@ -65,6 +73,36 @@
  // 0x401000
  int main(int argc, char** argv)
  {
++    modern_crash_install();
 +    int launcher_result = modern_launcher_entry(&argc, argv);
 +    if (launcher_result >= 0) return launcher_result;
 +    if (argc == 2 && strcmp(argv[1], "--check-movies") == 0) return modern_movie_check();
@@ -6499,7 +6548,7 @@ diff --git a/src/main.c b/src/main.c
      TigInitInfo init_info;
      TigVideoScreenshotSettings screenshotter;
      GameInitInfo game_init_info;
-@@ -205,10 +241,19 @@
+@@ -205,10 +243,19 @@
  
      // Specify window name.
      init_info.flags |= TIG_INITIALIZE_SET_WINDOW_NAME;
@@ -6520,7 +6569,7 @@ diff --git a/src/main.c b/src/main.c
      }
  
      screenshotter.key = SDL_SCANCODE_F12;
-@@ -290,11 +335,47 @@
+@@ -290,11 +337,47 @@
          return EXIT_SUCCESS; // FIXME: Should be `EXIT_FAILURE`.
      }
  
@@ -6570,7 +6619,7 @@ diff --git a/src/main.c b/src/main.c
          gameuilib_exit();
          gamelib_exit();
          tig_exit();
-@@ -317,6 +398,7 @@
+@@ -317,6 +400,7 @@
  
      main_loop();
  
@@ -6578,7 +6627,7 @@ diff --git a/src/main.c b/src/main.c
      gameuilib_mod_unload();
      gamelib_mod_unload();
      gameuilib_exit();
-@@ -383,8 +465,11 @@
+@@ -383,8 +467,11 @@
              output_profile_data = false;
          }
  
@@ -6590,7 +6639,7 @@ diff --git a/src/main.c b/src/main.c
          iso_redraw();
          tig_window_display();
  
-@@ -460,6 +545,7 @@
+@@ -460,6 +547,7 @@
                          }
                          break;
                      case SDL_SCANCODE_F7:
@@ -6598,7 +6647,7 @@ diff --git a/src/main.c b/src/main.c
                          if (!critter_is_dead(player_get_local_pc_obj())) {
                              if (wmap_ui_is_created()) {
                                  wmap_ui_close();
-@@ -473,8 +559,11 @@
+@@ -473,8 +561,11 @@
                                  intgame_mode_set(INTGAME_MODE_MAIN);
                                  intgame_mode_set(INTGAME_MODE_MAIN);
                                  mainmenu_ui_feedback_saving();
@@ -6612,7 +6661,7 @@ diff --git a/src/main.c b/src/main.c
                              } else {
                                  mainmenu_ui_feedback_cannot_save_in_tb();
                              }
-@@ -698,6 +787,7 @@
+@@ -698,6 +789,7 @@
  // 0x401F50
  void handle_mouse_scroll(void)
  {
@@ -6620,7 +6669,7 @@ diff --git a/src/main.c b/src/main.c
      TigMouseState mouse_state;
      int width;
      int height;
-@@ -743,25 +833,26 @@
+@@ -743,25 +835,26 @@
  // 0x402010
  void handle_keyboard_scroll(void)
  {
