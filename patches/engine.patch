@@ -233,6 +233,27 @@ diff --git a/first_party/tig/include/tig/movie.h b/first_party/tig/include/tig/m
  
  // Returns `true` if movie is currently being played.
  bool tig_movie_is_playing(void);
+diff --git a/first_party/tig/include/tig/str_parse.h b/first_party/tig/include/tig/str_parse.h
+--- a/first_party/tig/include/tig/str_parse.h
++++ b/first_party/tig/include/tig/str_parse.h
+@@ -10,7 +10,7 @@
+ int tig_str_parse_init(TigInitInfo* init_info);
+ void tig_str_parse_exit(void);
+ void tig_str_parse_set_separator(int sep);
+-void tig_str_parse_str_value(char** str, char* value);
++void tig_str_parse_str_value(char** str, char* value, size_t size);
+ void tig_str_parse_value(char** str, int* value);
+ void tig_str_parse_value_64(char** str, int64_t* value);
+ void tig_str_parse_range(char** str, int* start, int* end);
+@@ -21,7 +21,7 @@
+ void tig_str_parse_flag_list(char** str, const char** keys, const unsigned int* values, int length, unsigned int* value);
+ void tig_str_parse_flag_list_64(char** str, const char** keys, const uint64_t* values, int length, uint64_t* value);
+ bool tig_str_parse_named_value(char** str, const char* name, int* value);
+-bool tig_str_parse_named_str_value(char** str, const char* name, char* value);
++bool tig_str_parse_named_str_value(char** str, const char* name, char* value, size_t size);
+ bool tig_str_match_named_str_to_list(char** str, const char* name, const char** list, int list_length, int* value);
+ bool tig_str_parse_named_range(char** str, const char* name, int* start, int* end);
+ bool tig_str_parse_named_flag_list(char** str, const char* name, const char** keys, const unsigned int* values, int length, unsigned int* value);
 diff --git a/first_party/tig/include/tig/video.h b/first_party/tig/include/tig/video.h
 --- a/first_party/tig/include/tig/video.h
 +++ b/first_party/tig/include/tig/video.h
@@ -729,6 +750,381 @@ diff --git a/first_party/tig/src/rect.c b/first_party/tig/src/rect.c
              break;
          }
  
+diff --git a/first_party/tig/src/str_parse.c b/first_party/tig/src/str_parse.c
+--- a/first_party/tig/src/str_parse.c
++++ b/first_party/tig/src/str_parse.c
+@@ -33,18 +33,23 @@
+ }
+ 
+ // 0x5318F0
+-void tig_str_parse_str_value(char** str, char* value)
+-{
+-    while (isspace(*(*str))) {
+-        (*str)++;
+-    }
+-
+-    char* sep = strchr(*str, tig_str_parse_separator);
+-    if (sep != NULL) {
+-        *sep = '\0';
+-    }
+-
+-    memcpy(value, *str, strlen(*str) + 1);
++void tig_str_parse_str_value(char** str, char* value, size_t size)
++{
++    while (isspace((unsigned char)*(*str))) {
++        (*str)++;
++    }
++
++    char* sep = strchr(*str, tig_str_parse_separator);
++    if (sep != NULL) {
++        *sep = '\0';
++    }
++
++    if (size != 0) {
++        size_t len = strlen(*str);
++        if (len >= size) len = size - 1;
++        memcpy(value, *str, len);
++        value[len] = '\0';
++    }
+ 
+     if (sep != NULL) {
+         *sep = tig_str_parse_separator;
+@@ -57,7 +62,7 @@
+ // 0x531990
+ void tig_str_parse_value(char** str, int* value)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -79,7 +84,7 @@
+ // 0x531A20
+ void tig_str_parse_value_64(char** str, int64_t* value)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -101,7 +106,7 @@
+ // 0x531AB0
+ void tig_str_parse_range(char** str, int* start, int* end)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -135,7 +140,7 @@
+ // 0x531B70
+ void tig_str_parse_complex_value(char** str, int delim, int* value1, int* value2)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -176,7 +181,7 @@
+ // 0x531C60
+ void tig_str_parse_complex_value3(char** str, int delim, int* value1, int* value2, int* value3)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -225,7 +230,7 @@
+ // 0x531D80
+ void tig_str_parse_complex_str_value(char** str, int delim, const char** list, int list_length, int* value1, int* value2)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -289,7 +294,7 @@
+ // 0x531EE0
+ void tig_str_match_str_to_list(char** str, const char** list, int list_length, int* value)
+ {
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -324,7 +329,7 @@
+ {
+     *value = 0;
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -379,7 +384,7 @@
+                 *str = NULL;
+             }
+ 
+-            while (isspace(*(*str))) {
++            while (isspace((unsigned char)*(*str))) {
+                 (*str)++;
+             }
+         }
+@@ -398,7 +403,7 @@
+ {
+     *value = 0;
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -453,7 +458,7 @@
+                 *str = NULL;
+             }
+ 
+-            while (isspace(*(*str))) {
++            while (isspace((unsigned char)*(*str))) {
+                 (*str)++;
+             }
+         }
+@@ -476,7 +481,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -492,29 +497,29 @@
+ }
+ 
+ // 0x5323B0
+-bool tig_str_parse_named_str_value(char** str, const char* name, char* value)
+-{
+-    if (*str == NULL) {
+-        value[0] = '\0';
+-        return false;
+-    }
+-
+-    while (isspace(*(*str))) {
+-        (*str)++;
+-    }
+-
+-    if (strstr(*str, name) != *str) {
+-        value[0] = '\0';
+-        return false;
+-    }
+-
+-    *str += strlen(name);
+-
+-    while (isspace(*(*str))) {
+-        (*str)++;
+-    }
+-
+-    tig_str_parse_str_value(str, value);
++bool tig_str_parse_named_str_value(char** str, const char* name, char* value, size_t size)
++{
++    if (*str == NULL) {
++        if (size != 0) value[0] = '\0';
++        return false;
++    }
++
++    while (isspace((unsigned char)*(*str))) {
++        (*str)++;
++    }
++
++    if (strstr(*str, name) != *str) {
++        if (size != 0) value[0] = '\0';
++        return false;
++    }
++
++    *str += strlen(name);
++
++    while (isspace((unsigned char)*(*str))) {
++        (*str)++;
++    }
++
++    tig_str_parse_str_value(str, value, size);
+ 
+     return true;
+ }
+@@ -527,7 +532,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -538,7 +543,7 @@
+ 
+     *str += strlen(name);
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -556,7 +561,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -568,7 +573,7 @@
+ 
+     *str += strlen(name);
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -586,17 +591,17 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
+-        (*str)++;
+-    }
+-
+-    if (strstr(*str, name) != *str) {
+-        return false;
+-    }
+-
+-    *str += strlen(name);
+-
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
++        (*str)++;
++    }
++
++    if (strstr(*str, name) != *str) {
++        return false;
++    }
++
++    *str += strlen(name);
++
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -614,7 +619,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -626,7 +631,7 @@
+ 
+     *str += strlen(name);
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -645,7 +650,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -658,7 +663,7 @@
+ 
+     *str += strlen(name);
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -676,7 +681,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -688,7 +693,7 @@
+ 
+     *str += strlen(name);
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -706,17 +711,17 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
+-        (*str)++;
+-    }
+-
+-    if (strstr(*str, name) != *str) {
+-        return false;
+-    }
+-
+-    *str += strlen(name);
+-
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
++        (*str)++;
++    }
++
++    if (strstr(*str, name) != *str) {
++        return false;
++    }
++
++    *str += strlen(name);
++
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -734,7 +739,7 @@
+         return false;
+     }
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -754,7 +759,7 @@
+ {
+     *value = 0;
+ 
+-    while (isspace(*(*str))) {
++    while (isspace((unsigned char)*(*str))) {
+         (*str)++;
+     }
+ 
+@@ -809,7 +814,7 @@
+                 *str = NULL;
+             }
+ 
+-            while (isspace(*(*str))) {
++            while (isspace((unsigned char)*(*str))) {
+                 (*str)++;
+             }
+         }
 diff --git a/first_party/tig/src/video.c b/first_party/tig/src/video.c
 --- a/first_party/tig/src/video.c
 +++ b/first_party/tig/src/video.c
@@ -2687,6 +3083,24 @@ diff --git a/src/game/dialog.c b/src/game/dialog.c
          sub_416B00(a1->reply, entry.data.female_str, a1);
      } else {
          sub_416B00(a1->reply, entry.str, a1);
+@@ -2819,7 +2847,7 @@
+ int dialog_file_fgetc(TigFile* stream)
+ {
+     if (dialog_file_tmp_str_pos != dialog_file_tmp_str_size) {
+-        return dialog_file_tmp_str[dialog_file_tmp_str_pos++];
++        return (unsigned char)dialog_file_tmp_str[dialog_file_tmp_str_pos++];
+     }
+ 
+     dialog_file_tmp_str_pos = 0;
+@@ -2834,7 +2862,7 @@
+         return EOF;
+     }
+ 
+-    return dialog_file_tmp_str[dialog_file_tmp_str_pos++];
++    return (unsigned char)dialog_file_tmp_str[dialog_file_tmp_str_pos++];
+ }
+ 
+ // 0x417E00
 @@ -3051,7 +3079,7 @@
      int cnt;
      MesFileEntry mes_file_entry;
@@ -4365,11 +4779,10 @@ diff --git a/src/game/map.c b/src/game/map.c
              }
  
              flags = obj_field_int32_get(obj, OBJ_F_FLAGS);
-@@ -1444,6 +1442,20 @@
- 
+@@ -1445,6 +1443,20 @@
      // FIX: Release `stream`.
      tig_file_fclose(stream);
-+
+ 
 +    if (!map_editor && modern_tutorial_active()
 +        && SDL_strcasecmp(base_path, "maps\\Arcanum1-024-fixed") == 0) {
 +        tig_file_list_create(&file_list, "tutorial\\mobs\\*.mob");
@@ -4383,9 +4796,28 @@ diff --git a/src/game/map.c b/src/game/map.c
 +        }
 +        tig_file_list_destroy(&file_list);
 +    }
- 
++
      strcpy(fname, "mobile.md");
      if (tig_file_exists(path3, NULL)) {
+         stream = tig_file_fopen(path3, "rb");
+@@ -1618,7 +1630,7 @@
+         str = tmp;
+ 
+         tig_str_parse_set_separator(':');
+-        tig_str_parse_str_value(&str, key);
++        tig_str_parse_str_value(&str, key, sizeof(key));
+ 
+         if (SDL_strcasecmp(key, "LightScheme") == 0) {
+             tig_str_parse_value(&str, &light_scheme);
+@@ -2013,7 +2025,7 @@
+     mes_file_entry.num = 5000;
+     while (mes_search(dword_5D11D8, &mes_file_entry)) {
+         char* str = mes_file_entry.str;
+-        tig_str_parse_str_value(&str, map_list_info[map_list_info_count].name);
++        tig_str_parse_str_value(&str, map_list_info[map_list_info_count].name, sizeof(map_list_info[map_list_info_count].name));
+ 
+         // NOTE: This check is silly. When string it long enough it will easly
+         // overrun `MAP_NAME_LENGTH` and crash before this check
 diff --git a/src/game/map.h b/src/game/map.h
 --- a/src/game/map.h
 +++ b/src/game/map.h
@@ -4412,6 +4844,15 @@ diff --git a/src/game/mes.c b/src/game/mes.c
              buffer[pos++] = (char)ch;
          } else {
              too_long = true;
+@@ -661,7 +661,7 @@
+         }
+     }
+ 
+-    return mes_file_parse_buffer[mes_file_parse_pos++];
++    return (unsigned char)mes_file_parse_buffer[mes_file_parse_pos++];
+ }
+ 
+ /**
 diff --git a/src/game/mp_utils.c b/src/game/mp_utils.c
 --- a/src/game/mp_utils.c
 +++ b/src/game/mp_utils.c
@@ -10291,6 +10732,24 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
      int mode;
      int cnt;
      int note;
+@@ -1313,7 +1349,7 @@
+             }
+         }
+ 
+-        tig_str_parse_str_value(&str, wmap_ui_mode_info[WMAP_UI_MODE_WORLD].field_68);
++        tig_str_parse_str_value(&str, wmap_ui_mode_info[WMAP_UI_MODE_WORLD].field_68, sizeof(wmap_ui_mode_info[WMAP_UI_MODE_WORLD].field_68));
+ 
+         if (!wmTileArtLock(0)) {
+             tig_debug_printf("wmap_load_worldmap_info: ERROR: wmTileArtLockMode failed!\n");
+@@ -1327,7 +1363,7 @@
+         wmTileArtUnlock(0);
+         wmTileArtUnload(0);
+ 
+-        tig_str_parse_named_str_value(&str, "ZoomedName:", wmap_ui_mode_info[WMAP_UI_MODE_WORLD].str);
++        tig_str_parse_named_str_value(&str, "ZoomedName:", wmap_ui_mode_info[WMAP_UI_MODE_WORLD].str, sizeof(wmap_ui_mode_info[WMAP_UI_MODE_WORLD].str));
+ 
+         dword_66D87C = 0;
+         if (tig_str_parse_named_value(&str, "MapKeyedTo:", &map_keyed_to)) {
 @@ -1411,6 +1447,9 @@
      if (!wmap_ui_created) {
          return;
