@@ -28,7 +28,9 @@ class TutorialContentTests(unittest.TestCase):
         self.assertTrue((base / 'scr/48874_guide.scr').is_file())
         self.assertEqual(len(list((base / 'tutorial/mobs').glob('*.mob'))), 7)
         self.assertEqual(len(list((base / 'townmap/tutorial-island').glob('*.bmp'))), 32)
-        self.assertEqual(len(list((base / 'sound/tutorial').glob('TUTORIAL_*.mp3'))), 35)
+        self.assertEqual(len(list((base / 'sound/tutorial').glob('TUTORIAL_*.mp3'))), 36)
+        self.assertEqual((base / 'sound/tutorial/TUTORIAL_PORTRAIT.mp3').read_bytes(),
+                         (ROOT / 'resources/tutorial/sound/TUTORIAL_PORTRAIT.mp3').read_bytes())
         for line in ('1', '10'):
             voice = Path(f'speech/16106/v{line}_m.mp3')
             self.assertEqual((base / 'sound' / voice).read_bytes(),

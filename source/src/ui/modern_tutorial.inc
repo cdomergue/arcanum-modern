@@ -8,7 +8,9 @@ enum TutorialStep {
     TUTORIAL_REGROUP, TUTORIAL_MAP, TUTORIAL_ZOOM, TUTORIAL_NOTE, TUTORIAL_ROUTE,
     TUTORIAL_JOURNAL, TUTORIAL_JOURNAL_FILTER, TUTORIAL_TRACK, TUTORIAL_SHEET,
     TUTORIAL_SPELLS, TUTORIAL_SKILLS, TUTORIAL_SCHEMATICS, TUTORIAL_REST,
-    TUTORIAL_SERVICES, TUTORIAL_FIGHT, TUTORIAL_TURN, TUTORIAL_AI, TUTORIAL_LOG, TUTORIAL_DONE, TUTORIAL_HELLO
+    TUTORIAL_SERVICES, TUTORIAL_FIGHT, TUTORIAL_TURN, TUTORIAL_AI, TUTORIAL_LOG, TUTORIAL_DONE, TUTORIAL_HELLO,
+    /* Append new lessons to preserve the guide script's existing step IDs. */
+    TUTORIAL_PORTRAIT
 };
 static enum TutorialStep tutorial_step;
 static bool tutorial_checked, tutorial_invite, tutorial_starting;
@@ -131,7 +133,7 @@ bool modern_tutorial_active(void)
     int64_t guide=obj_pool_perm_lookup(id);
     if(!guide)return false;
     int step=script_local_counter_get(guide,SAP_DIALOG,0)&255;
-    return step>=TUTORIAL_GUIDE && step<=TUTORIAL_HELLO;
+    return step>=TUTORIAL_GUIDE && step<=TUTORIAL_PORTRAIT;
 }
 
 static void tutorial_draw_invite(void)

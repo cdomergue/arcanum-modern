@@ -91,6 +91,7 @@ static void check_settings(void)
     text_scale=100;save_settings();
 }
 #include "check-portrait-in-game.inc"
+#include "check-tutorial-portrait.inc"
 #include "check-progression.inc"
 
 static void check_party_hints(void)
@@ -257,6 +258,7 @@ int main(int argc,char** argv)
     highres_config_load();
     TigInitInfo init={0};init.width=1360;init.height=768;init.bpp=32;
     init.texture_width=init.texture_height=2048;init.flags=TIG_INITIALIZE_WINDOWED|TIG_INITIALIZE_NO_SOUND;
+    if(SDL_getenv("ARCANUM_CHECK_TUTORIAL_PORTRAIT"))init.flags &= ~TIG_INITIALIZE_NO_SOUND;
     init.art_file_path_resolver=name_resolve_path;init.art_id_reset_func=name_normalize_aid;init.sound_file_path_resolver=gsound_resolve_path;
     puts("Initialize TIG");assert(tig_init(&init)==TIG_OK);intgame_set_iso_window_width(init.width);intgame_set_iso_window_height(init.height);
     puts("Initialize game");GameInitInfo game={0};assert(intgame_create_iso_window(&game.iso_window_handle)&&gamelib_init(&game));
@@ -277,6 +279,7 @@ int main(int argc,char** argv)
     if(SDL_getenv("ARCANUM_CHECK_COMBAT_HINTS")){check_combat_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_STAT_COLORS")){check_stat_colors();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_PROGRESSION")){check_progression();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_TUTORIAL_PORTRAIT")){check_tutorial_portrait(pc);return 0;}
 
 
 

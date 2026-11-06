@@ -39,7 +39,7 @@ static void tutorial_draw_lesson(void)
     static int initial_count;
     static unsigned initial_slot;
     static float initial_zoom;
-    static bool initial_toggle;
+    static bool initial_toggle,portrait_seen;
     tutorial_next_rect=(SDL_FRect){0};
     if(!tutorial_available || tutorial_starting || !visible())return;
     int64_t pc=player_get_local_pc_obj();
@@ -51,7 +51,7 @@ static void tutorial_draw_lesson(void)
         script_local_counter_set(guide,SAP_DIALOG,0,TUTORIAL_HELLO);
         saved=TUTORIAL_HELLO;
     }
-    if(saved<TUTORIAL_GUIDE || saved>TUTORIAL_HELLO)return;
+    if(saved<TUTORIAL_GUIDE || saved>TUTORIAL_PORTRAIT)return;
     tutorial_departure=false;tutorial_step=(enum TutorialStep)saved;
     int64_t loc=obj_field_int64_get(pc,OBJ_F_LOCATION);
     int64_t weapon=item_wield_get(pc,ITEM_INV_LOC_WEAPON),armor=item_wield_get(pc,ITEM_INV_LOC_ARMOR);
@@ -92,6 +92,7 @@ static void tutorial_draw_lesson(void)
     if(previous!=saved || last_pc!=pc){
         previous=saved;last_pc=pc;tutorial_origin=loc;
         tutorial_voice_stop();
+        portrait_seen=false;
         if(tutorial_step==TUTORIAL_HELLO)tutorial_hello_started=SDL_GetTicks();
         if(tutorial_step==TUTORIAL_ROUTE)tutorial_route_started=false;
         if(tutorial_step==TUTORIAL_SERVICES)tutorial_pause_seen=false;
@@ -100,7 +101,7 @@ static void tutorial_draw_lesson(void)
         initial_zoom=tutorial_step==TUTORIAL_CAMERA?world_zoom:map_camera.scale;
         initial_count=tutorial_step==TUTORIAL_TRANSFER?item_gold_get(guide):tutorial_step==TUTORIAL_NOTE?map_memo_count:tutorial_step==TUTORIAL_TURN?combat_turn_based_turn_get():quest_filter;
         initial_toggle=tutorial_step==TUTORIAL_COMPARE?inventory_compare:tutorial_step==TUTORIAL_AI?combat_companion_ai_get():journal_favorites;
-        bool locked=(tutorial_step==TUTORIAL_HELLO || tutorial_step<TUTORIAL_FIGHT) && !(tutorial_step==TUTORIAL_ROUTE && script_local_counter_get(guide,SAP_DIALOG,2));
+        bool locked=(tutorial_step==TUTORIAL_HELLO || tutorial_step==TUTORIAL_PORTRAIT || tutorial_step<TUTORIAL_FIGHT) && !(tutorial_step==TUTORIAL_ROUTE && script_local_counter_get(guide,SAP_DIALOG,2));
         // The map has open wall segments as well as portal objects. Seal the
         // complete exterior ring so diagonal routes cannot bypass a doorway.
         for(int y=25;y<=35;y++)for(int x=17;x<=27;x++){
@@ -269,6 +270,14 @@ static void tutorial_draw_lesson(void)
                 "Open the character sheet to review attributes, skills and points available when levelling up.");
         target=1; complete=panel==1;
         break;
+    case TUTORIAL_PORTRAIT:
+        voice="TUTORIAL_PORTRAIT";
+        line=tr("Dans votre fiche, cliquez sur la tête pour choisir ou importer un portrait. Fermez ensuite ce panneau : Annuler permet de garder votre portrait actuel.",
+                "On your character sheet, click the face to choose or import a portrait. Then close this panel: Cancel keeps your current portrait.");
+        if(portrait_editor.active && portrait_editor.in_game && portrait_editor.object==pc)portrait_seen=true;
+        target=portrait_editor.active?514:panel==1?3000:1;
+        complete=portrait_seen && !portrait_editor.active;
+        break;
     case TUTORIAL_SPELLS: {
         voice="TUTORIAL_SPELLS";
         line=tr("Ouvrez Magie. Faites glisser le sort du parchemin d’Agilité du Feu vers la case 2 de la barre rapide. Le parchemin sera consommé au lancement.",
@@ -340,11 +349,13 @@ static void tutorial_draw_lesson(void)
         break;
     default:return;
     }
-    bool optional=tutorial_step>TUTORIAL_GUIDE && tutorial_step<TUTORIAL_FIGHT;
+    bool optional=(tutorial_step>TUTORIAL_GUIDE && tutorial_step<TUTORIAL_FIGHT) || tutorial_step==TUTORIAL_PORTRAIT;
     bool defeated=tutorial_step>=TUTORIAL_FIGHT && tutorial_step<TUTORIAL_DONE && tutorial_wolves_defeated();
     if(defeated || complete || (optional && tutorial_skip)){
         int next=defeated?TUTORIAL_DONE:tutorial_step+1;
         if(tutorial_step==TUTORIAL_HELLO)next=TUTORIAL_GUIDE;
+        if(tutorial_step==TUTORIAL_SHEET)next=TUTORIAL_PORTRAIT;
+        if(tutorial_step==TUTORIAL_PORTRAIT)next=TUTORIAL_SPELLS;
         tutorial_voice_stop();
         if(tutorial_step==TUTORIAL_NOTE)next=TUTORIAL_JOURNAL;
         if(tutorial_step==TUTORIAL_SERVICES){
