@@ -53,6 +53,7 @@ jobs:
           python3 tests/test_ui_localization.py
           python3 tests/test_autosave.py
           python3 tests/test_ce_animation_preview.py
+          python3 tests/test_combat_diagnostics.py
           python3 tests/test_ce_portrait.py
           python3 tests/test_ce_quantity.py
           python3 tests/test_save_diagnostics.py

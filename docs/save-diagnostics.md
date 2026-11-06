@@ -117,3 +117,7 @@ trigger and live reference lifetime are established. These logs improve evidence
 they do not themselves fix the scheduling issue.
 
 For companion-menu animation stops, see [follower diagnostics](follower-diagnostics.md). The save journal does not record animation state.
+
+For hit outcomes, critical misses, protective shields and measured HP changes,
+see [combat diagnostics](combat-diagnostics.md). These use a separate bounded
+journal; older save/crash reports do not contain per-hit evidence.

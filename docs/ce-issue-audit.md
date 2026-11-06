@@ -74,8 +74,9 @@ that a symptom was reproduced. The archive files and saves must stay out of Git.
 
 For newly reproduced failures without sufficient evidence, add bounded persistent
 diagnostics and document how to interpret them. Read `save-diagnostics.md` for
-the existing save/crash logs; these do not currently trace per-hit spell damage
-or AI disengagement. Do not invent those records when reading an old report.
+the existing save/crash logs, and `combat-diagnostics.md` for the bounded per-hit
+journal. Older reports do not contain the new records. Combat snapshots do not
+yet trace the exact transition of an AI actor that silently stops acting.
 
 ## Native area diagnostics
 
@@ -102,12 +103,20 @@ forced melee hits with 10 normal damage each. The helper does not save.
 
 `CE_SHIELD` records the requested definition, resolved shield definition,
 actual attacker/target HP loss and target spell flags. Spell application and
-damage resolution use the installed game resources. Casting animation timing,
-critical failures, equipment, autonomous AI and other shield types are outside
-this probe. `UNRESISTABLE` must not be used to simplify the fixture: the native
+damage resolution use the installed game resources. A separate control reloads
+the fixture and activates the native critical-miss fate on the PC: the wolf's
+attack is redirected to itself and the PC loses no HP. `CE_FUMBLE` reports the
+measured losses and flags. This validates the retargeting path, not the natural
+frequency of critical misses. Casting animation timing, equipment, autonomous
+AI and other shield types are outside this probe.
+`UNRESISTABLE` must not be used to simplify the fixture: the native
 lifecycle also ends maintained spells with that flag. The test retains normal
 resistance handling and fails if the protective effect was not applied.
 
 Windows native FR and EN runs both passed: attacker loss `0/0/60`, target loss
 `120/60/120` for the three scenarios. This is evidence about these controlled
-conditions, not a claim that every #128 combat symptom is resolved.
+conditions, not a claim that every #128 combat symptom is resolved. Native runs
+with the combat journal each produce 37 attack, 49 damage, 12 fire-retaliation
+and one critical-miss record. The critical-miss control loses attacker HP and
+leaves the intended victim's HP unchanged. See [combat diagnostics](combat-diagnostics.md)
+for record fields, limits and interpretation.

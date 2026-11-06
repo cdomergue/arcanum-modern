@@ -28,6 +28,7 @@
 #include "game/anim.h"
 #include "game/magictech.h"
 #include "game/critter.h"
+#include "game/fate.h"
 #include "ui/inven_ui.h"
 #include "ui/follower_ui.h"
 #include "game/townmap.h"
@@ -483,7 +484,25 @@ static int check_ce_shield(const char* input)
         if (scenario == 1) REQUIRE(shield_spell == SPELL_SHIELD_OF_PROTECTION);
         REQUIRE(scenario == 2 ? lost_attacker > 0 : lost_attacker == 0);
     }
-    puts("PASS: protection shield has no hit retaliation; Body of Fire positive control does");
+    // Separate critical-miss control: native fate forces retargeting to attacker.
+    REQUIRE(gamelib_load(input));
+    int64_t pc = player_get_local_pc_obj(), attacker;
+    REQUIRE(object_create(sub_4685A0(BP_WOLF), obj_field_int64_get(pc, OBJ_F_LOCATION), &attacker));
+    object_hp_pts_set(attacker, 1000);
+    stat_base_set(pc, STAT_FATE_POINTS, 1);
+    REQUIRE(fate_activate(pc, FATE_CRIT_MISS));
+    int attacker_hp = object_hp_current(attacker), target_hp = object_hp_current(pc);
+    CombatContext critical;
+    sub_4B2210(attacker, pc, &critical);
+    critical.flags |= 0x100;
+    critical.dam[DAMAGE_TYPE_NORMAL] = 10;
+    sub_4B3170(&critical);
+    REQUIRE(critical.target_obj == attacker && (critical.flags & 0x8));
+    REQUIRE(object_hp_current(attacker) < attacker_hp);
+    REQUIRE(object_hp_current(pc) == target_hp);
+    printf("CE_FUMBLE attacker_hp_loss=%d intended_target_hp_loss=%d flags=%x\n",
+        attacker_hp - object_hp_current(attacker), target_hp - object_hp_current(pc), critical.flags);
+    puts("PASS: protection has no retaliation; fire and critical-miss controls lose attacker HP");
     return 0;
 }
 

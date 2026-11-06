@@ -42,6 +42,9 @@ static const char* modern_intgame_text(int id){return id==20?"native chance":"na
 static int object_get_ac(int64_t target,bool ignored){assert(target==9);(void)ignored;return 20;}
 static void modern_combat_event(int64_t actor,int64_t target,const char* raw){assert(actor==7&&target==9);snprintf(output,sizeof(output),"%s",raw);events++;}
 static void SDL_strlcpy(char* dst,const char* src,size_t size){snprintf(dst,size,"%s",src);}
+static void combat_diagnostic_event(const char* event,const CombatContext* combat,const char* detail,const void* a,const void* t){
+ assert(!strcmp(event,"attack")&&combat&&strstr(detail,"chance="));assert(!a&&!t);
+}
 '''
 code += function('game/combat.c', 'combat_report_attack')
 code += function('ui/modern_combat.inc', 'tactical_log_append_line')
