@@ -37,7 +37,7 @@ the combined candidate. Full native UI rendering was not validated in this audit
 
 | Report | Current finding / next validation |
 | --- | --- |
-| [#167](https://github.com/alexbatalov/arcanum-ce/issues/167), IA dialogue conditions | `area_from_loc` rejects both an absent townmap at the actor and an absent townmap at the area origin. Moving only the first test does not solve both. `get_nearest_area` is not bounded by the area's radius; accepting its result everywhere could enable location-specific dialogue in the wilderness. Verify installed area 19 coordinates and townmap sectors before changing engine semantics or localized resources. The hotfix catalog contains `mes/gamearea.mes`, which alone does not prove a fix is installed. Reported as an original-game defect; local impact still unconfirmed. |
+| [#167](https://github.com/alexbatalov/arcanum-ce/issues/167), IA dialogue conditions | `area_from_loc` rejects both an absent townmap at the actor and an absent townmap at the area origin. Moving only the first test does not solve both. `get_nearest_area` is not bounded by the area's radius; accepting its result everywhere could enable location-specific dialogue in the wilderness. Native checks on isolated FR and EN installations with UAP 2.0.2 and the active hotfix resolve the installed origin (20701, 55992) to townmap 19 and `area_of_object == 19`. This differs from the reported unpatched origin (20693, 56027). The current English installation has matching base/module archive hashes and matching active UAP resources; loose prototype differences do not establish full installation equivalence. The specific origin failure is not reproduced with these installed area resources. This does not validate every IA dialogue condition or unpatched game data. |
 | [#66](https://github.com/alexbatalov/arcanum-ce/issues/66), concave walls | Reported in the original engine. Requires the supplied Tarant scene and camera position to distinguish visibility geometry from art assets. No speculative renderer changes made. |
 | [#128](https://github.com/alexbatalov/arcanum-ce/issues/128), protective shield | The `OSF_SHIELDED` branch of `magictech_anim_play_hit_fx` adds a visual effect; it does not itself apply retaliatory damage. A visible impact is not proof of HP loss. Record active spell definition IDs, attacker/target and actual HP changes; distinguish protective, fire and electrical shields. No damage change without reproduction. |
 | #128, healthy enemies stop fighting | Health and fatigue alone do not establish AI eligibility. Need the actor, active target, combat membership, animation goal, status flags and time of disengagement. A delayed dead-actor cleanup log is not evidence that a living actor stopped. No speculative global AI changes made. |
@@ -69,3 +69,17 @@ For newly reproduced failures without sufficient evidence, add bounded persisten
 diagnostics and document how to interpret them. Read `save-diagnostics.md` for
 the existing save/crash logs; these do not currently trace per-hit spell damage
 or AI disengagement. Do not invent those records when reading an old report.
+
+## Native area diagnostics
+
+Run `check-campaign <marked-disposable-game> <SlotXXXX> --ce-isle-area`
+on a main-world-map save. `CE_ISLE` reports the origin in tile coordinates,
+its townmap ID, and the area returned by the production dialogue lookup.
+The probe changes the PC location field only in memory, restores it, and does
+not save the diagnostic state. Loading still writes the disposable Current
+directory and can create world-update backups: never run it on a personal installation.
+
+`--ce-inspect` loads a fixture and prints `CE_FIXTURE`, `CE_AREA` and
+`CE_TOWNMAP` metadata. Redirect stdout/stderr to a local investigation log.
+Area coordinates are tiles; townmap width/height describe map-image metadata.
+A passing area probe is not proof that all island dialogues were played.

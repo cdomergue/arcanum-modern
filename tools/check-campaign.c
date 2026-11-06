@@ -24,6 +24,7 @@
 #include "game/map.h"
 #include "game/sector.h"
 #include "game/area.h"
+#include "game/location.h"
 #include "game/townmap.h"
 #include "ui/wmap_ui.h"
 #include "game/modern_world_updates.h"
@@ -411,6 +412,51 @@ static int hardin_route_roundtrip(const char* input)
     return 0;
 }
 
+static int inspect_ce_fixture(const char* input)
+{
+    REQUIRE(gamelib_load(input));
+    int64_t pc = player_get_local_pc_obj();
+    int64_t loc = obj_field_int64_get(pc, OBJ_F_LOCATION);
+    printf("CE_FIXTURE slot=%s map=%d loc=%llu area=%d townmap=%d spell_flags=%x\n",
+        input, map_current_map(), (unsigned long long)loc, area_of_object(pc),
+        townmap_get(sector_id_from_loc(loc)), obj_field_int32_get(pc, OBJ_F_SPELL_FLAGS));
+    for (int area = 1; area < area_count(); area++) {
+        int64_t origin = area_get_location(area);
+        int64_t x = LOCATION_GET_X(origin), y = LOCATION_GET_Y(origin);
+        printf("CE_AREA id=%d x=%lld y=%lld townmap=%d name=%s\n", area,
+            (long long)x, (long long)y, townmap_get(sector_id_from_loc(origin)), area_get_name(area));
+    }
+    for (int map = 1; map < townmap_count(); map++) {
+        TownMapInfo info;
+        if (townmap_info(map, &info)) printf("CE_TOWNMAP id=%d name=%s map=%d origin=%llu w=%d h=%d cols=%d rows=%d\n",
+            map, townmap_name(map), info.map, (unsigned long long)info.loc,
+            info.width, info.height, info.num_hor_tiles, info.num_vert_tiles);
+    }
+    puts("PASS: CE fixture loaded and location metadata inspected");
+    return 0;
+}
+
+static int check_ce_isle_area(const char* input)
+{
+    REQUIRE(gamelib_load(input));
+    REQUIRE(map_current_map() == map_by_type(MAP_TYPE_START_MAP));
+    int64_t pc = player_get_local_pc_obj();
+    int64_t original = obj_field_int64_get(pc, OBJ_F_LOCATION);
+    int64_t origin = area_get_location(19);
+    printf("CE_ISLE origin_x=%lld origin_y=%lld townmap=%d\n",
+        (long long)LOCATION_GET_X(origin), (long long)LOCATION_GET_Y(origin),
+        townmap_get(sector_id_from_loc(origin)));
+    // This test only changes the in-memory location field, restores it before
+    // returning, and never serializes the diagnostic state.
+    obj_field_int64_set(pc, OBJ_F_LOCATION, origin);
+    int detected = area_of_object(pc);
+    obj_field_int64_set(pc, OBJ_F_LOCATION, original);
+    printf("CE_ISLE area_of_object=%d expected=19\n", detected);
+    REQUIRE(detected == 19);
+    puts("PASS: installed Isle of Despair origin resolves to dialogue area 19");
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -422,7 +468,7 @@ int main(int argc, char** argv)
     if (!marked || (strcmp(argv[2], "--create") && strcmp(argv[2], "--prototypes") && strcmp(argv[2], "--actors") &&
         (strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)))) return 2;
     if (argc == 4 && strcmp(argv[3], "--roundtrip") && strcmp(argv[3], "--arachnid")
-        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route")) return 2;
+        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area")) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
@@ -455,6 +501,8 @@ int main(int argc, char** argv)
     if (!strcmp(argv[2], "--actors")) result = inspect_actors();
     else if (!strcmp(argv[2], "--prototypes")) result = inspect_prototypes();
     else if (!strcmp(argv[2], "--create")) result = create_fixture();
+    else if (argc == 4 && !strcmp(argv[3], "--ce-inspect")) result = inspect_ce_fixture(argv[2]);
+    else if (argc == 4 && !strcmp(argv[3], "--ce-isle-area")) result = check_ce_isle_area(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--arachnid")) result = arachnid_roundtrip(argv[2], false);
     else if (argc == 4 && !strcmp(argv[3], "--arachnid-original")) result = arachnid_roundtrip(argv[2], true);
     else if (argc == 4 && !strcmp(argv[3], "--save-retry")) result = save_retry_roundtrip(argv[2]);
