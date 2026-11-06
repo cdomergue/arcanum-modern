@@ -1,3 +1,56 @@
+/* Modern labels select a location's exact centre. Some known locations (passes)
+ * have a blocked centre: approach on a reachable neighbouring sector, then let
+ * the native mouse-up destination snap enter the location as usual. */
+static void modern_world_route_approach(WmapCoords* target)
+{
+    int64_t pc = player_get_local_pc_obj(), location;
+    sub_561800(target, &location);
+    int area = area_get_nearest_known_area(location, pc, qword_66D850);
+    if (area <= 0) return;
+    WmapCoords centre;
+    sub_561490(area_get_location(area), &centre);
+    if (target->x != centre.x || target->y != centre.y
+        || !sector_is_blocked(sector_id_from_loc(location))) return;
+
+    WmapRoute* route = &wmap_ui_routes[WMAP_ROUTE_TYPE_WORLD];
+    int start = 0;
+    int64_t from;
+    if (route->length) {
+        WmapRouteWaypoint* previous = &route->waypoints[route->length - 1];
+        from = previous->loc;
+        start = previous->start + previous->steps;
+    } else {
+        sub_561800(&wmap_ui_mode_info[WMAP_UI_MODE_WORLD].field_3C, &from);
+    }
+    if (start >= 5000) return;
+    int8_t rotations[5000];
+    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
+    for (int radius = 1; radius <= qword_66D850 / 64; radius++) {
+        int best = INT_MAX;
+        WmapCoords approach = *target;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                if (abs(dx) != radius && abs(dy) != radius) continue;
+                WmapCoords candidate = { centre.x + dx, centre.y + dy };
+                if (candidate.x < 0 || candidate.y < 0
+                    || candidate.x >= info->map_width || candidate.y >= info->map_height) continue;
+                int64_t to;
+                sub_561800(&candidate, &to);
+                if (sector_is_blocked(sector_id_from_loc(to))
+                    || area_get_nearest_known_area(to, pc, qword_66D850) != area) continue;
+                WmapPathInfo path = {0};
+                path.from = sector_id_from_loc(from);
+                path.to = sector_id_from_loc(to);
+                path.max_rotations = 5000 - start;
+                path.rotations = rotations;
+                int steps = wmap_path_make(&path);
+                if (steps > 0 && steps < best) { best = steps; approach = candidate; }
+            }
+        }
+        if (best != INT_MAX) { *target = approach; return; }
+    }
+}
+
 enum {TOWN_ROUTE_SPAN=32, TOWN_ROUTE_PROBES=128};
 typedef struct TownRouteSearch {
     int64_t actor;

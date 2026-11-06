@@ -10465,7 +10465,7 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
              dst_rect = src_rect;
  
              src_rect.x -= x2 - wmap_note_type_info[WMAP_NOTE_TYPE_WAYPOINT].width / 2;
-@@ -4984,3 +5052,311 @@
+@@ -4984,3 +5052,318 @@
          tig_window_blit_art(wmap_ui_window, &art_blit_info);
      }
  }
@@ -10690,6 +10690,13 @@ diff --git a/src/ui/wmap_ui.c b/src/ui/wmap_ui.c
 +    ModernTravelMap map;
 +    if (!modern_map_travel_state(&map) || x < 0 || y < 0 || x >= map.width || y >= map.height) return;
 +    WmapInfo* info = &wmap_ui_mode_info[WMAP_UI_MODE_WORLD];
++    if (event == TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN && !wmap_ui_selecting
++        && wmap_ui_state == WMAP_UI_STATE_NORMAL && dword_66D880) {
++        WmapCoords target = { x, y };
++        modern_world_route_approach(&target);
++        x = target.x;
++        y = target.y;
++    }
 +    if (wmap_ui_state != WMAP_UI_STATE_MOVING) {
 +        modern_map_pan(x - info->field_14.width / 2 - info->field_34,
 +            y - info->field_14.height / 2 - info->field_38);

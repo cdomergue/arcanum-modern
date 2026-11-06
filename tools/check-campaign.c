@@ -23,6 +23,9 @@
 #include "game/name.h"
 #include "game/map.h"
 #include "game/sector.h"
+#include "game/area.h"
+#include "game/townmap.h"
+#include "ui/wmap_ui.h"
 #include "game/modern_world_updates.h"
 #include "game/object.h"
 #include "game/player.h"
@@ -356,6 +359,58 @@ static int save_retry_roundtrip(const char* input)
     return 0;
 }
 
+static int hardin_route_roundtrip(const char* input)
+{
+    REQUIRE(gamelib_load(input));
+    REQUIRE(modern_world_updates_finish_load());
+    int64_t pc = player_get_local_pc_obj();
+    REQUIRE(area_set_known(pc, 17));
+    int64_t origin = obj_field_int64_get(pc, OBJ_F_LOCATION);
+    bool outside = false;
+    // Start outside town bounds, where the native UI permits world travel.
+    for (int distance = 64; distance <= 4096; distance += 64) {
+        int64_t loc = location_make(LOCATION_GET_X(origin) + distance, LOCATION_GET_Y(origin));
+        int64_t sector = sector_id_from_loc(loc);
+        if (townmap_get(sector) == TOWNMAP_NONE && !sector_is_blocked(sector)) {
+            TeleportData move = {0};
+            move.obj = pc; move.loc = loc; move.map = map_current_map();
+            REQUIRE(teleport_do(&move)); teleport_ping(0);
+            outside = true; break;
+        }
+    }
+    REQUIRE(outside);
+    wmap_ui_open();
+    ModernTravelMap travel;
+    REQUIRE(modern_map_travel_state(&travel));
+    ModernMapLabel labels[200];
+    int count = modern_map_travel_labels(labels, 200), target = -1;
+    for (int i = 0; i < count; i++) if (!strcmp(labels[i].text, area_get_name(17))) target = i;
+    REQUIRE(target >= 0);
+    int64_t destination = area_get_location(17);
+    REQUIRE(sector_is_blocked(sector_id_from_loc(destination)));
+    int x = labels[target].x, y = labels[target].y;
+    modern_map_travel_mouse(x, y, TIG_MESSAGE_MOUSE_MOVE);
+    modern_map_travel_mouse(x, y, TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN);
+    modern_map_travel_mouse(x, y, TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP);
+    modern_map_action(3);
+    ModernMap state;
+    REQUIRE(modern_map_state(&state) && state.moving);
+    int ticks = 0;
+    while (wmap_ui_is_created() && ticks++ < 5000) {
+        wmap_ui_bkg_process_callback(NULL);
+        teleport_ping(0);
+    }
+    REQUIRE(ticks < 5000 && !wmap_ui_is_created());
+    REQUIRE(obj_field_int64_get(player_get_local_pc_obj(), OBJ_F_LOCATION) == destination);
+    REQUIRE(sector_is_blocked(sector_id_from_loc(destination)));
+    REQUIRE(!sector_save_failed());
+    REQUIRE(gamelib_save("SlotHR01", "Hardin marker arrival regression"));
+    REQUIRE(gamelib_load("SlotHR01"));
+    REQUIRE(obj_field_int64_get(player_get_local_pc_obj(), OBJ_F_LOCATION) == destination);
+    printf("PASS: exact Hardin marker click travels and reloads at the destination without unblocking the pass\n");
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -367,7 +422,7 @@ int main(int argc, char** argv)
     if (!marked || (strcmp(argv[2], "--create") && strcmp(argv[2], "--prototypes") && strcmp(argv[2], "--actors") &&
         (strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)))) return 2;
     if (argc == 4 && strcmp(argv[3], "--roundtrip") && strcmp(argv[3], "--arachnid")
-        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry")) return 2;
+        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route")) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
@@ -403,6 +458,7 @@ int main(int argc, char** argv)
     else if (argc == 4 && !strcmp(argv[3], "--arachnid")) result = arachnid_roundtrip(argv[2], false);
     else if (argc == 4 && !strcmp(argv[3], "--arachnid-original")) result = arachnid_roundtrip(argv[2], true);
     else if (argc == 4 && !strcmp(argv[3], "--save-retry")) result = save_retry_roundtrip(argv[2]);
+    else if (argc == 4 && !strcmp(argv[3], "--hardin-route")) result = hardin_route_roundtrip(argv[2]);
     else if (argc == 4) result = roundtrip(argv[2]);
     else {
         result = reward(argv[2], 50, 7000, "SlotC050");
