@@ -1144,7 +1144,15 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  
  // 0x426840
  bool sub_426840(AnimRunInfo* run_info)
-@@ -5630,6 +5657,11 @@
+@@ -5576,7 +5603,6 @@
+     AnimRunInfo* run_info;
+ 
+     if (combat_turn_based_is_active()
+-        && combat_turn_based_whos_turn_get() == obj
+         && (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & OCF_STUNNED) != 0
+         && anim_is_current_goal_type(obj, AG_ANIMATE_STUNNED, &anim_id)
+         && anim_id_to_run_info(&anim_id, &run_info)) {
+@@ -5630,6 +5656,11 @@
  
      if (!location_in_dir(loc, rot, &adjacent_loc)) {
          return false;
@@ -1156,7 +1164,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
      }
  
      if (run_info->path.curr > run_info->path.max - 2) {
-@@ -5926,7 +5958,7 @@
+@@ -5926,7 +5957,7 @@
          }
  
          if (run_info->path.max == 0) {
@@ -1165,7 +1173,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -10416,6 +10448,7 @@
+@@ -10416,6 +10447,7 @@
      sub_42EDC0(run_info, obj, &art_id, (run_info->flags & 0x40) != 0, &v2);
  
      if (!combat_check_action_points(obj, v2)) {
@@ -1173,7 +1181,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
          return false;
      }
-@@ -10459,6 +10492,10 @@
+@@ -10459,6 +10491,10 @@
  
      loc = obj_field_int64_get(obj, OBJ_F_LOCATION);
      if (!location_in_dir(loc, run_info->path.rotations[0], &next_loc)) {
@@ -1184,7 +1192,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          return false;
      }
  
-@@ -11333,7 +11370,7 @@
+@@ -11333,7 +11369,7 @@
  
      always_run = settings_get_value(&settings, ALWAYS_RUN_KEY);
  
@@ -1193,7 +1201,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          if (always_run) {
              if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
                  return false;
-@@ -11480,8 +11517,11 @@
+@@ -11480,8 +11516,11 @@
              if (tig_art_anim_data(art_id, &art_anim_data) == TIG_OK) {
                  frame = tig_art_id_frame_get(art_id);
                  if (frame == 3 || frame == 8) {
@@ -1207,7 +1215,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  }
              }
          }
-@@ -11568,6 +11608,7 @@
+@@ -11568,6 +11607,7 @@
                  }
  
                  if (!combat_check_action_points(obj, v3)) {
@@ -1215,7 +1223,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
                      return false;
                  }
-@@ -11591,7 +11632,8 @@
+@@ -11591,7 +11631,8 @@
  
              if ((run_info->flags & 0x80000) != 0
                  && player_is_local_pc_obj(obj)
@@ -1225,7 +1233,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  int64_t x;
                  int64_t y;
  
-@@ -13334,13 +13376,15 @@
+@@ -13334,13 +13375,15 @@
          return false;
      }
  
@@ -1243,7 +1251,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_MOVE_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
          if (!sub_424070(obj, 3, false, false)) {
-@@ -13441,7 +13485,7 @@
+@@ -13441,7 +13484,7 @@
          return false;
      }
  
@@ -1252,7 +1260,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)) {
          return sub_434030(obj, loc);
      }
-@@ -13507,7 +13551,8 @@
+@@ -13507,7 +13550,8 @@
          return false;
      }
  
@@ -1262,7 +1270,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_RUN_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
  
-@@ -13901,6 +13946,7 @@
+@@ -13901,6 +13945,7 @@
          return true;
      }
  
