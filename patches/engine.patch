@@ -4080,6 +4080,18 @@ diff --git a/src/game/magictech.c b/src/game/magictech.c
  
  #include <stdio.h>
  
+@@ -1767,9 +1768,9 @@
+     }
+ 
+     if (run_info->action == MAGICTECH_ACTION_BEGIN) {
+-        cost = magictech_spells[mt_id].cost;
++        cost = magictech_spells[run_info->spell].cost;
+     } else {
+-        cost = magictech_get_maintenance(mt_id)->cost;
++        cost = magictech_get_maintenance(run_info->spell)->cost;
+     }
+ 
+     if (magictech_cheat_mode) {
 @@ -4947,6 +4948,8 @@
      if (mt_invocation->parent_obj.obj != OBJ_HANDLE_NULL) {
          int64_t parent_loc = obj_field_int64_get(mt_invocation->parent_obj.obj, OBJ_F_LOCATION);
