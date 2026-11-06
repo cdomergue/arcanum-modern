@@ -539,6 +539,54 @@ static int check_ce_portrait_animation(const char* input)
     return 0;
 }
 
+static int inspect_ce_combat(const char* input)
+{
+    REQUIRE(gamelib_load(input));
+    int64_t pc = player_get_local_pc_obj();
+    printf("CE_COMBAT slot=%s map=%d tb=%d turn_actor=%llu\n", input, map_current_map(),
+        combat_turn_based_is_active(), (unsigned long long)combat_turn_based_whos_turn_get());
+    ObjectList actors;
+    object_list_vicinity(pc, OBJ_TM_PC | OBJ_TM_NPC, &actors);
+    for (ObjectNode* node = actors.head; node; node = node->next) {
+        int64_t obj = node->obj, focus = 0;
+        int danger = 0, shield_index = -1;
+        if (obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_NPC) {
+            unsigned int cf = obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS);
+            if (cf & (OCF_FLEEING | OCF_SURRENDERED)) {
+                danger = cf & OCF_FLEEING ? 2 : 3;
+                focus = obj_field_handle_get(obj, OBJ_F_CRITTER_FLEEING_FROM);
+            } else if (obj_field_int32_get(obj, OBJ_F_NPC_FLAGS) & ONF_FIGHTING) {
+                danger = 1;
+                focus = obj_field_handle_get(obj, OBJ_F_NPC_COMBAT_FOCUS);
+            }
+        }
+        AnimID id;
+        AnimRunInfo* run;
+        bool animated = sub_423300(obj, &id) && anim_id_to_run_info(&id, &run);
+        int goal = animated && run->current_goal >= 0 ? run->goals[run->current_goal].type : -1;
+        int shield = sub_459170(obj, OSF_SHIELDED, &shield_index) ? magictech_run_info[shield_index].spell : -1;
+        printf("CE_ACTOR obj=%llu proto=%d dist=%lld hp=%d fatigue=%d active=%d dead=%d unconscious=%d mode=%d danger=%d focus=%llu slot=%d goal=%d of=%x cf=%x cf2=%x nf=%x sf=%x shield=%d\n",
+            (unsigned long long)obj, obj_get_id(obj_field_handle_get(obj, OBJ_F_PROTOTYPE_HANDLE)).d.a,
+            (long long)object_dist(pc, obj), object_hp_current(obj), critter_fatigue_current(obj),
+            critter_is_active(obj), critter_is_dead(obj), critter_is_unconscious(obj),
+            combat_critter_is_combat_mode_active(obj), danger, (unsigned long long)focus,
+            animated ? id.slot_num : -1, goal, obj_field_int32_get(obj, OBJ_F_FLAGS),
+            obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS), obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS2),
+            obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_NPC ? obj_field_int32_get(obj, OBJ_F_NPC_FLAGS) : 0,
+            obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS), shield);
+    }
+    object_list_destroy(&actors);
+    for (int i = 0; i < 512; i++) {
+        const MagicTechRunInfo* run = &magictech_run_info[i];
+        if (run->flags & MAGICTECH_RUN_ACTIVE)
+            printf("CE_SPELL index=%d id=%d definition=%d action=%d flags=%x parent=%llu target=%llu\n",
+                i, run->id, run->spell, run->action, run->flags,
+                (unsigned long long)run->parent_obj.obj, (unsigned long long)run->target_obj.obj);
+    }
+    puts("PASS: public fixture combat state inspected without running AI or saving");
+    return 0;
+}
+
 static int inspect_ce_fixture(const char* input)
 {
     REQUIRE(gamelib_load(input));
@@ -595,7 +643,7 @@ int main(int argc, char** argv)
     if (!marked || (strcmp(argv[2], "--create") && strcmp(argv[2], "--prototypes") && strcmp(argv[2], "--actors") &&
         (strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)))) return 2;
     if (argc == 4 && strcmp(argv[3], "--roundtrip") && strcmp(argv[3], "--arachnid")
-        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area") && strcmp(argv[3], "--ce-portrait") && strcmp(argv[3], "--ce-shield")) return 2;
+        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area") && strcmp(argv[3], "--ce-portrait") && strcmp(argv[3], "--ce-shield") && strcmp(argv[3], "--ce-combat-state")) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
@@ -628,6 +676,7 @@ int main(int argc, char** argv)
     if (!strcmp(argv[2], "--actors")) result = inspect_actors();
     else if (!strcmp(argv[2], "--prototypes")) result = inspect_prototypes();
     else if (!strcmp(argv[2], "--create")) result = create_fixture();
+    else if (argc == 4 && !strcmp(argv[3], "--ce-combat-state")) result = inspect_ce_combat(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-shield")) result = check_ce_shield(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-portrait")) result = check_ce_portrait_animation(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-inspect")) result = inspect_ce_fixture(argv[2]);
