@@ -960,7 +960,7 @@ diff --git a/src/game/ai.c b/src/game/ai.c
  }
  
  // 0x4A9AD0
-@@ -1469,6 +1484,12 @@
+@@ -1469,17 +1484,25 @@
          return;
      }
  
@@ -972,8 +972,23 @@ diff --git a/src/game/ai.c b/src/game/ai.c
 +    }
      wait = obj_field_int32_get(obj, OBJ_F_NPC_WAIT);
      leader_obj = critter_leader_get(obj);
-     if (stat_is_extraordinary(leader_obj, STAT_CHARISMA)
-@@ -1507,6 +1528,11 @@
+-    if (stat_is_extraordinary(leader_obj, STAT_CHARISMA)
++    if (!stat_is_extraordinary(leader_obj, STAT_CHARISMA)
+         && (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0) {
+         if (basic_skill_training_get(leader_obj, BASIC_SKILL_PERSUATION) != TRAINING_NONE) {
+             wait++;
+         }
+ 
+-        if (wait < 6) {
++        if (wait >= 0 && wait < 6) {
+             datetime = stru_5B5088[wait];
++            memset(&timeevent, 0, sizeof(timeevent));
+             timeevent.type = TIMEEVENT_TYPE_NPC_WAIT_HERE;
++            timeevent.params[0].object_value = obj;
+             timeevent_add_delay(&timeevent, &datetime);
+         }
+     }
+@@ -1507,6 +1530,11 @@
      }
  
      if ((obj_field_int32_get(obj, OBJ_F_NPC_FLAGS) & ONF_AI_WAIT_HERE) == 0) {
@@ -985,7 +1000,7 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          return;
      }
  
-@@ -2415,6 +2441,7 @@
+@@ -2415,6 +2443,7 @@
              return;
          }
  
@@ -993,7 +1008,7 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          anim_goal_follow_obj(ai->obj, ai->leader_obj);
  
          if (!sub_423300(ai->obj, NULL)) {
-@@ -3186,7 +3213,7 @@
+@@ -3186,7 +3215,7 @@
          return AI_FOLLOW_LOW_LEVEL;
      }
  

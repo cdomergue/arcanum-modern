@@ -29,6 +29,7 @@ jobs:
           python3 tests/test_world_route.py
           python3 tests/test_crash_report.py
           python3 tests/test_line_clipping.py
+          python3 tests/test_ce_waiting.py
           python3 tests/test_ce_reaction.py
           python3 tests/test_ce_spell_cost.py
           python3 tests/test_ce_running.py
