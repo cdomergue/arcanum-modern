@@ -52,6 +52,7 @@ jobs:
           python3 tests/test_module_repositories.py
           python3 tests/test_ui_localization.py
           python3 tests/test_autosave.py
+          python3 tests/test_save_diagnostics.py
           python3 tests/test_save_rename.py
           python3 tests/test_auto_level_schemes.py
           python3 tests/test_sheet_navigation.py

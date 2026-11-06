@@ -36,6 +36,7 @@
 !/source/src/game/modern_companion_ai.inc
 !/source/src/game/modern_autosave.c
 !/source/src/game/modern_autosave.h
+!/source/src/game/modern_save_log.inc
 !/source/src/game/modern_uap.c
 !/source/src/game/modern_uap.h
 !/source/src/game/modern_compat.c

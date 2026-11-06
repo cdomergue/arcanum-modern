@@ -148,6 +148,7 @@ static bool autosave_write(void)
         if (strchr("\\/:*?\"<>|", *ch) != NULL || (unsigned char)*ch < 32) *ch = ' ';
     }
 
+    gamelib_save_log("autosave_begin", name);
     autosave_running = true;
     autosave_remove_stage();
     if (!gamelib_save(autosave_stage, description)) goto done;
@@ -173,6 +174,7 @@ done:
         mainmenu_ui_feedback_saving_failed();
     }
     autosave_remove_stage();
+    gamelib_save_log(success ? "autosave_success" : "autosave_failure", name);
     autosave_running = false;
     return success;
 }
@@ -185,23 +187,30 @@ void modern_autosave_reset(void)
 void modern_autosave_after_combat(void)
 {
     if (!settings_get_value(&settings, MODERN_AUTOSAVE_KEY) || modern_tutorial_active() || gamelib_in_reset() || gamelib_in_load() || gamelib_in_save() || teleport_is_teleporting()) return;
+    gamelib_save_log("autosave_request", "after_combat_deferred");
     autosave_pending = true;
     tig_timer_now(&autosave_requested_at);
 }
 
 void modern_autosave_before_combat(void)
 {
+    gamelib_save_log("autosave_request", "before_combat");
     if (autosave_safe()) {
         autosave_pending = false;
         autosave_write();
+    } else {
+        gamelib_save_log("autosave_skipped", "unsafe_state");
     }
 }
 
 void modern_autosave_before_map_change(void)
 {
+    gamelib_save_log("autosave_request", "before_map_change");
     if (autosave_safe()) {
         autosave_pending = false;
         autosave_write();
+    } else {
+        gamelib_save_log("autosave_skipped", "unsafe_state");
     }
 }
 

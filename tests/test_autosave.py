@@ -66,6 +66,7 @@ static bool critter_is_unconscious(int64_t obj){(void)obj;return unconscious;}
 static bool combat_critter_is_combat_mode_active(int64_t obj){(void)obj;return armed;}
 static void tig_timer_now(unsigned* time){*time=now;}
 static unsigned tig_timer_elapsed(unsigned time){return now-time;}
+static void gamelib_save_log(const char* event,const char* detail){(void)event;(void)detail;}
 static void tig_debug_printf(const char* fmt,...){(void)fmt;}
 '''
 tests = r'''

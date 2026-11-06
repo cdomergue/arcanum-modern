@@ -18,6 +18,13 @@ Changes to existing upstream engine files are represented by `patches/engine.pat
 
 ## Development and Verification
 
+For each newly reported bug whose existing diagnostics do not explain the failure,
+add focused persistent logging as part of the investigation or fix. Record useful
+context, timing and outcomes; bound log growth and exclude personal save contents.
+Test the logging and do not present an unconfirmed cause as established.
+For save failures and crash reports, read `docs/save-diagnostics.md` first. It
+documents log locations, fields, rotation, limitations and isolated verification.
+
 Use `./build.sh` to compile and install the executable atomically. After editing an
 existing upstream file, run `python3 tools/update-engine-patch.py` before building.
 `ARCANUM_ENGINE_SOURCE` points to the upstream Git checkout used by that script.
