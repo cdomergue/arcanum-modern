@@ -46,7 +46,7 @@ The quantity transaction still needs a full native inventory gameplay reproducti
 | --- | --- |
 | [#167](https://github.com/alexbatalov/arcanum-ce/issues/167), IA dialogue conditions | `area_from_loc` rejects both an absent townmap at the actor and an absent townmap at the area origin. Moving only the first test does not solve both. `get_nearest_area` is not bounded by the area's radius; accepting its result everywhere could enable location-specific dialogue in the wilderness. Native checks on isolated FR and EN installations with UAP 2.0.2 and the active hotfix resolve the installed origin (20701, 55992) to townmap 19 and `area_of_object == 19`. This differs from the reported unpatched origin (20693, 56027). The current English installation has matching base/module archive hashes and matching active UAP resources; loose prototype differences do not establish full installation equivalence. The specific origin failure is not reproduced with these installed area resources. This does not validate every IA dialogue condition or unpatched game data. |
 | [#66](https://github.com/alexbatalov/arcanum-ce/issues/66), concave walls | Reported in the original engine. Requires the supplied Tarant scene and camera position to distinguish visibility geometry from art assets. No speculative renderer changes made. |
-| [#128](https://github.com/alexbatalov/arcanum-ce/issues/128), protective shield | The `OSF_SHIELDED` branch of `magictech_anim_play_hit_fx` adds a visual effect; it does not itself apply retaliatory damage. A visible impact is not proof of HP loss. Record active spell definition IDs, attacker/target and actual HP changes; distinguish protective, fire and electrical shields. No damage change without reproduction. |
+| [#128](https://github.com/alexbatalov/arcanum-ce/issues/128), protective shield | Native isolated FR/EN tests apply the real spell and resolve 12 forced melee hits: no shield loses 120 target HP, protection loses 60, and neither damages the attacker. Body of Fire is a positive control: 60 attacker HP lost. This excludes critical misses and does not reproduce the reported retaliation. The `OSF_SHIELDED` hit branch only adds an effect; critical misses can separately redirect damage to the attacker. Neither observation establishes the cause of the reported real combat. Persistent per-hit context remains needed; no speculative damage change. |
 | #128, healthy enemies stop fighting | Health and fatigue alone do not establish AI eligibility. Need the actor, active target, combat membership, animation goal, status flags and time of disengagement. A delayed dead-actor cleanup log is not evidence that a living actor stopped. No speculative global AI changes made. |
 | [PR #72](https://github.com/alexbatalov/arcanum-ce/pull/72) | Mostly renaming. Proposed initializations in `sub_43D9F0` were reviewed: current loops assign the used sector indexes, widths and lock flags before use. No proven uninitialized read established, so no cosmetic bulk import. |
 
@@ -90,3 +90,24 @@ directory and can create world-update backups: never run it on a personal instal
 `CE_TOWNMAP` metadata. Redirect stdout/stderr to a local investigation log.
 Area coordinates are tiles; townmap width/height describe map-image metadata.
 A passing area probe is not proof that all island dialogues were played.
+
+## Native shield diagnostic
+
+`check-campaign <marked-disposable-game> Slot0106 --ce-shield` loads the
+public elemental fixture separately for each of three scenarios: no spell,
+Shield of Protection (definition 30), and Body of Fire (23). It creates two
+unequipped wolves in memory, casts through the native invocation API, executes
+the queued spell's BEGIN action, verifies its active flag, and resolves 12
+forced melee hits with 10 normal damage each. The helper does not save.
+
+`CE_SHIELD` records the requested definition, resolved shield definition,
+actual attacker/target HP loss and target spell flags. Spell application and
+damage resolution use the installed game resources. Casting animation timing,
+critical failures, equipment, autonomous AI and other shield types are outside
+this probe. `UNRESISTABLE` must not be used to simplify the fixture: the native
+lifecycle also ends maintained spells with that flag. The test retains normal
+resistance handling and fails if the protective effect was not applied.
+
+Windows native FR and EN runs both passed: attacker loss `0/0/60`, target loss
+`120/60/120` for the three scenarios. This is evidence about these controlled
+conditions, not a claim that every #128 combat symptom is resolved.

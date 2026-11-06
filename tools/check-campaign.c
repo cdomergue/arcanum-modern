@@ -26,6 +26,8 @@
 #include "game/area.h"
 #include "game/location.h"
 #include "game/anim.h"
+#include "game/magictech.h"
+#include "game/critter.h"
 #include "ui/inven_ui.h"
 #include "ui/follower_ui.h"
 #include "game/townmap.h"
@@ -415,6 +417,76 @@ static int hardin_route_roundtrip(const char* input)
     return 0;
 }
 
+static int check_ce_shield(const char* input)
+{
+    const int spells[] = {-1, SPELL_SHIELD_OF_PROTECTION, SPELL_BODY_OF_FIRE};
+    const unsigned int expected[] = {0, OSF_SHIELDED, OSF_BODY_OF_FIRE};
+    for (int scenario = 0; scenario < 3; scenario++) {
+        REQUIRE(gamelib_load(input));
+        int64_t pc = player_get_local_pc_obj();
+        int64_t loc = obj_field_int64_get(pc, OBJ_F_LOCATION);
+        int64_t attacker, target;
+        REQUIRE(object_create(sub_4685A0(BP_WOLF), loc, &attacker));
+        REQUIRE(object_create(sub_4685A0(BP_WOLF), loc, &target));
+        object_hp_pts_set(attacker, 1000);
+        object_hp_pts_set(target, 1000);
+        REQUIRE(obj_field_int32_get(target, OBJ_F_SPELL_FLAGS) == 0);
+        REQUIRE(combat_critter_weapon(attacker) == OBJ_HANDLE_NULL);
+        if (scenario) {
+            stat_base_set(pc, STAT_INTELLIGENCE, 20);
+            stat_base_set(pc, STAT_WILLPOWER, 20);
+            MagicTechInvocation invocation;
+            magictech_invocation_init(&invocation, pc, spells[scenario]);
+            sub_4440E0(target, &invocation.target_obj);
+            invocation.target_loc = loc;
+            // UNRESISTABLE also ends maintained spells in the native lifecycle.
+            // Keep the normal resistance/lifecycle path on these fresh wolves.
+            invocation.flags |= MAGICTECH_INVOCATION_FREE;
+            magictech_invocation_run(&invocation);
+            // Execute the queued spell's native BEGIN action without a UI clock.
+            // This probe checks effects/hits, not casting animation scheduling.
+            int spell_id = -1;
+            for (int index = 0; index < 512; index++) {
+                if ((magictech_run_info[index].flags & MAGICTECH_RUN_ACTIVE)
+                    && magictech_run_info[index].spell == spells[scenario]
+                    && magictech_run_info[index].target_obj.obj == target) {
+                    spell_id = magictech_run_info[index].id;
+                    break;
+                }
+            }
+            printf("CE_SHIELD queued_spell=%d id=%d\n", spells[scenario], spell_id);
+            REQUIRE(spell_id >= 0);
+            sub_456F70(spell_id);
+            REQUIRE((obj_field_int32_get(target, OBJ_F_SPELL_FLAGS) & expected[scenario]) != 0);
+        }
+        int shield_index = -1;
+        int shield_spell = sub_459170(target, OSF_SHIELDED, &shield_index)
+            ? magictech_run_info[shield_index].spell : -1;
+        int before_attacker = object_hp_current(attacker);
+        int before_target = object_hp_current(target);
+        for (int hit = 0; hit < 12; hit++) {
+            CombatContext combat;
+            sub_4B2210(attacker, target, &combat);
+            // Production forced-hit path: isolate retaliation from critical misses.
+            combat.flags |= 0x100;
+            combat.dam[DAMAGE_TYPE_NORMAL] = 10;
+            sub_4B3170(&combat);
+            REQUIRE(combat.target_obj == target);
+            REQUIRE((combat.flags & CF_HIT) != 0);
+        }
+        int lost_attacker = before_attacker - object_hp_current(attacker);
+        int lost_target = before_target - object_hp_current(target);
+        printf("CE_SHIELD spell=%d resolved_shield=%d hits=12 attacker_hp_loss=%d target_hp_loss=%d target_flags=%x\n",
+            spells[scenario], shield_spell, lost_attacker, lost_target,
+            (unsigned int)obj_field_int32_get(target, OBJ_F_SPELL_FLAGS));
+        REQUIRE(lost_target > 0);
+        if (scenario == 1) REQUIRE(shield_spell == SPELL_SHIELD_OF_PROTECTION);
+        REQUIRE(scenario == 2 ? lost_attacker > 0 : lost_attacker == 0);
+    }
+    puts("PASS: protection shield has no hit retaliation; Body of Fire positive control does");
+    return 0;
+}
+
 static int check_ce_portrait_animation(const char* input)
 {
     REQUIRE(gamelib_load(input));
@@ -504,7 +576,7 @@ int main(int argc, char** argv)
     if (!marked || (strcmp(argv[2], "--create") && strcmp(argv[2], "--prototypes") && strcmp(argv[2], "--actors") &&
         (strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)))) return 2;
     if (argc == 4 && strcmp(argv[3], "--roundtrip") && strcmp(argv[3], "--arachnid")
-        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area") && strcmp(argv[3], "--ce-portrait")) return 2;
+        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area") && strcmp(argv[3], "--ce-portrait") && strcmp(argv[3], "--ce-shield")) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
@@ -537,6 +609,7 @@ int main(int argc, char** argv)
     if (!strcmp(argv[2], "--actors")) result = inspect_actors();
     else if (!strcmp(argv[2], "--prototypes")) result = inspect_prototypes();
     else if (!strcmp(argv[2], "--create")) result = create_fixture();
+    else if (argc == 4 && !strcmp(argv[3], "--ce-shield")) result = check_ce_shield(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-portrait")) result = check_ce_portrait_animation(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-inspect")) result = inspect_ce_fixture(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-isle-area")) result = check_ce_isle_area(argv[2]);
