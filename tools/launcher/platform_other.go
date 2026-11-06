@@ -151,7 +151,7 @@ func main() {
 		return
 	}
 	defer release()
-	if !preview && (!exists(filepath.Join(root, "arcanum1.dat")) || (!exists(filepath.Join(root, gameRelative())) && !exists(filepath.Join(root, transactionDir)))) {
+	if !preview && (!hasGameArchive(root) || (!exists(filepath.Join(root, gameRelative())) && !exists(filepath.Join(root, transactionDir)))) {
 		fmt.Fprintln(os.Stderr, "Extract the complete Renaissance package beside arcanum1.dat.")
 		return
 	}

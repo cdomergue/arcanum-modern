@@ -72,6 +72,36 @@ class LinuxPackageTests(unittest.TestCase):
             self.assertEqual(Path(lines[0]).resolve(), game.resolve())
             self.assertEqual(lines[1:], ['1', '-window', '-geometry=1280x720', 'argument with spaces'])
 
+    def test_launcher_accepts_uap_archive_casing(self):
+        with tempfile.TemporaryDirectory(prefix='arcanum UAP ') as temp:
+            game = Path(temp)
+            launcher = game/'Play Arcanum Renaissance.sh'
+            launcher.write_bytes((ROOT/'tools/linux/Play Arcanum Renaissance.sh').read_bytes())
+            (game/'modern-ui').mkdir()
+            (game/'modern-ui/Book.ttf').write_bytes(b'fixture')
+            helper = game/'renaissance-launcher'
+            helper.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+            helper.chmod(0o755)
+            for name in ('arcanum1.dat', 'Arcanum1.dat', 'ARCANUM1.DAT', 'aRcAnUm1.DaT'):
+                with self.subTest(name=name):
+                    archive = game/name
+                    archive.write_bytes(b'fixture')
+                    result = subprocess.run(['sh', str(launcher)], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout.splitlines(), ['-geometry=1280x720'])
+                    archive.unlink()
+            archive = game/'Arcanum1.dat'
+            archive.mkdir()
+            result = subprocess.run(['sh', str(launcher)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, 'accepted a directory as an archive')
+            archive.rmdir()
+            archive.symlink_to(game/'original.dat')
+            result = subprocess.run(['sh', str(launcher)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, 'accepted a dangling symlink')
+            (game/'original.dat').write_bytes(b'fixture')
+            result = subprocess.run(['sh', str(launcher)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_bundled_decoder_search_paths(self):
         self.p.validate_dependencies('0x1 (NEEDED) Shared library: [libavcodec.so.62]\n'
                                      '0x1 (RUNPATH) Library runpath: [$ORIGIN/ArcanumModern/lib]')

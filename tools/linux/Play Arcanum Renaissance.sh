@@ -1,7 +1,15 @@
 #!/bin/sh
 set -eu
 cd -- "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-if [ ! -f arcanum1.dat ] || [ ! -f modern-ui/Book.ttf ]; then
+# UAP capitalizes archive names; Linux filesystems distinguish their case.
+arcanum_data_found=false
+for arcanum_data in [aA][rR][cC][aA][nN][uU][mM]1.[dD][aA][tT]; do
+    if [ -f "$arcanum_data" ]; then
+        arcanum_data_found=true
+        break
+    fi
+done
+if [ "$arcanum_data_found" != true ] || [ ! -f modern-ui/Book.ttf ]; then
     printf '%s\n' 'Extract the complete ZIP into your Arcanum game folder, beside arcanum1.dat.' >&2
     exit 1
 fi

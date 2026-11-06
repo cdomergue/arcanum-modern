@@ -183,7 +183,7 @@ func main() {
 	}
 	defer release()
 	if !preview {
-		if !exists(filepath.Join(root, "arcanum1.dat")) || (!exists(filepath.Join(root, "arcanum-modern.exe")) && !exists(filepath.Join(root, transactionDir))) {
+		if !hasGameArchive(root) || (!exists(filepath.Join(root, "arcanum-modern.exe")) && !exists(filepath.Join(root, transactionDir))) {
 			message("Place the complete Renaissance package in your Arcanum game folder.\nPlacez Renaissance dans le dossier de votre jeu Arcanum.")
 			return
 		}
