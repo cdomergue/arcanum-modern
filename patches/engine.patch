@@ -1404,7 +1404,43 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          anim_goal_follow_obj(ai->obj, ai->leader_obj);
  
          if (!sub_423300(ai->obj, NULL)) {
-@@ -3186,7 +3215,7 @@
+@@ -3065,7 +3094,7 @@
+ }
+ 
+ // 0x4AD800
+-int ai_can_speak(int64_t npc_obj, int64_t pc_obj, bool a3)
++static int ai_can_speak_impl(int64_t npc_obj, int64_t pc_obj, bool a3, bool preview)
+ {
+     ObjectCritterFlags critter_flags;
+     ObjectSpellFlags spell_flags;
+@@ -3112,7 +3141,8 @@
+                 return AI_SPEAK_COMBAT;
+             }
+ 
+-            if (!sub_424070(npc_obj, 2, false, false)) {
++            if (!(preview ? anim_can_interrupt_object(npc_obj, PRIORITY_2)
++                          : sub_424070(npc_obj, PRIORITY_2, false, false))) {
+                 return AI_SPEAK_ANIM;
+             }
+         }
+@@ -3125,6 +3155,16 @@
+     }
+ 
+     return AI_SPEAK_OK;
++}
++
++int ai_can_speak(int64_t npc_obj, int64_t pc_obj, bool a3)
++{
++    return ai_can_speak_impl(npc_obj, pc_obj, a3, false);
++}
++
++int ai_can_speak_preview(int64_t npc_obj, int64_t pc_obj)
++{
++    return ai_can_speak_impl(npc_obj, pc_obj, false, true);
+ }
+ 
+ // 0x4AD950
+@@ -3186,7 +3226,7 @@
          return AI_FOLLOW_LOW_LEVEL;
      }
  
@@ -1413,6 +1449,17 @@ diff --git a/src/game/ai.c b/src/game/ai.c
          pc_max_followers = stat_level_get(pc_obj, STAT_MAX_FOLLOWERS);
          if (pc_max_followers == 0) {
              return AI_FOLLOW_NOT_ALLOWED;
+diff --git a/src/game/ai.h b/src/game/ai.h
+--- a/src/game/ai.h
++++ b/src/game/ai.h
+@@ -145,6 +145,7 @@
+ bool ai_timeevent_process(TimeEvent* timeevent);
+ void sub_4AD6E0(int64_t obj);
+ void ai_timeevent_clear(int64_t obj);
++int ai_can_speak_preview(int64_t npc_obj, int64_t pc_obj);
+ int ai_can_speak(int64_t npc_obj, int64_t pc_obj, bool a3);
+ int ai_check_follow(int64_t npc_obj, int64_t pc_obj, bool ignore_charisma_limits);
+ void sub_4AD790(int64_t obj, int a2);
 diff --git a/src/game/anim.c b/src/game/anim.c
 --- a/src/game/anim.c
 +++ b/src/game/anim.c
@@ -1439,7 +1486,24 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      combat_consume_action_points(run_info->anim_obj, combat_required_action_points_get());
                  }
  
-@@ -4848,7 +4850,7 @@
+@@ -3985,6 +3987,16 @@
+         slot = anim_find_next(slot, obj);
+     }
+ 
++    return true;
++}
++
++bool anim_can_interrupt_object(int64_t obj, int priority)
++{
++    int previous = -1;
++    for (int slot = anim_find_first(obj); slot != -1 && slot != previous; slot = anim_find_next(slot, obj)) {
++        previous = slot;
++        if (!anim_can_interrupt(&anim_run_info[slot].id, priority)) return false;
++    }
+     return true;
+ }
+ 
+@@ -4848,7 +4860,7 @@
      if (run_info->path.max == 0 || run_info->path.max > range) {
          path_create_info.flags = PATH_FLAG_0x0001;
          if (!sub_425BF0(&path_create_info, 1)) {
@@ -1448,7 +1512,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4856,7 +4858,7 @@
+@@ -4856,7 +4868,7 @@
  
          run_info->path.max = path_make(&path_create_info);
          if (run_info->path.max == 0 || run_info->path.max > range) {
@@ -1457,7 +1521,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4973,7 +4975,7 @@
+@@ -4973,7 +4985,7 @@
      if (run_info->path.max == 0 || run_info->path.max > range) {
          path_create_info.flags = PATH_FLAG_0x0001;
          if (!sub_425BF0(&path_create_info, 1)) {
@@ -1466,7 +1530,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -4981,7 +4983,7 @@
+@@ -4981,7 +4993,7 @@
  
          run_info->path.max = path_make(&path_create_info);
          if (run_info->path.max == 0 || run_info->path.max > range) {
@@ -1475,7 +1539,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -5037,6 +5039,7 @@
+@@ -5037,6 +5049,7 @@
      }
  
      if ((run_info->flags & 0x400) != 0 || !player_is_pc_obj(obj)) {
@@ -1483,7 +1547,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          return false;
      }
  
-@@ -5044,6 +5047,7 @@
+@@ -5044,6 +5057,7 @@
  
      rc = sub_426500(obj, run_info->params[1].loc, &(run_info->path), flags | PATH_FLAG_0x0040 | PATH_FLAG_0x0020 | PATH_FLAG_0x0010 | PATH_FLAG_0x0008);
  
@@ -1491,7 +1555,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
      return rc;
  }
  
-@@ -5168,7 +5172,7 @@
+@@ -5168,7 +5182,7 @@
  }
  
  // 0x426560
@@ -1500,7 +1564,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  {
      int v1;
      int8_t* rotations;
-@@ -5211,7 +5215,8 @@
+@@ -5211,7 +5225,8 @@
      offset_x = obj_field_int32_get(obj, OBJ_F_OFFSET_X);
      offset_y = obj_field_int32_get(obj, OBJ_F_OFFSET_Y);
  
@@ -1510,7 +1574,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          v1--;
          rotations++;
          v2 = false;
-@@ -5221,6 +5226,7 @@
+@@ -5221,6 +5236,7 @@
          }
  
          if (!tile_is_blocking(adjacent_loc, false)
@@ -1518,7 +1582,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
              && !object_traversal_is_blocked(obj, from, rot, path_translate_flags(flags), NULL)) {
              from = adjacent_loc;
          } else {
-@@ -5244,7 +5250,7 @@
+@@ -5244,7 +5260,7 @@
      }
  
      if (path->max == 0) {
@@ -1527,7 +1591,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
              combat_turn_based_end_critter_turn(obj);
          }
          return false;
-@@ -5261,6 +5267,27 @@
+@@ -5261,6 +5277,27 @@
  
      return true;
  }
@@ -1555,7 +1619,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
  
  // 0x426840
  bool sub_426840(AnimRunInfo* run_info)
-@@ -5576,7 +5603,6 @@
+@@ -5576,7 +5613,6 @@
      AnimRunInfo* run_info;
  
      if (combat_turn_based_is_active()
@@ -1563,7 +1627,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & OCF_STUNNED) != 0
          && anim_is_current_goal_type(obj, AG_ANIMATE_STUNNED, &anim_id)
          && anim_id_to_run_info(&anim_id, &run_info)) {
-@@ -5630,6 +5656,11 @@
+@@ -5630,6 +5666,11 @@
  
      if (!location_in_dir(loc, rot, &adjacent_loc)) {
          return false;
@@ -1575,7 +1639,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
      }
  
      if (run_info->path.curr > run_info->path.max - 2) {
-@@ -5926,7 +5957,7 @@
+@@ -5926,7 +5967,7 @@
          }
  
          if (run_info->path.max == 0) {
@@ -1584,7 +1648,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  combat_turn_based_end_critter_turn(obj);
              }
              return false;
-@@ -10416,6 +10447,7 @@
+@@ -10416,6 +10457,7 @@
      sub_42EDC0(run_info, obj, &art_id, (run_info->flags & 0x40) != 0, &v2);
  
      if (!combat_check_action_points(obj, v2)) {
@@ -1592,7 +1656,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
          return false;
      }
-@@ -10459,6 +10491,10 @@
+@@ -10459,6 +10501,10 @@
  
      loc = obj_field_int64_get(obj, OBJ_F_LOCATION);
      if (!location_in_dir(loc, run_info->path.rotations[0], &next_loc)) {
@@ -1603,7 +1667,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          return false;
      }
  
-@@ -11333,7 +11369,7 @@
+@@ -11333,7 +11379,7 @@
  
      always_run = settings_get_value(&settings, ALWAYS_RUN_KEY);
  
@@ -1612,7 +1676,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          if (always_run) {
              if (tig_kb_get_modifier(SDL_KMOD_CTRL)) {
                  return false;
-@@ -11480,8 +11516,11 @@
+@@ -11480,8 +11526,11 @@
              if (tig_art_anim_data(art_id, &art_anim_data) == TIG_OK) {
                  frame = tig_art_id_frame_get(art_id);
                  if (frame == 3 || frame == 8) {
@@ -1626,7 +1690,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  }
              }
          }
-@@ -11568,6 +11607,7 @@
+@@ -11568,6 +11617,7 @@
                  }
  
                  if (!combat_check_action_points(obj, v3)) {
@@ -1634,7 +1698,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                      anim_interrupt(&(run_info->id), PRIORITY_HIGHEST);
                      return false;
                  }
-@@ -11591,7 +11631,8 @@
+@@ -11591,7 +11641,8 @@
  
              if ((run_info->flags & 0x80000) != 0
                  && player_is_local_pc_obj(obj)
@@ -1644,7 +1708,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  int64_t x;
                  int64_t y;
  
-@@ -11690,7 +11731,7 @@
+@@ -11690,7 +11741,7 @@
  
      if (run_info->current_goal > 0 && (run_info->flags & 0x40) != 0) {
          if (critter_fatigue_current(obj) > 0) {
@@ -1653,7 +1717,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                  v1 = 5;
  
                  run_info->cur_stack_data->params[AGDATA_SCRATCH_VAL4].data++;
-@@ -11714,7 +11755,7 @@
+@@ -11714,7 +11765,7 @@
  
                      fatigue_dam = critter_fatigue_damage_get(obj);
  
@@ -1662,7 +1726,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
                          return false;
                      }
                  }
-@@ -13334,13 +13375,15 @@
+@@ -13334,13 +13385,15 @@
          return false;
      }
  
@@ -1680,7 +1744,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_MOVE_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
          if (!sub_424070(obj, 3, false, false)) {
-@@ -13441,7 +13484,7 @@
+@@ -13441,7 +13494,7 @@
          return false;
      }
  
@@ -1689,7 +1753,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          && get_always_run(obj)) {
          return sub_434030(obj, loc);
      }
-@@ -13507,7 +13550,8 @@
+@@ -13507,7 +13560,8 @@
          return false;
      }
  
@@ -1699,7 +1763,7 @@ diff --git a/src/game/anim.c b/src/game/anim.c
          sub_44D500(&goal_data, obj, AG_RUN_TO_TILE);
          goal_data.params[AGDATA_TARGET_TILE].loc = loc;
  
-@@ -13901,6 +13945,7 @@
+@@ -13901,6 +13955,7 @@
          return true;
      }
  
@@ -1710,16 +1774,62 @@ diff --git a/src/game/anim.c b/src/game/anim.c
 diff --git a/src/game/anim.h b/src/game/anim.h
 --- a/src/game/anim.h
 +++ b/src/game/anim.h
-@@ -53,6 +53,9 @@
- } BloodSplotchType;
+@@ -54,6 +54,9 @@
  
  extern AnimGoalNode* anim_goal_nodes[];
-+
+ 
 +bool anim_preview_route_segment(int64_t obj, int64_t from, int64_t to);
 +bool anim_preview_path(int64_t obj, int64_t to, bool adjacent, AnimPath* path);
- 
++
  bool anim_init(GameInitInfo* init_info);
  void anim_exit(void);
+ void anim_reset(void);
+@@ -77,6 +80,7 @@
+ void anim_catch_up_disable(void);
+ void sub_423FE0(void (*func)(void));
+ bool sub_423FF0(int64_t obj);
++bool anim_can_interrupt_object(int64_t obj, int priority);
+ bool sub_424070(int64_t obj, int priority_level, bool a3, bool a4);
+ bool anim_goal_interrupt_all_goals(void);
+ bool anim_goal_interrupt_all_goals_of_priority(int priority_level);
+diff --git a/src/game/anim_private.c b/src/game/anim_private.c
+--- a/src/game/anim_private.c
++++ b/src/game/anim_private.c
+@@ -992,6 +992,23 @@
+     return timeevent->params[0].integer_value == dword_5B052C;
+ }
+ 
++/* Read-only counterpart of anim_interrupt's eligibility checks. Menus must
++ * not destroy an idle animation merely to decide whether a command is enabled. */
++bool anim_can_interrupt(AnimID* anim_id, int priority)
++{
++    AnimRunInfo* run_info;
++    if (!anim_id_to_run_info(anim_id, &run_info) || !(run_info->flags & 0x01)) return false;
++    if (gamelib_in_reset() || run_info->current_goal == -1) return true;
++    AnimGoalNode* goal = anim_goal_nodes[run_info->goals[run_info->current_goal].type];
++    if (priority < PRIORITY_HIGHEST) {
++        if (goal->field_8) return true;
++        if (goal->priority_level == PRIORITY_5) return false;
++    }
++    if (goal->priority_level == PRIORITY_3) return priority >= PRIORITY_3;
++    if (goal->priority_level == PRIORITY_2) return priority >= PRIORITY_2;
++    return priority > goal->priority_level;
++}
++
+ // 0x44E2C0
+ bool anim_interrupt(AnimID* anim_id, int priority)
+ {
+diff --git a/src/game/anim_private.h b/src/game/anim_private.h
+--- a/src/game/anim_private.h
++++ b/src/game/anim_private.h
+@@ -276,6 +276,7 @@
+ void sub_44E050(int64_t a1, int64_t a2);
+ void sub_44E0E0(int64_t a1, int64_t a2);
+ bool anim_force_interrupt(AnimID* anim_id);
++bool anim_can_interrupt(AnimID* anim_id, int priority);
+ bool anim_interrupt(AnimID* anim_id, int priority);
+ bool anim_find_first_of_type(int64_t obj, int type, AnimID* anim_id);
+ bool anim_find_next_of_type(int64_t obj, int type, AnimID* anim_id);
 diff --git a/src/game/background.c b/src/game/background.c
 --- a/src/game/background.c
 +++ b/src/game/background.c
@@ -7760,8 +7870,12 @@ diff --git a/src/ui/fate_ui.c b/src/ui/fate_ui.c
 diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 --- a/src/ui/follower_ui.c
 +++ b/src/ui/follower_ui.c
-@@ -3,10 +3,15 @@
+@@ -1,12 +1,19 @@
+ #include "ui/follower_ui.h"
+ 
  #include <stdio.h>
++#include <errno.h>
++#include <time.h>
  
  #include "game/broadcast.h"
 +#include "game/ai.h"
@@ -7776,7 +7890,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  #include "game/object.h"
  #include "game/player.h"
  #include "game/portrait.h"
-@@ -18,23 +23,7 @@
+@@ -18,23 +25,7 @@
  #include "ui/inven_ui.h"
  #include "ui/tb_ui.h"
  
@@ -7801,7 +7915,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
  /**
   * The maximum number of followers visible at one time in the panel.
-@@ -153,6 +142,8 @@
+@@ -153,6 +144,8 @@
   */
  #define FOLLOWER_UI_DROP_DOWN_MENU_ART 826
  
@@ -7810,7 +7924,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  static void follower_ui_create(int index);
  static bool follower_ui_message_filter(TigMessage* msg);
  static void follower_ui_drop_down_menu_create(int index);
-@@ -549,6 +540,7 @@
+@@ -549,6 +542,7 @@
   */
  void follower_ui_reset(void)
  {
@@ -7818,7 +7932,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      int index;
  
      follower_ui_visible = true;
-@@ -618,7 +610,7 @@
+@@ -618,7 +612,7 @@
  
      follower_ui_refresh();
  
@@ -7827,7 +7941,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  }
  
  /**
-@@ -631,7 +623,7 @@
+@@ -631,7 +625,7 @@
      if (tig_file_fwrite(&follower_ui_visible, sizeof(follower_ui_visible), 1, stream) != 1) return false;
      if (tig_file_fwrite(&follower_ui_top_index, sizeof(follower_ui_top_index), 1, stream) != 1) return false;
  
@@ -7836,7 +7950,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  }
  
  /**
-@@ -643,9 +635,7 @@
+@@ -643,9 +637,7 @@
  {
      int64_t pc_obj;
      int index;
@@ -7846,7 +7960,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      TargetDescriptor td;
  
      pc_obj = player_get_local_pc_obj();
-@@ -681,40 +671,7 @@
+@@ -681,40 +673,7 @@
                  for (index = 0; index < FOLLOWER_UI_COMMAND_COUNT; index++) {
                      if (msg->data.button.button_handle == follower_ui_drop_menu_item_buttons[index]) {
                          follower_ui_drop_down_menu_destroy();
@@ -7888,7 +8002,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                          return true;
                      }
                  }
-@@ -825,6 +782,9 @@
+@@ -825,6 +784,9 @@
                      if (tig_window_get_at_position(msg->data.mouse.x, msg->data.mouse.y, &window_handle) == TIG_OK
                          && window_handle == follower_ui_windows[index]) {
                          follower_ui_drop_down_menu_create(index);
@@ -7898,7 +8012,16 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                      }
                      break;
                  }
-@@ -977,6 +937,13 @@
+@@ -851,6 +813,8 @@
+ 
+     sub_444130(&(follower_ui_followers[follower_ui_top_index + index]));
+     follower_ui_subordinate_obj = follower_ui_followers[follower_ui_top_index + index].obj;
++
++    modern_follower_log_menu(follower_ui_subordinate_obj);
+ 
+     window_data.flags = 0;
+     window_data.rect = follower_ui_drop_down_menu_rects[index];
+@@ -977,6 +941,13 @@
      intgame_mode_set(INTGAME_MODE_MAIN);
  }
  
@@ -7912,7 +8035,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  /**
   * Redraws all visible follower portrait slots.
   *
-@@ -1016,7 +983,9 @@
+@@ -1016,7 +987,9 @@
          sub_444130(&(follower_ui_followers[follower_ui_top_index + index]));
  
          follower_obj = follower_ui_followers[follower_ui_top_index + index].obj;
@@ -7923,7 +8046,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
              // Follower is no longer valid - rebuild the list and stop.
              follower_ui_refresh();
              break;
-@@ -1039,7 +1008,7 @@
+@@ -1039,7 +1012,7 @@
          }
  
          // Draw health bar.
@@ -7932,7 +8055,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          if (stat_level_get(follower_obj, STAT_POISON_LEVEL) > FOLLOWER_UI_POISON_LEVEL_THRESHOLD) {
              follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_POISON_BAR_ART, 3, 39, hp_percent, 100);
          } else {
-@@ -1052,7 +1021,7 @@
+@@ -1052,7 +1025,7 @@
          }
  
          // Draw fatigue bar.
@@ -7941,7 +8064,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          follower_ui_draw(follower_ui_windows[index], FOLLOWER_UI_FATIGUE_BAR_ART, 3, 44, fatigue_percent, 100);
      }
  
-@@ -1139,7 +1108,7 @@
+@@ -1139,7 +1112,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -7950,7 +8073,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
  
          tig_art_interface_id_create(FOLLOWER_UI_ARROW_DOWN_ART, 0, 0, 0, &art_id);
-@@ -1212,7 +1181,7 @@
+@@ -1212,7 +1185,7 @@
      if (follower_ui_visible) {
          // Show all active slots.
          for (index = 0; index < FOLLOWER_UI_SLOTS && index < follower_ui_followers_count; index++) {
@@ -7959,7 +8082,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
          }
      }
  
-@@ -1243,7 +1212,7 @@
+@@ -1243,7 +1216,7 @@
  void update_toggle_button_visibility(void)
  {
      if (follower_ui_followers_count > 0) {
@@ -7968,7 +8091,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          tig_window_hide(follower_ui_windows[FOLLOWER_UI_BUTTON_TOGGLE]);
      }
-@@ -1271,7 +1240,7 @@
+@@ -1271,7 +1244,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_UP_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_UP], art_id);
@@ -7977,7 +8100,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
  
          // Scroll-down button is active if not already at the bottom.
          if (follower_ui_top_index != follower_ui_followers_count - FOLLOWER_UI_SLOTS) {
-@@ -1280,7 +1249,7 @@
+@@ -1280,7 +1253,7 @@
              tig_art_interface_id_create(FOLLOWER_UI_SCROLL_DOWN_OFF_ART, 0, 0, 0, &art_id);
          }
          tig_button_set_art(follower_ui_buttons[FOLLOWER_UI_BUTTON_SCROLL_DOWN], art_id);
@@ -7986,8 +8109,12 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
      } else {
          // Either all portraits fit into existing slots, or the follower UI is
          // hidden.
-@@ -1313,7 +1282,7 @@
-                 enabled = inven_ui_can_open_inven(follower_ui_commander_obj, follower_ui_subordinate_obj);
+@@ -1310,10 +1283,10 @@
+             // Determine whether this command is currently available.
+             switch (cmd) {
+             case FOLLOWER_UI_COMMAND_INVENTORY:
+-                enabled = inven_ui_can_open_inven(follower_ui_commander_obj, follower_ui_subordinate_obj);
++                enabled = inven_ui_can_open_inven_preview(follower_ui_commander_obj, follower_ui_subordinate_obj);
                  break;
              case FOLLOWER_UI_COMMAND_WAIT:
 -                enabled = (obj_field_int32_get(follower_ui_subordinate_obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0;
@@ -7995,7 +8122,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
                  break;
              default:
                  enabled = true;
-@@ -1351,3 +1320,115 @@
+@@ -1351,3 +1324,158 @@
          follower_ui_refresh();
      }
  }
@@ -8084,6 +8211,49 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 +        && mes_search(follower_ui_mes_file, &entry) ? entry.str : "";
 +}
 +
++/* One record per menu opening, not per frame. No actor names or save contents. */
++void modern_follower_log_menu(int64_t obj)
++{
++    int saved_errno = errno;
++    if (!obj || !obj_handle_is_valid(obj)) return;
++    AnimID before, after;
++    AnimRunInfo* run;
++    bool active_before = sub_423300(obj, &before);
++    int goal_before = active_before && anim_id_to_run_info(&before, &run)
++        && run->current_goal >= 0 ? run->goals[run->current_goal].type : -1;
++    unsigned int aid_before = obj_field_int32_get(obj, OBJ_F_CURRENT_AID);
++    bool available = modern_follower_command_available(obj, FOLLOWER_UI_COMMAND_INVENTORY);
++    bool active_after = sub_423300(obj, &after);
++    int goal_after = active_after && anim_id_to_run_info(&after, &run)
++        && run->current_goal >= 0 ? run->goals[run->current_goal].type : -1;
++    time_t now = time(NULL);
++    struct tm* local = localtime(&now);
++    char stamp[32] = "time-unavailable";
++    if (local) strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%S%z", local);
++    FILE* log = fopen("ArcanumModern/follower-events.log", "ab+");
++    if (log) {
++        fseek(log, 0, SEEK_END);
++        if (ftell(log) >= 1024 * 1024) {
++            fclose(log);
++            remove("ArcanumModern/follower-events.previous.log");
++            if (rename("ArcanumModern/follower-events.log", "ArcanumModern/follower-events.previous.log") != 0) {
++                errno = saved_errno;
++                return;
++            }
++            log = fopen("ArcanumModern/follower-events.log", "ab");
++        }
++        if (log) {
++            fprintf(log, "%s event=menu_open actor=%llu inventory=%d active=%d/%d slot=%d/%d goal=%d/%d aid=%08x/%08x spell_flags=%x\n",
++                stamp, (unsigned long long)obj, available, active_before, active_after,
++                before.slot_num, after.slot_num, goal_before, goal_after, aid_before,
++                (unsigned int)obj_field_int32_get(obj, OBJ_F_CURRENT_AID),
++                (unsigned int)obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS));
++            fclose(log);
++        }
++    }
++    errno = saved_errno;
++}
++
 +bool modern_follower_command_available(int64_t obj, int command)
 +{
 +    int64_t pc = player_get_local_pc_obj();
@@ -8095,7 +8265,7 @@ diff --git a/src/ui/follower_ui.c b/src/ui/follower_ui.c
 +        /* Never issue AI orders or change the active actor through this menu. */
 +        return command == FOLLOWER_UI_COMMAND_INVENTORY && obj == combat_input_actor() && combat_input_ready(obj);
 +    }
-+    if (command == FOLLOWER_UI_COMMAND_INVENTORY) return inven_ui_can_open_inven(pc, obj);
++    if (command == FOLLOWER_UI_COMMAND_INVENTORY) return inven_ui_can_open_inven_preview(pc, obj);
 +    if (command == FOLLOWER_UI_COMMAND_WAIT) return (obj_field_int32_get(obj, OBJ_F_SPELL_FLAGS) & OSF_MIND_CONTROLLED) == 0 || critter_can_command_familiar(obj);
 +    return true;
 +}
@@ -8139,7 +8309,7 @@ diff --git a/src/ui/follower_ui.h b/src/ui/follower_ui.h
  
  bool follower_ui_init(GameInitInfo* init_info);
  void follower_ui_exit(void);
-@@ -18,4 +36,14 @@
+@@ -18,4 +36,15 @@
  void follower_ui_hide(void);
  void follower_ui_show(void);
  
@@ -8150,6 +8320,7 @@ diff --git a/src/ui/follower_ui.h b/src/ui/follower_ui.h
 +void modern_followers_sync(bool hidden);
 +int modern_followers_get(int64_t* objects, int capacity);
 +const char* modern_follower_text(int command);
++void modern_follower_log_menu(int64_t obj);
 +bool modern_follower_command_available(int64_t obj, int command);
 +void modern_follower_command(int64_t obj, int command);
 +
@@ -9373,16 +9544,49 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
      bool v45 = false;
      TigMessage tmp_msg = *msg;
      msg = &tmp_msg;
-@@ -2232,6 +2241,8 @@
-     int64_t follower_obj;
+@@ -2233,6 +2242,8 @@
      int64_t pc_obj;
      int mode;
-+
-+    if (combat_tactical_enabled() && combat_turn_based_is_active()) return;
  
++    if (combat_tactical_enabled() && combat_turn_based_is_active()) return;
++
      sub_575770();
  
-@@ -4595,3 +4606,64 @@
+     follower_obj = qword_6813A8;
+@@ -2256,13 +2267,13 @@
+ }
+ 
+ // 0x575080
+-bool inven_ui_can_open_inven(int64_t pc_obj, int64_t npc_obj)
++static bool inven_ui_can_open_inven_impl(int64_t pc_obj, int64_t npc_obj, bool preview)
+ {
+     if (inven_ui_created && npc_obj == qword_6813A8) {
+         return true;
+     }
+ 
+-    if (ai_can_speak(npc_obj, pc_obj, false) != AI_SPEAK_OK) {
++    if ((preview ? ai_can_speak_preview(npc_obj, pc_obj) : ai_can_speak(npc_obj, pc_obj, false)) != AI_SPEAK_OK) {
+         return false;
+     }
+ 
+@@ -2275,6 +2286,16 @@
+     }
+ 
+     return true;
++}
++
++bool inven_ui_can_open_inven(int64_t pc_obj, int64_t npc_obj)
++{
++    return inven_ui_can_open_inven_impl(pc_obj, npc_obj, false);
++}
++
++bool inven_ui_can_open_inven_preview(int64_t pc_obj, int64_t npc_obj)
++{
++    return inven_ui_can_open_inven_impl(pc_obj, npc_obj, true);
+ }
+ 
+ // 0x575100
+@@ -4595,3 +4616,64 @@
      blit_info.dst_rect = rect;
      tig_window_blit_art(inven_ui_window_handle, &blit_info);
  }
@@ -9447,6 +9651,17 @@ diff --git a/src/ui/inven_ui.c b/src/ui/inven_ui.c
 +{
 +    MesFileEntry entry={.num=number};mes_get_msg(inven_ui_mes_file,&entry);return entry.str;
 +}
+diff --git a/src/ui/inven_ui.h b/src/ui/inven_ui.h
+--- a/src/ui/inven_ui.h
++++ b/src/ui/inven_ui.h
+@@ -32,6 +32,7 @@
+ void sub_573730(void);
+ void sub_573740(int64_t a1, bool a2);
+ void sub_573840(void);
++bool inven_ui_can_open_inven_preview(int64_t pc_obj, int64_t npc_obj);
+ bool inven_ui_can_open_inven(int64_t pc_obj, int64_t npc_obj);
+ void sub_575770(void);
+ void sub_575930(void);
 diff --git a/src/ui/item_ui.c b/src/ui/item_ui.c
 --- a/src/ui/item_ui.c
 +++ b/src/ui/item_ui.c

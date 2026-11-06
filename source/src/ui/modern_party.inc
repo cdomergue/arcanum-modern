@@ -186,6 +186,7 @@ static bool party_event(SDL_Event* event)
     party_capture=false;
     if(event->button.button!=party_pressed_button || party_pressed!=hit(x,y))return true;
     if(party_pressed_button==SDL_BUTTON_RIGHT && party_pressed>=1800 && party_pressed<1928){
+        modern_follower_log_menu(party_pressed_obj);
         party_menu_obj=party_pressed_obj;party_menu_y=fminf(canvas_h-130-party_menu_rect().h,fmaxf(88,y));
     } else if(party_pressed_button==SDL_BUTTON_LEFT && party_pressed>=1800){
         party_action_obj=party_pressed_obj;pending_action=party_pressed;party_menu_obj=0;

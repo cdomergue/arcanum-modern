@@ -19,19 +19,26 @@ a full game inventory transaction. The issue reports the duplication in the
 original engine too; this is a legacy path retained by CE, not introduced by
 Renaissance's inventory panel.
 
-[#68](https://github.com/alexbatalov/arcanum-ce/issues/68) reports elemental-form
-animation stopping after a portrait click. The native filter opened the context
-menu but returned false, allowing the click to reach downstream handlers. It now
-consumes the click only after opening the menu. `test_ce_portrait.py` executes
-the production mouse branch and checks valid clicks, covered windows, hidden UI,
-empty slots and clicks outside portraits. Renaissance's `party_event` already
-consumes its portrait clicks. The native propagation defect is confirmed in CE;
-the elemental-animation symptom still needs a visual reproduction. Do not claim
-that every animation issue in #68 is fixed solely from this test.
+[#68](https://github.com/alexbatalov/arcanum-ce/issues/68) has two separate
+paths. The native portrait filter now consumes the context click instead of
+propagating it. The animation stop was traced further to the inventory availability
+check: CE's `ai_can_speak` interrupts the actor, even when called merely to draw a
+menu. Both the native menu and Renaissance now use a read-only preview. Actual
+inventory/dialogue actions retain their execution behavior.
 
-Both tests failed on their respective original routing paths and pass with the
-fixes. Windows MSVC compile/link and 42 pre-existing portable checks passed on
-the combined candidate. Full native UI rendering was not validated in this audit.
+The public water-form fixture passes the native check in isolated FR and EN
+installations: 60 previews preserve slot 17, goal 2 and the art ID; the old
+execution path then removes the animation. Live Windows FR menu openings preserve
+the goal, with different art-frame IDs in consecutive records. The portable test
+checks 2,352 combinations against the production interruption eligibility rules,
+plus timestamped diagnostics, missing directories and rotation. See
+[follower diagnostics](follower-diagnostics.md) for reproduction and log reading.
+This side effect is confirmed in CE and inherited by Renaissance; its presence in
+the proprietary original executable has not been verified.
+
+Windows MSVC compile/link and all 45 portable release checks passed on the combined
+candidate. These checks do not validate complete packaging on every target OS.
+The quantity transaction still needs a full native inventory gameplay reproduction.
 
 ## Other reports and required evidence
 

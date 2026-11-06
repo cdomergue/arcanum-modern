@@ -115,3 +115,5 @@ Before-combat autosave is a Renaissance integration; the sector cache is inherit
 from CE. Attribution of this intermittent failure remains unconfirmed until the
 trigger and live reference lifetime are established. These logs improve evidence;
 they do not themselves fix the scheduling issue.
+
+For companion-menu animation stops, see [follower diagnostics](follower-diagnostics.md). The save journal does not record animation state.

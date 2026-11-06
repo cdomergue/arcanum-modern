@@ -25,6 +25,9 @@
 #include "game/sector.h"
 #include "game/area.h"
 #include "game/location.h"
+#include "game/anim.h"
+#include "ui/inven_ui.h"
+#include "ui/follower_ui.h"
 #include "game/townmap.h"
 #include "ui/wmap_ui.h"
 #include "game/modern_world_updates.h"
@@ -412,6 +415,39 @@ static int hardin_route_roundtrip(const char* input)
     return 0;
 }
 
+static int check_ce_portrait_animation(const char* input)
+{
+    REQUIRE(gamelib_load(input));
+    int64_t pc = player_get_local_pc_obj();
+    ObjectList followers;
+    object_list_followers(pc, &followers);
+    int64_t npc = followers.head ? followers.head->obj : OBJ_HANDLE_NULL;
+    object_list_destroy(&followers);
+    REQUIRE(npc != OBJ_HANDLE_NULL);
+    AnimID before, after;
+    REQUIRE(sub_423300(npc, &before));
+    AnimRunInfo* run;
+    REQUIRE(anim_id_to_run_info(&before, &run));
+    int goal = run->goals[run->current_goal].type;
+    unsigned int flags = run->flags;
+    unsigned int aid = obj_field_int32_get(npc, OBJ_F_CURRENT_AID);
+    for (int i = 0; i < 60; i++) REQUIRE(inven_ui_can_open_inven_preview(pc, npc));
+    modern_follower_log_menu(npc);
+    REQUIRE(sub_423300(npc, &after));
+    REQUIRE(anim_id_is_equal(&before, &after));
+    REQUIRE(anim_id_to_run_info(&after, &run));
+    REQUIRE(run->flags == flags && run->goals[run->current_goal].type == goal);
+    REQUIRE((unsigned int)obj_field_int32_get(npc, OBJ_F_CURRENT_AID) == aid);
+    printf("CE_PORTRAIT preview_calls=60 preserved_slot=%d goal=%d aid=%08x\n", before.slot_num, goal, aid);
+    // The execution path deliberately retains its ability to stop the actor.
+    REQUIRE(inven_ui_can_open_inven(pc, npc));
+    bool active = sub_423300(npc, &after);
+    printf("CE_PORTRAIT execute_active=%d (may stop interruptible goal)\n", active);
+    REQUIRE(!active || !anim_id_is_equal(&before, &after));
+    puts("PASS: menu preview preserves animation; execution still interrupts");
+    return 0;
+}
+
 static int inspect_ce_fixture(const char* input)
 {
     REQUIRE(gamelib_load(input));
@@ -468,7 +504,7 @@ int main(int argc, char** argv)
     if (!marked || (strcmp(argv[2], "--create") && strcmp(argv[2], "--prototypes") && strcmp(argv[2], "--actors") &&
         (strlen(argv[2]) != 8 || strncmp(argv[2], "Slot", 4)))) return 2;
     if (argc == 4 && strcmp(argv[3], "--roundtrip") && strcmp(argv[3], "--arachnid")
-        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area")) return 2;
+        && strcmp(argv[3], "--arachnid-original") && strcmp(argv[3], "--save-retry") && strcmp(argv[3], "--hardin-route") && strcmp(argv[3], "--ce-inspect") && strcmp(argv[3], "--ce-isle-area") && strcmp(argv[3], "--ce-portrait")) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE);
@@ -501,6 +537,7 @@ int main(int argc, char** argv)
     if (!strcmp(argv[2], "--actors")) result = inspect_actors();
     else if (!strcmp(argv[2], "--prototypes")) result = inspect_prototypes();
     else if (!strcmp(argv[2], "--create")) result = create_fixture();
+    else if (argc == 4 && !strcmp(argv[3], "--ce-portrait")) result = check_ce_portrait_animation(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-inspect")) result = inspect_ce_fixture(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--ce-isle-area")) result = check_ce_isle_area(argv[2]);
     else if (argc == 4 && !strcmp(argv[3], "--arachnid")) result = arachnid_roundtrip(argv[2], false);
