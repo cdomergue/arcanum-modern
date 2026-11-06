@@ -27,6 +27,8 @@ typedef struct {unsigned count;char** names;} GameSaveList;
 typedef struct {int num;char* str;} MesFileEntry;
 static char files[256][TIG_MAX_PATH];
 static int file_count,write_count,rename_count,fail_rename,fail_save;
+static int save_failure_messages;
+static void mainmenu_ui_feedback_saving_failed(void){save_failure_messages++;}
 static bool tutorial;
 #define MODERN_AUTOSAVE_KEY "modern autosave"
 static int settings,autosave_enabled=1;
@@ -74,10 +76,12 @@ int main(void){
  gamelib_save("Slot0012","Manual");int manual_files=file_count;write_count=0;
  for(int i=0;i<8;i++){modern_autosave_reset();modern_autosave_before_map_change();assert(autosaves()==(i<3?i+1:3));assert_complete();}
  assert(find_file("save\\Slot0012Manual.gsi")>=0);assert(file_count==manual_files+12);
+ assert(save_failure_messages==0);
  for(int fail=0;fail<=4;fail++){
   char snapshot[256][TIG_MAX_PATH];int old_count=file_count;memcpy(snapshot,files,sizeof(files));fail_save=fail==0;fail_rename=fail;rename_count=0;
   modern_autosave_before_map_change();assert(file_count==old_count);for(int i=0;i<old_count;i++)assert(find_file(snapshot[i])>=0);assert_complete();
  }
+ assert(save_failure_messages==5);
  fail_save=fail_rename=0;
  {int count=write_count;modern_autosave_after_combat();modern_autosave_before_combat();assert(write_count==count+1);assert_complete();now+=1000;modern_autosave_tick();assert(write_count==count+1);}
  bool* guards[]={&tutorial,&reset_state,&load_state,&save_state,&menu,&worldmap,&dialog,&teleport,&combat,&dead,&unconscious,&armed};

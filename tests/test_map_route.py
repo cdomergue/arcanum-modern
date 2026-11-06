@@ -7,6 +7,7 @@ import tempfile
 
 root=Path(__file__).resolve().parents[1]
 source=(root/'source/src/ui/modern_map_route.inc').read_text()
+source=source[source.index('enum {TOWN_ROUTE_SPAN='):]
 code=r'''
 #include <assert.h>
 #include <stdbool.h>
