@@ -11741,7 +11741,7 @@ int sub_430FC0(AnimRunInfo* run_info)
 
     if (run_info->current_goal > 0 && (run_info->flags & 0x40) != 0) {
         if (critter_fatigue_current(obj) > 0) {
-            {
+            if (combat_critter_is_combat_mode_active(obj)) {
                 v1 = 5;
 
                 run_info->cur_stack_data->params[AGDATA_SCRATCH_VAL4].data++;
@@ -11765,7 +11765,7 @@ int sub_430FC0(AnimRunInfo* run_info)
 
                     fatigue_dam = critter_fatigue_damage_get(obj);
 
-                    if (critter_fatigue_damage_set(obj, fatigue_dam + 1) == 0) {
+                    if (critter_fatigue_damage_set(obj, fatigue_dam) == 0) {
                         return false;
                     }
                 }

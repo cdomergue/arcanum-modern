@@ -1,4 +1,4 @@
-"""Behavioral regressions for CE #128 and PRs #162/#163, using production C."""
+"""Running must not consume fatigue; preserve movement and exhaustion handling."""
 from pathlib import Path
 import os
 import subprocess
@@ -53,15 +53,25 @@ int main(void){
  for(int mode=0;mode<2;mode++){
   combat_mode=mode;damage=0;stack.params[0].data=0;
   for(int i=0;i<4;i++){assert(sub_430FC0(&run));assert(damage==0&&ap==1);}
-  assert(sub_430FC0(&run));assert(damage==1);
+  assert(sub_430FC0(&run));assert(damage==0);
  }
  fields[OBJ_F_CRITTER_FLAGS]=OCF_FATIGUE_LIMITING;damage=0;stack.params[0].data=0;
- for(int i=0;i<19;i++)sub_430FC0(&run);assert(damage==0);sub_430FC0(&run);assert(damage==1);
+ for(int i=0;i<19;i++)sub_430FC0(&run);assert(damage==0);sub_430FC0(&run);assert(damage==0);
  fields[OBJ_F_CRITTER_FLAGS]=0;fields[OBJ_F_CRITTER_FLAGS2]=OCF2_FATIGUE_DRAINING;
- damage=0;sub_430FC0(&run);assert(damage==1);
- run.flags=0;sub_430FC0(&run);assert(damage==1&&ap==2);
+ damage=0;sub_430FC0(&run);assert(damage==0);
+ run.flags=0;sub_430FC0(&run);assert(damage==0&&ap==2);
  run.flags=0x40;energy=0;sub_430FC0(&run);assert(walks==1&&!(run.flags&0x40)&&ap==2);
- energy=30;run.flags=0x40;survives=false;assert(!sub_430FC0(&run));
+ // Sustained running must never drain fatigue, with either fatigue modifier.
+ for(int mode=0;mode<2;mode++){
+  combat_mode=mode;
+  for(int modifier=0;modifier<3;modifier++){
+   energy=1;damage=29;run.flags=0x40;stack.params[0].data=0;
+   fields[OBJ_F_CRITTER_FLAGS]=modifier==1?OCF_FATIGUE_LIMITING:0;
+   fields[OBJ_F_CRITTER_FLAGS2]=modifier==2?OCF2_FATIGUE_DRAINING:0;
+   for(int i=0;i<10000;i++){assert(sub_430FC0(&run));assert(damage==29&&ap==1);}
+  }
+ }
+ energy=30;run.flags=0x40;combat_mode=true;survives=false;assert(!sub_430FC0(&run));
  survives=true;can_act=false;assert(!sub_430FC0(&run));assert(interruptions==1&&dword_5DE6E4==0);
 }
 '''
