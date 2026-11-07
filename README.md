@@ -6,7 +6,7 @@ Magick Obscura**, based on
 
 ## Windows Quick start
 
-Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe), select your Arcanum folder, and launch the game from the "Arcanum Renaissance" desktop shortcut. Check the Installation guide for more details and operating systems.
+Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/latest/download/ArcanumModern-windows-x64-setup.exe), select your Arcanum folder, and launch the game from the "Arcanum Renaissance" desktop shortcut. Check the Installation guide for more details and operating systems. Windows SmartScreen may warn that Arcanum Renaissance is from an unknown publisher because its executables are not yet digitally signed
 
 ## Features
 
