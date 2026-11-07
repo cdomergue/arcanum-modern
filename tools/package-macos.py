@@ -124,7 +124,7 @@ def package(app, build_dir, output):
         stb = (ROOT/'source/third_party/stb/stb_truetype.h').read_text()
         (licenses/'stb.txt').write_text(stb[stb.rindex('/*\n---'):])
         shutil.copyfile(ROOT/'tools/macos/INSTALL.txt', notices/'INSTALL.txt')
-        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(resources/aid/LICENSE.txt)', '(licenses/aid.txt)').replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
+        (notices/'README.md').write_text((ROOT/'README.md').read_text().replace('(resources/aid/LICENSE.txt)', '(licenses/aid.txt)').replace('(source/LICENSE.md)', '(licenses/arcanum-ce.md)').replace('(source/README.md)', '(https://github.com/cdomergue/arcanum-modern/blob/main/source/README.md)').replace('(docs/repository.md)', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/repository.md)').replace('(game/modern-ui/', '(../modern-ui/').replace('(docs/development.md', '(https://github.com/cdomergue/arcanum-modern/blob/main/docs/development.md').replace('(docs/screenshots/', '(https://raw.githubusercontent.com/cdomergue/arcanum-modern/main/docs/screenshots/'))
         git = ['git', '-c', f'safe.directory={ROOT}', '-C', str(ROOT)]
         manifest = {
             'target': 'macos-arm64', 'includes_game_data': False, 'launcher_format': 1,
