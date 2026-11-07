@@ -11765,7 +11765,7 @@ int sub_430FC0(AnimRunInfo* run_info)
 
                     fatigue_dam = critter_fatigue_damage_get(obj);
 
-                    if (critter_fatigue_damage_set(obj, fatigue_dam) == 0) {
+                    if (critter_fatigue_damage_set(obj, fatigue_dam + 1) == 0) {
                         return false;
                     }
                 }
