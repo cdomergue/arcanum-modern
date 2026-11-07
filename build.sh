@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 arcanum_project=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-bash "$arcanum_project/prepare-source.sh"
 arcanum_build=${ARCANUM_BUILD_DIR:-"$arcanum_project/build"}
 arcanum_sdk=${ARCANUM_BUILD_SDK:-/tmp/arcanum-ce-sdk}
 arcanum_cache=${ARCANUM_DEPENDENCY_CACHE:-/tmp/arcanum-ce-build/_deps}

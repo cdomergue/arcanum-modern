@@ -255,7 +255,8 @@ player and is saved between sessions.
 ## Build and contribute
 
 See the [development guide](docs/development.md#build-from-source) for build
-requirements, platform commands, packaging and tests. On Linux, `./build.sh`
+requirements, platform commands, packaging and tests, and the
+[repository guide](docs/repository.md) for the source layout. On Linux, `./build.sh`
 compiles and installs the executable into `game/`. Supply your own game files
 to run it.
 
@@ -264,16 +265,20 @@ to run it.
 Arcanum was created by **Troika Games**. Renaissance is unofficial and includes
 no original game data in its standard packages.
 
-- **Arcanum Community Edition**, by **Alex Batalov**:
-  [Sustainable Use License](https://github.com/alexbatalov/arcanum-ce/blob/a7ff41b300ef712f0e7d088183a3d08957110cdd/LICENSE.md).
+- **Arcanum Community Edition**, by **Alex Batalov and contributors**.
+  Renaissance includes and modifies its engine source, based on
+  [revision `a7ff41b300ef712f0e7d088183a3d08957110cdd`](https://github.com/alexbatalov/arcanum-ce/commit/a7ff41b300ef712f0e7d088183a3d08957110cdd).
+  See the included [Sustainable Use License](source/LICENSE.md) and
+  [engine provenance](source/README.md).
 - **Arcanum Improved Descriptions (AID)**, by **SCARaw and contributors**, with
   a French translation for Renaissance:
   [original mod](https://www.nexusmods.com/arcanumofsteamworksandmagickobscura/mods/13),
   [source](https://github.com/SCARaw/Arcanum-Item-Description-Project),
   [MIT license](resources/aid/LICENSE.txt).
 - **Noto fonts**: [SIL Open Font License](game/modern-ui/FONT-LICENSE.txt).
-- **FFmpeg**: LGPL 2.1 or later. Packages include its source, build script and
-  license in `ArcanumModern/licenses/ffmpeg/`.
+- **FFmpeg**: LGPL 2.1 or later. Runtime packages include license notices;
+  matching dependency sources and build scripts are distributed as separate
+  release assets. See [dependency source packages](docs/development.md).
 
 Packages include license notices for SDL, SDL_mixer, zlib, fpattern, stb and
 other bundled dependencies.

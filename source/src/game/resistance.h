@@ -1,0 +1,15 @@
+#ifndef ARCANUM_GAME_RESISTANCE_H_
+#define ARCANUM_GAME_RESISTANCE_H_
+
+typedef enum ResistanceType {
+    RESISTANCE_TYPE_NORMAL,
+    RESISTANCE_TYPE_FIRE,
+    RESISTANCE_TYPE_ELECTRICAL,
+    RESISTANCE_TYPE_POISON,
+    RESISTANCE_TYPE_MAGIC,
+    RESISTANCE_TYPE_COUNT,
+} ResistanceType;
+
+extern const char* resistance_lookup_keys_tbl[RESISTANCE_TYPE_COUNT];
+
+#endif /* ARCANUM_GAME_RESISTANCE_H_ */

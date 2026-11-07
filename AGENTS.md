@@ -2,18 +2,20 @@
 
 ## Scope
 
-This repository contains the Arcanum Renaissance interface mod. The local `game/`
-installation and the upstream engine in `source/` are working copies, not content
-to import wholesale into Git. Deploying validated builds and mod resources to the
-main game installation at `/mnt/sshd/Jeux/Arcanum/` is authorized. Never modify,
+This repository contains Arcanum Renaissance and its complete engine source in
+`source/`. The local `game/` installation is a working copy; only the selected
+interface resources in `game/modern-ui/` belong in Git. Deploying validated builds
+and mod resources to the main game installation at `/mnt/sshd/Jeux/Arcanum/` is
+authorized. Never modify,
 overwrite, rename, or delete its saves. Any testing that writes saves must use an
 isolated game copy, not the main installation.
 
 ## Source Organization
 
-Our modules are `source/src/ui/modern_ui.*` and `modern_graphics.*`.
-Changes to existing upstream engine files are represented by `patches/engine.patch`.
-`prepare-source.sh` restores the pinned upstream revision and applies that patch.
+Engine and Renaissance modules are versioned directly in `source/`. UI code
+lives in `source/src/ui/`, gameplay code in `source/src/game/`, and platform
+support in `source/first_party/`. Preserve the authorship, revision reference
+and license notices documented in `source/README.md`.
 `game/modern-ui/` contains the mod's fonts, background, and local preferences.
 
 ## Development and Verification
@@ -25,10 +27,9 @@ Test the logging and do not present an unconfirmed cause as established.
 For save failures and crash reports, read `docs/save-diagnostics.md` first. It
 documents log locations, fields, rotation, limitations and isolated verification.
 
-Use `./build.sh` to compile and install the executable atomically. After editing an
-existing upstream file, run `python3 tools/update-engine-patch.py` before building.
-`ARCANUM_ENGINE_SOURCE` points to the upstream Git checkout used by that script.
-Do not include unrelated upstream changes in the patch.
+Edit engine files directly and use `./build.sh` to compile and install the
+executable atomically into the repository-local `game/` directory. Compilation
+uses the checked-in source; no separate Arcanum CE checkout is required.
 
 Run `python3 tests/test_keyboard_capture.py` for input routing changes. Test live
 menu transitions on an isolated game copy. Include physical key holds and delayed
@@ -37,7 +38,7 @@ event-order bugs. Identify the test process and window before automating input.
 
 ## Git and Documentation
 
-Track only the mod's code, integration patch, scripts, tests, documentation, and
+Track engine and mod code, scripts, tests, documentation, and
 interface resources. Keep game archives, executables, saves, generated captures,
 logs, and personal settings excluded. Inspect the exact staged list before any
 commit. Do not commit unless requested.
@@ -52,13 +53,6 @@ chronological progress reports, descriptions of our own bug fixes, or manual tes
 diaries. Report task-specific changes and test results in the conversation.
 
 ## Release Preparation
-
-The 2.1.0 release exposed three gaps: Windows test artifacts were downloaded with
-subdirectories but invoked as flat files; the macOS engine was signed before
-changing `CFBundleExecutable` and `Info.plist`; external FFmpeg and 7-Zip downloads
-failed without recovery. Local and portable tests did not cover the complete
-native packaging path. Creating the tag before that validation led to repeated
-tag moves and full rebuilds. Do not repeat that sequence.
 
 - Run `.github/workflows/release.yml` with `workflow_dispatch` on the candidate
   branch before tagging. Record the candidate commit and wait for Linux, macOS,

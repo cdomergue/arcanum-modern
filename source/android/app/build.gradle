@@ -1,0 +1,86 @@
+plugins {
+     id 'com.android.application'
+}
+
+android {
+    namespace = 'com.alexbatalov.arcanumce'
+    compileSdkVersion 35
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 35
+        versionCode 1
+        versionName '1.0.0'
+        externalNativeBuild {
+            ndkBuild {
+                arguments 'APP_PLATFORM=android-21'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            }
+            cmake {
+                arguments '-DANDROID_PLATFORM=android-21', '-DANDROID_STL=c++_static', '-DAPP_SUPPORT_FLEXIBLE_PAGE_SIZES=true'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            }
+        }
+    }
+    signingConfigs {
+        // Override default debug signing config to make sure every CI runner
+        // uses the same key for painless updates.
+        def debugKeystorePropertiesFile = rootProject.file('debug-keystore.properties')
+        if (debugKeystorePropertiesFile.exists()) {
+            def debugKeystoreProperties = new Properties()
+            debugKeystoreProperties.load(new FileInputStream(debugKeystorePropertiesFile))
+
+            debug {
+                storeFile rootProject.file(debugKeystoreProperties.getProperty('storeFile'))
+                storePassword debugKeystoreProperties.getProperty('storePassword')
+                keyAlias debugKeystoreProperties.getProperty('keyAlias')
+                keyPassword debugKeystoreProperties.getProperty('keyPassword')
+            }
+        }
+
+        def releaseKeystoreProperties = new Properties()
+        def releaseKeystorePropertiesFile = rootProject.file('release-keystore.properties')
+        if (releaseKeystorePropertiesFile.exists()) {
+            releaseKeystoreProperties.load(new FileInputStream(releaseKeystorePropertiesFile))
+
+            release {
+                storeFile rootProject.file(releaseKeystoreProperties.getProperty('storeFile'))
+                storePassword releaseKeystoreProperties.getProperty('storePassword')
+                keyAlias releaseKeystoreProperties.getProperty('keyAlias')
+                keyPassword releaseKeystoreProperties.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            // Prevents signing keys clashes between debug and release versions
+            // for painless development.
+            applicationIdSuffix '.debug'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    applicationVariants.all { variant ->
+        tasks["merge${variant.name.capitalize()}Assets"]
+            .dependsOn("externalNativeBuild${variant.name.capitalize()}")
+    }
+    if (!project.hasProperty('EXCLUDE_NATIVE_LIBS')) {
+        sourceSets.main {
+            jniLibs.srcDir 'libs'
+        }
+        externalNativeBuild {
+            cmake {
+                path '../../CMakeLists.txt'
+            }
+        }
+
+    }
+    lint {
+        abortOnError = false
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+}

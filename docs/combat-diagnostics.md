@@ -63,7 +63,7 @@ follow any `critical_miss`, `body_of_fire` and `damage` records. Compare HP for
 the same valid handle before and after the damage call. An impact animation or
 floating message alone does not establish damage or its cause.
 
-The native `--ce-shield` probe is documented in [the CE audit](ce-issue-audit.md).
+The native `--ce-shield` probe is documented in [engine diagnostics](engine-diagnostics.md).
 FR and EN tests show no retaliation from protection under controlled forced hits,
 with Body of Fire as a positive control. A separate native fate-forced critical
 miss verifies that the journal records the intended victim before retargeting

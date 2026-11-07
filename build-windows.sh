@@ -39,7 +39,6 @@ case "$(uname -s)" in
         ;;
     *) echo "Use Linux with LLVM-MinGW or Git Bash with Visual Studio 2022 C++ tools." >&2; exit 1;;
 esac
-bash "$arcanum_project/prepare-source.sh"
 # Reuse source-only dependency downloads; never reuse Linux binaries.
 if [[ -n ${ARCANUM_DEPENDENCY_CACHE:-} ]]; then
     for dep in fpattern sdl3 sdl3_mixer zlib; do

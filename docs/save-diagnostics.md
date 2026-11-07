@@ -89,32 +89,20 @@ power loss and some early failures cannot be captured by the crash handler.
 Dumps can contain fragments of process memory: do not commit or publish them
 without reviewing what will be shared.
 
-## Investigation procedure and known observation
+## Investigation procedure
 
 Collect the exact message, trigger, approximate time, running executable hash,
 both save-event logs and relevant crash reports. Read personal saves only; copy
 them into a marked disposable installation before any load/save tests. Record
 which binary performed the test. Never write diagnostic saves in the main game.
 
-On 2026-11-06, the French installation reported an intermittent failure of the
-automatic save before combat. Later saves succeeded. The legacy log last changed
-at 23:12:56 and contained blocked sectors with nonzero references; automatic slots
-were created at 23:12:24 and 23:12:37. Because the old entries lack timestamps,
-this is a strong lead, not a proven association with that precise popup.
-
-The latest slot `SlotA0NL` loaded on an isolated copy and passed the native
-`--save-retry` check: save, simulated locked-sector failure, recovery after
-unlocking, and reload with unchanged player snapshot. This is not reproduction
-of the actual pre-combat timing. The generic `--roundtrip` fixture expects fixed
-character stats and daggers; its fixture assertion failure on a personal save
-must not be reported as save corruption.
-
-The main FR binary at investigation start had SHA-256
-`13E71A71DDA53AA29F3ABB0CFA4D6981D78A44C3E762A030668E536E3E71354C`.
-Before-combat autosave is a Renaissance integration; the sector cache is inherited
-from CE. Attribution of this intermittent failure remains unconfirmed until the
-trigger and live reference lifetime are established. These logs improve evidence;
-they do not themselves fix the scheduling issue.
+The native `--save-retry` check exercises saving, a simulated locked-sector
+failure, recovery after unlocking, and reloading with an unchanged player
+snapshot. It does not reproduce the timing of an intermittent pre-combat failure.
+The generic `--roundtrip` probe expects fixed character stats and daggers;
+a fixture assertion failure on another save does not establish save corruption.
+Correlate timestamped events with live sector-reference lifetime before assigning
+a cause. Successful later saves do not explain an earlier failure.
 
 For companion-menu animation stops, see [follower diagnostics](follower-diagnostics.md). The save journal does not record animation state.
 

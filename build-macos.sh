@@ -10,7 +10,6 @@ arcanum_python=${PYTHON:-python3}
 command -v "$arcanum_cmake" >/dev/null
 command -v "$arcanum_python" >/dev/null
 xcrun --sdk macosx --show-sdk-path >/dev/null
-bash "$arcanum_project/prepare-source.sh"
 args=(-DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
     -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBUILD_SHARED_LIBS=OFF)
 # Bash 3.2 (shipped by macOS) has no ${variable^^} expansion.

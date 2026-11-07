@@ -12,10 +12,11 @@ Clone this repository with Git, then run the commands below from its root.
 The packaging tools use Git metadata to record the source revision, so use a
 Git checkout when creating packages rather than a downloaded source-only ZIP.
 
-The build scripts call `prepare-source.sh` automatically. It obtains the pinned
-upstream engine revision, applies `patches/engine.patch` and leaves the project's
-modern interface modules in place. CMake downloads the required dependencies
-when they are not cached. An uncached build needs internet access.
+The complete engine source is included in `source/`, with Renaissance changes
+already integrated. Building requires no Arcanum CE download or separate
+checkout. CMake downloads external dependencies when they are not cached; an
+uncached build still needs internet access. See [engine provenance](../source/README.md)
+for authorship, the original revision and licensing.
 
 Use separate build directories for each target platform. Game data is needed to
 play, generate detailed maps or create a complete ZIP; standard engine builds
@@ -341,7 +342,6 @@ Useful environment variables:
 | `ARCANUM_MACOS_BUILD_DIR` | macOS build directory. |
 | `ARCANUM_WINDOWS_BUILD_DIR` | Windows build directory. |
 | `ARCANUM_DEPENDENCY_CACHE` | Directory containing reusable dependency source folders such as `sdl3-src`. |
-| `ARCANUM_ENGINE_SOURCE` | Local upstream Git checkout containing the pinned engine revision. |
 | `CMAKE`, `PYTHON` | Tool commands used by the macOS and Windows packaging scripts. |
 | `NINJA` | Ninja executable for the Linux-to-Windows cross-build. |
 
@@ -415,15 +415,10 @@ game archives and run `Play Arcanum Renaissance.sh`.
 
 ## Development and contributing
 
-Modern interface modules live in `source/src/ui/modern_*`. Changes to upstream
-engine files are stored in `patches/engine.patch`. The pinned engine revision is
-`a7ff41b300ef712f0e7d088183a3d08957110cdd`.
-
-After editing an upstream file, regenerate the integration patch:
-
-```sh
-ARCANUM_ENGINE_SOURCE=/path/to/arcanum-ce python3 tools/update-engine-patch.py
-```
+Edit engine and interface files directly in `source/`; Git records each change.
+There is no patch-generation step. Keep engine changes focused and preserve
+third-party notices. The [repository guide](repository.md) describes the layout,
+tool families and documentation.
 
 Focused tests are in `tests/` and use Python and, where needed, a C compiler.
 Examples:
