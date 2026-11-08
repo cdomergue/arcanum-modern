@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -229,5 +230,22 @@ func runGame(root string, args []string) error {
 			break
 		}
 	}
-	return cmd.Run()
+	started := time.Now()
+	output := newGameLog(root)
+	defer output.Close()
+	binaryHash, hashErr := fileHash(cmd.Path)
+	output.event("start", fmt.Sprintf("engine_sha256=%s hash_error=%v", binaryHash, hashErr))
+	cmd.Stdout = output
+	cmd.Stderr = output
+	err := cmd.Start()
+	if err == nil {
+		output.event("running", fmt.Sprintf("pid=%d", cmd.Process.Pid))
+		err = cmd.Wait()
+	}
+	code := -1
+	if cmd.ProcessState != nil {
+		code = cmd.ProcessState.ExitCode()
+	}
+	output.event("exit", fmt.Sprintf("code=0x%08x elapsed_ms=%d error=%v", uint32(code), time.Since(started).Milliseconds(), err))
+	return err
 }

@@ -77,6 +77,14 @@ correlation. Ordinary SDL/TIG debug output is not automatically a persistent log
 
 ## Crash reports are separate
 
+On Windows, `ArcanumModern/game-process.log` records the engine executable's
+SHA-256, process ID, start and exit times, elapsed milliseconds and hexadecimal
+exit code when started by the launcher. It also captures the engine's standard
+output and error messages. Each segment is limited to 1 MiB; the previous segment
+is retained as `game-process.previous.log`. Logging failure does not prevent the
+game from running. These local diagnostics may contain resource paths and game
+context; review them before sharing. An exit code alone does not identify a cause.
+
 `ArcanumModern/CrashReports` contains `.txt`, `.dmp` and, when available, an
 installed-manifest copy. If the installation is not writable, check
 `%LOCALAPPDATA%\ArcanumRenaissance\CrashReports`. The text identifies the exception,

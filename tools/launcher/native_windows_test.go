@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +32,10 @@ func init() {
 			Window    string
 		}{cwd, os.Args[1:], os.Getenv("ARCANUM_IGNORE_DISPLAY_SETTINGS")})
 		_ = os.WriteFile(filepath.Join(cwd, "game-started.json"), b, 0600)
+		if os.Getenv("RENAISSANCE_TEST_GAME_FAILURE") == "1" {
+			os.Stderr.WriteString("diagnostic child failure\n")
+			os.Exit(-1)
+		}
 		time.Sleep(800 * time.Millisecond)
 		os.Exit(0)
 	}
@@ -200,5 +205,34 @@ func TestNativeLauncherBootstrap(t *testing.T) {
 	}
 	for gameRunning(root) && time.Now().Before(deadline) {
 		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func TestNativeGameFailureLog(t *testing.T) {
+	root := t.TempDir()
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	put(t, root, "arcanum-modern.exe", data)
+	t.Setenv("RENAISSANCE_TEST_GAME", "1")
+	t.Setenv("RENAISSANCE_TEST_GAME_FAILURE", "1")
+	err = runGame(root, nil)
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || uint32(exit.ExitCode()) != 0xffffffff {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	log, err := os.ReadFile(filepath.Join(root, "ArcanumModern", "game-process.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, text := range []string{"engine_sha256=", "process_running pid=", "diagnostic child failure", "process_exit code=0xffffffff", "elapsed_ms="} {
+		if !strings.Contains(string(log), text) {
+			t.Fatalf("missing %q in %s", text, log)
+		}
 	}
 }
