@@ -3,6 +3,8 @@
 #include "ui/modern_ui.h"
 
 #include <inttypes.h>
+#include <errno.h>
+#include <stdio.h>
 
 #include "game/ai.h"
 #include "game/anim.h"
@@ -3655,6 +3657,29 @@ void object_list_followers(int64_t obj, ObjectList* objects)
     ++dword_5E2F98;
 }
 
+/* Trace nested rosters only, at most once per second. Each sampled traversal
+ * has a begin/end pair, so an unfinished expansion is visible after a crash. */
+static void object_followers_log(const char* phase,int64_t root,int direct,int nested,Uint64 elapsed)
+{
+    int saved_errno=errno;
+    FILE* log=fopen("ArcanumModern/party-traversal.log","ab+");
+    if(log){
+        fseek(log,0,SEEK_END);
+        if(ftell(log)>=1024*1024){
+            fclose(log);log=NULL;
+            if(remove("ArcanumModern/party-traversal.previous.log")==0 || errno==ENOENT)
+                if(rename("ArcanumModern/party-traversal.log","ArcanumModern/party-traversal.previous.log")==0)
+                    log=fopen("ArcanumModern/party-traversal.log","ab");
+        }
+        if(log){
+            fprintf(log,"ticks_ms=%llu phase=%s root=%llu direct=%d nested=%d elapsed_ms=%llu\n",
+                (unsigned long long)SDL_GetTicks(),phase,(unsigned long long)root,direct,nested,(unsigned long long)elapsed);
+            fclose(log);
+        }
+    }
+    errno=saved_errno;
+}
+
 // 0x441260
 void object_list_all_followers(int64_t obj, ObjectList* objects)
 {
@@ -3664,6 +3689,10 @@ void object_list_all_followers(int64_t obj, ObjectList* objects)
     ObjectList tmp_list;
     ObjectNode* tmp_node;
     ObjectNode* new_node;
+    static Uint64 next_trace;
+    Uint64 started=SDL_GetTicks();
+    bool traced=false;
+    int nested=0;
 
     objects->num_sectors = 0;
     objects->head = NULL;
@@ -3679,11 +3708,16 @@ void object_list_all_followers(int64_t obj, ObjectList* objects)
         cnt++;
     }
 
+    int direct=cnt;
     node = objects->head;
     while (node != NULL && cnt > 0) {
         object_list_all_followers(node->obj, &tmp_list);
 
         tmp_node = tmp_list.head;
+        if(tmp_node && !traced && SDL_GetTicks()>=next_trace){
+            next_trace=SDL_GetTicks()+1000;traced=true;
+            object_followers_log("begin",obj,direct,nested,0);
+        }
         while (tmp_node != NULL) {
             new_node = object_node_create();
             new_node->obj = tmp_node->obj;
@@ -3691,6 +3725,8 @@ void object_list_all_followers(int64_t obj, ObjectList* objects)
 
             *parent_ptr = new_node;
             parent_ptr = &((*parent_ptr)->next);
+            tmp_node = tmp_node->next;
+            nested++;
         }
 
         object_list_destroy(&tmp_list);
@@ -3698,6 +3734,7 @@ void object_list_all_followers(int64_t obj, ObjectList* objects)
         node = node->next;
         cnt--;
     }
+    if(traced)object_followers_log("complete",obj,direct,nested,SDL_GetTicks()-started);
 }
 
 // 0x441310

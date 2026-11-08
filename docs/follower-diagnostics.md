@@ -74,6 +74,31 @@ original-Arcanum origin without further evidence. The earlier native click
 consumption fix addresses event propagation and is not the fix for this side
 effect.
 
+## Nested followers and deployable constructs
+
+A construct deployed by a controlled companion follows that companion. Party
+queries must therefore include followers of followers. The traversal advances
+through each nested list before releasing its temporary nodes; repeating the
+same entry would allocate nodes indefinitely.
+
+`ArcanumModern/party-traversal.log` records sampled nested expansions with
+`begin` and `complete` phases, SDL uptime, root actor handle, direct and nested
+counts, and elapsed milliseconds. Sampling is limited to once per second. The
+log rotates at 1 MiB to `party-traversal.previous.log`; it contains no names or
+serialized save data. An unfinished `begin` record identifies a traversal that
+did not return, without establishing why it stopped.
+
+Run `python3 tests/test_nested_followers.py` for empty, direct and three-level
+parties, repeated traversal, node cleanup and log rotation. For the native Linux
+regression, build with `python3 tools/build-companion-arachnid-check.py`, then run
+`build/check-companion-arachnid MARKED_COPY/game SLOT`. The copy must contain
+`.map-export-sandbox` and a copied save with an active companion. The check
+selects the companion, binds a mechanized arachnid to slot 1, activates the
+shortcut and runs the native throw animation and deployment script. It checks
+the resulting hierarchy, repeated party queries and save/load through
+`SlotArac` in that copy. Its address space is capped after loading so an old
+engine's runaway traversal cannot exhaust the host's memory.
+
 ## Follow-camera keyboard routing
 
 `ArcanumModern/follow-input.log` records movement routing changes (`route`),
