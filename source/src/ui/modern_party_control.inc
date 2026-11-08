@@ -28,7 +28,7 @@ bool modern_party_set_grouped(int64_t obj,bool grouped)
     int index=0;while(index<party_detached_count && !objid_is_equal(id,party_detached[index]))index++;
     if(grouped){
         if(index<party_detached_count)party_detached[index]=party_detached[--party_detached_count];
-        if(party_selected==obj)party_selected=OBJ_HANDLE_NULL;
+        if(party_selected==obj){party_selected=OBJ_HANDLE_NULL;ai_follower_release(obj,party_selected);}
     }else if(index==party_detached_count){
         if(party_detached_count==PARTY_DETACHED_LIMIT || !sub_424070(obj,3,0,0))return false;
         party_detached[party_detached_count++]=id;
@@ -50,11 +50,13 @@ bool modern_party_select(int64_t obj)
     if(dialog_ui_is_in_dialog(player_get_local_pc_obj()))return false;
     if(obj!=party_selected && (intgame_mode_get()==INTGAME_MODE_SKILL || intgame_mode_get()==INTGAME_MODE_SPELL || intgame_mode_get()==INTGAME_MODE_ITEM))intgame_mode_set(INTGAME_MODE_MAIN);
     if(obj!=party_selected)dialog_speaker_set(OBJ_HANDLE_NULL);
-    if(obj==OBJ_HANDLE_NULL){party_selected=OBJ_HANDLE_NULL;return true;}
+    int64_t previous=modern_party_selected();
+    if(obj==OBJ_HANDLE_NULL){party_selected=OBJ_HANDLE_NULL;if(previous)ai_follower_release(previous,party_selected);return true;}
     if(!party_control_member(obj) || !critter_is_active(obj)
         || ((obj_field_int32_get(obj,OBJ_F_SPELL_FLAGS)&OSF_MIND_CONTROLLED) && !critter_can_command_familiar(obj))
         || !modern_party_set_grouped(obj,false))return false;
     party_selected=obj;
+    if(previous && previous!=obj)ai_follower_release(previous,party_selected);
     return modern_party_selected()==obj;
 }
 

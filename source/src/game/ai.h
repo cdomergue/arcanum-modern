@@ -173,4 +173,9 @@ int ai_max_dialog_distance(int64_t obj);
 void ai_target_lock(int64_t obj, int64_t tgt);
 void ai_target_unlock(int64_t obj);
 
+/* Restore an eligible distant follower after manual control ends. */
+bool ai_follower_catchup(int64_t obj);
+/* Recall on explicit control release and restore the camera if recalled. */
+bool ai_follower_release(int64_t obj,int64_t camera_actor);
+
 #endif /* ARCANUM_GAME_AI_H_ */

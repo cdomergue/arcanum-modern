@@ -11,6 +11,7 @@
 #include "game/name.h"
 #include "game/descriptions.h"
 #include "game/map.h"
+#include "game/ai.h"
 #include "game/obj.h"
 #include "ui/gameuilib.h"
 #include "../source/src/ui/modern_ui.c"
@@ -76,6 +77,45 @@ int main(int argc,char** argv)
     int64_t companion=allies[0];assert(modern_party_select(companion));
     assert(follow_control_actor()==companion);
     location_origin_set(obj_field_int64_get(companion,OBJ_F_LOCATION));iso_interface_refresh();
+    /* A remotely commanded ally stays put and remains eligible for AI ticks. */
+    int64_t original=obj_field_int64_get(companion,OBJ_F_LOCATION),remote;
+    assert(location_in_range(obj_field_int64_get(pc,OBJ_F_LOCATION),2,45,&remote));
+    sub_43E770(companion,remote,0,0);
+    assert(object_dist(pc,companion)>30);
+    assert(!ai_follower_catchup(companion));
+    TimeEvent heartbeat={0};heartbeat.params[0].object_value=companion;
+    assert(ai_timeevent_process(&heartbeat));
+    assert(obj_field_int64_get(companion,OBJ_F_LOCATION)==remote);
+    follow_camera=false;scroll_distance_set(1);scroll_fps_set(1000);
+    int perception=stat_base_get(companion,STAT_PERCEPTION);
+    stat_base_set(companion,STAT_PERCEPTION,16);
+    assert(scroll_distance_get()==stat_level_get(companion,STAT_PERCEPTION)/2+3);
+    for(int direction=0;direction<8;direction+=2){
+        location_origin_set(remote);int64_t x,y,xx,yy;location_origin_get(&x,&y);
+        gamelib_ping_time+=10;scroll_start(direction);location_origin_get(&xx,&yy);
+        assert(xx!=x||yy!=y);scroll_stop();
+    }
+    for(int camera=0;camera<2;camera++){
+        follow_camera=camera!=0;
+        assert(intgame_dialog_begin(NULL));
+        location_origin_set(obj_field_int64_get(pc,OBJ_F_LOCATION));
+        intgame_dialog_end();
+        int64_t dx,dy;
+        location_calc_dist_from_screen_center(remote,&dx,&dy);
+        assert(dx==0&&dy==0&&modern_party_selected()==companion);
+        assert(intgame_mode_get()==INTGAME_MODE_MAIN);
+    }
+    puts("PASS: dialogue exit restores selected companion immediately in free and follow camera modes");
+    follow_camera=false;location_origin_set(remote);
+    assert(modern_party_select(0));assert(object_dist(pc,companion)<=1);
+    int64_t camera_dx,camera_dy;
+    location_calc_dist_from_screen_center(obj_field_int64_get(pc,OBJ_F_LOCATION),&camera_dx,&camera_dy);
+    assert(camera_dx==0&&camera_dy==0);
+    puts("PASS: releasing remote companion restores free camera to hero immediately");
+    stat_base_set(companion,STAT_PERCEPTION,perception);
+    sub_43E770(companion,original,0,0);assert(modern_party_select(companion));
+    follow_camera=true;location_origin_set(original);
+    puts("PASS: remote selection suppresses catchup, free camera scrolls around companion, release recalls distant ally");
     SDL_PropertiesID props=SDL_GetWindowProperties(window);
     display=SDL_GetPointerProperty(props,SDL_PROP_WINDOW_X11_DISPLAY_POINTER,NULL);
     unsigned long xid=SDL_GetNumberProperty(props,SDL_PROP_WINDOW_X11_WINDOW_NUMBER,0);assert(display&&xid);

@@ -36,7 +36,8 @@ static void dialog_speaker_set(int64_t value){(void)value;}
 typedef struct {int64_t id;} ObjectID;
 typedef FILE TigFile;
 static bool combat,dialog,interruptible=true,alive=true,member=true;
-static int interruptions,flags,spells,object_flags;
+static int interruptions,flags,spells,object_flags,catchups;
+static bool ai_follower_release(int64_t obj,int64_t target){(void)obj;(void)target;catchups++;return false;}
 static bool obj_handle_is_valid(int64_t obj){return obj>=1&&obj<=3;}
 static int64_t player_get_local_pc_obj(void){return 1;}
 static int obj_field_int32_get(int64_t obj,int field){
@@ -61,7 +62,7 @@ int main(void){
  assert(!modern_party_set_grouped(3,false));
  assert(modern_party_set_grouped(2,false));assert(interruptions==1&&modern_party_detached(2));
  assert(modern_party_select(2)&&modern_party_selected()==2&&interruptions==1);
- mode=INTGAME_MODE_SKILL;assert(modern_party_select(0)&&mode==INTGAME_MODE_MAIN);
+ mode=INTGAME_MODE_SKILL;assert(modern_party_select(0)&&mode==INTGAME_MODE_MAIN);assert(catchups==1);
  assert(modern_party_select(2));
  assert(party_control_save());party_detached_count=0;party_selected=0;
  assert(party_control_load()&&modern_party_detached(2)&&!modern_party_selected());

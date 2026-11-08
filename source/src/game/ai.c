@@ -1,6 +1,7 @@
 #include "ui/follower_ui.h"
 #include "game/ai.h"
 #include "game/gamelib.h"
+#include "ui/iso.h"
 
 #include "game/anim.h"
 #include "game/anim_private.h"
@@ -32,6 +33,9 @@
 #include "game/tile.h"
 #include "game/timeevent.h"
 #include "game/ui.h"
+
+#include <errno.h>
+#include <stdio.h>
 
 #define CLOCKWORK_DECOY 6719
 
@@ -127,7 +131,6 @@ static void ai_wake_up(int64_t npc_obj);
 static int64_t ai_find_nearest_bed(int64_t obj);
 static void ai_move_to(int64_t obj, int64_t loc, int range);
 static bool sub_4AD420(int64_t obj);
-static bool sub_4AD4D0(int64_t obj);
 static int ai_timeevent_delay(int64_t obj);
 static int ai_distance_to_nearest_player(int64_t obj);
 static bool ai_timeevent_check(TimeEvent* timeevent);
@@ -2947,7 +2950,7 @@ bool ai_timeevent_process(TimeEvent* timeevent)
             v1 = true;
         }
 
-        if (!sub_4AD4D0(obj) && !v1) {
+        if (!ai_follower_catchup(obj) && !v1) {
             if (!combat_turn_based_is_active()
                 && (obj_field_int32_get(obj, OBJ_F_CRITTER_FLAGS) & OCF_ENCOUNTER) != 0) {
                 object_destroy(obj);
@@ -2965,6 +2968,28 @@ bool ai_timeevent_process(TimeEvent* timeevent)
     return true;
 }
 
+/* Bounded diagnostics for manual control beyond the normal follower radius. */
+static void party_distance_log(const char* event,int64_t obj,int distance)
+{
+    int saved_errno=errno;
+    FILE* log=fopen("ArcanumModern/party-distance.log","ab+");
+    if(log){
+        fseek(log,0,SEEK_END);
+        if(ftell(log)>=1024*1024){
+            fclose(log);log=NULL;
+            if(remove("ArcanumModern/party-distance.previous.log")==0 || errno==ENOENT)
+                if(rename("ArcanumModern/party-distance.log","ArcanumModern/party-distance.previous.log")==0)
+                    log=fopen("ArcanumModern/party-distance.log","ab");
+        }
+        if(log){
+            fprintf(log,"ticks_ms=%llu event=%s actor=%llu distance=%d\n",
+                (unsigned long long)SDL_GetTicks(),event,(unsigned long long)obj,distance);
+            fclose(log);
+        }
+    }
+    errno=saved_errno;
+}
+
 // 0x4AD420
 bool sub_4AD420(int64_t obj)
 {
@@ -2976,6 +3001,16 @@ bool sub_4AD420(int64_t obj)
         return false;
     }
 
+    if (obj == modern_party_selected()) {
+        static Uint64 logged_at;
+        Uint64 now=SDL_GetTicks();
+        int distance=object_dist(player_get_local_pc_obj(),obj);
+        if(distance>30 && (!logged_at || now-logged_at>=5000)){
+            party_distance_log("manual_remote",obj,distance);logged_at=now;
+        }
+        return true;
+    }
+
     if (object_dist(player_get_local_pc_obj(), obj) <= 30) {
         return true;
     }
@@ -2984,7 +3019,7 @@ bool sub_4AD420(int64_t obj)
 }
 
 // 0x4AD4D0
-bool sub_4AD4D0(int64_t obj)
+bool ai_follower_catchup(int64_t obj)
 {
     int64_t pc_leader_obj;
 
@@ -2995,6 +3030,8 @@ bool sub_4AD4D0(int64_t obj)
     if (combat_turn_based_is_active()) {
         return false;
     }
+
+    if (obj == modern_party_selected()) return false;
 
     pc_leader_obj = critter_pc_leader_get(obj);
     if (pc_leader_obj == OBJ_HANDLE_NULL) {
@@ -3017,15 +3054,33 @@ bool sub_4AD4D0(int64_t obj)
         return false;
     }
 
+    party_distance_log("catchup",obj,object_dist(pc_leader_obj,obj));
     sub_424070(obj, 4, false, true);
     sub_43E770(obj, obj_field_int64_get(pc_leader_obj, OBJ_F_LOCATION), 0, 0);
 
     return true;
 }
 
+/* Explicit release follows a recalled ally back to the current controlled actor. */
+bool ai_follower_release(int64_t obj,int64_t camera_actor)
+{
+    if(!ai_follower_catchup(obj))return false;
+    if(!camera_actor)camera_actor=player_get_local_pc_obj();
+    if(camera_actor){
+        int64_t location=obj_field_int64_get(camera_actor,OBJ_F_LOCATION),x,y;
+        location_origin_set(location);
+        iso_redraw();
+        location_calc_dist_from_screen_center(location,&x,&y);
+        party_distance_log(x==0 && y==0 ? "release_camera_centered" : "release_camera_failed",
+            camera_actor,object_dist(player_get_local_pc_obj(),camera_actor));
+    }
+    return true;
+}
+
 // 0x4AD5D0
 int ai_timeevent_delay(int64_t obj)
 {
+    if(obj==modern_party_selected())return 250;
     return 4750 * ai_distance_to_nearest_player(obj) / 30 + 250;
 }
 

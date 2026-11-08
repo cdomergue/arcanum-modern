@@ -4,6 +4,7 @@
 #include "game/path.h"
 
 #include <stdio.h>
+#include <errno.h>
 
 #include "game/ai.h"
 #include "game/anim.h"
@@ -4892,6 +4893,34 @@ void sub_551A10(int64_t obj)
     }
 }
 
+/* Dialogue exit must restore the manually controlled party member in either camera mode. */
+static void intgame_dialog_restore_camera(int64_t pc)
+{
+    int64_t selected=modern_party_selected();
+    int64_t actor=selected ? selected : pc;
+    sub_551A10(actor);
+    int64_t x=0,y=0;
+    if(actor)location_calc_dist_from_screen_center(obj_field_int64_get(actor,OBJ_F_LOCATION),&x,&y);
+    int saved_errno=errno;
+    FILE* log=fopen("ArcanumModern/dialog-camera.log","ab+");
+    if(log){
+        fseek(log,0,SEEK_END);
+        if(ftell(log)>=1024*1024){
+            fclose(log);log=NULL;
+            if(remove("ArcanumModern/dialog-camera.previous.log")==0 || errno==ENOENT)
+                if(rename("ArcanumModern/dialog-camera.log","ArcanumModern/dialog-camera.previous.log")==0)
+                    log=fopen("ArcanumModern/dialog-camera.log","ab");
+        }
+        if(log){
+            fprintf(log,"ticks_ms=%llu event=dialog_exit actor=%llu hero=%llu selected=%llu centered=%d\n",
+                (unsigned long long)SDL_GetTicks(),(unsigned long long)actor,
+                (unsigned long long)pc,(unsigned long long)selected,actor && x==0 && y==0);
+            fclose(log);
+        }
+    }
+    errno=saved_errno;
+}
+
 // 0x551A80
 bool intgame_mode_set(IntgameMode mode)
 {
@@ -4944,7 +4973,7 @@ bool intgame_mode_set(IntgameMode mode)
             combat_check_use_skill(combat_input_actor());
             break;
         case INTGAME_MODE_DIALOG:
-            sub_551A10(pc_obj);
+            intgame_dialog_restore_camera(pc_obj);
             v1 = 1;
             if (v2) {
                 dialog_ui_end_dialog(player_get_local_pc_obj(), 0);

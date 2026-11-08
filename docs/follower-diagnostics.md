@@ -94,3 +94,38 @@ party in the game map, identifies its process/window, focuses that window and
 uses XTest to hold/release movement keys across selection changes and a pause
 menu transition. It requires X11/XWayland and libXtst, writes a screenshot and
 diagnostics inside the isolated copy, and does not save the party.
+
+## Distant manual control
+
+The selected companion remains exempt from the normal 30-tile follower catchup
+and from the out-of-range AI animation interruption. Manual selection retains
+normal nearby AI tick frequency. Ending selection, selecting another companion,
+or regrouping applies the usual catchup check immediately; combat, death,
+inactivity, paralysis and the native Wait Here flag still prevent recall.
+Free-camera scrolling uses the selected companion's location and perception.
+When explicit control release recalls a distant companion, the camera centers
+on the current controlled actor (the hero on deselection), including free mode.
+Automatic catchup and releases without recall do not move the camera.
+
+`ArcanumModern/party-distance.log` records `manual_remote` (at most once per five
+seconds) and `catchup` with SDL uptime, actor handle and distance in tiles. It
+rotates at 1 MiB to `party-distance.previous.log`. It excludes names and save
+contents. `release_camera_centered` / `release_camera_failed` record the immediate
+camera outcome after explicit recall. `catchup` records a native relocation request, not a save operation.
+Run `python3 tests/test_party_distance.py` and `tests/test_party_grouping.py` for
+AI guards, release callbacks and log rotation. The live `check-follow-input`
+fixture additionally tests 45-tile separation, AI processing without recall,
+free-camera scrolling in all four cardinal directions and recall on deselection.
+
+## Camera after dialogue
+
+Dialogue exit restores the selected companion's camera position in both free
+and follow camera modes, falling back to the hero when no companion is selected.
+`ArcanumModern/dialog-camera.log` records SDL uptime, runtime actor/hero/selection
+handles and whether the target tile is centered after the request. It rotates
+at 1 MiB to `dialog-camera.previous.log`; it excludes names and save contents.
+Logging failure does not prevent camera restoration. Run
+`python3 tests/test_dialog_camera.py` for target selection and log rotation. The
+live `check-follow-input GAME --fresh` fixture also opens and closes the native
+dialogue interface in both camera modes with the companion 45 tiles away,
+checking camera position and selection immediately after closing.

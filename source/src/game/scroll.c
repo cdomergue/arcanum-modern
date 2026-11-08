@@ -1,4 +1,5 @@
 #include "game/scroll.h"
+#include "ui/follower_ui.h"
 
 #include "game/gamelib.h"
 #include "game/gsound.h"
@@ -290,8 +291,10 @@ void scroll_start(int direction)
         return;
     }
 
-    // Get the current scroll center coordinates (adjusted to center of tile)
-    location_xy(scroll_center, &center_x, &center_y);
+    // Manual control uses the companion as the perception-limited camera anchor.
+    int64_t selected=modern_party_selected();
+    int64_t center=selected ? obj_field_int64_get(selected,OBJ_F_LOCATION) : scroll_center;
+    location_xy(center, &center_x, &center_y);
     center_x += 40;
     center_y += 20;
 
@@ -314,7 +317,7 @@ void scroll_start(int direction)
 
     location_at(viewport_center_x, viewport_center_y, &viewport_center_loc);
 
-    rot = location_rot(viewport_center_loc, scroll_center);
+    rot = location_rot(viewport_center_loc, center);
     if (rot == (direction - 1) % 8
         || rot == (direction + 1) % 8
         || rot == direction) {
@@ -559,7 +562,8 @@ int scroll_distance_get(void)
         return 0;
     }
 
-    pc_obj = player_get_local_pc_obj();
+    pc_obj = modern_party_selected();
+    if (!pc_obj) pc_obj = player_get_local_pc_obj();
     if (pc_obj == OBJ_HANDLE_NULL) {
         return 0;
     }
