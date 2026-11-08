@@ -10,47 +10,37 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
 
 ## Features
 
-- Floating HP feedback above actors: damage in red, healing in green. Numbers
-  rise and fade out, including outside combat.
-
 - Turn-based combat with direct companion control, switching between allies
-  with consecutive turns, action previews and a scrollable combat log showing
-  attack rolls, hit chances and outcomes. Walls fade around all combat
-  participants throughout the fight, including between their turns. Combat uses
-  Arcanum's rules.
+  with consecutive turns, action previews, a scrollable combat log, and floating HP feedback above actors
 - Redesigned HUD, character sheet, inventory, trading, dialogue, journal, maps,
-  spell and skill panels, save/load menus and display options.
+  spell and skill panels, save/load menus, and display options.
 - Custom portraits imported during character creation or from your
-  hero’s in-game character sheet, with cropping, zoom and automatic conversion
-  to the classic game’s image formats.
-- Custom backgrounds in character creation, with a name,
-  personal history, attribute adjustments, native effects, starting money and equipment.
-- Interactive voiced tutorial on a dedicated island, offered on first launch and
-  replayable anytime from **Single Player → Tutorial** (with French or English
-  subtitles).
+  hero’s in-game character sheet, with cropping, zoom, and automatic conversion
+- Custom backgrounds in character creation
+- Interactive voiced tutorial on a dedicated island
 - Zoom the world, pan with the keyboard, or use Follow Camera to move your character with WASD.
-  Remap your keys and play in windowed, desktop fullscreen or exclusive fullscreen mode.
+  Remap your keys and play in windowed, desktop fullscreen, or exclusive fullscreen mode.
 - Inventory search, categories, equipment comparison, item details, stack
-  transfers and two banks of ten personal quick slots per controlled character.
+  transfers, and two banks of ten personal quick slots per controlled character.
 - Integrated **AID descriptions in French and English** for the Arcanum
   campaign: item effects, strength requirements, quest and crafting tags,
-  offerings and gifts. Supports existing saves and installations with AID
-  already present. Magical properties remain hidden until identification.
-- Independent companion positioning, regrouping and control outside combat.
-  Your character and companions avoid detected ground traps and stop if no safe route is available.
+  offerings, and gifts.
+- Independent companion positioning, regrouping, and control outside combat.
+- Improved ground traps avoidance for player and companions.
 - Select automatic level-up schemes for your character and companions.
   Choose None for a companion to assign their available points yourself.
 - Equal combat XP for the hero and living companions at the end of each fight;
   progression beyond level 50.
-- Five seconds of world-map travel between random encounters.
 - Three rotating autosaves before and after combat and before eligible area
-  transitions, separate from manual saves. Automatic saves can be disabled in the game options.
-- Journal search, quest filters, favorites, quest tracking and personal map notes.
-- Zoomable local maps with exploration fog, localized labels and route planning without a waypoint limit.
+  transitions
+- Journal search, quest filters, favorites, quest tracking, and personal map notes.
+- Zoomable local maps with exploration fog, localized labels, and route planning without a waypoint limit.
+- Longer-distance pathfinding for zoomed-out movement and local-map routes with fewer automatic waypoints.
 - Books, letters, newspapers, inscriptions, telegrams and floating dialogue
   using the installed game's text, plus playback of its original cinematics.
 - Optional unlimited companions; disabled by default. Recruitment conditions apply.
 - Various bug fixes not covered by UAP.
+
 
 Game text follows the installed game's language. Additional interface text has
 partial French and English support.
