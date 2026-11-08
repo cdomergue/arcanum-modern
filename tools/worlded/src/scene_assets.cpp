@@ -1,4 +1,5 @@
 #include "scene_assets.hpp"
+#include "prototype_catalog.hpp"
 #include "worlded/building.hpp"
 #include <QImage>
 #include <sstream>
@@ -220,6 +221,7 @@ std::vector<CatalogEntry> SceneAssets::catalog() {
     std::vector<CatalogEntry> result;
     std::set<std::pair<unsigned,unsigned>> keys;
     catalogErrors.clear();
+    for(const auto& warning : installation_->diagnostics) catalogErrors.append(QString::fromUtf8(warning.c_str()));
     auto add=[&](GameObject object,QString label,QString source) {
         auto aid=unsigned(object.number("CURRENT_AID"));
         if(!keys.emplace(object.prototype_id,aid).second) return;
@@ -323,5 +325,7 @@ std::vector<CatalogEntry> SceneAssets::catalog() {
             } catch(const std::exception&) { }
         } if(added) break; }
     }
+    log_prototype_catalog(QString("catalog prototypes=%1 entries=%2 errors=%3")
+        .arg(prototype_paths_.size()).arg(result.size()).arg(catalogErrors.size()));
     return result;
 }

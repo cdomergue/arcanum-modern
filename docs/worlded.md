@@ -66,6 +66,14 @@ The wall library includes the
 structures, faces and variants in your installation. Selecting a wall in the
 scene locates its library entry.
 
+Keep the matching `worlded-native-inventory` helper beside the editor. It
+generates built-in object prototypes from your installed tables in a temporary
+directory; it does not change the game installation or its saves. Mod prototypes
+take precedence. Source builds need the [native helper](worlded-build.md#native-object-and-inventory-helper)
+as well as the Qt editor. Library diagnostics are stored in
+`worlded-catalog.log` under the platform's application data directory, with one
+256 KiB rotated backup.
+
 Select and drag objects to move them. Ctrl+D duplicates the selection, Delete
 removes it, and Ctrl+Z / Ctrl+Shift+Z undo or redo. Double-click a placed object
 to configure its position, appearance, properties and script events. Applying
@@ -337,7 +345,7 @@ NPCs that need generated inventories require the
 inside the copy, generates and equips inventories, and preserves permanent
 object references for later saves. This preparation belongs to test copies;
 it does not populate project exports. See
-[native inventory helper](worlded-build.md#native-inventory-helper). If the helper is
+[native inventory helper](worlded-build.md#native-object-and-inventory-helper). If the helper is
 missing, preparation of a scene that needs it fails with an explanation.
 
 Use **Resume test…** with the copy's `playtest.json` to launch it again. Linux

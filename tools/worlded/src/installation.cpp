@@ -1,6 +1,8 @@
 #include "worlded/assets.hpp"
 #include <algorithm>
 #include <cctype>
+#include <charconv>
+#include <set>
 #include <stdexcept>
 
 namespace worlded {
@@ -18,7 +20,7 @@ fs::path child(const fs::path& root, const std::string& name) {
 }
 void Installation::add_archive(const fs::path& path) {
     auto archive = std::make_shared<Archive>(path);
-    for (const auto& [name, entry] : archive->entries()) resources_[name].push_back({path, archive, entry.size});
+    for (const auto& [name, entry] : archive->entries()) resources_[name].push_back({path, archive, entry.size,{}});
 }
 void Installation::add_directory(const fs::path& path) {
     if (!fs::is_directory(path)) return;
@@ -33,7 +35,7 @@ void Installation::add_directory(const fs::path& path) {
         if (it->is_symlink()) continue;
         if (!it->is_regular_file()) continue;
         auto name = resource_name(utf8_cp1252(relative.generic_u8string()));
-        resources_[name].push_back({it->path(), {}, it->file_size()});
+        resources_[name].push_back({it->path(), {}, it->file_size(),{}});
     }
 }
 Installation::Installation(const fs::path& game, const std::string& module) {
@@ -48,7 +50,7 @@ Installation::Installation(const fs::path& game, const std::string& module) {
         for (fs::recursive_directory_iterator it(directory), end; it != end; ++it) {
             if (it->is_symlink() || !it->is_regular_file()) continue;
             auto name = resource_name(utf8_cp1252(it->path().lexically_relative(game).generic_u8string()));
-            resources_[name].push_back({it->path(), {}, it->file_size()});
+            resources_[name].push_back({it->path(), {}, it->file_size(),{}});
         }
     }
     std::map<std::string, fs::path> archives;
@@ -119,6 +121,37 @@ Bytes Installation::read(const std::string& name) const {
     auto it = resources_.find(normalized);
     if (it == resources_.end()) throw std::runtime_error("Missing resource: " + name);
     const auto& source = it->second.back();
+    if (source.generated) return *source.generated;
     return source.archive ? source.archive->read(normalized) : read_file(source.file);
+}
+std::size_t Installation::add_default_prototypes(const fs::path& directory) {
+    std::set<unsigned> installed;
+    for (const auto& [name,sources] : resources_) {
+        (void)sources;
+        if (name.rfind("proto/",0)!=0 || fs::path(name).extension()!=".pro") continue;
+        unsigned id=0;
+        if (std::from_chars(name.data()+6,name.data()+name.size(),id).ec==std::errc{}) installed.insert(id);
+    }
+    // Validate the entire output before publishing any entries.
+    std::map<std::string,std::shared_ptr<const Bytes>> defaults;
+    std::size_t decoded=0,total=0;
+    for (const auto& entry : fs::directory_iterator(directory)) {
+        if (entry.is_symlink() || !entry.is_regular_file()) throw std::runtime_error("Invalid generated prototype file");
+        auto name=resource_name(utf8_cp1252(entry.path().filename().u8string()));
+        if (fs::path(name).extension()!=".pro") throw std::runtime_error("Unexpected generated prototype extension");
+        total+=entry.file_size();
+        if(++decoded>10000 || total>resource_limit) throw std::runtime_error("Generated prototypes exceed the catalog limit");
+        auto data=std::make_shared<const Bytes>(read_file(entry.path()));
+        auto objects=read_objects(*data);
+        unsigned id=0;
+        if (std::from_chars(name.data(),name.data()+name.size(),id).ec!=std::errc{} || objects.size()!=1
+            || !objects[0].prototype || objects[0].prototype_id!=id || !id)
+            throw std::runtime_error("Invalid generated prototype");
+        if (installed.insert(id).second) defaults.emplace("proto/"+name,std::move(data));
+    }
+    if (!decoded) throw std::runtime_error("Native generator produced no prototypes");
+    for (const auto& [name,data] : defaults)
+        resources_[name].push_back({fs::path("Built-in engine prototypes"),{},data->size(),data});
+    return defaults.size();
 }
 }

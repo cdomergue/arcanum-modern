@@ -384,6 +384,9 @@ add_executable(worlded-native-inventory EXCLUDE_FROM_ALL "../tools/worlded/prepa
 target_include_directories(worlded-native-inventory PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(worlded-native-inventory PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
 if(WIN32)
+    target_link_libraries(worlded-native-inventory PRIVATE shell32)
+endif()
+if(WIN32)
     add_custom_command(TARGET worlded-native-inventory POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:worlded-native-inventory>"
         VERBATIM)

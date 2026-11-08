@@ -1,10 +1,13 @@
 /* Native inventory materialization for WorldED copies.
  * Usage: worlded-native-inventory COPY/game SLOT REQUESTS OUTPUT_DIRECTORY SECTOR_X SECTOR_Y
+ *    or: worlded-native-inventory --prototypes DISPOSABLE_DIRECTORY
  * Refuses source installations; never saves or replaces a campaign slot. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
 #include <direct.h>
 #include <io.h>
 #define chdir _chdir
@@ -34,6 +37,15 @@
 #include "game/script_name.h"
 #include "game/dialog.h"
 #include "game/obj_file.h"
+#include "game/proto.h"
+#include "game/proto_defaults.h"
+#include "game/description.h"
+#include "game/oname.h"
+#include "game/critter.h"
+#include "game/random.h"
+#include "game/stat.h"
+#include "game/level.h"
+#include "game/effect.h"
 #include "ui/iso.h"
 #include "ui/gameuilib.h"
 #include "ui/intgame.h"
@@ -44,8 +56,59 @@
 static void render(void) {
     for(int i=0;i<3;i++) {modern_ui_tick();tig_ping();gamelib_ping();iso_invalidate_rect(NULL);iso_redraw();tig_window_display();TigMessage msg;while(tig_message_dequeue(&msg)==TIG_OK){}}
 }
+/* This mode receives only a disposable directory of resolved resource tables.
+ * It does not initialize a campaign, open a save or mount the source game. */
+static int generate_prototypes(const char* directory) {
+    REQUIRE(chdir(directory)==0);
+    FILE* marker=fopen(".worlded-prototypes","rb");
+    REQUIRE(marker!=NULL);
+    int valid=fgetc(marker)=='1' && fgetc(marker)=='\n' && fgetc(marker)==EOF;
+    fclose(marker);REQUIRE(valid);
+    TigInitInfo init={0};GameInitInfo game={0};game.editor=true;
+    REQUIRE(tig_memory_init(&init)==TIG_OK);
+    REQUIRE(tig_file_repository_add("."));
+    REQUIRE(tig_color_init(&init)==TIG_OK);
+    tig_color_set_rgba_settings(0xff0000,0xff00,0xff,0xff000000);
+    REQUIRE(tig_str_parse_init(&init)==TIG_OK);
+    REQUIRE(description_init(&game));
+    REQUIRE(random_init(&game));
+    REQUIRE(critter_init(&game));
+    REQUIRE(name_init(&game));
+    REQUIRE(script_name_init(&game));
+    REQUIRE(stat_init(&game));
+    REQUIRE(level_init(&game));
+    REQUIRE(o_name_init(&game));
+    REQUIRE(effect_init(&game));
+    REQUIRE(obj_init(&game));
+    REQUIRE(proto_init(&game));
+    unsigned expected=0;
+#define PROTO_RANGE_COUNT(first,last) expected+=last-first;
+    ARCANUM_DEFAULT_PROTO_RANGES(PROTO_RANGE_COUNT)
+#undef PROTO_RANGE_COUNT
+    TigFileList files;tig_file_list_create(&files,"proto\\*.pro");
+    unsigned generated=files.count;tig_file_list_destroy(&files);
+    REQUIRE(generated==expected);
+    puts("WorldED prototypes generated");
+    proto_exit();obj_exit();effect_exit();o_name_exit();level_exit();stat_exit();
+    script_name_exit();name_exit();critter_exit();description_exit();
+    tig_str_parse_exit();tig_color_exit();tig_file_exit();tig_memory_exit();
+    return 0;
+}
 int main(int argc,char** argv) {
     setvbuf(stdout,NULL,_IONBF,0);
+    if(argc==3 && !strcmp(argv[1],"--prototypes")) {
+#ifdef _WIN32
+        // QProcess passes UTF-16 arguments. The CRT's narrow argv can lose an
+        // accented Windows user name in the temporary directory path.
+        int count=0;wchar_t** wide=CommandLineToArgvW(GetCommandLineW(),&count);
+        if(!wide)return 2;
+        int result=count==3 ? _wchdir(wide[2]) : -1;
+        LocalFree(wide);if(result)return 2;
+        return generate_prototypes(".");
+#else
+        return generate_prototypes(argv[2]);
+#endif
+    }
     if(argc!=7 || chdir(argv[1]) || access(".worlded-playtest",R_OK)) return 2;
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER,"software",SDL_HINT_OVERRIDE);

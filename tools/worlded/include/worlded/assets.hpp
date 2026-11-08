@@ -52,6 +52,7 @@ struct ResourceSource {
     std::filesystem::path file;
     std::shared_ptr<Archive> archive;
     std::uint64_t size = 0;
+    std::shared_ptr<const Bytes> generated;
 };
 // TIG, loose root resources, base archives, data/, module archive, numerical
 // module patches, then module loose data. Records every shadowed source.
@@ -61,6 +62,10 @@ public:
     const std::map<std::string, std::vector<ResourceSource>>& resources() const { return resources_; }
     Bytes read(const std::string& name) const;
     bool contains(const std::string& name) const;
+    // Fill missing IDs only. Installed prototypes, including custom filenames,
+    // retain precedence over the engine's defaults.
+    std::size_t add_default_prototypes(const std::filesystem::path& directory);
+    std::vector<std::string> diagnostics;
 private:
     std::map<std::string, std::vector<ResourceSource>> resources_;
     void add_archive(const std::filesystem::path& path);

@@ -1,4 +1,5 @@
 #include "editor_canvas.hpp"
+#include "prototype_catalog.hpp"
 #include "worlded/world.hpp"
 #include "world_view.hpp"
 #include "workspace.hpp"
@@ -557,7 +558,11 @@ public:
             catch (...) { error("Failed to index resources."); capture(); }
             watcher->deleteLater();
         });
-        watcher->setFuture(QtConcurrent::run([path]{ return std::make_shared<Installation>(fs::u8path(path.toUtf8().constData())); }));
+        watcher->setFuture(QtConcurrent::run([path]{
+            auto installation=std::make_shared<Installation>(fs::u8path(path.toUtf8().constData()));
+            prepare_default_prototypes(*installation);
+            return installation;
+        }));
         return true;
     }
     void chooseResource(const QString& path) {
@@ -713,6 +718,7 @@ public:
             if(!item->isHidden()) ++visible;
         }
         paletteCount->setText(QString("%1 / %2 entries").arg(visible).arg(paletteObjects.size())+(assets && !assets->catalogErrors.empty() ? QString(" · %1 errors").arg(assets->catalogErrors.size()) : QString{}));
+        if(installation && !installation->diagnostics.empty()) paletteCount->setText(paletteCount->text()+"\nBuilt-in objects unavailable.\nHover here for details.");
         paletteIcons.start();
     }
     Sprite paletteSpriteAt(int index) {

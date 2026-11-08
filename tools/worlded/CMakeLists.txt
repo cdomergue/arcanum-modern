@@ -57,6 +57,17 @@ if(WORLDED_BUILD_GUI)
         target_compile_options(worlded-explorer PRIVATE -Wall -Wextra -Wpedantic)
     endif()
     install(TARGETS worlded-explorer RUNTIME DESTINATION bin)
+    set(WORLDED_NATIVE_HELPER "" CACHE FILEPATH "Matching engine worlded-native-inventory executable")
+    if(WORLDED_NATIVE_HELPER)
+        if(NOT EXISTS "${WORLDED_NATIVE_HELPER}")
+            message(FATAL_ERROR "WORLDED_NATIVE_HELPER does not exist: ${WORLDED_NATIVE_HELPER}")
+        endif()
+        add_custom_command(TARGET worlded-explorer POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${WORLDED_NATIVE_HELPER}"
+                "$<TARGET_FILE_DIR:worlded-explorer>/"
+            VERBATIM)
+        install(PROGRAMS "${WORLDED_NATIVE_HELPER}" DESTINATION bin)
+    endif()
     if(BUILD_TESTING)
         add_test(NAME worlded_house_export COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/test_house_export.py" "$<TARGET_FILE:worlded-house-export>")

@@ -142,12 +142,21 @@ ctest --test-dir build/worlded-cli -C Release --output-on-failure
 zlib and a C++17 compiler are still required. Set `BUILD_TESTING=OFF` if you
 intentionally want a build without Python or tests.
 
-## Native inventory helper
+## Native object and inventory helper
 
-Tests containing NPCs with generated inventories require
-`worlded-native-inventory` beside `worlded-explorer`. Build it against the
+The object library on a fresh installation and tests containing NPCs with
+generated inventories require `worlded-native-inventory` beside
+`worlded-explorer`. The original DAT archives do not contain the built-in
+prototype files: the helper generates them from the engine definitions and
+installed resource tables in a disposable directory. Existing mod prototypes
+take precedence. No game files or saves are written by library generation.
+Build the helper against the
 Renaissance engine, using the same compiler and architecture as that engine.
 The Qt editor build alone does not produce it.
+
+You can also configure the editor with
+`-DWORLDED_NATIVE_HELPER=/absolute/path/to/worlded-native-inventory` to copy
+the helper beside the editor on build and include it in `cmake --install`.
 
 After configuring the engine as described in the [development guide](development.md):
 

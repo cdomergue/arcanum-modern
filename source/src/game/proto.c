@@ -1,4 +1,5 @@
 #include "game/proto.h"
+#include "game/proto_defaults.h"
 
 #include <stdio.h>
 
@@ -87,52 +88,14 @@ static bool proto_id_list_check(int* proto_ids, int cnt, int id);
 static void proto_id_list_destroy(int* proto_ids);
 
 // 0x5B37FC
-static int dword_5B37FC[OBJ_TYPE_COUNT] = {
-    /*          OBJ_TYPE_WALL */ 1000,
-    /*        OBJ_TYPE_PORTAL */ 2008,
-    /*     OBJ_TYPE_CONTAINER */ 3023,
-    /*       OBJ_TYPE_SCENERY */ 4006,
-    /*    OBJ_TYPE_PROJECTILE */ 5028,
-    /*        OBJ_TYPE_WEAPON */ 6029,
-    /*          OBJ_TYPE_AMMO */ 7038,
-    /*         OBJ_TYPE_ARMOR */ 8042,
-    /*          OBJ_TYPE_GOLD */ 9056,
-    /*          OBJ_TYPE_FOOD */ 10057,
-    /*        OBJ_TYPE_SCROLL */ 11059,
-    /*           OBJ_TYPE_KEY */ 12060,
-    /*      OBJ_TYPE_KEY_RING */ 13061,
-    /*       OBJ_TYPE_WRITTEN */ 14062,
-    /*       OBJ_TYPE_GENERIC */ 15065,
-    /*            OBJ_TYPE_PC */ 16066,
-    /*           OBJ_TYPE_NPC */ 17067,
-    /*          OBJ_TYPE_TRAP */ 26000,
-    /*       OBJ_TYPE_MONSTER */ 27309,
-    /*    OBJ_TYPE_UNIQUE_NPC */ 28310,
-};
+#define PROTO_RANGE_START(first, last) first,
+static int dword_5B37FC[OBJ_TYPE_COUNT] = { ARCANUM_DEFAULT_PROTO_RANGES(PROTO_RANGE_START) };
+#undef PROTO_RANGE_START
 
 // 0x5B384C
-static int dword_5B384C[OBJ_TYPE_COUNT] = {
-    /*          OBJ_TYPE_WALL */ 1008,
-    /*        OBJ_TYPE_PORTAL */ 2023,
-    /*     OBJ_TYPE_CONTAINER */ 3061,
-    /*       OBJ_TYPE_SCENERY */ 4051,
-    /*    OBJ_TYPE_PROJECTILE */ 5029,
-    /*        OBJ_TYPE_WEAPON */ 6179,
-    /*          OBJ_TYPE_AMMO */ 7042,
-    /*         OBJ_TYPE_ARMOR */ 8293,
-    /*          OBJ_TYPE_GOLD */ 9057,
-    /*          OBJ_TYPE_FOOD */ 10145,
-    /*        OBJ_TYPE_SCROLL */ 11143,
-    /*           OBJ_TYPE_KEY */ 12063,
-    /*      OBJ_TYPE_KEY_RING */ 13062,
-    /*       OBJ_TYPE_WRITTEN */ 14130,
-    /*       OBJ_TYPE_GENERIC */ 15213,
-    /*            OBJ_TYPE_PC */ 16079,
-    /*           OBJ_TYPE_NPC */ 17317,
-    /*          OBJ_TYPE_TRAP */ 26008,
-    /*       OBJ_TYPE_MONSTER */ 27394,
-    /*    OBJ_TYPE_UNIQUE_NPC */ 28472,
-};
+#define PROTO_RANGE_END(first, last) last,
+static int dword_5B384C[OBJ_TYPE_COUNT] = { ARCANUM_DEFAULT_PROTO_RANGES(PROTO_RANGE_END) };
+#undef PROTO_RANGE_END
 
 // 0x5B389C
 static int race_to_body_type_tbl[RACE_COUNT] = {

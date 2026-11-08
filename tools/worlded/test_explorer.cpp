@@ -3,18 +3,43 @@
 #include <QtTest>
 #include "test_authoring.hpp"
 #include "test_inventory_explorer.inc"
+#include "test_prototypes.hpp"
 
 namespace {
 void check(bool condition, const char* message) { if (!condition) throw std::runtime_error(message); }
 }
 int main(int argc, char** argv) {
     QApplication app(argc,argv); app.setStyle("Fusion"); applyExplorerStyle(app);
-    if (argc!=7 && argc!=5 && argc!=6 && argc!=3 && !(argc==4 && (std::string(argv[3])=="--updates" || std::string(argv[3])=="--real-sector" || std::string(argv[3])=="--carpets" || std::string(argv[3])=="--facades" || std::string(argv[3])=="--lights"))) return 2;
+    if(argc==3 && std::string(argv[1])=="--prototypes") {
+        auto root=fs::u8path(argv[2]);
+        if(read_file(root/".worlded-prototypes")!=Bytes({'1','\n'}))return 2;
+        write_bytes(root/"proto/001020.pro",read_file(root/"mes/fixture.mes"));return 0;
+    }
+    if (argc!=7 && argc!=5 && argc!=6 && argc!=3 && !(argc==4 && (std::string(argv[3])=="--prototype-catalog-missing" || std::string(argv[3])=="--prototype-catalog" || std::string(argv[3])=="--updates" || std::string(argv[3])=="--real-sector" || std::string(argv[3])=="--carpets" || std::string(argv[3])=="--facades" || std::string(argv[3])=="--lights"))) return 2;
     try {
         checkAuthoring();
         Explorer window; window.show(); window.mount(QString::fromUtf8(argv[1]));
         check(QTest::qWaitFor([&]{return window.installation != nullptr || window.failed;},20000), "Indexing timed out");
         check(!window.failed, "Installation failed");
+        if(argc==4 && (std::string(argv[3])=="--prototype-catalog" || std::string(argv[3])=="--prototype-catalog-missing")) {
+            bool missing=std::string(argv[3])=="--prototype-catalog-missing";
+            check(window.installation->diagnostics.empty()!=missing,"Unexpected native prototype generation result");
+            window.populatePalette();
+            check(window.assets->catalogErrors.empty()!=missing,"Unexpected catalog diagnostics");
+            if(missing) check(window.paletteCount->text().contains("Built-in objects unavailable"),"Missing generator is not visible in the library");
+            if(!missing) for(unsigned type : {0,1,2,3,5,15,16,17}) {
+                auto found=std::find_if(window.paletteObjects.begin(),window.paletteObjects.end(),[&](const auto& o){return o.type==type;});
+                check(found!=window.paletteObjects.end(),"Built-in object category is empty");
+                auto prototype=read_objects(window.installation->read(window.assets->prototypePath(found->prototype_id)));
+                check(prototype.size()==1 && prototype[0].prototype,"Generated placement prototype unavailable");
+            }
+            window.resize(1360,900);window.showWorld();window.openWorldSector({1450,1293});
+            window.libraryTabs->setCurrentIndex(0);window.paletteCategory->setCurrentIndex(window.paletteCategory->findData(0));
+            QTest::qWait(700);window.loadPaletteIcons();window.grab().save(QString::fromUtf8(argv[2]));
+            std::cout<<"PASS: built-in catalog, diagnostics and rendered library ("<<window.paletteObjects.size()<<" entries)\n";
+            return 0;
+        }
+        if(argc==3) checkDefaultPrototypes(fs::u8path(argv[1]));
         if(argc==4 && std::string(argv[3])=="--updates"){
             window.resize(1280,800);window.showWorld();window.openWorldSector({1346,1024});check(window.building && window.building->reference,"Update reference not captured");
             for(unsigned n=0;n<30;n++)window.building->ground.set_blocked(n,0,!window.building->ground.blocked(n,0));
