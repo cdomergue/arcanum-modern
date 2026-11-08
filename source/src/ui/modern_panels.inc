@@ -361,6 +361,41 @@ static int inventory_detail_card(SDL_FRect r,ModernDetails* details,int scroll,i
     }
     return maximum;
 }
+/* Layout diagnostics contain dimensions only, never item names or quotes. */
+static void inventory_feedback_log(int mode,int source,int rows,SDL_FRect box,float actions_bottom)
+{
+    static int previous_mode=-1,previous_source=-1,previous_rows=-1;
+    static float previous_w,previous_h,previous_line_height;
+    float line_height=text_line_height();
+    if(mode==previous_mode && source==previous_source && rows==previous_rows
+        && canvas_w==previous_w && canvas_h==previous_h && line_height==previous_line_height)return;
+    previous_mode=mode;previous_source=source;previous_rows=rows;
+    previous_w=canvas_w;previous_h=canvas_h;previous_line_height=line_height;
+    static Uint64 window;
+    static int count;
+    Uint64 now=SDL_GetTicks();
+    if(now-window>=1000){window=now;count=0;}
+    if(count++>=20)return;
+    int saved_errno=errno;
+    FILE* log=fopen("ArcanumModern/inventory-layout.log","ab+");
+    if(log){
+        fseek(log,0,SEEK_END);
+        if(ftell(log)>=1024*1024){
+            fclose(log);log=NULL;
+            if(remove("ArcanumModern/inventory-layout.previous.log")==0 || errno==ENOENT)
+                if(rename("ArcanumModern/inventory-layout.log","ArcanumModern/inventory-layout.previous.log")==0)
+                    log=fopen("ArcanumModern/inventory-layout.log","ab");
+        }
+        if(log){
+            fprintf(log,"ticks_ms=%llu mode=%d viewport=%.0fx%.0f source=%d rows=%d line_height=%.1f feedback=%.1f,%.1f,%.1f,%.1f actions_bottom=%.1f overlap=%d\n",
+                (unsigned long long)now,mode,canvas_w,canvas_h,source,rows,line_height,
+                box.x,box.y,box.w,box.h,actions_bottom,source!=0 && box.y<actions_bottom);
+            fclose(log);
+        }
+    }
+    errno=saved_errno;
+}
+
 static void draw_inventory(void)
 {
     ModernInventory inv;if(!modern_inventory_state(&inv))return;
@@ -373,6 +408,10 @@ static void draw_inventory(void)
     centered(3,actor_name(inv.pc),canvas_w/2,y+22,GOLD);
     bool single=inv.mode==INVEN_UI_MODE_INVENTORY || inv.mode>=INVEN_UI_MODE_NPC_IDENTIFY;
     float left=x+25,right=x+440,cw=360;
+    SDL_FRect feedback={left,y+688,790,54};
+    int feedback_source=inv.feedback && *inv.feedback?1:
+        *message_text && SDL_GetTicks()-message_time<12000?2:0;
+    float actions_bottom=feedback.y-8;
     inventory_detail_rect=(SDL_FRect){x+830,y+214,w-855,516};
     SDL_FRect query={x+830,y+83,w-855,34};
     button(query,2400,"",-1,inventory_searching,true);
@@ -406,7 +445,8 @@ static void draw_inventory(void)
     const int icons[3]={224,342,345};
     for(int i=0;i<3;i++)if(targets[i][0]) {
         float gap=14,tw=(cw-2*gap)/3;
-        SDL_FRect target={left+i*(tw+gap),y+651,tw,tw*292/488};
+        float th=tw*292/488;
+        SDL_FRect target={left+i*(tw+gap),actions_bottom-th,tw,th};
         if(inventory_actions_texture) {
             /* Sample the brass oval and mounting plate without the atlas presentation frame. */
             float aw,ah;SDL_GetTextureSize(inventory_actions_texture,&aw,&ah);
@@ -455,7 +495,7 @@ static void draw_inventory(void)
         inventory_compare_max=inventory_detail_card(inventory_compare_rect,&comparison,inventory_compare_scroll,776);
         if(inventory_compare_scroll>inventory_compare_max)inventory_compare_scroll=inventory_compare_max;
     }
-    if(inv.mode==INVEN_UI_MODE_BARTER || inv.mode==INVEN_UI_MODE_LOOT)text_compact(tr("Maj + clic : transférer la pile","Shift + click: transfer stack"),left,y+722,790,false,MUTED);
+    if(!feedback_source && (inv.mode==INVEN_UI_MODE_BARTER || inv.mode==INVEN_UI_MODE_LOOT))text_compact(tr("Maj + clic : transférer la pile","Shift + click: transfer stack"),left,y+722,790,false,MUTED);
     if(inv.transfer_all) {
         bool ready=!inven_ui_drag_item_obj_get() && combat_input_actor()==inv.pc
             && (!combat_turn_based_is_active() || combat_input_ready(inv.pc));
@@ -465,10 +505,9 @@ static void draw_inventory(void)
     if(mainmenu_ui_is_active())menu_button((SDL_FRect){left+140,y+footer,220,48},737,menu_text(7002),true);
     menu_button((SDL_FRect){x+w-275,y+footer,240,48},730,menu_text(260),true);
     /* NPC service quotes share the engine feedback used by barter. */
-    if(inv.feedback && *inv.feedback)
-        menu_paragraph(game_text(inv.feedback),(SDL_FRect){left,y+688,790,54},0,GOLD);
-    else if(*message_text && SDL_GetTicks()-message_time<12000)
-        text_compact(message_text,left,y+688,790,false,GOLD);
+    const char* quote=feedback_source==1?game_text(inv.feedback):feedback_source==2?message_text:NULL;
+    int feedback_rows=quote?menu_paragraph(quote,feedback,0,GOLD):0;
+    inventory_feedback_log(inv.mode,feedback_source,feedback_rows,feedback,actions_bottom);
     int64_t drag=inven_ui_drag_item_obj_get();
     if(drag)draw_art_id(obj_field_int32_get(drag,OBJ_F_ITEM_INV_AID),(SDL_FRect){mouse_x+12,mouse_y+12,72,88},true);
     if(intgame_mode_get()==INTGAME_MODE_QUANTITY) {
@@ -633,7 +672,7 @@ static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)
     notebook_sync();memo_map_rect=dest;memo_map_state=*map;
     memo_hover=-1;
     if(memos_visible)for(int i=0;i<map_memo_count;i++) {
-        MapMemo* memo=&map_memos[i];if(memo->mode!=map->mode || memo->map!=map->map)continue;
+        MapMemo* memo=&map_memos[i];if(!map_memo_matches(memo,map))continue;
         float x=dest.x+(memo->x-map->offset_x)*scale,y=dest.y+(memo->y-map->offset_y)*scale;
         if(x<dest.x+12 || y<dest.y+12 || x>dest.x+dest.w-12 || y>dest.y+dest.h-12)continue;
         SDL_FRect r={x-12,y-12,24,24};button(r,2200+i,"*",-1,false,true);
@@ -646,7 +685,12 @@ static bool memo_action(int action)
 {
     if(action==2190){memo_placing=!memo_placing;return true;}
     if(action==2191){memos_visible=!memos_visible;return true;}
-    if(action>=2200 && action<2200+map_memo_count){memo_draft=map_memos[action-2200];memo_focus(action-2200);return true;}
+    if(action>=2200 && action<2200+map_memo_count){
+        if(map_memo_matches(&map_memos[action-2200],&memo_map_state)){
+            memo_draft=map_memos[action-2200];memo_focus(action-2200);
+        }
+        return true;
+    }
     if(action==2194){memo_close();return true;}
     if(memo_edit<0)return false;
     if(action==2192 && *memo_draft.text){
@@ -1359,7 +1403,7 @@ static bool panels_event(SDL_Event* event)
         }
         if(memo_placing && inside(memo_map_rect,mouse_x,mouse_y)){
             if(event->type==SDL_EVENT_MOUSE_BUTTON_UP && event->button.button==SDL_BUTTON_LEFT){
-                memo_draft=(MapMemo){.mode=memo_map_state.mode,.map=memo_map_state.map,
+                memo_draft=(MapMemo){.mode=memo_map_state.mode,.map=memo_map_state.map,.townmap=memo_map_state.townmap,
                     .x=memo_map_state.offset_x+(mouse_x-memo_map_rect.x)*memo_map_state.width/memo_map_rect.w,
                     .y=memo_map_state.offset_y+(mouse_y-memo_map_rect.y)*memo_map_state.height/memo_map_rect.h};
                 memo_placing=false;memo_focus(64);

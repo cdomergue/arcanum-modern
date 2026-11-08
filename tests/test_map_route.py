@@ -16,6 +16,7 @@ code=r'''
 #include <stdlib.h>
 #include <limits.h>
 typedef uint64_t Uint64;
+#define PATH_ROUTE_MAX_STEPS 200
 #define LOCATION_GET_X(loc) ((uint32_t)(loc))
 #define LOCATION_GET_Y(loc) ((uint32_t)((uint64_t)(loc)>>32))
 static int64_t location_make(int64_t x,int64_t y){return (int64_t)(((uint64_t)y<<32)|(uint32_t)x);}
@@ -45,9 +46,10 @@ static bool anim_preview_route_segment(int64_t obj,int64_t from,int64_t to){
     (void)obj;calls++;ticks+=probe_time;
     int dx=(int)LOCATION_GET_X(to)-(int)LOCATION_GET_X(from);
     int dy=(int)LOCATION_GET_Y(to)-(int)LOCATION_GET_Y(from);
-    assert(dx>=-32 && dx<=32 && dy>=-32 && dy<=32);
+    assert(dx>=-200 && dx<=200 && dy>=-200 && dy<=200);
+    if(blocked==3 && (dx>128 || dx<-128 || dy>128 || dy<-128))return false;
     if(blocked==1)return false;
-    if(blocked==2 && LOCATION_GET_X(to)==42 && LOCATION_GET_Y(to)==10)return false;
+    if(blocked==2 && LOCATION_GET_X(to)==210 && LOCATION_GET_Y(to)==10)return false;
     return true;
 }
 ''' + source + r'''
@@ -62,24 +64,25 @@ static void check_route(int x,int y,int expected){
     WmapRoute* r=&wmap_ui_routes[0];assert(r->length==expected);
     int64_t previous=player_loc;
     for(int i=0;i<r->length;i++){
-        assert(town_route_distance(previous,r->waypoints[i].loc)<=32);
+        assert(town_route_distance(previous,r->waypoints[i].loc)<=200);
         assert(previous!=r->waypoints[i].loc);previous=r->waypoints[i].loc;
     }
     assert(previous==location_make(x,y));assert(dword_5C9AD8==expected-1);
 }
 int main(void){
     reset();check_route(30,10,1);
-    reset();check_route(100,10,3);check_route(150,10,5);
-    check_route(202,10,7);
+    reset();check_route(100,10,1);check_route(150,10,2);
+    check_route(202,10,3);
     WmapRoute before;
     reset();
     for(int i=1;i<=1000;i++)check_route(10+i,10,i);
     assert(wmap_ui_routes[0].capacity>=1000);
-    check_route(2020,10,1032);
-    reset();check_route(202,10,6);
-    reset();check_route(100,100,3);
-    reset();player_loc=location_make(100,100);check_route(10,10,3);
-    reset();blocked=2;check_route(85,10,3);
+    check_route(2020,10,1006);
+    reset();check_route(202,10,1);
+    reset();check_route(100,100,1);
+    reset();player_loc=location_make(100,100);check_route(10,10,1);
+    reset();blocked=2;check_route(500,10,3);
+    reset();blocked=3;check_route(410,10,4);
     reset();check_route(20,10,1);blocked=1;before=wmap_ui_routes[0];
     WmapCoords target={100,10};assert(!modern_town_route_add(&target));
     assert(!memcmp(&before,&wmap_ui_routes[0],sizeof(before)));assert(feedback==610);
@@ -87,7 +90,7 @@ int main(void){
     reset();probe_time=250;target=(WmapCoords){100,10};assert(!modern_town_route_add(&target));
     assert(calls==1 && !wmap_ui_routes[0].length);
     reset();target=(WmapCoords){10,10};assert(!modern_town_route_add(&target));assert(!calls);
-    reset();check_route(1000,1000,31);
+    reset();check_route(1000,1000,5);
     reset();
 }
 '''

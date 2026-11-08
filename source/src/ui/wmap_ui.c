@@ -5,6 +5,7 @@
 #include "ui/modern_ui.h"
 
 #include <stdio.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -203,7 +204,7 @@ static WmapNoteTypeInfo wmap_note_type_info[WMAP_NOTE_TYPE_COUNT] = {
 };
 
 static void sub_560010(void);
-static void wmap_ui_town_notes_save(void);
+static bool wmap_ui_town_notes_save(void);
 static void wmap_ui_destroy(void);
 static bool wmap_ui_town_note_save(WmapNote* note, TigFile* stream);
 static bool wmap_ui_rect_write(TigRect* rect, TigFile* stream);
@@ -283,7 +284,7 @@ static void sub_564A70(int64_t pc_obj, int64_t loc);
 static void sub_564E30(WmapCoords* coords, int64_t* loc_ptr);
 static int64_t sub_564EE0(WmapCoords* a1, WmapCoords* a2, DateTime* datetime);
 static void wmap_ui_town_notes_load(void);
-static void sub_5650C0(void);
+static bool sub_5650C0(void);
 static int wmap_ui_compass_arrow_frame_calc(WmapCoords* a, WmapCoords* b);
 static void wmap_ui_compass_arrow_frame_set(int frame);
 static int wmap_ui_compass_arrow_frame_get(void);
@@ -666,6 +667,8 @@ static WmapInfo wmap_ui_mode_info[WMAP_UI_MODE_COUNT] = {
     }
 };
 
+#include "modern_map_notes.inc"
+
 // 0x55F8D0
 bool wmap_ui_init(GameInitInfo* init_info)
 {
@@ -860,7 +863,7 @@ void sub_560010(void)
 }
 
 // 0x560040
-void wmap_ui_town_notes_save(void)
+bool wmap_ui_town_notes_save(void)
 {
     int index;
     bool success = true;
@@ -868,12 +871,11 @@ void wmap_ui_town_notes_save(void)
     TigFile* stream;
 
     if (dword_66D878 == 0) {
-        return;
+        return true;
     }
 
-    if (dword_66D878 >= townmap_count()) {
-        dword_66D878 = 0;
-        return;
+    if (townmap_name(dword_66D878) == NULL) {
+        return false;
     }
 
     snprintf(path, sizeof(path),
@@ -883,8 +885,9 @@ void wmap_ui_town_notes_save(void)
 
     stream = tig_file_fopen(path, "wb");
     if (stream == NULL) {
+        town_notes_log("save", dword_66D878, dword_66D878, wmap_ui_num_town_notes, "open_failed");
         tig_debug_printf("wmap_ui_town_notes_save(): Error creating file %s\n", path);
-        return;
+        return false;
     }
 
     if (tig_file_fwrite(&wmap_ui_num_town_notes, sizeof(wmap_ui_num_town_notes), 1, stream) == 1) {
@@ -896,17 +899,19 @@ void wmap_ui_town_notes_save(void)
                 }
             }
         } else {
-            // FIXME: Should set error?
+            success = false;
         }
     } else {
         success = false;
     }
 
-    tig_file_fclose(stream);
+    if (tig_file_fclose(stream) != 0) success = false;
 
+    town_notes_log("save", dword_66D878, dword_66D878, wmap_ui_num_town_notes, success ? "saved" : "write_failed");
     if (!success) {
         tig_debug_printf("wmap_ui_town_notes_save(): Error writing data!\n");
     }
+    return success;
 }
 
 // 0x560150
@@ -949,10 +954,14 @@ void wmap_ui_reset(void)
     int index;
 
     if (wmap_ui_initialized) {
+        /* Save/Current may already belong to the newly loaded session. */
+        dword_66D878 = 0;
         wmap_ui_close();
 
         for (index = 0; index < WMAP_UI_MODE_COUNT; index++) {
             if (wmap_ui_mode_info[index].num_notes != NULL) {
+                for (int n = 0; n < *wmap_ui_mode_info[index].num_notes; n++)
+                    sub_5642F0(&wmap_ui_mode_info[index].notes[n]);
                 *wmap_ui_mode_info[index].num_notes = 0;
             }
             wmap_ui_mode_info[index].field_198 = -1;
@@ -1112,9 +1121,13 @@ bool wmap_ui_town_note_load(WmapNote* note, TigFile* stream)
     if (tig_file_fread(&(note->type), sizeof(note->type), 1, stream) != 1) return false;
     if (tig_file_fread(&size, sizeof(size), 1, stream) != 1) return false;
 
+    if (size < 0 || size >= (int)sizeof(note->str)) return false;
+
     memset(note->str, 0, sizeof(note->str));
     if (tig_file_fread(note->str, 1, size, stream) != size) return false;
 
+    note->flags &= ~0x4;
+    note->video_buffer = NULL;
     return true;
 }
 
@@ -3309,6 +3322,7 @@ void sub_563C00(int x, int y, WmapCoords* coords)
 // 0x563C60
 bool sub_563C60(WmapNote* note)
 {
+
     WmapInfo* wmap_info;
     int index;
 
@@ -3375,6 +3389,10 @@ WmapNote* sub_563D90(int id)
 // 0x563DE0
 bool find_note_by_coords(WmapCoords* coords, int* id_ptr)
 {
+    if (wmap_ui_mode == WMAP_UI_MODE_TOWN && dword_66D878 != wmap_ui_townmap) {
+        if (id_ptr) *id_ptr = -1;
+        return false;
+    }
     return find_note_by_coords_mode(coords, id_ptr, wmap_ui_mode);
 }
 
@@ -3453,6 +3471,7 @@ bool sub_563F00(WmapCoords* coords, int64_t* a2)
 // 0x563F90
 void sub_563F90(WmapCoords* coords)
 {
+    if (wmap_ui_mode == WMAP_UI_MODE_TOWN && !wmap_ui_town_notes_select(wmap_ui_townmap)) return;
     stru_66D718.str[0] = '\0';
     stru_66D718.type = dword_66D89C;
     stru_66D718.coords = *coords;
@@ -3524,6 +3543,7 @@ void wmap_ui_textedit_on_enter(TextEdit* textedit)
 // 0x564140
 bool wmap_note_add(WmapNote* note)
 {
+    if (wmap_ui_mode == WMAP_UI_MODE_TOWN && !wmap_ui_town_notes_select(wmap_ui_townmap)) return false;
     return wmap_note_add_mode(note, wmap_ui_mode);
 }
 
@@ -3920,7 +3940,8 @@ void wmap_ui_mark_townmap(int64_t obj)
         return;
     }
 
-    if (!townmap_info(pc_townmap, &wmap_ui_tmi)) {
+    if (!wmap_ui_town_notes_select(pc_townmap)
+        || !townmap_info(pc_townmap, &wmap_ui_tmi)) {
         return;
     }
 
@@ -3935,8 +3956,6 @@ void wmap_ui_mark_townmap(int64_t obj)
     note.field_10 = 0;
     note.flags = 0x2;
     note.type = WMAP_NOTE_TYPE_QUEST;
-
-    dword_66D878 = pc_townmap;
 
     if (!wmap_note_add_mode(&note, 2)) {
         tig_debug_printf("WmapUI: WARNING: Attempt to mark TownMap Failed: Note didn't Add!\n");
@@ -4080,55 +4099,19 @@ void wmap_ui_notify_sector_changed(int64_t pc_obj, int64_t sec)
 // 0x564FD0
 void wmap_ui_town_notes_load(void)
 {
-    char path[TIG_MAX_PATH];
-    TigFile* stream;
-    int index;
-    bool success = true;
-
-    if (dword_66D878 != wmap_ui_townmap) {
-        sub_5650C0();
-    }
-    dword_66D878 = wmap_ui_townmap;
-
-    if (dword_66D878 != 0) {
-        snprintf(path, sizeof(path),
-            "%s\\%s.tmn",
-            "Save\\Current",
-            townmap_name(dword_66D878));
-
-        stream = tig_file_fopen(path, "rb");
-        if (stream == NULL) {
-            return;
-        }
-
-        if (tig_file_fread(&wmap_ui_num_town_notes, sizeof(wmap_ui_num_town_notes), 1, stream) == 1
-            && tig_file_fread(&(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].field_194), sizeof(wmap_ui_mode_info[WMAP_UI_MODE_TOWN].field_194), 1, stream) == 1) {
-            for (index = 0; index < wmap_ui_num_town_notes; index++) {
-                if (!wmap_ui_town_note_load(&(wmap_ui_town_notes[index]), stream)) {
-                    success = false;
-                    break;
-                }
-            }
-        } else {
-            success = false;
-        }
-
-        tig_file_fclose(stream);
-
-        if (!success) {
-            tig_debug_printf("wmap_ui_town_notes_load(): Warning reading data!\n");
-        }
-    }
+    wmap_ui_town_notes_select(wmap_ui_townmap);
 }
 
 // 0x5650C0
-void sub_5650C0(void)
+bool sub_5650C0(void)
 {
-    if (dword_66D878 != 0) {
-        wmap_ui_town_notes_save();
-    }
+    if (dword_66D878 != 0 && !wmap_ui_town_notes_save()) return false;
+    for (int i = 0; i < wmap_ui_num_town_notes; i++)
+        sub_5642F0(&wmap_ui_town_notes[i]);
+    wmap_ui_mode_info[WMAP_UI_MODE_TOWN].field_194 = 0;
     dword_66D878 = 0;
     wmap_ui_num_town_notes = 0;
+    return true;
 }
 
 // 0x5650E0
@@ -4808,7 +4791,8 @@ void wmap_town_refresh_rect(TigRect* rect)
     art_blit_info.src_rect = &art_src_rect;
     art_blit_info.dst_rect = &art_dst_rect;
 
-    for (note = 0; note < *wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_notes; note++) {
+    for (note = 0; dword_66D878 == wmap_ui_townmap
+        && note < *wmap_ui_mode_info[WMAP_UI_MODE_TOWN].num_notes; note++) {
         offset_x = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].notes[note].coords.x;
         offset_y = wmap_ui_mode_info[WMAP_UI_MODE_TOWN].notes[note].coords.y;
 

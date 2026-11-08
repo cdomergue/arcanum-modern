@@ -22,7 +22,7 @@ static bool modern_town_route_start(void)
     WmapRoute* route=&wmap_ui_routes[WMAP_ROUTE_TYPE_TOWN];
     int64_t actor=player_get_local_pc_obj();
     int64_t from=obj_field_int64_get(actor,OBJ_F_LOCATION);
-    if(!route->length)return true;
+    if(route->length<=0)return true;
     for(int i=0;i<route->length;i++) {
         if(!anim_preview_route_segment(actor,from,route->waypoints[i].loc)) {
             town_route_feedback();return true;

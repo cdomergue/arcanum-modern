@@ -2,6 +2,7 @@
 #include "ui/modern_ui.h"
 
 #include <stdio.h>
+#include <errno.h>
 
 #include "game/ai.h"
 #include "game/animfx.h"
@@ -61,6 +62,7 @@ static bool sub_424BC0(AnimRunInfo* run_info);
 static bool sub_424D00(AnimRunInfo* run_info);
 static bool sub_424D90(AnimRunInfo* run_info);
 static bool sub_424E00(AnimRunInfo* run_info);
+static bool anim_interaction_reachable(int64_t actor, int64_t from, int64_t target, int range);
 static bool sub_425130(AnimRunInfo* run_info);
 static bool sub_425270(AnimRunInfo* run_info);
 static bool sub_425340(AnimRunInfo* run_info);
@@ -4543,6 +4545,10 @@ bool sub_425130(AnimRunInfo* run_info)
         return false;
     }
 
+    if (anim_has_interaction_path(target_obj) && range >= 1 && range <= 2) {
+        return anim_interaction_reachable(source_obj, source_loc, target_obj, range);
+    }
+
     rot = location_rot(source_loc, target_loc);
     if (sub_425840(source_obj, source_loc, target_loc, rot, target_obj)) {
         return false;
@@ -4781,8 +4787,8 @@ bool sub_425840(int64_t a1, int64_t a2, int64_t a3, int a4, int64_t a5)
     unsigned int flags = 0;
     bool v1 = true;
     bool v2 = false;
-    int64_t v3;
-    int v4;
+    int64_t v3 = OBJ_HANDLE_NULL;
+    int v4 = OBJ_TYPE_WALL;
 
     sub_4257E0(a1, &flags);
 
@@ -4805,6 +4811,8 @@ bool sub_425840(int64_t a1, int64_t a2, int64_t a3, int a4, int64_t a5)
 
     return v2;
 }
+
+#include "modern_interaction_path.inc"
 
 // 0x425930
 bool sub_425930(AnimRunInfo* run_info)
@@ -5154,7 +5162,11 @@ int sub_426320(AnimPath* anim_path, int64_t from, int64_t to, int64_t obj)
             tig_debug_printf(", DstLocAxis: (%d x %d)\n", (int)location_get_x(to), (int)location_get_y(to));
         }
 
-        anim_path->maxPathLength = 4 * estimate + 5;
+        /* A distant click may need more than the animation buffer's estimate.
+         * Saturate before validation; the pathfinder respects this capacity. */
+        int64_t estimated_capacity = 4 * (int64_t)estimate + 5;
+        anim_path->maxPathLength = estimated_capacity > anim_path->field_CC
+            ? anim_path->field_CC : (int)estimated_capacity;
         if (anim_path->absMaxPathLength > anim_path->field_CC) {
             anim_path->absMaxPathLength = anim_path->field_CC;
         }
@@ -5281,6 +5293,8 @@ bool sub_426560(int64_t obj, int64_t from, int64_t to, AnimPath* path, unsigned 
 {
     return anim_find_path(obj, from, to, path, flags, false);
 }
+
+_Static_assert(PATH_ROUTE_MAX_STEPS == sizeof(((AnimPath*)0)->rotations), "route capacity must match AnimPath");
 
 bool anim_preview_route_segment(int64_t obj, int64_t from, int64_t to)
 {
@@ -6019,6 +6033,10 @@ bool sub_427990(AnimRunInfo* run_info)
     }
 
     range = run_info->cur_stack_data->params[AGDATA_RANGE_DATA].data;
+    if (anim_has_interaction_path(target_obj) && range >= 1 && range <= 2) {
+        return anim_move_to_interaction(run_info, (int)range);
+    }
+
     orig_range = range;
 
     switch (obj_field_int32_get(target_obj, OBJ_F_TYPE)) {
@@ -6224,6 +6242,10 @@ bool sub_4280D0(AnimRunInfo* run_info)
     }
 
     range = run_info->cur_stack_data->params[AGDATA_RANGE_DATA].data;
+    if (anim_has_interaction_path(target_obj) && range >= 1 && range <= 2) {
+        return anim_move_to_interaction(run_info, (int)range);
+    }
+
     source_loc = obj_field_int64_get(source_obj, OBJ_F_LOCATION);
     target_loc = obj_field_int64_get(target_obj, OBJ_F_LOCATION);
     max_rotations = sub_426320(&(run_info->path), source_loc, target_loc, source_obj);
@@ -6597,10 +6619,6 @@ bool sub_428A10(AnimRunInfo* run_info)
         return false;
     }
 
-    if (!combat_consume_action_points(source_obj, 2)) {
-        return false;
-    }
-
     spell_flags = obj_field_int32_get(source_obj, OBJ_F_SPELL_FLAGS);
 
     if (target_obj == OBJ_HANDLE_NULL) {
@@ -6611,11 +6629,19 @@ bool sub_428A10(AnimRunInfo* run_info)
     target_loc = obj_field_int64_get(target_obj, OBJ_F_LOCATION);
     rot = location_rot(source_loc, target_loc);
 
-    if (sub_425840(source_obj, source_loc, target_loc, rot, target_obj)) {
+    bool blocked = anim_has_interaction_path(target_obj)
+        ? !anim_interaction_reachable(source_obj, source_loc, target_obj, anim_interaction_range(target_obj))
+        : sub_425840(source_obj, source_loc, target_loc, rot, target_obj);
+    if (blocked) {
+        anim_interaction_log(source_obj, target_obj, 0, 0, 0, "use_blocked", 0);
         if (tig_net_is_active()
             && tig_net_is_host()) {
             sub_424070(source_obj, 2, false, false);
         }
+        return false;
+    }
+
+    if (!combat_consume_action_points(source_obj, 2)) {
         return false;
     }
 
@@ -11639,24 +11665,8 @@ bool sub_4305D0(AnimRunInfo* run_info)
                 // TODO: Incomplete.
             }
 
-            if ((run_info->flags & 0x80000) != 0
-                && player_is_local_pc_obj(obj)
-                && new_loc != loc
-                && !modern_follow_camera_active()) {
-                int64_t x;
-                int64_t y;
-
-                location_calc_dist_from_screen_center(new_loc, &x, &y);
-
-                // NOTE: Original code compares by casting to double.
-                if (llabs(x) > 360) {
-                    location_origin_set(new_loc);
-                }
-
-                // NOTE: Original code compares by casting to double.
-                if (llabs(y) > 180) {
-                    location_origin_set(new_loc);
-                }
+            if (new_loc != loc) {
+                modern_free_camera_keep_visible(obj);
             }
 
             if (!sub_430FC0(run_info)) {

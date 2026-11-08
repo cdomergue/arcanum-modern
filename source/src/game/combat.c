@@ -3708,6 +3708,17 @@ bool combat_check_use_obj(int64_t source_obj, int64_t target_obj)
         return combat_check_action_points(source_obj, 0);
     }
 
+    if (anim_has_interaction_path(target_obj)) {
+        AnimPath path;
+        if (!anim_preview_interaction_path(source_obj, target_obj, &path)) {
+            modern_combat_rejected(source_obj, target_obj, 2, 0);
+            return false;
+        }
+        int multiplier = obj_field_int32_get(source_obj, OBJ_F_TYPE) == OBJ_TYPE_PC
+            && get_always_run(source_obj) ? 1 : 2;
+        return combat_check_action_points(source_obj, 2 + multiplier * path.max);
+    }
+
     action_points = 2;
 
     source_loc = obj_field_int64_get(source_obj, OBJ_F_LOCATION);

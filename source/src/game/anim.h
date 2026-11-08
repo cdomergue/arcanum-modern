@@ -56,6 +56,8 @@ extern AnimGoalNode* anim_goal_nodes[];
 
 bool anim_preview_route_segment(int64_t obj, int64_t from, int64_t to);
 bool anim_preview_path(int64_t obj, int64_t to, bool adjacent, AnimPath* path);
+bool anim_has_interaction_path(int64_t target);
+bool anim_preview_interaction_path(int64_t actor, int64_t target, AnimPath* path);
 
 bool anim_init(GameInitInfo* init_info);
 void anim_exit(void);

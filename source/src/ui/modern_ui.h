@@ -52,6 +52,7 @@ const char* modern_written_book_paragraph(int index,bool* centered,int* font);
 bool modern_camera_key(int scancode);
 bool modern_follow_camera_active(void);
 void modern_follow_camera_tick(void);
+void modern_free_camera_keep_visible(int64_t actor);
 void modern_item_spell_activate(int64_t actor,int64_t item,int spell);
 bool modern_hotkey_assign(int index,int type,int data,int64_t item_obj);
 bool modern_world_resize(int width,int height,float anchor_x,float anchor_y);

@@ -2006,6 +2006,8 @@ static int64_t follow_control_actor(void)
     return selected ? selected : player_get_local_pc_obj();
 }
 
+#include "modern_free_camera.inc"
+
 typedef struct CameraAxis {
     double fraction;
     double velocity;

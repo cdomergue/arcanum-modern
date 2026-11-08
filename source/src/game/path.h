@@ -5,6 +5,9 @@
 
 typedef unsigned int PathFlags;
 
+/* Native animation route capacity; does not change serialized AnimPath. */
+#define PATH_ROUTE_MAX_STEPS 200
+
 #define PATH_FLAG_0x0001 0x0001u
 #define PATH_FLAG_0x0002 0x0002u
 #define PATH_FLAG_0x0004 0x0004u
@@ -38,6 +41,9 @@ typedef struct WmapPathInfo {
 } WmapPathInfo;
 
 int path_make(PathCreateInfo* path_create_info);
+/* Full route (up to max_rotations) to one of at most 25 standing tiles.
+ * On success, to is the selected goal. Does not use adjacency shortcuts. */
+int path_make_to_goals(PathCreateInfo* info, const int64_t* goals, int count);
 unsigned int path_translate_flags(PathFlags flags);
 int path_make_straight(int64_t from, int64_t to, int8_t* rotations);
 int wmap_path_make(WmapPathInfo* path_info);

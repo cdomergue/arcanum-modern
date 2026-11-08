@@ -51,7 +51,7 @@ static void modern_world_route_approach(WmapCoords* target)
     }
 }
 
-enum {TOWN_ROUTE_SPAN=32, TOWN_ROUTE_PROBES=128};
+enum {TOWN_ROUTE_SPAN=PATH_ROUTE_MAX_STEPS, TOWN_ROUTE_PROBES=128};
 typedef struct TownRouteSearch {
     int64_t actor;
     int probes;
@@ -74,30 +74,38 @@ static int town_route_plan(TownRouteSearch* search,int64_t from,int64_t to,int s
         || search->probes>=TOWN_ROUTE_PROBES || SDL_GetTicks()>=search->deadline)return 0;
     if(distance<=TOWN_ROUTE_SPAN) {
         search->probes++;
-        if(anim_preview_route_segment(search->actor,from,to)){points[0]=to;return 1;}
+        bool valid=anim_preview_route_segment(search->actor,from,to);
+        if(SDL_GetTicks()>=search->deadline)return 0;
+        if(valid){points[0]=to;return 1;}
     }
     if(slots==1)return 0;
     int64_t dx=(int64_t)LOCATION_GET_X(to)-LOCATION_GET_X(from);
     int64_t dy=(int64_t)LOCATION_GET_Y(to)-LOCATION_GET_Y(from);
     int64_t stride=distance>TOWN_ROUTE_SPAN?TOWN_ROUTE_SPAN:distance/2;
-    if(!stride)return 0;
-    int64_t x=LOCATION_GET_X(from)+dx*stride/distance;
-    int64_t y=LOCATION_GET_Y(from)+dy*stride/distance;
     const int offsets[][2]={{0,0},{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
-    for(int candidate=0;candidate<25;candidate++) {
-        if(search->probes>=TOWN_ROUTE_PROBES || SDL_GetTicks()>=search->deadline)return 0;
-        int index=candidate?(candidate-1)%8+1:0;
-        int radius=candidate?((candidate-1)/8+1)*4:0;
-        int64_t nx=x+offsets[index][0]*radius,ny=y+offsets[index][1]*radius;
-        if(nx<0 || ny<0 || nx>UINT32_MAX || ny>UINT32_MAX)continue;
-        int64_t next=location_make(nx,ny);
-        int64_t remaining=town_route_distance(next,to);
-        if(next==from || !remaining || remaining>=distance || remaining>TOWN_ROUTE_SPAN*(slots-1)
-            || town_route_distance(from,next)>TOWN_ROUTE_SPAN)continue;
-        search->probes++;
-        if(!anim_preview_route_segment(search->actor,from,next))continue;
-        int count=town_route_plan(search,next,to,slots-1,points+1);
-        if(count){points[0]=next;return count+1;}
+    /* A long straight-line leg may need a detour exceeding the path buffer.
+     * Retry shorter legs instead of retaining the old mandatory 32-tile grid. */
+    while(stride>0){
+        int64_t x=LOCATION_GET_X(from)+dx*stride/distance;
+        int64_t y=LOCATION_GET_Y(from)+dy*stride/distance;
+        for(int candidate=0;candidate<25;candidate++) {
+            if(search->probes>=TOWN_ROUTE_PROBES || SDL_GetTicks()>=search->deadline)return 0;
+            int index=candidate?(candidate-1)%8+1:0;
+            int radius=candidate?((candidate-1)/8+1)*4:0;
+            int64_t nx=x+offsets[index][0]*radius,ny=y+offsets[index][1]*radius;
+            if(nx<0 || ny<0 || nx>UINT32_MAX || ny>UINT32_MAX)continue;
+            int64_t next=location_make(nx,ny);
+            int64_t remaining=town_route_distance(next,to);
+            if(next==from || !remaining || remaining>=distance || remaining>TOWN_ROUTE_SPAN*(slots-1)
+                || town_route_distance(from,next)>TOWN_ROUTE_SPAN)continue;
+            search->probes++;
+            bool valid=anim_preview_route_segment(search->actor,from,next);
+            if(SDL_GetTicks()>=search->deadline)return 0;
+            if(!valid)continue;
+            int count=town_route_plan(search,next,to,slots-1,points+1);
+            if(count){points[0]=next;return count+1;}
+        }
+        stride/=2;
     }
     return 0;
 }
