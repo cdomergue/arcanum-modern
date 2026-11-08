@@ -85,6 +85,13 @@ is retained as `game-process.previous.log`. Logging failure does not prevent the
 game from running. These local diagnostics may contain resource paths and game
 context; review them before sharing. An exit code alone does not identify a cause.
 
+The save journal also records `load_begin`, `load_phase`, `load_success` and
+`load_failure`. Load phases identify archive restoration, module readers and
+finalization without recording the save description or serialized data. An
+unfinished load sequence identifies the last reached phase, not necessarily the
+function responsible for termination. These entries require an engine containing
+the load diagnostics; adding them to source does not update an installed game.
+
 `ArcanumModern/CrashReports` contains `.txt`, `.dmp` and, when available, an
 installed-manifest copy. If the installation is not writable, check
 `%LOCALAPPDATA%\ArcanumRenaissance\CrashReports`. The text identifies the exception,

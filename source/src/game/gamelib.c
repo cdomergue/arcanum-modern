@@ -1147,7 +1147,7 @@ bool gamelib_save(const char* name, const char* description)
 }
 
 // 0x403410
-bool gamelib_load(const char* name)
+static bool gamelib_load_internal(const char* name)
 {
     int start_pos = 0;
     int pos;
@@ -1163,6 +1163,8 @@ bool gamelib_load(const char* name)
     tig_debug_printf("\ngamelib_load: Loading from File: %s.\n", name);
     tig_timer_now(&start_time);
 
+    save_diagnostic_phase = "reset";
+    gamelib_save_log("load_phase", "");
     modern_autosave_reset();
     modern_world_updates_reset();
     modern_progression_reset();
@@ -1171,6 +1173,8 @@ bool gamelib_load(const char* name)
 
     ui_progressbar_init(MODULE_COUNT + 2);
 
+    save_diagnostic_phase = "current_directory";
+    gamelib_save_log("load_phase", "");
     if (!tig_file_is_directory("Save\\Current")) {
         tig_debug_printf("gamelib_load(): Error finding folder %s\n", "Save\\Current");
         modern_world_updates_abort_load();
@@ -1182,6 +1186,8 @@ bool gamelib_load(const char* name)
 
     tig_debug_printf("gamelib_load: begin removing files...");
     tig_timer_now(&time);
+    save_diagnostic_phase = "clear_current";
+    gamelib_save_log("load_phase", "");
     if (!tig_file_empty_directory("Save\\Current")) {
         tig_debug_printf("gamelib_load(): Error clearing folder %s\n", "Save\\Current");
         modern_world_updates_abort_load();
@@ -1193,6 +1199,8 @@ bool gamelib_load(const char* name)
 
     tig_debug_printf("gamelib_load: begin restoring folder archive...");
     tig_timer_now(&time);
+    save_diagnostic_phase = "unarchive";
+    gamelib_save_log("load_phase", "");
     if (!tig_file_unarchive(path, "Save\\Current")) {
         tig_debug_printf("gamelib_load(): error restoring archive %s to save\\test\n", path);
         modern_world_updates_abort_load();
@@ -1202,12 +1210,16 @@ bool gamelib_load(const char* name)
     duration = tig_timer_elapsed(time);
     tig_debug_printf("done.  Time (ms): %d\n", duration);
 
+    save_diagnostic_phase = "world_updates";
+    gamelib_save_log("load_phase", "");
     if (!modern_world_updates_load(name)) {
         modern_world_updates_abort_load();
         in_load = false;
         return false;
     }
 
+    save_diagnostic_phase = "open_data";
+    gamelib_save_log("load_phase", "");
     stream = tig_file_fopen("Save\\Current\\data.sav", "rb");
     if (stream == NULL) {
         tig_debug_printf("gamelib_load(): Error reading data.sav\n");
@@ -1236,6 +1248,8 @@ bool gamelib_load(const char* name)
             tig_debug_printf("gamelib_load: Function %d (%s)", index, gamelib_modules[index].name);
             tig_timer_now(&time);
 
+            save_diagnostic_phase = gamelib_modules[index].name;
+            gamelib_save_log("load_phase", "");
             if (!gamelib_modules[index].load_func(&load_info)) {
                 tig_debug_printf("gamelib_load(): load function %d (%s) failed\n", index, gamelib_modules[index].name);
                 break;
@@ -1271,6 +1285,8 @@ bool gamelib_load(const char* name)
         return false;
     }
 
+    save_diagnostic_phase = "extra_load";
+    gamelib_save_log("load_phase", "");
     if (gamelib_extra_load_func != NULL) {
         tig_debug_printf("gamelib_load: Begin gamelib_extra_load_func()...");
         tig_timer_now(&time);
@@ -1283,6 +1299,8 @@ bool gamelib_load(const char* name)
         tig_debug_printf("done. Time (ms): %d\n", duration);
     }
 
+    save_diagnostic_phase = "finalize";
+    gamelib_save_log("load_phase", "");
     if (!background_rules_saved_objects_valid() || !modern_world_updates_finish_load() || !modern_progression_load()) {
         modern_world_updates_abort_load();
         in_load = false;
@@ -1297,6 +1315,17 @@ bool gamelib_load(const char* name)
     tig_debug_printf("gamelib_load: Load Complete.  Total time: %d ms.\n", duration);
 
     return true;
+}
+
+bool gamelib_load(const char* name)
+{
+    const char* previous_phase = save_diagnostic_phase;
+    save_diagnostic_phase = "begin";
+    gamelib_save_log("load_begin", "");
+    bool success = gamelib_load_internal(name);
+    gamelib_save_log(success ? "load_success" : "load_failure", "");
+    save_diagnostic_phase = previous_phase;
+    return success;
 }
 
 // 0x403790
