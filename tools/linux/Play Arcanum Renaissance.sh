@@ -21,4 +21,6 @@ for arcanum_arg in "$@"; do
         export ARCANUM_IGNORE_DISPLAY_SETTINGS=1
     fi
 done
+# Keep launcher graphics independent of the game renderer.
+export RENAISSANCE_LAUNCHER_SOFTWARE="${RENAISSANCE_LAUNCHER_SOFTWARE:-1}"
 exec ./renaissance-launcher "$@"

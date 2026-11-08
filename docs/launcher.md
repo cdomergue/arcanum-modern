@@ -55,6 +55,12 @@ The launcher stores its language and automatic-start preference in
 `modern-ui/launcher.json`, cached release text in
 `ArcanumModern/launcher-release.json`, and diagnostics in
 `ArcanumModern/launcher.log`. These are not distributed update payloads.
+On Linux and macOS, renderer startup, stderr and exit timing are recorded in
+`ArcanumModern/launcher-ui.log`, with one rotated `.previous.log` segment
+(up to 1 MiB each). On Linux, a renderer crash triggers one software/X11 retry
+unless `SDL_RENDER_DRIVER` was explicitly selected. Set
+`RENAISSANCE_LAUNCHER_SOFTWARE=1` to use software rendering for the launcher
+without changing the game renderer.
 
 ## Building and verification
 
