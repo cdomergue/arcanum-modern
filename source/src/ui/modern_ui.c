@@ -1998,6 +1998,13 @@ bool modern_follow_camera_active(void)
         && !slide_ui_is_active() && !tactical_active();
 }
 
+/* The selection accessor also rejects companions that can no longer be controlled. */
+static int64_t follow_control_actor(void)
+{
+    int64_t selected=modern_party_selected();
+    return selected ? selected : player_get_local_pc_obj();
+}
+
 typedef struct CameraAxis {
     double fraction;
     double velocity;
@@ -2056,7 +2063,8 @@ void modern_follow_camera_tick(void)
         vertical=(CameraAxis){0};
         return;
     }
-    int64_t pc=player_get_local_pc_obj();
+    int64_t pc=follow_control_actor();
+    if (!pc)return;
     int64_t dx,dy;
     location_calc_dist_from_screen_center(obj_field_int64_get(pc,OBJ_F_LOCATION),&dx,&dy);
     dx-=obj_field_int32_get(pc,OBJ_F_OFFSET_X);
@@ -2958,6 +2966,30 @@ typedef struct FollowWalk {
     AnimID id;
 } FollowWalk;
 
+/* Log only routing changes and path attempts, never names, positions or save data. */
+static void follow_walk_log(const char* event,int64_t actor,int direction,unsigned held,unsigned taps,int outcome)
+{
+    int saved_errno=errno;
+    FILE* log=fopen("ArcanumModern/follow-input.log","ab+");
+    if(log){
+        fseek(log,0,SEEK_END);
+        if(ftell(log)>=1024*1024){
+            fclose(log);log=NULL;
+            if(remove("ArcanumModern/follow-input.previous.log")==0 || errno==ENOENT){
+                if(rename("ArcanumModern/follow-input.log","ArcanumModern/follow-input.previous.log")==0)
+                    log=fopen("ArcanumModern/follow-input.log","ab");
+            }
+        }
+        if(log){
+            fprintf(log,"ticks_ms=%llu event=%s actor=%llu hero=%llu direction=%d held=%u taps=%u outcome=%d\n",
+                (unsigned long long)SDL_GetTicks(),event,(unsigned long long)actor,
+                (unsigned long long)player_get_local_pc_obj(),direction,held,taps,outcome);
+            fclose(log);
+        }
+    }
+    errno=saved_errno;
+}
+
 static FollowWalk follow_walk;
 
 static AnimRunInfo* follow_walk_animation(void)
@@ -2973,7 +3005,7 @@ static AnimRunInfo* follow_walk_animation(void)
 static void follow_walk_stop(void)
 {
     AnimRunInfo* run=follow_walk_animation();
-    if (run && follow_walk.pc==player_get_local_pc_obj()) {
+    if (run && obj_handle_is_valid(follow_walk.pc)) {
         // Finish the step already in progress. Keep its animation and offsets.
         AnimPath* path=&run->path;
         int64_t stop=path->field_E8;
@@ -2993,6 +3025,8 @@ static void follow_walk_tick(void)
 {
     static Uint64 retry_at;
     static int previous_direction=-1;
+    static int64_t previous_actor;
+    int64_t pc=follow_control_actor();
     unsigned held=0,taps=follow_walk_taps;
     follow_walk_taps=0;
     int direction=-1;
@@ -3005,14 +3039,15 @@ static void follow_walk_tick(void)
         static const int directions[3][3]={{7,0,1},{6,-1,2},{5,4,3}};
         direction=directions[y+1][x+1];
     }
-    if (direction!=previous_direction) {
+    if (direction!=previous_direction || pc!=previous_actor) {
+        if(direction>=0 || previous_direction>=0)follow_walk_log("route",pc,direction,held,taps,0);
         follow_walk_stop();
+        previous_actor=pc;
         previous_direction=direction;
         retry_at=0;
     }
     if (direction<0)return;
-    int64_t pc=player_get_local_pc_obj();
-    if (!critter_is_active(pc)) {follow_walk_stop();return;}
+    if (!pc || !critter_is_active(pc)) {follow_walk_stop();return;}
     int64_t tile=obj_field_int64_get(pc,OBJ_F_LOCATION);
     if (follow_walk_animation() && location_dist(tile,follow_walk.destination)>2)return;
     Uint64 now=SDL_GetTicks();
@@ -3029,13 +3064,16 @@ static void follow_walk_tick(void)
         for (int i=0;i<path.max;i++)if(path.rotations[i]!=direction)straight=false;
         if (!straight)continue;
         if (destination==follow_walk.destination && follow_walk_animation())return;
-        if (anim_goal_move_to_tile(pc,destination) && sub_423300(pc,&follow_walk.id)) {
+        bool moved=anim_goal_move_to_tile(pc,destination) && sub_423300(pc,&follow_walk.id);
+        follow_walk_log("path",pc,direction,held,taps,moved);
+        if (moved) {
             follow_walk.pc=pc;
             follow_walk.direction=direction;
             follow_walk.destination=destination;
         }
         return;
     }
+    follow_walk_log("blocked",pc,direction,held,taps,0);
 }
 
 void modern_ui_tick(void)

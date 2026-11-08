@@ -73,3 +73,24 @@ executable was not inspected for this cause; do not claim a CE-only origin or an
 original-Arcanum origin without further evidence. The earlier native click
 consumption fix addresses event propagation and is not the fix for this side
 effect.
+
+## Follow-camera keyboard routing
+
+`ArcanumModern/follow-input.log` records movement routing changes (`route`),
+native path submission (`path`) and failed path searches (`blocked`). It rotates
+at 1 MiB to `follow-input.previous.log`; logging failure does not block input.
+Records contain milliseconds since SDL startup, runtime actor and hero handles,
+direction, held/tapped direction masks (up=1, left=2, down=4, right=8), and path
+submission outcome (1=accepted, 0=failed; not applicable for routing events).
+They contain no actor names, positions or serialized save data. An accepted path
+is not proof of completed movement.
+
+Run `python3 tests/test_follow_input.py` for selection changes during held input,
+companion release, invalid selection, modal gating, path failure and log rotation.
+For a live Linux/X11 check, build with `python3 tools/build-follow-input-check.py`
+after `./build.sh`. Run `build/check-follow-input GAME --fresh` only on an
+isolated copy containing `.map-export-sandbox`. The check creates a temporary
+party in the game map, identifies its process/window, focuses that window and
+uses XTest to hold/release movement keys across selection changes and a pause
+menu transition. It requires X11/XWayland and libXtst, writes a screenshot and
+diagnostics inside the isolated copy, and does not save the party.
