@@ -1,105 +1,110 @@
-# Éditeur de sauvegardes Arcanum
+# Arcanum save editor
 
-Ouvrir `index.html` dans un navigateur récent. Aucun serveur, compte,
-installation de dépendances ou accès réseau n’est nécessaire. Conserver les
-fichiers JS et CSS dans le même dossier que le HTML.
+Open `index.html` in a recent browser. No server, account, dependency installation
+or network access is needed. Keep the JS and CSS files beside the HTML file.
 
-Pour obtenir un **fichier HTML autonome**, depuis la racine du dépôt :
+To build a **standalone HTML file**, run this from the repository root:
 
 ```sh
 python3 tools/build-save-editor.py
 ```
 
-Ouvrir ensuite `dist/arcanum-save-editor.html`. Les polices du mod sont incluses
-si elles sont présentes lors de la génération.
+Then open `dist/arcanum-save-editor.html`. The mod's fonts are embedded if they
+are available when the file is built.
 
-Pour inclure les noms localisés d’une installation personnelle, ajouter
-`--mes-directory /chemin/vers/mes` à cette commande. Les trois fichiers
-`stat.mes`, `skill.mes`, `spell.mes` sont requis. Seuls les noms utiles sont
-inclus dans le HTML généré sous `dist/`, qui reste exclu de Git. Ne pas ajouter
-les textes extraits du jeu au dépôt.
+To include localized names from your own installation, add
+`--mes-directory /path/to/mes` to the command. All three files — `stat.mes`,
+`skill.mes` and `spell.mes` — are required. Only the relevant names are embedded
+in the generated HTML under `dist/`, which remains excluded from Git. Do not
+add extracted game text to the repository. The editor's interface is in English;
+imported game labels retain their original language.
 
-## Modifier le personnage
+## Edit your character
 
-Dans **Personnage**, saisissez un nom ou choisissez une race et un sexe. Le nom accepte jusqu’à 23 caractères du jeu, accents compris. Importez le fichier `.gsi` avec la paire `.tfai` / `.tfaf` pour mettre à jour le nom affiché dans le menu **Charger**. Sans ce fichier, le nouveau nom est enregistré dans la partie et le menu se met à jour lors de la prochaine sauvegarde en jeu.
+In **Character**, enter a name or choose a race and gender. Names support up to
+23 game characters, including accents. Import the `.gsi` file with the
+`.tfai` / `.tfaf` pair to update the name shown in the **Load** menu. Without
+that file, the new name is stored in the saved game and the menu updates the
+next time you save in game.
 
-Cochez **Mon jeu utilise le Race Mod de l’UAP** si ce composant est installé. Il fournit les races supplémentaires et change le modèle des demi-elfes. L’éditeur vérifie les combinaisons de race et de sexe disponibles dans le jeu. Il adapte le corps, la voix et les effets de race et de sexe. Le portrait et l’historique restent ceux du personnage.
+Select **My game uses the UAP Race Mod** if that component is installed. It
+provides additional races and changes the half-elf body model. The editor checks
+which race and gender combinations have playable models. It adjusts the body,
+voice, and race and gender effects. The character's portrait and background
+are preserved.
 
-## Utilisation
+## Usage
 
-1. Copier les fichiers de l’emplacement à conserver dans un dossier de secours.
-2. Sélectionner ensemble `Slot….tfai` et `Slot….tfaf` dans
-   `modules/Arcanum/Save/`. Les noms doivent correspondre. Ajouter éventuellement
-   le `.gsi` et le `.bmp` du même emplacement.
-3. Modifier les valeurs et vérifier le récapitulatif.
-4. Exporter le ZIP, fermer le jeu et décompresser les fichiers dans le dossier
-   `Save` en conservant leurs noms. Si le `.gsi` et le `.bmp` n’ont pas été importés,
-   conserver ceux de l’emplacement d’origine. Le ZIP seul n’est pas une sauvegarde
-   que le jeu peut ouvrir.
+1. Back up the files from the save slot you want to keep.
+2. Select `Slot….tfai` and `Slot….tfaf` together from
+   `modules/Arcanum/Save/`. Their names must match. Optionally include the `.gsi`
+   and `.bmp` files from the same slot.
+3. Edit the values and review your changes.
+4. Export the ZIP, close the game, and extract the files into the `Save` folder,
+   preserving their names. If you did not import the `.gsi` and `.bmp` files,
+   keep the originals from that slot. The game cannot open the ZIP itself
+   as a save.
 
-Les fichiers d’origine ne sont jamais écrits par l’éditeur. Importation limitée
-à 128 Mo au total. Les modifications ne persistent pas après fermeture de la page.
+The editor never writes to the original files. Imports are limited to 128 MiB
+in total. Changes do not persist after the page is closed.
 
-## Champs et compatibilité
+## Fields and compatibility
 
-- Attributs de base, expérience, alignement, points de destin et points disponibles.
-- Solde bancaire s’il est enregistré ; or et munitions si leur pile est présente
-  et référencée par le personnage.
-- Les **16 compétences**, avec rang de 0 à 5 et entraînement de 0 à 3.
-- Les **80 sorts**, répartis en 16 collèges : choisir un sort apprend aussi les
-  rangs précédents ; le décocher retire les rangs suivants. Un bouton apprend
-  les 80 sorts. Les compétences et collèges absents peuvent être ajoutés.
-- Sélection du personnage lorsque plusieurs objets joueurs sont présents.
-- Import facultatif de **`stat.mes`, `skill.mes`, `spell.mes` provenant du dossier
-  `mes` de votre jeu** pour les noms des caractéristiques, compétences et sorts.
-  Sinon, les identifiants du moteur sont affichés. Aucun texte extrait du jeu
-  n’est suivi dans le dépôt. Les ressources gardent leurs identifiants.
+- Base attributes, experience, alignment, fate points and available points.
+- Bank balance if saved; gold and ammunition if the stack exists and is
+  referenced by the character.
+- All **16 skills**, with rank from 0 to 5 and training from 0 to 3.
+- All **80 spells**, across 16 colleges: selecting a spell also learns earlier
+  ranks; clearing it removes later ranks. A button learns all 80 spells.
+  Missing skill and spell college entries can be added.
+- Character selection when the save contains multiple player objects.
+- Optional import of **`stat.mes`, `skill.mes` and `spell.mes` from your game's
+  `mes` folder** for attribute, skill and spell names. Otherwise, engine
+  identifiers are displayed. No extracted game text is tracked in the
+  repository. Resources keep their identifiers.
 
-Les attributs et ressources existants sont modifiés en place. Pour les compétences
-et sorts, l’éditeur peut compléter les tableaux creux, ajouter les champs absents
-et mettre à jour la taille des fichiers dans l’index. Les autres octets sont
-conservés. Les archives TIG `.tfai`/`.tfaf` contenant des objets mobiles version 119
-(`.mob`, `.mdy`) sont prises en charge. Un format inconnu ou incohérent est refusé.
-Le fichier BMP reste identique. Dans le GSI, seul le nom du personnage peut changer. Le format TIG ne contient
-pas d’empreinte permettant de prouver que deux fichiers de même nom et de même
-taille viennent réellement de la même sauvegarde : importer une paire intacte.
+Existing attributes and resources are edited in place. For skills and spells,
+the editor can extend sparse arrays, add missing fields and update file sizes
+in the index. Other bytes are preserved. TIG `.tfai`/`.tfaf` archives containing
+version 119 mobile objects (`.mob`, `.mdy`) are supported. Unknown or inconsistent
+formats are rejected. The BMP file remains unchanged. Only the character's name
+can change in the GSI. The TIG format has no fingerprint that proves two files
+with matching names and sizes belong to the same save: import an intact pair.
 
-Les quêtes, compagnons, objets complets et niveau ne sont pas édités. Les valeurs sont celles enregistrées avant les
-modificateurs d’équipement, de race, d’historique et de magie. L’outil n’exécute
-pas toutes les règles du moteur : il ne recalcule pas les effets dérivés, ne déclenche
-pas de passage de niveau à partir de l’expérience et n’applique pas les bonus
-liés au franchissement d’un seuil d’attribut. Les bornes d’édition sont des
-limites techniques ; elles ne garantissent pas un personnage conforme aux règles
-de chaque mod. Les piles de ressources non résolues ne sont pas inventées.
+Quests, companions, full inventory items and level are not editable. Values
+are those saved before equipment, race, background and magic modifiers. The
+tool does not run all engine rules: it does not recalculate derived effects,
+trigger a level-up from experience or apply bonuses for crossing attribute
+thresholds. Editing bounds are technical limits; they do not guarantee a
+character that follows every mod's rules. Unresolved resource stacks are
+not invented.
 
-Les sorts et compétences sont ajoutés sans dépenser les points disponibles.
-Les compteurs d’aptitude magique et technologique sont ajustés par différence,
-comme pour les points ajoutés dans le moteur. Les disciplines technologiques,
-la maîtrise d’un collège et les bits non concernés des compétences sont conservés.
-Les prérequis du jeu restent applicables et les quêtes des maîtres ne sont pas
-accomplies par un changement du degré d’entraînement.
+Spells and skills are added without spending available points. Magic and
+technology aptitude counters are adjusted by the difference, as they are when
+points are added in the engine. Technology disciplines, college mastery and
+unrelated skill bits are preserved. Game requirements still apply, and changing
+the training degree does not complete master training quests.
 
-## Vérification et maintenance
+## Verification and maintenance
 
 ```sh
 node tests/test_save_editor.cjs
 ARCANUM_SAVE_TEST_DIR=game/modules/Arcanum/Save node tests/test_save_editor.cjs
 ```
 
-La seconde commande lit les sauvegardes existantes et vérifie les modifications
-sur des copies en mémoire. Elle n’écrit aucun fichier de sauvegarde. Les tests
-couvrent aussi les archives tronquées, les tableaux creux, les bornes numériques,
-les caractères accentués, l’ajout des sorts et compétences, les compteurs
-d’aptitude, la conservation des bits d’entraînement, la résolution des piles et l’intégrité du ZIP (avec
-le lecteur indépendant `zipfile` de Python).
+The second command reads existing saves and checks changes on copies in memory.
+It does not write any save files. Tests also cover truncated archives, sparse
+arrays, numeric bounds, accented characters, adding spells and skills, aptitude
+counters, preservation of training bits, stack resolution and ZIP integrity
+(using Python's independent `zipfile` reader).
 
-`tools/check-save-editor.c` est un vérificateur optionnel à lier aux objets du
-moteur. Il charge une sauvegarde préparée avec les 80 sorts et les 16 compétences
-au rang 5 / entraînement 3, puis vérifie ces valeurs avec les accesseurs du jeu.
-Il exige une installation de test isolée et le marqueur `.save-editor-sandbox`.
+`tools/check-save-editor.c` is an optional verifier to link against the engine's
+object files. It loads a prepared save with all 80 spells and all 16 skills at
+rank 5 / training 3, then checks those values through the game's accessors.
+It requires an isolated test installation and the `.save-editor-sandbox` marker.
 
-`schema.js` contient uniquement des métadonnées de format générées par
-`python3 tools/generate-save-schema.py` depuis la révision épinglée du moteur.
-Références : `source/first_party/tig/src/file.c`,
-`source/src/game/{obj,obj_private,sa,stat,item}.c` et leurs en-têtes, dans
+`schema.js` contains only format metadata generated by
+`python3 tools/generate-save-schema.py` from the pinned engine revision.
+References: `source/first_party/tig/src/file.c`,
+`source/src/game/{obj,obj_private,sa,stat,item}.c` and their headers, in
 [Arcanum CE](https://github.com/alexbatalov/arcanum-ce).

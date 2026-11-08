@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Éditeur local de sauvegardes Arcanum. Importez, modifiez et exportez une copie sans envoyer vos fichiers.">
-  <title>Arcanum — Atelier des sauvegardes</title>
+  <meta name="description" content="Offline Arcanum save editor. Import, edit and export a copy without uploading your files.">
+  <title>Arcanum — Save Workshop</title>
   <link rel="stylesheet" href="style.css">
   <script src="schema.js" defer></script>
   <script src="save-format.js" defer></script>
@@ -13,42 +13,42 @@
 <body>
   <aside class="sidebar">
     <a class="brand" href="#"><span class="seal" aria-hidden="true">A</span><span>ARCANUM<small>RENAISSANCE</small></span></a>
-    <div class="side-caption">L’ATELIER</div>
-    <a class="side-link active" href="#workspace"><span aria-hidden="true">◈</span> Sauvegarde</a>
-    <a class="side-link" href="#instructions"><span aria-hidden="true">≡</span> Mode d’emploi</a>
-    <div class="local-card"><span class="dot"></span> Entièrement local<p>Vos fichiers restent dans ce navigateur. Aucun compte, aucun envoi.</p></div>
+    <div class="side-caption">THE WORKSHOP</div>
+    <a class="side-link active" href="#workspace"><span aria-hidden="true">◈</span> Save file</a>
+    <a class="side-link" href="#instructions"><span aria-hidden="true">≡</span> Instructions</a>
+    <div class="local-card"><span class="dot"></span> Fully local<p>Your files stay in this browser. No account or uploads.</p></div>
     <div class="language-card">
-      <h2>Textes du jeu</h2>
-      <p>Importez <code>stat.mes</code>, <code>skill.mes</code> et <code>spell.mes</code> du dossier <code>mes</code> pour les noms dans la langue du jeu.</p>
-      <label class="button subtle file-button">Importer les textes MES<input id="mes-input" type="file" accept=".mes" multiple></label>
-      <p id="language-status" class="tiny">Sans ces fichiers : identifiants du moteur.</p>
+      <h2>Game text</h2>
+      <p>Import <code>stat.mes</code>, <code>skill.mes</code> and <code>spell.mes</code> from the game’s <code>mes</code> folder to use names in your game’s language.</p>
+      <label class="button subtle file-button">Import MES text<input id="mes-input" type="file" accept=".mes" multiple></label>
+      <p id="language-status" class="tiny">Without these files: engine identifiers.</p>
     </div>
-    <small class="side-footer">MAGIE · TECHNOLOGIE · POSSIBILITÉS</small>
+    <small class="side-footer">MAGIC · TECHNOLOGY · POSSIBILITIES</small>
   </aside>
   <main id="workspace">
-    <header class="topbar"><span>OUTILS / ÉDITEUR DE SAUVEGARDE</span><span class="offline"><span class="dot"></span> HORS LIGNE</span></header>
-    <section class="heading"><div><p class="eyebrow">LE PROCHAIN CHAPITRE VOUS APPARTIENT</p><h1>Atelier des sauvegardes</h1><p>Ajustez votre personnage. Reprenez votre aventure.</p></div><label class="button file-button">Ouvrir une sauvegarde<input id="files-input" type="file" accept=".tfai,.tfaf,.gsi,.bmp" multiple></label></section>
-    <ol class="steps"><li><b>01</b> Importer les fichiers</li><li><b>02</b> Ajuster le personnage</li><li><b>03</b> Exporter une copie</li></ol>
-    <p id="status" class="status" role="status" aria-live="polite">Prêt à ouvrir une sauvegarde.</p>
+    <header class="topbar"><span>TOOLS / SAVE EDITOR</span><span class="offline"><span class="dot"></span> OFFLINE</span></header>
+    <section class="heading"><div><p class="eyebrow">THE NEXT CHAPTER IS YOURS</p><h1>Save Workshop</h1><p>Adjust your character. Continue your adventure.</p></div><label class="button file-button">Open a save<input id="files-input" type="file" accept=".tfai,.tfaf,.gsi,.bmp" multiple></label></section>
+    <ol class="steps"><li><b>01</b> Import files</li><li><b>02</b> Adjust your character</li><li><b>03</b> Export a copy</li></ol>
+    <p id="status" class="status" role="status" aria-live="polite">Ready to open a save.</p>
     <section id="empty-state" class="dropzone" aria-labelledby="drop-title">
-      <div class="archive-icon" aria-hidden="true">▤</div><p class="eyebrow">VOTRE AVENTURE, ENTRE VOS MAINS</p>
-      <h2 id="drop-title">Déposez les fichiers de votre sauvegarde</h2>
-      <p>Sélectionnez ensemble les fichiers <strong>.tfai</strong> et <strong>.tfaf</strong> du même emplacement.<br>Vous pouvez ajouter les fichiers <strong>.gsi</strong> et <strong>.bmp</strong> correspondants.</p>
-      <button id="choose-files" class="button primary" type="button">Parcourir les fichiers <span aria-hidden="true">↗</span></button>
+      <div class="archive-icon" aria-hidden="true">▤</div><p class="eyebrow">YOUR ADVENTURE, IN YOUR HANDS</p>
+      <h2 id="drop-title">Drop your save files here</h2>
+      <p>Select the <strong>.tfai</strong> and <strong>.tfaf</strong> files from the same save slot together.<br>You can also include the matching <strong>.gsi</strong> and <strong>.bmp</strong> files.</p>
+      <button id="choose-files" class="button primary" type="button">Browse files <span aria-hidden="true">↗</span></button>
       <code class="path-hint">Arcanum / modules / Arcanum / Save</code>
-      <span class="tiny">Le fichier d’origine n’est jamais écrasé par l’éditeur.</span>
+      <span class="tiny">The editor never overwrites your original files.</span>
     </section>
-    <section id="editor" hidden aria-label="Édition du personnage">
-      <div class="character-card"><div class="character-seal" aria-hidden="true">◈</div><div class="character-info"><p id="slot-name" class="eyebrow"></p><h2 id="character-name"></h2><p id="character-meta"></p></div><div><label class="tiny" for="player-select">PERSONNAGE</label><select id="player-select"></select></div></div>
+    <section id="editor" hidden aria-label="Character editing">
+      <div class="character-card"><div class="character-seal" aria-hidden="true">◈</div><div class="character-info"><p id="slot-name" class="eyebrow"></p><h2 id="character-name"></h2><p id="character-meta"></p></div><div><label class="tiny" for="player-select">CHARACTER</label><select id="player-select"></select></div></div>
       <div class="editor-layout"><div>
-        <div class="filter-row" role="group" aria-label="Afficher les champs"><button class="filter active" data-filter="all" aria-pressed="true">Tout</button><button class="filter" data-filter="identity" aria-pressed="false">Personnage</button><button class="filter" data-filter="attributes" aria-pressed="false">Attributs</button><button class="filter" data-filter="progress" aria-pressed="false">Progression</button><button class="filter" data-filter="resources" aria-pressed="false">Ressources</button><button class="filter" data-filter="skills" aria-pressed="false">Compétences</button><button class="filter" data-filter="magic" aria-pressed="false">Magies</button></div>
-        <p class="field-note">Valeurs de base enregistrées, avant les effets d’équipement et de magie. Les compétences et les collèges de magie peuvent être ajoutés même s’ils sont absents.</p>
+        <div class="filter-row" role="group" aria-label="Show fields"><button class="filter active" data-filter="all" aria-pressed="true">All</button><button class="filter" data-filter="identity" aria-pressed="false">Character</button><button class="filter" data-filter="attributes" aria-pressed="false">Attributes</button><button class="filter" data-filter="progress" aria-pressed="false">Progress</button><button class="filter" data-filter="resources" aria-pressed="false">Resources</button><button class="filter" data-filter="skills" aria-pressed="false">Skills</button><button class="filter" data-filter="magic" aria-pressed="false">Magic</button></div>
+        <p class="field-note">Saved base values, before equipment and magic effects. Skills and spell colleges can be added even if they are absent.</p>
         <form id="fields-form" novalidate><div id="fields"></div></form>
-        <p id="no-fields" class="field-note" hidden>Aucun champ présent dans cette catégorie.</p>
-      </div><aside class="review-card"><p class="eyebrow">AVANT DE REPARTIR</p><h2>Vos changements <span id="change-count">0</span></h2><p id="review-empty">Aucune modification pour le moment.</p><ul id="changes"></ul><p id="invalid-note" class="invalid-note" hidden>Corrigez les valeurs signalées avant l’export.</p><button id="export" class="button primary" disabled>Exporter la copie .zip <span aria-hidden="true">↓</span></button><button id="reset" class="button subtle" disabled>Annuler les modifications</button><p class="tiny">Les noms des fichiers sont conservés. L’archive contient la paire de sauvegarde et les fichiers associés que vous avez importés.</p></aside></div>
+        <p id="no-fields" class="field-note" hidden>No fields in this category.</p>
+      </div><aside class="review-card"><p class="eyebrow">BEFORE YOU SET OFF</p><h2>Your changes <span id="change-count">0</span></h2><p id="review-empty">No changes yet.</p><ul id="changes"></ul><p id="invalid-note" class="invalid-note" hidden>Correct the highlighted values before exporting.</p><button id="export" class="button primary" disabled>Export .zip copy <span aria-hidden="true">↓</span></button><button id="reset" class="button subtle" disabled>Reset changes</button><p class="tiny">Filenames are preserved. The archive contains the save pair and any companion files you imported.</p></aside></div>
     </section>
-    <section id="instructions" class="instructions"><div><p class="eyebrow">POUR REPRENDRE LA PARTIE</p><h2>Trois gestes, une nouvelle copie.</h2></div><ol><li><strong>Gardez l’original.</strong> Faites une copie des fichiers de votre emplacement de sauvegarde avant de le remplacer.</li><li><strong>Importez, puis ajustez.</strong> Ouvrez une seule paire de fichiers. Les valeurs d’origine restent visibles à côté de vos changements.</li><li><strong>Exportez et remplacez.</strong> Fermez le jeu, décompressez le ZIP, puis placez les fichiers dans le dossier <code>Save</code>. Conservez les <code>.gsi</code> et <code>.bmp</code> d’origine si vous ne les avez pas importés.</li></ol><p class="limitation">Compatible avec les archives TIG contenant des objets version 119. L’ajout de sorts et de compétences ne consomme pas de points disponibles ; les compteurs d’aptitude magique et technologique sont ajustés. Le jeu applique toujours les restrictions liées aux attributs et au niveau. Les quêtes d’entraînement ne sont pas accomplies par l’éditeur. L’inventaire complet, les compagnons et les effets dérivés ne sont pas édités. Modifier l’expérience ne déclenche pas automatiquement un passage de niveau.</p></section>
-    <footer>ARCANUM RENAISSANCE <span>Un outil local, une copie à la fois.</span></footer>
+    <section id="instructions" class="instructions"><div><p class="eyebrow">TO CONTINUE YOUR GAME</p><h2>Three steps to a new copy.</h2></div><ol><li><strong>Keep the original.</strong> Back up the files from your save slot before replacing them.</li><li><strong>Import, then adjust.</strong> Open one pair of files. Original values remain visible beside your changes.</li><li><strong>Export and replace.</strong> Close the game, extract the ZIP, then place the files in the <code>Save</code> folder. Keep the original <code>.gsi</code> and <code>.bmp</code> files if you did not import them.</li></ol><p class="limitation">Supports TIG archives containing version 119 objects. Adding spells and skills does not spend available points; magic and technology aptitude counters are adjusted. The game still applies attribute and level restrictions. The editor does not complete training quests or edit full inventories, companions or derived effects. Changing experience does not automatically trigger a level-up.</p></section>
+    <footer>ARCANUM RENAISSANCE <span>An offline tool, one copy at a time.</span></footer>
   </main>
 </body>
 </html>

@@ -68,8 +68,8 @@ test('edits only chosen int32 fields and preserves opaque entries', () => {
 });
 test('rejects invalid writes, including NaN, fractional and unknown fields', () => {
   const save = opened(), field = save.fields.find(f => f.label === 'STRENGTH');
-  for (const value of [NaN, Infinity, 1.5, '10', -1, 41]) assert.throws(() => api.exportSave(save, new Map([[field.key, value]])), /Valeur invalide/);
-  assert.throws(() => api.exportSave(save, new Map([['unknown', 10]])), /Champ inconnu/);
+  for (const value of [NaN, Infinity, 1.5, '10', -1, 41]) assert.throws(() => api.exportSave(save, new Map([[field.key, value]])), /Invalid value/);
+  assert.throws(() => api.exportSave(save, new Map([['unknown', 10]])), /Unknown field/);
 });
 test('unresolved gold handle never becomes an arbitrary editable stack', () => {
   const f = fixture({goldReference: 999}), save = api.openSave(f.index, f.data);
@@ -149,7 +149,7 @@ test('ZIP is independently readable with exact UTF-8 names, bytes and CRCs', () 
     const result = spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), ['-c', 'import sys,zipfile,pathlib; p=pathlib.Path(sys.argv[1]); z=zipfile.ZipFile(p/"test.zip"); assert z.testzip() is None; assert z.read("Slot0001.tfai")== (p/"expected.tfai").read_bytes(); assert z.read("Slot0001.tfaf")== (p/"expected.tfaf").read_bytes(); assert z.read("Slot0001Hélène.gsi")==bytes([0,255,12,99])', dir], {encoding: 'utf8'});
     assert.equal(result.status, 0, result.stderr);
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
-  assert.throws(() => api.makeZip([{name: '../escape', data: Buffer.alloc(0)}]), /invalide/);
+  assert.throws(() => api.makeZip([{name: '../escape', data: Buffer.alloc(0)}]), /Invalid/);
 });
 
 const realDir = process.env.ARCANUM_SAVE_TEST_DIR;
@@ -197,7 +197,7 @@ test('updates the selected PC, its body, sound, race and gender effects', () => 
   const dwarf = change(elf, 1, 1);
   assert.deepEqual(effects(dwarf), [65]);
   assert.equal((dwarf.players[0].fields.get('CURRENT_AID').value >>> 24) & 15, 9);
-  assert.throws(() => change(elf, 1, 0), /modèle/);
+  assert.throws(() => change(elf, 1, 0), /playable model/);
   assert.throws(() => change(elf, 10, 1), /UAP/);
   const orc = change(elf, 10, 1, true);
   assert.equal(orc.players[0].fields.get('CURRENT_AID').value >>> 0, 0xc1002000);

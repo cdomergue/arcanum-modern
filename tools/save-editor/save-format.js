@@ -22,7 +22,7 @@
       this.view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     }
     take(n) {
-      check(Number.isSafeInteger(n) && n >= 0 && n <= this.end - this.pos, 'Fichier tronqué ou taille invalide.');
+      check(Number.isSafeInteger(n) && n >= 0 && n <= this.end - this.pos, 'Truncated file or invalid size.');
       const start = this.pos; this.pos += n; return this.data.subarray(start, this.pos);
     }
     u8() { return this.take(1)[0]; }
@@ -36,25 +36,25 @@
     let offset = 0, ended = false;
     while (r.pos < r.end) {
       const type = r.u32();
-      if (type === 3) { check(!stack.length, 'Dossiers non refermés dans l’index.'); ended = true; break; }
-      if (type === 2) { check(stack.length, 'Index de dossiers invalide.'); stack.pop(); continue; }
-      check(type === 0 || type === 1, 'Type d’entrée TFAI inconnu.');
+      if (type === 3) { check(!stack.length, 'Unclosed folders in the index.'); ended = true; break; }
+      if (type === 2) { check(stack.length, 'Invalid folder index.'); stack.pop(); continue; }
+      check(type === 0 || type === 1, 'Unknown TFAI entry type.');
       const length = r.u32();
-      check(length > 0 && length < 260, 'Nom d’entrée invalide.');
+      check(length > 0 && length < 260, 'Invalid entry name.');
       const name = decodeGameText(r.take(length));
-      check(!/[\\/\x00-\x1f:]/.test(name) && name !== '.' && name !== '..', 'Chemin d’entrée invalide.');
-      if (type === 1) { check(stack.length < 32, 'Trop de dossiers imbriqués.'); stack.push(name); continue; }
+      check(!/[\\/\x00-\x1f:]/.test(name) && name !== '.' && name !== '..', 'Invalid entry path.');
+      if (type === 1) { check(stack.length < 32, 'Too many nested folders.'); stack.push(name); continue; }
       const sizeOffset = r.pos, size = r.u32(), path = [...stack, name].join('/');
-      check(!paths.has(path.toLowerCase()), 'Entrée dupliquée dans l’archive.');
-      check(size <= data.length - offset, 'Les fichiers TFAI et TFAF ne correspondent pas, ou sont tronqués.');
+      check(!paths.has(path.toLowerCase()), 'Duplicate archive entry.');
+      check(size <= data.length - offset, 'The TFAI and TFAF files do not match or are truncated.');
       paths.add(path.toLowerCase()); entries.push({path, offset, size, sizeOffset}); offset += size;
-      check(entries.length <= 100000, 'Archive trop complexe.');
+      check(entries.length <= 100000, 'Archive is too complex.');
     }
-    check(ended && r.pos === r.end && offset === data.length, 'Index incomplet ou données supplémentaires non reconnues.');
+    check(ended && r.pos === r.end && offset === data.length, 'Incomplete index or unrecognized trailing data.');
     return {index, data, entries};
   }
   function objectLayout(type) {
-    check(typeNames[type], 'Type d’objet non pris en charge.');
+    check(typeNames[type], 'Unsupported object type.');
     const groups = ['BASE'];
     if (type >= 5 && type <= 14) groups.push('ITEM');
     if (type === 15 || type === 16) groups.push('CRITTER');
@@ -75,52 +75,52 @@
   function readField(r, kind) {
     if (kind === 'INT32') { const offset = r.pos; return {offset, value: r.i32(), kind}; }
     const present = r.u8();
-    check(present === 0 || present === 1, 'Présence de champ invalide.');
+    check(present === 0 || present === 1, 'Invalid field presence marker.');
     if (!present) return {kind, absent: true};
     if (kind === 'INT64') return {kind, raw: r.take(8)};
     if (kind === 'HANDLE') return {kind, id: idKey(r.take(24))};
     if (kind === 'STRING') {
       const length = r.u32(), raw = r.take(length + 1);
-      check(raw[length] === 0, 'Chaîne non terminée.');
+      check(raw[length] === 0, 'Unterminated string.');
       return {kind, text: decodeGameText(raw.subarray(0, length))};
     }
-    check(Object.hasOwn(arraySizes, kind), 'Format de champ inconnu.');
+    check(Object.hasOwn(arraySizes, kind), 'Unknown field format.');
     const size = r.u32(), count = r.u32(), bitsetId = r.u32();
-    check(size === arraySizes[kind], `Taille de tableau ${kind} non prise en charge (${size}).`);
+    check(size === arraySizes[kind], `Unsupported ${kind} array element size (${size}).`);
     const offset = r.pos; r.take(size * count);
     const words = r.u32();
-    check(words <= 100000, 'Tableau trop grand.');
+    check(words <= 100000, 'Array is too large.');
     const mask = r.take(words * 4), maskView = new DataView(mask.buffer, mask.byteOffset, mask.byteLength);
     const elements = new Map(); let rank = 0;
     for (let w = 0; w < words; w++) {
       const word = maskView.getUint32(w * 4, true);
       for (let bit = 0; bit < 32; bit++) if (word & (1 << bit)) {
-        check(rank < count, 'Tableau et masque incohérents.');
+        check(rank < count, 'Array and bitmask do not match.');
         const p = offset + rank++ * size;
         elements.set(w * 32 + bit, {offset: p, value: size === 4 ? r.view.getInt32(p, true) : null, kind: size === 4 ? 'INT32' : kind});
       }
     }
-    check(rank === count, 'Nombre d’éléments incohérent.');
+    check(rank === count, 'Element count does not match.');
     return {kind, elements, bitsetId, words};
   }
   function readObject(r, entry) {
     const offset = r.pos;
-    check(r.u32() === 119, 'Version d’objet différente de 119.');
+    check(r.u32() === 119, 'Object version is not 119.');
     const proto = r.take(24);
-    check(new DataView(proto.buffer, proto.byteOffset, 24).getInt16(0, true) === 1, 'Prototype d’objet non reconnu.');
+    check(new DataView(proto.buffer, proto.byteOffset, 24).getInt16(0, true) === 1, 'Unrecognized object prototype.');
     const oid = r.take(24), oidType = new DataView(oid.buffer, oid.byteOffset, 24).getInt16(0, true);
-    check([0, 2, 3].includes(oidType), 'Identifiant d’objet invalide.');
+    check([0, 2, 3].includes(oidType), 'Invalid object identifier.');
     const type = r.u32(), count = r.u16(), layout = objectLayout(type);
     const masks = Array.from({length: layout.words}, () => r.u32());
     const allowed = Array(layout.words).fill(0);
     for (const f of layout.fields) allowed[f.word] |= 1 << f.bit;
-    check(masks.every((m, i) => (m & ~allowed[i]) === 0), 'Masque de champs non reconnu.');
+    check(masks.every((m, i) => (m & ~allowed[i]) === 0), 'Unrecognized field bitmask.');
     const fields = new Map();
     for (const f of layout.fields) if (masks[f.word] & (1 << f.bit)) {
       const start = r.pos, field = readField(r, f.kind);
       fields.set(f.name, {...field, start, end: r.pos});
     }
-    check(fields.size === count, 'Nombre de champs incohérent.');
+    check(fields.size === count, 'Field count does not match.');
     return {id: idKey(oid), type, offset, end: r.pos, entry, fields, layout};
   }
   const editableStats = [0, 1, 2, 3, 4, 5, 6, 7, 18, 19, 20, 21];
@@ -141,10 +141,10 @@
       catch (error) { throw new Error(`${entry.path} : ${error.message}`); }
     }
     const players = objects.filter(o => o.type === 15);
-    check(players.length, 'Aucun personnage joueur dans les objets mobiles de cette sauvegarde.');
+    check(players.length, 'No player character found in this save’s mobile objects.');
     const fields = [];
     for (const [playerIndex, player] of players.entries()) {
-      player.name = player.fields.get('PC_PLAYER_NAME')?.text || `Personnage ${playerIndex + 1}`;
+      player.name = player.fields.get('PC_PLAYER_NAME')?.text || `Character ${playerIndex + 1}`;
       player.level = player.fields.get('CRITTER_STAT_BASE_IDX')?.elements?.get(17)?.value;
       const add = (field, key, group, range, stat = null) => {
         if (!field || field.kind !== 'INT32' || !Number.isInteger(field.value)) return;
@@ -178,19 +178,19 @@
         add(target.fields.get(suffix === 'GOLD' ? 'GOLD_QUANTITY' : 'AMMO_QUANTITY'), suffix, 'resources', [0, 2000000000]);
       }
     }
-    check(fields.length, 'Aucun champ modifiable présent.');
+    check(fields.length, 'No editable fields found.');
     return {archive, objects, players, fields};
   }
-  const races = ['Humain', 'Nain', 'Elfe', 'Demi-elfe', 'Gnome', 'Halfelin', 'Demi-orque', 'Demi-ogre', 'Elfe noir', 'Ogre', 'Orque'];
-  const genders = ['Femme', 'Homme'];
+  const races = ['Human', 'Dwarf', 'Elf', 'Half-elf', 'Gnome', 'Halfling', 'Half-orc', 'Half-ogre', 'Dark elf', 'Ogre', 'Orc'];
+  const genders = ['Female', 'Male'];
   const bodyTypes = [0, 1, 4, 0, 2, 2, 0, 3, 4, 3, 0];
   const femaleRaces = new Set([0, 2, 3, 6, 8]);
   const characters = new Map(Array.from({length:256}, (_, i) => [decodeGameText(Uint8Array.of(i)), i]));
   function encodeName(name) {
     check(typeof name === 'string' && name.trim() && name.length <= 23 && !/[\x00-\x1f\x7f-\x9f]/.test(name),
-      'Le nom doit contenir de 1 à 23 caractères imprimables.');
+      'The name must contain 1 to 23 printable characters.');
     return Uint8Array.from([...name], ch => {
-      check(characters.has(ch), 'Ce caractère ne peut pas être enregistré dans un nom Arcanum.');
+      check(characters.has(ch), 'This character cannot be saved in an Arcanum name.');
       return characters.get(ch);
     });
   }
@@ -206,7 +206,7 @@
     };
   }
   function identityFields(save) {
-    const labels = {name: 'Nom', gender: 'Sexe', race: 'Race'};
+    const labels = {name: 'Name', gender: 'Gender', race: 'Race'};
     const choices = {gender: genders, race: races};
     return save.players.flatMap((player, playerIndex) =>
       Object.entries(savedIdentity(player)).map(([id, original]) => ({
@@ -223,14 +223,14 @@
     if (!edits.has('race') && !edits.has('gender')) return fields;
     const gender = edits.has('gender') ? edits.get('gender') : original.gender;
     const race = edits.has('race') ? edits.get('race') : original.race;
-    check(Number.isInteger(gender) && genders[gender] && Number.isInteger(race) && races[race], 'Sélectionnez un sexe et une race valides.');
-    check(race < 8 || raceMod, 'Cette race nécessite le Race Mod de l’UAP.');
-    check(gender === 1 || femaleRaces.has(race), 'Cette combinaison de race et de sexe ne dispose pas de modèle jouable.');
+    check(Number.isInteger(gender) && genders[gender] && Number.isInteger(race) && races[race], 'Select a valid gender and race.');
+    check(race < 8 || raceMod, 'This race requires the UAP Race Mod.');
+    check(gender === 1 || femaleRaces.has(race), 'This race and gender combination has no playable model.');
 
     // Match stat_base_set: racial effects have cause 0, the female effect has cause 9.
     const effects = player.fields.get('CRITTER_EFFECTS_IDX')?.elements ?? new Map();
     const causes = player.fields.get('CRITTER_EFFECT_CAUSE_IDX')?.elements ?? new Map();
-    check(effects.size === causes.size && [...effects.keys()].every(i => causes.has(i)), 'Tableaux d’effets incompatibles.');
+    check(effects.size === causes.size && [...effects.keys()].every(i => causes.has(i)), 'Incompatible effect arrays.');
     const pairs = [];
     for (const [i, effect] of effects) {
       const cause = causes.get(i).value;
@@ -301,10 +301,10 @@
         continue;
       }
       const field = known.get(key);
-      check(field, 'Champ inconnu.');
-      check(typeof value === 'number' && Number.isInteger(value) && value >= field.min && value <= field.max, `Valeur invalide pour ${field.label}.`);
+      check(field, 'Unknown field.');
+      check(typeof value === 'number' && Number.isInteger(value) && value >= field.min && value <= field.max, `Invalid value for ${field.label}.`);
       if (field.arrayName) continue;
-      check(!written.has(field.offset) || written.get(field.offset) === value, 'Modifications contradictoires.');
+      check(!written.has(field.offset) || written.get(field.offset) === value, 'Conflicting changes.');
       written.set(field.offset, value); view.setInt32(field.offset, value, true);
     }
     for (const [key, value] of changes) {
@@ -390,7 +390,7 @@
     const field = save.players.length === 1 ? renames[0] : renames.find(f => f.original === oldName);
     if (!field) return data;
     if (save.players.length > 1) {
-      check(save.players.filter(p => savedIdentity(p).name === oldName).length === 1, 'Nom ambigu dans le fichier .gsi.');
+      check(save.players.filter(p => savedIdentity(p).name === oldName).length === 1, 'Ambiguous name in the .gsi file.');
     }
     const name = encodeName(changes.get(field.key));
     return concat([data.subarray(0, start), numberBytes(name.length), name, data.subarray(r.pos)]);
@@ -402,7 +402,7 @@
     catch { text = decodeGameText(data); }
     const entries = new Map();
     for (const match of text.matchAll(/\{\s*(-?\d+)\s*\}\s*\{([^}]*)\}/g)) entries.set(Number(match[1]), match[2]);
-    check(entries.size, 'Aucune entrée MES reconnue.');
+    check(entries.size, 'No MES entries recognized.');
     return entries;
   }
   // ZIP (store) keeps the original filenames and avoids multiple-download prompts.
@@ -412,12 +412,12 @@
     return (crc ^ 0xffffffff) >>> 0;
   }
   function makeZip(files) {
-    check(files.length <= 65535, 'Trop de fichiers.');
+    check(files.length <= 65535, 'Too many files.');
     const chunks = [], central = []; let offset = 0, centralSize = 0;
     for (const file of files) {
-      check(!/[\\/\x00-\x1f:]/.test(file.name) && !['.', '..', ''].includes(file.name), 'Nom de fichier ZIP invalide.');
+      check(!/[\\/\x00-\x1f:]/.test(file.name) && !['.', '..', ''].includes(file.name), 'Invalid ZIP filename.');
       const name = new TextEncoder().encode(file.name), data = bytes(file.data), crc = crc32(data);
-      check(name.length <= 65535 && data.length < 0xffffffff, 'Fichier trop volumineux.');
+      check(name.length <= 65535 && data.length < 0xffffffff, 'File is too large.');
       const local = new Uint8Array(30 + name.length), l = new DataView(local.buffer);
       l.setUint32(0, 0x04034b50, true); l.setUint16(4, 20, true); l.setUint16(6, 0x800, true);
       l.setUint16(12, 33, true); l.setUint32(14, crc, true); l.setUint32(18, data.length, true);
@@ -429,7 +429,7 @@
       c.setUint32(42, offset, true); record.set(name, 46);
       chunks.push(local, data); central.push(record); offset += local.length + data.length; centralSize += record.length;
     }
-    check(offset + centralSize + 22 < 0xffffffff, 'Archive ZIP trop volumineuse.');
+    check(offset + centralSize + 22 < 0xffffffff, 'ZIP archive is too large.');
     const end = new Uint8Array(22), e = new DataView(end.buffer);
     e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
     e.setUint32(12, centralSize, true); e.setUint32(16, offset, true);

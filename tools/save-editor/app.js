@@ -7,17 +7,17 @@
   const schema = globalThis.ArcanumSchema;
   if (globalThis.ArcanumLocalMessages) {
     for (const name of ['stat', 'skill', 'spell']) translations[name] = new Map(globalThis.ArcanumLocalMessages[name] ?? []);
-    $('language-status').textContent = 'Textes de votre jeu inclus dans ce fichier local.';
+    $('language-status').textContent = 'Your game’s text is included in this local file.';
   }
-  const groupNames = {identity:'Personnage', attributes: 'Attributs', progress: 'Progression', resources: 'Ressources', skills: 'Compétences', magic: 'Magies'};
-  const fmt = value => value.toLocaleString('fr-FR');
+  const groupNames = {identity:'Character', attributes: 'Attributes', progress: 'Progress', resources: 'Resources', skills: 'Skills', magic: 'Magic'};
+  const fmt = value => value.toLocaleString('en-US');
   function label(field) {
-    if (field.skill !== undefined) return (translations.skill.get(field.skill) || schema.skills[field.skill]) + (field.training ? ' · entraînement' : ' · rang');
+    if (field.skill !== undefined) return (translations.skill.get(field.skill) || schema.skills[field.skill]) + (field.training ? ' · training' : ' · rank');
     if (field.college !== undefined) return translations.spell.get(500 + field.college) || field.label;
     return (field.stat !== null && translations.stat.get(field.stat)) || field.label;
   }
   function trainingLabel(value) { return translations.skill.get(16 + value) || schema.training[value]; }
-  function valueLabel(field, value) { if (field.group === 'identity') return field.choices?.[value] ?? value ?? 'Hérité'; return field.training ? trainingLabel(value) : fmt(value); }
+  function valueLabel(field, value) { if (field.group === 'identity') return field.choices?.[value] ?? value ?? 'Inherited'; return field.training ? trainingLabel(value) : fmt(value); }
   function status(message, error = false) { $('status').textContent = message; $('status').classList.toggle('error', error); }
   function textNode(tag, text, className) {
     const node = document.createElement(tag); node.textContent = text;
@@ -45,7 +45,7 @@
     for (const [key, delta] of deltas) if (delta) {
       const [index, kind] = key.split(':'), player = save.players[Number(index)], stat = kind === 'magic' ? 22 : 23;
       const original = player.fields.get('CRITTER_STAT_BASE_IDX')?.elements?.get(stat)?.value ?? 0;
-      const row = textNode('li', `${player.name} · ${schema.stats[stat]} (automatique)`);
+      const row = textNode('li', `${player.name} · ${schema.stats[stat]} (automatic)`);
       row.append(textNode('strong', `${fmt(original)} → ${fmt(Math.max(0, Math.min(210, original + delta)))}`)); $('changes').append(row);
     }
   }
@@ -65,7 +65,7 @@
   }
   function identitySection(fields) {
     const section = textNode('section', '', 'field-group');
-    section.append(textNode('h3', 'Identité du personnage'));
+    section.append(textNode('h3', 'Character identity'));
     const grid = textNode('div', '', 'fields-grid');
     for (const field of fields) {
       const box = textNode('label', '', 'field identity-field');
@@ -73,7 +73,7 @@
       box.append(textNode('span', field.label));
       if (field.choices) {
         if (field.original === undefined) {
-          const option = textNode('option', 'Hérité du prototype');
+          const option = textNode('option', 'Inherited from prototype');
           option.value = '';
           input.append(option);
         }
@@ -93,7 +93,7 @@
         checkIdentity();
       });
       box.classList.toggle('changed', changes.has(field.key));
-      box.append(input, textNode('small', 'Valeur initiale : ' + valueLabel(field, field.original)));
+      box.append(input, textNode('small', 'Original value: ' + valueLabel(field, field.original)));
       grid.append(box);
     }
     const profile = textNode('label', '', 'field-note'), toggle = document.createElement('input');
@@ -103,11 +103,11 @@
       raceMod = toggle.checked;
       renderFields();
     });
-    profile.append(toggle, document.createTextNode(' Mon jeu utilise le Race Mod de l’UAP.'));
+    profile.append(toggle, document.createTextNode(' My game uses the UAP Race Mod.'));
     const error = textNode('p', '', 'field-error');
     error.id = 'identity-error';
     error.setAttribute('aria-live', 'polite');
-    section.append(grid, profile, textNode('p', 'Le portrait et l’historique sont conservés. Importez aussi le .gsi pour afficher le nouveau nom dans le menu Charger.', 'field-note'), error);
+    section.append(grid, profile, textNode('p', 'Portrait and background are preserved. Include the .gsi file to display the new name in the Load menu.', 'field-note'), error);
     return section;
   }
   function renderFields() {
@@ -115,7 +115,7 @@
     if (!save) return;
     const player = save.players[playerIndex];
     $('character-name').textContent = changes.get(playerIndex+':identity:name') || player.name;
-    $('character-meta').textContent = `${player.level === undefined ? 'Niveau non enregistré' : `Niveau ${player.level}`} · ${save.archive.entries.length} fichiers · ${fmt(save.archive.data.length)} octets`;
+    $('character-meta').textContent = `${player.level === undefined ? 'Level not saved' : `Level ${player.level}`} · ${save.archive.entries.length} files · ${fmt(save.archive.data.length)} bytes`;
     let visible = 0;
     for (const [group, title] of Object.entries(groupNames)) {
       if (filter !== 'all' && filter !== group) continue;
@@ -131,13 +131,13 @@
       visible += fields.length;
       const section = document.createElement('section'); section.className = 'field-group';
       section.append(textNode('h3', title));
-      if (group === 'skills') section.append(textNode('p', 'Rang de 0 à 5 ; l’entraînement se règle séparément. Le jeu limite l’efficacité selon les attributs. Les points disponibles ne sont pas consommés.', 'field-note'));
+      if (group === 'skills') section.append(textNode('p', 'Rank ranges from 0 to 5; training is set separately. Attributes limit effectiveness in game. Available points are not spent.', 'field-note'));
       if (group === 'magic') {
-        section.append(textNode('p', 'Choisir un sort apprend aussi tous les rangs précédents de son collège. Décocher un sort retire les rangs suivants. Les prérequis d’utilisation du jeu restent applicables.', 'field-note'));
-        const learn = textNode('button', 'Apprendre les 80 sorts', 'button subtle'); learn.type = 'button';
+        section.append(textNode('p', 'Selecting a spell also learns all previous ranks in its college. Clearing a spell removes later ranks. The game’s requirements for using spells still apply.', 'field-note'));
+        const learn = textNode('button', 'Learn all 80 spells', 'button subtle'); learn.type = 'button';
         learn.addEventListener('click', () => {
           for (const field of fields) { if (field.original === 5) changes.delete(field.key); else changes.set(field.key, 5); invalid.delete(field.key); }
-          renderFields(); updateReview(); status('Les 16 collèges sont au rang 5 dans la copie à exporter.');
+          renderFields(); updateReview(); status('All 16 colleges are at rank 5 in the copy to export.');
         }); section.append(learn);
       }
       const grid = document.createElement('div'); grid.className = 'fields-grid';
@@ -151,11 +151,11 @@
         else { input.type = 'number'; input.min = field.min; input.max = field.max; input.step = 1; }
         input.value = invalid.has(field.key) ? '' : (changes.get(field.key) ?? field.original);
         input.setAttribute('aria-describedby', `hint-${field.key} error-${field.key}`);
-        const hint = textNode('small', `Initial : ${valueLabel(field, field.original)}`); hint.id = `hint-${field.key}`;
+        const hint = textNode('small', `Original: ${valueLabel(field, field.original)}`); hint.id = `hint-${field.key}`;
         const error = textNode('span', '', 'field-error'); error.id = `error-${field.key}`;
         function setError(isInvalid) {
           input.setAttribute('aria-invalid', String(isInvalid));
-          error.textContent = isInvalid ? `Entier de ${fmt(field.min)} à ${fmt(field.max)} attendu.` : '';
+          error.textContent = isInvalid ? `Enter a whole number from ${fmt(field.min)} to ${fmt(field.max)}.` : '';
         }
         setError(invalid.has(field.key));
         const spellChecks = [];
@@ -192,27 +192,27 @@
   }
   async function importFiles(selected) {
     if (!selected.length || busy) return;
-    if ((changes.size || invalid.size) && !window.confirm('Abandonner les modifications en cours et ouvrir cette sauvegarde ?')) return;
-    busy = true; updateReview(); status('Lecture et vérification des fichiers…');
+    if ((changes.size || invalid.size) && !window.confirm('Discard your current changes and open this save?')) return;
+    busy = true; updateReview(); status('Reading and checking files…');
     try {
       const incoming = Array.from(selected), names = new Set();
-      if (incoming.reduce((n, f) => n + f.size, 0) > 128 * 1024 * 1024) throw new Error('La sélection dépasse la limite de 128 Mo.');
+      if (incoming.reduce((n, f) => n + f.size, 0) > 128 * 1024 * 1024) throw new Error('The selection exceeds the 128 MiB limit.');
       for (const file of incoming) {
         const name = file.name.toLowerCase();
-        if (names.has(name)) throw new Error('La sélection contient des noms de fichiers en double.');
+        if (names.has(name)) throw new Error('The selection contains duplicate filenames.');
         names.add(name);
       }
       const indexes = incoming.filter(f => /\.tfai$/i.test(f.name));
       const archives = incoming.filter(f => /\.tfaf$/i.test(f.name));
-      if (indexes.length !== 1 || archives.length !== 1) throw new Error('Sélectionnez ensemble un fichier .tfai et un fichier .tfaf d’une seule sauvegarde.');
+      if (indexes.length !== 1 || archives.length !== 1) throw new Error('Select one .tfai file and one .tfaf file from the same save together.');
       const base = indexes[0].name.slice(0, -5);
-      if (archives[0].name.slice(0, -5).toLowerCase() !== base.toLowerCase()) throw new Error('Les fichiers .tfai et .tfaf doivent porter le même nom.');
+      if (archives[0].name.slice(0, -5).toLowerCase() !== base.toLowerCase()) throw new Error('The .tfai and .tfaf files must have matching names.');
       for (const file of incoming) {
         const name = file.name.toLowerCase(), stem = base.toLowerCase();
         if (file === indexes[0] || file === archives[0]) continue;
-        if (name !== `${stem}.bmp` && !(name.startsWith(stem) && name.endsWith('.gsi'))) throw new Error(`Fichier associé inattendu : ${file.name}`);
+        if (name !== `${stem}.bmp` && !(name.startsWith(stem) && name.endsWith('.gsi'))) throw new Error(`Unexpected companion file: ${file.name}`);
       }
-      if (incoming.filter(f => /\.gsi$/i.test(f.name)).length > 1) throw new Error('Sélectionnez un seul fichier .gsi pour cet emplacement.');
+      if (incoming.filter(f => /\.gsi$/i.test(f.name)).length > 1) throw new Error('Select only one .gsi file for this slot.');
       const loaded = await Promise.all(incoming.map(async f => ({name: f.name, data: new Uint8Array(await f.arrayBuffer())})));
       const next = api.openSave(loaded.find(f => f.name === indexes[0].name).data, loaded.find(f => f.name === archives[0].name).data);
       raceMod=next.players.some(p=>{
@@ -221,12 +221,12 @@
       });
       save = next; files = loaded; slot = base; changes = new Map(); invalid = new Set(); playerIndex = 0;
       $('empty-state').hidden = true; $('editor').hidden = false;
-      $('slot-name').textContent = `SAUVEGARDE / ${slot}`;
+      $('slot-name').textContent = `SAVE / ${slot}`;
       $('player-select').replaceChildren(...save.players.map((player, i) => {
         const option = textNode('option', `${player.name} · ${player.entry.path}`); option.value = i; return option;
       }));
       $('player-select').disabled = save.players.length === 1;
-      renderFields(); status(`${slot} ouverte. ${save.fields.length + api.identityFields(save).length} champs modifiables. Les fichiers d’origine sont préservés.`);
+      renderFields(); status(`${slot} opened. ${save.fields.length + api.identityFields(save).length} editable fields. Your original files are preserved.`);
     } catch (error) { status(error.message, true); }
     finally { busy = false; updateReview(); $('files-input').value = ''; }
   }
@@ -243,37 +243,37 @@
   }));
   $('fields-form').addEventListener('submit', event => event.preventDefault());
   $('reset').addEventListener('click', () => {
-    changes.clear(); invalid.clear(); renderFields(); updateReview(); status('Toutes les valeurs d’origine ont été rétablies.');
+    changes.clear(); invalid.clear(); renderFields(); updateReview(); status('All original values have been restored.');
   });
   $('mes-input').addEventListener('change', async event => {
     const files = Array.from(event.target.files); if (!files.length) return;
     try {
       const next = {...translations};
       for (const file of files) {
-        if (file.size > 2 * 1024 * 1024) throw new Error('Un fichier MES dépasse 2 Mo.');
+        if (file.size > 2 * 1024 * 1024) throw new Error('A MES file exceeds 2 MiB.');
         const name = file.name.toLowerCase().replace(/\.mes$/, '');
-        if (!['stat', 'skill', 'spell'].includes(name)) throw new Error('Importez stat.mes, skill.mes ou spell.mes provenant du dossier mes du jeu.');
+        if (!['stat', 'skill', 'spell'].includes(name)) throw new Error('Import stat.mes, skill.mes or spell.mes from the game’s mes folder.');
         const entries = api.parseMes(await file.arrayBuffer()), count = {stat: 28, skill: 20, spell: 80}[name];
-        if (!Array.from({length: count}, (_, i) => i).every(i => entries.has(i))) throw new Error(`${file.name} ne contient pas toutes les entrées attendues.`);
+        if (!Array.from({length: count}, (_, i) => i).every(i => entries.has(i))) throw new Error(`${file.name} does not contain all expected entries.`);
         next[name] = entries;
       }
-      translations = next; $('language-status').textContent = Object.keys(next).filter(k => next[k].size).map(k => `${k}.mes`).join(', ') + ' chargés';
-      renderFields(); updateReview(); status('Les noms affichés proviennent maintenant de vos fichiers MES.');
+      translations = next; $('language-status').textContent = Object.keys(next).filter(k => next[k].size).map(k => `${k}.mes`).join(', ') + ' loaded';
+      renderFields(); updateReview(); status('Displayed names now come from your MES files.');
     } catch (error) { status(error.message, true); }
     finally { event.target.value = ''; }
   });
   $('export').addEventListener('click', async () => {
     if (!save || !changes.size || invalid.size || busy) return;
-    busy = true; updateReview(); status('Préparation de la copie…');
+    busy = true; updateReview(); status('Preparing your copy…');
     await new Promise(resolve => setTimeout(resolve, 0));
     try {
       const result = api.exportSave(save, changes,{raceMod});
       const output = files.map(file => ({name: file.name, data: /\.tfaf$/i.test(file.name) ? result.data : /\.tfai$/i.test(file.name) ? result.index : /\.gsi$/i.test(file.name) ? api.updateGsiName(file.data,save,changes) : file.data}));
       const blob = new Blob(api.makeZip(output), {type: 'application/zip'});
       const url = URL.createObjectURL(blob), link = document.createElement('a');
-      link.href = url; link.download = `${slot}-modifiee.zip`; document.body.append(link); link.click(); link.remove();
+      link.href = url; link.download = `${slot}-edited.zip`; document.body.append(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      status(`Copie préparée : ${slot}-modifiee.zip. Décompressez-la pour installer les fichiers, après avoir conservé l’original.`);
+      status(`Copy ready: ${slot}-edited.zip. Back up the original, then extract the archive to install the files.`);
     } catch (error) { status(error.message, true); }
     finally { busy = false; updateReview(); }
   });
