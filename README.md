@@ -10,6 +10,9 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
 
 ## Features
 
+- Floating HP feedback above actors: damage in red, healing in green. Numbers
+  rise and fade out, including outside combat.
+
 - Turn-based combat with direct companion control, switching between allies
   with consecutive turns, action previews and a scrollable combat log showing
   attack rolls, hit chances and outcomes. Walls fade around all combat

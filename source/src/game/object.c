@@ -1,5 +1,6 @@
 #include "game/modern_compat.h"
 #include "game/object.h"
+#include "ui/modern_ui.h"
 
 #include <inttypes.h>
 
@@ -299,6 +300,7 @@ void object_resize(GameResizeInfo* resize_info)
 // 0x43A650
 void object_reset(void)
 {
+    modern_health_reset();
     TigRectListNode* next;
     int index;
 
@@ -1610,6 +1612,7 @@ int object_hp_damage_get(int64_t obj)
 int object_hp_damage_set(int64_t obj, int value)
 {
     int obj_type;
+    int old_damage=object_hp_damage_get(obj);
 
     if (value < 0) {
         value = 0;
@@ -1625,6 +1628,7 @@ int object_hp_damage_set(int64_t obj, int value)
     }
 
     ui_refresh_health_bar(obj);
+    modern_health_change(obj,old_damage,value);
 
     return value;
 }

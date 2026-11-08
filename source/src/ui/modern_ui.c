@@ -22,6 +22,7 @@
 #include "game/critter.h"
 #include "game/combat.h"
 #include "game/location.h"
+#include "game/roof.h"
 #include "game/tile_block.h"
 #include "game/gsound.h"
 #include "game/scroll.h"
@@ -2250,6 +2251,7 @@ void modern_ui_menu_tick(void)
 /* Native play panels share this file's text, materials and input helpers. */
 #include "modern_map_cache.inc"
 #include "modern_panels.inc"
+#include "modern_floating_health.inc"
 #include "modern_combat.inc"
 #include "modern_party.inc"
 
@@ -2457,6 +2459,7 @@ static void render_overlay(SDL_Renderer* target)
         }
     }
     else {
+        draw_floating_health();
         draw_world_bubbles();
         world_hover_rect=(SDL_FRect){0};
         if(!hud_region(mouse_x,mouse_y) && !hud)draw_world_hover();
@@ -2876,6 +2879,7 @@ static SDL_Texture* make_material(bool paper)
 
 bool modern_ui_init(void)
 {
+    modern_health_reset();
     if(SDL_getenv("ARCANUM_LEGACY_UI")) return false;
     if(tig_video_renderer_get(&renderer)!=TIG_OK || tig_video_window_get(&window)!=TIG_OK) return false;
     book_font_data=SDL_LoadFile("modern-ui/Book.ttf",&book_font_size);
@@ -3134,6 +3138,7 @@ void modern_ui_message(const char* text)
 
 void modern_ui_exit(void)
 {
+    modern_health_reset();
     tutorial_exit();
     SDL_SetAtomicInt(&portrait_picker.alive,0);
     if(SDL_GetAtomicInt(&portrait_picker.state)==2) {

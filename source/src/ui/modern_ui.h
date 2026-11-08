@@ -25,6 +25,9 @@ bool modern_spell_resources(int64_t actor, int spell, int* fatigue_cost);
 int modern_maintained_spells(int64_t actor, int* ids, int* spells, int capacity);
 bool modern_spell_stop(int64_t actor, int id);
 
+/* Runtime HP changes only; presentation never modifies health. */
+void modern_health_change(int64_t actor,int old_damage,int new_damage);
+void modern_health_reset(void);
 bool modern_ui_init(void);
 bool modern_ui_prepare_maps(const char* executable);
 SDL_Texture* modern_ui_loading_label(SDL_Renderer* target,const char* text,float size);
