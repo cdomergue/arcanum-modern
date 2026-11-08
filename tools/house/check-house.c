@@ -36,6 +36,9 @@
 #include "game/path.h"
 #include "game/script.h"
 #include "game/modern_house.h"
+#include "game/spell.h"
+#include "game/area.h"
+#include "game/antiteleport.h"
 #include "game/modern_world_updates_internal.h"
 #include "game/mes.h"
 #include "game/obj_flags.h"
@@ -297,6 +300,69 @@ int main(int argc,char** argv) {
     REQUIRE(intgame_create_iso_window(&game.iso_window_handle));REQUIRE(gamelib_init(&game));puts("Initialize UI");REQUIRE(gameuilib_init(&game));puts("Load module");
     REQUIRE(gamelib_mod_load("Arcanum"));REQUIRE(gameuilib_mod_load());gamelib_splash_clear();REQUIRE(modern_ui_init());
     puts("Load copied save");REQUIRE(gamelib_load(argv[2]));sub_5412D0();intgame_mode_set(INTGAME_MODE_MAIN);
+
+    if(argc==4 && !strcmp(argv[3],"--check-teleport")){
+        int64_t pc=player_get_local_pc_obj();int world=map_list_info_find("Arcanum1-024-fixed")+1;
+        TeleportData start={.obj=pc,.map=world,.loc=location_make(61996,65628)};
+        REQUIRE(teleport_do(&start));teleport_ping(0);
+        pc=player_get_local_pc_obj();int areas=area_count();
+        int x=1346,y=1024;const char* name;
+        int64_t destination=location_make(x*64+32,y*64+32);
+        printf("Native area near the house: %d\n",area_get_nearest_known_area(destination,pc,320));
+        for(int pass=0;pass<3;pass++){
+            script_global_var_set(1988,pass==1);script_global_var_set(1989,pass==2);
+            REQUIRE(modern_house_location(0,&x,&y,&name)==(pass!=0));
+            start.obj=pc;REQUIRE(teleport_do(&start));teleport_ping(0);pc=player_get_local_pc_obj();
+            critter_fatigue_damage_set(pc,0);
+            int fatigue=critter_fatigue_damage_get(pc);
+            wmap_ui_select(pc,SPELL_TELEPORTATION);REQUIRE(wmap_ui_is_created());
+            ModernTravelMap map;REQUIRE(modern_map_travel_state(&map));
+            modern_map_travel_mouse(2000-x,y,TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP);
+            if(!pass){
+                REQUIRE(wmap_ui_is_created());teleport_ping(0);
+                REQUIRE(obj_field_int64_get(pc,OBJ_F_LOCATION)==start.loc);
+                REQUIRE(critter_fatigue_damage_get(pc)==fatigue);wmap_ui_close();
+            }else{
+                REQUIRE(!wmap_ui_is_created());teleport_ping(0);pc=player_get_local_pc_obj();
+                REQUIRE(map_current_map()==world && obj_field_int64_get(pc,OBJ_F_LOCATION)==destination);
+                REQUIRE(critter_fatigue_damage_get(pc)>fatigue);
+                bool accessible=false;
+                for(int direction=0;direction<8;direction++){
+                    int64_t neighbor;REQUIRE(location_in_dir(destination,direction,&neighbor));
+                    int64_t block=0;int type=-1;bool window=false;
+                    int cost=object_calc_traversal_cost(pc,neighbor,(direction+4)%8,
+                        OBJ_TRAVERSAL_IGNORE_CRITTERS|OBJ_TRAVERSAL_WINDOW_BLOCKS|OBJ_TRAVERSAL_PORTAL_BLOCKS,&block,&type,&window);
+                    if(!cost && !block && !window)accessible=true;
+                }
+                REQUIRE(accessible);
+            }
+            REQUIRE(area_count()==areas);
+        }
+        puts("PASS: undiscovered house rejected without fatigue cost; revealed/owned house selectable, walkable arrival and normal spell cost; saved area count unchanged");
+
+        start.obj=pc;REQUIRE(teleport_do(&start));teleport_ping(0);pc=player_get_local_pc_obj();critter_fatigue_damage_set(pc,0);
+        REQUIRE(SDL_CreateDirectory("teleport-rules/Rules"));
+        REQUIRE(tig_file_repository_add("teleport-rules"));
+        /* Use TIG's write path so its archive entry notices the loose override. */
+        TigFile* rules=tig_file_fopen("Rules\\AntiTeleport.mes","wt");REQUIRE(rules);
+        tig_file_fprintf(rules,"{100}{%lld,%lld,1}\n",(long long)LOCATION_GET_X(destination),(long long)LOCATION_GET_Y(destination));REQUIRE(tig_file_fclose(rules)==0);
+        antiteleport_mod_unload();REQUIRE(antiteleport_mod_load());
+        REQUIRE(!antiteleport_check(pc,destination));int fatigue=critter_fatigue_damage_get(pc);
+        wmap_ui_select(pc,SPELL_TELEPORTATION);REQUIRE(wmap_ui_is_created());
+        modern_map_travel_mouse(2000-x,y,TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP);
+        REQUIRE(wmap_ui_is_created());teleport_ping(0);
+        REQUIRE(obj_field_int64_get(pc,OBJ_F_LOCATION)==start.loc && critter_fatigue_damage_get(pc)==fatigue);
+        wmap_ui_close();antiteleport_mod_unload();REQUIRE(tig_file_repository_remove("teleport-rules"));REQUIRE(antiteleport_mod_load());
+        puts("PASS: anti-teleport destination restrictions still block the house without spending fatigue");
+
+        int area=area_get_nearest_area_in_range(start.loc,true);REQUIRE(area>0);REQUIRE(area_set_known(pc,area));
+        int64_t town=area_get_location(area);wmap_ui_select(pc,SPELL_TELEPORTATION);REQUIRE(wmap_ui_is_created());
+        modern_map_travel_mouse(2000-(LOCATION_GET_X(town)>>6),LOCATION_GET_Y(town)>>6,TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP);
+        REQUIRE(!wmap_ui_is_created());teleport_ping(0);pc=player_get_local_pc_obj();
+        REQUIRE(obj_field_int64_get(pc,OBJ_F_LOCATION)==town && area_count()==areas);
+        puts("PASS: native known town destination still resolves to its original arrival point");
+        gameuilib_exit();gamelib_exit();tig_exit();return 0;
+    }
 
     if(argc==4 && (!strcmp(argv[3],"--check-update")||!strcmp(argv[3],"--prepare-update-legacy")||!strcmp(argv[3],"--check-update-legacy"))){REQUIRE(check_housing_update(argv[3])==0);gameuilib_exit();gamelib_exit();tig_exit();return 0;}
     if(argc==4 && !strcmp(argv[3],"--check-inventory")){

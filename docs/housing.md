@@ -5,6 +5,14 @@ for 10,000 coins. Asking about the property or speaking to its guard reveals its
 world-map marker. The furnished house stands on the main map in sector
 1346, 1024; the former owner's tame wolf stays there.
 
+Once a property is revealed or owned, its marker can also be selected as a
+destination for the Teleportation spell. Normal teleportation restrictions
+still apply. The spell uses the property's sector without adding an entry to
+the campaign's saved area table.
+Destination selection is logged in `ArcanumModern/teleport.log`, with a
+256 KiB limit and one rotated backup. It records destination coordinates,
+selection results and restrictions, without character names or save contents.
+
 Before purchase, doors, windows and storage are locked. Buying the house gives
 the party its key and enables the beds. The agent replaces a lost key free of
 charge. Storage uses the normal save system. English and French dialogue are
@@ -408,6 +416,9 @@ The copy must contain `.renaissance-house-test`. The check writes slots 0096,
 `--check-door` uses slot 0094 and requires a copied party at the house;
 `--check-shadows` uses slot 0093. On Windows, build the `check-house` target in
 the **engine** CMake build; Visual Studio puts it in `Release/check-house.exe`.
+`--check-teleport` checks hidden, revealed and owned property destinations,
+arrival accessibility, spell fatigue cost, anti-teleport restrictions and native
+town destinations on a copied save, without creating a new save slot.
 These regressions cover the shipped fixture. Record the manual results for your
 new house separately, including the engine version, language, platform and
 whether the sector had already been visited.

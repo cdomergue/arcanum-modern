@@ -38,6 +38,30 @@
 
 static bool modern_town_route_start(void);
 
+/* One record per spell destination click; no character names or save data. */
+static void modern_teleport_log(const char* result,int area,int house,int64_t clicked,int64_t destination)
+{
+    int saved_errno=errno;
+    FILE* log=fopen("ArcanumModern/teleport.log","ab+");
+    if(log){
+        fseek(log,0,SEEK_END);
+        if(ftell(log)>=256*1024){
+            fclose(log);log=NULL;
+            if(remove("ArcanumModern/teleport.previous.log")==0 || errno==ENOENT)
+                if(rename("ArcanumModern/teleport.log","ArcanumModern/teleport.previous.log")==0)
+                    log=fopen("ArcanumModern/teleport.log","ab");
+        }
+        if(log){
+            fprintf(log,"ticks_ms=%llu result=%s area=%d house=%d clicked=%lld,%lld destination=%lld,%lld\n",
+                (unsigned long long)SDL_GetTicks(),result,area,house,
+                (long long)LOCATION_GET_X(clicked),(long long)LOCATION_GET_Y(clicked),
+                (long long)LOCATION_GET_X(destination),(long long)LOCATION_GET_Y(destination));
+            fclose(log);
+        }
+    }
+    errno=saved_errno;
+}
+
 typedef enum WmapUiMode {
     WMAP_UI_MODE_WORLD,
     WMAP_UI_MODE_CONTINENT,
@@ -1969,29 +1993,48 @@ bool wmap_ui_message_filter(TigMessage* msg)
                     int64_t loc;
                     sub_561800(&stru_64E7E8, &loc);
 
-                    int area = area_get_nearest_known_area(loc, player_get_local_pc_obj(), qword_66D850);
-                    if (area <= 0) {
+                    int64_t clicked=loc;
+                    int64_t pc_obj=player_get_local_pc_obj();
+                    int area=area_get_nearest_known_area(clicked,pc_obj,qword_66D850);
+                    int house=-1;
+                    loc=area>0 ? area_get_location(area) : 0;
+                    int64_t nearest=loc ? location_dist(clicked,loc) : qword_66D850+1;
+                    /* Estate markers are intentionally absent from the saved
+                     * campaign area table. Resolve known properties separately,
+                     * with the same selection radius as native destinations. */
+                    if(dword_66D87C==map_list_info_find("Arcanum1-024-fixed")+1){
+                        for(int slot=0;slot<100;slot++){
+                            int x,y;const char* name;
+                            if(!modern_house_location(slot,&x,&y,&name) || x<0 || y<0 || x>=2000 || y>=2000)continue;
+                            int64_t target=location_make(x*64+32,y*64+32);
+                            int64_t distance=location_dist(clicked,target);
+                            if(distance<nearest){loc=target;nearest=distance;house=slot;area=AREA_UNKNOWN;}
+                        }
+                    }
+                    if (!loc) {
+                        modern_teleport_log("no-known-destination",area,house,clicked,0);
                         return true;
                     }
 
-                    loc = area_get_location(area);
-                    if (loc == 0 || wmap_ui_spell == -1) {
+                    if (wmap_ui_spell == -1) {
+                        modern_teleport_log("no-active-spell",area,house,clicked,loc);
                         return true;
                     }
 
-                    int64_t pc_obj = player_get_local_pc_obj();
                     if (antiteleport_check(pc_obj, loc)) {
                         if (player_is_local_pc_obj(wmap_ui_obj)) {
                             sub_4507B0(wmap_ui_obj, wmap_ui_spell);
                         }
 
-                        if (area_get_last_known_area(pc_obj) == area) {
+                        if (area>0 && area_get_last_known_area(pc_obj) == area) {
                             area_reset_last_known_area(pc_obj);
                         }
 
-                        wmap_ui_teleport(loc);
+                        bool queued=wmap_ui_teleport(loc);
+                        modern_teleport_log(queued?"queued":"queue-failed",area,house,clicked,loc);
                         wmap_ui_close();
                     } else {
+                        modern_teleport_log("restricted",area,house,clicked,loc);
                         mes_file_entry.num = 640; // "You are unable to teleport to this location. Something is blocking you."
                         mes_get_msg(wmap_ui_worldmap_mes_file, &mes_file_entry);
                         ui_display_warning(mes_file_entry.str);
