@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Go - uap tests" type="GoTestRunConfiguration" factoryName="Go Test" folderName="Tests">
+    <module name="uap" />
+    <working_directory value="$PROJECT_DIR$/tools/uap" />
+    <kind value="PACKAGE" />
+    <package value="arcanum-modern/uap" />
+    <directory value="$PROJECT_DIR$/tools/uap" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/arcanum-modern-source.iml" filepath="$PROJECT_DIR$/.idea/arcanum-modern-source.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/engine.iml" filepath="$PROJECT_DIR$/.idea/engine.iml" group="Native" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/worlded.iml" filepath="$PROJECT_DIR$/.idea/worlded.iml" group="Native" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/automation.iml" filepath="$PROJECT_DIR$/.idea/automation.iml" group="Tools" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/launcher.iml" filepath="$PROJECT_DIR$/.idea/launcher.iml" group="Go" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/uap.iml" filepath="$PROJECT_DIR$/.idea/uap.iml" group="Go" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/save-editor.iml" filepath="$PROJECT_DIR$/.idea/save-editor.iml" group="Web" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/content.iml" filepath="$PROJECT_DIR$/.idea/content.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/documentation.iml" filepath="$PROJECT_DIR$/.idea/documentation.iml" />
+    </modules>
+  </component>
+</project>

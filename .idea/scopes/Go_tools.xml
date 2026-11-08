@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="DependencyValidationManager">
+  <scope name="Go tools" pattern="file:tools/launcher//*||file:tools/uap//*" />
+</component>

@@ -1,0 +1,18 @@
+<module type="WEB_MODULE" version="4">
+  <component name="Go" enabled="true">
+    <option name="GOPATH" value="" />
+  </component>
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../tools/launcher">
+      <sourceFolder url="file://$MODULE_DIR$/../tools/launcher" isTestSource="false" />
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

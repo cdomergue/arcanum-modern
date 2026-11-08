@@ -33,7 +33,9 @@ worlded.local.json
 .DS_Store
 ._*
 /dist/
-/.idea/
+/projectFilesBackup/
+# Shared IntelliJ project configuration; .idea/.gitignore keeps local state private.
+!/.idea/
 
 # Upstream CI belongs to Arcanum CE; Renaissance workflows live in .github/.
 /source/.github/

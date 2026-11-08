@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Node - Save editor tests" type="NodeJSConfigurationType" folderName="Tests" path-to-js-file="$PROJECT_DIR$/tests/test_save_editor.cjs" working-dir="$PROJECT_DIR$" node-interpreter="project">
+    <method v="2" />
+  </configuration>
+</component>

@@ -2,6 +2,73 @@
 
 [Back to the main README](../README.md)
 
+## IntelliJ IDEA
+
+Open the repository root as a project. The shared `.idea/` configuration separates
+the engine and platform code, WorldED and Script Editor, Python automation and
+tests, the two Go modules, the browser save editor, game content and documentation.
+Generated builds, packages, game archives, saves and caches are excluded from
+project indexing; `game/modern-ui/` remains available as a separate content root.
+Local IDE state and SDK paths remain ignored by Git.
+
+Install or enable the plugins requested by the project: **CLion C and C++**,
+**Python**, **Go**, **JavaScript**, **Node.js**, **Shell Script** and **EditorConfig**.
+Use plugin versions compatible with your IntelliJ version. The official
+[CLion C and C++ plugin](https://plugins.jetbrains.com/plugin/28804-clion-c-and-c-)
+provides native language support inside IntelliJ; `.idea/` alone cannot provide
+C/C++ completion without it.
+
+Select a Python 3.10+ interpreter for the `automation` module, a Go 1.24+ SDK
+under **Settings | Go | GOROOT**, and a Node.js interpreter under
+**Settings | Languages & Frameworks | JavaScript Runtime** (called **Node.js**
+in older versions). SDK installation paths are deliberately not shared.
+The inherited Android project links only `source/android`, uses the existing
+JDK name `21`, and requires the Android SDK/NDK and Android support if you choose
+to sync it. Android resources do not imply Renaissance runtime support.
+
+The Run menu contains the repository build scripts, local game launcher,
+WorldED configure/build/CTest commands, Go tests for each module, the save editor's
+Node tests and HTML packager, keyboard capture regression, and a Python current-file
+configuration. Working directories are set explicitly. Shell configurations use
+Bash and tools from `PATH`; Windows requires Git Bash and selecting its `bash.exe` as the interpreter
+in those configurations. The macOS build configuration runs on macOS. Saved scopes let searches
+and inspections target each subsystem. Python tests run as scripts; several
+harnesses require a previously built native executable and are not suitable for
+blanket unittest discovery.
+
+### Native code index
+
+The engine and WorldED are independent CMake projects. For completion in both
+within the same IntelliJ window, the project uses a combined compilation database
+at `build/ide/compile_commands.json`. Configure/build the engine with `./build.sh`
+and WorldED using the [WorldED build guide](worlded-build.md), then run
+**IDE - Refresh C and C++ index**, or:
+
+```sh
+python3 tools/ide-native-index.py
+```
+
+The helper reads `build/` and `build/worlded/`. It uses exported
+`compile_commands.json` files, or reads Ninja compiler rules without executing
+them. For Makefile builds, configure with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`.
+Other build directories, including the native codec/state tests, can be supplied
+as positional arguments. Keep the engine first so its compilation context takes
+priority over harnesses that reuse its source files. Refresh after CMake changes
+or reconfiguration, then reload the compilation database in IntelliJ. If the
+plugin does not attach it automatically, use **File | Open** on the generated
+`compile_commands.json`, choose **Open as Project**, and set the project root to
+the repository when prompted.
+
+The index retains actual compiler flags and include paths. Compilers, downloaded
+dependencies, FFmpeg headers and the Qt development SDK must still exist at the
+paths recorded by their builds. Reconfigure a build after moving its SDK; merging
+commands cannot restore missing dependencies. Index generation does not configure,
+compile, deploy or launch anything and preserves the previous index on failure.
+
+EditorConfig and the engine's `source/.clang-format` remain the formatting
+references. Project encoding is UTF-8, with Windows-1252 explicitly retained for
+the French tutorial dialogs under `resources/tutorial/dlg/fr/`.
+
 ## Build from source
 
 The repository contains source code, build scripts and interface resources.

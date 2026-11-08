@@ -1,0 +1,25 @@
+# Keep local IDE state, SDK paths, caches and workspace preferences private.
+*
+!.gitignore
+!arcanum-modern-source.iml
+!engine.iml
+!worlded.iml
+!automation.iml
+!launcher.iml
+!uap.iml
+!save-editor.iml
+!content.iml
+!documentation.iml
+!modules.xml
+!misc.xml
+!gradle.xml
+!vcs.xml
+!encodings.xml
+!go.mod.xml
+!externalDependencies.xml
+!codeStyles/
+!codeStyles/*.xml
+!scopes/
+!scopes/*.xml
+!runConfigurations/
+!runConfigurations/*.xml

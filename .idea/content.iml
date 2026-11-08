@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../resources">
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <content url="file://$MODULE_DIR$/../tutorial">
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <content url="file://$MODULE_DIR$/../examples">
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <content url="file://$MODULE_DIR$/../game/modern-ui">
+      <excludePattern pattern="*.ini*" />
+      <excludePattern pattern="*.log" />
+      <excludeFolder url="file://$MODULE_DIR$/../game/modern-ui/local-maps" />
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

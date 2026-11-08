@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="DependencyValidationManager">
+  <scope name="Automation and tests" pattern="file:tools//*.py||file:tests//*||file:*.sh||file:.github//*" />
+</component>

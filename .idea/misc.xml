@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilationDatabaseWorkspace" PROJECT_DIR="$PROJECT_DIR$/build/ide" />
+  <component name="CidrRootsConfiguration">
+    <sourceRoots>
+      <file path="$PROJECT_DIR$/source/src" />
+      <file path="$PROJECT_DIR$/source/first_party" />
+      <file path="$PROJECT_DIR$/shared" />
+      <file path="$PROJECT_DIR$/tools/worlded" />
+      <file path="$PROJECT_DIR$/tools/launcher-ui" />
+      <file path="$PROJECT_DIR$/tools/house" />
+    </sourceRoots>
+    <excludeRoots>
+      <file path="$PROJECT_DIR$/build" />
+      <file path="$PROJECT_DIR$/dist" />
+      <file path="$PROJECT_DIR$/game" />
+    </excludeRoots>
+    <libraryRoots>
+      <file path="$PROJECT_DIR$/source/third_party" />
+    </libraryRoots>
+  </component>
+  <component name="ProjectRootManager" version="2" />
+  <component name="JavaScriptSettings">
+    <option name="languageLevel" value="ES6" />
+  </component>
+</project>

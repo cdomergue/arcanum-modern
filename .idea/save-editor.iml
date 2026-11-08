@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="WEB_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../tools/save-editor">
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

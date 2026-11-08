@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Go - launcher tests" type="GoTestRunConfiguration" factoryName="Go Test" folderName="Tests">
+    <module name="launcher" />
+    <working_directory value="$PROJECT_DIR$/tools/launcher" />
+    <kind value="PACKAGE" />
+    <package value="arcanum-modern/launcher" />
+    <directory value="$PROJECT_DIR$/tools/launcher" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>

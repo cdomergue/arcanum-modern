@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="DependencyValidationManager">
+  <scope name="WorldED and Script Editor" pattern="file:tools/worlded//*||file:tools/house//*||file:script-editor.html||file:worlded-tutorial.html" />
+</component>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/..">
+      <excludeFolder url="file://$MODULE_DIR$/../.git" />
+      <excludeFolder url="file://$MODULE_DIR$/../.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/../.agents" />
+      <excludeFolder url="file://$MODULE_DIR$/../.aws" />
+      <excludeFolder url="file://$MODULE_DIR$/../.codex" />
+      <excludeFolder url="file://$MODULE_DIR$/../build" />
+      <excludeFolder url="file://$MODULE_DIR$/../dist" />
+      <excludeFolder url="file://$MODULE_DIR$/../review" />
+      <excludeFolder url="file://$MODULE_DIR$/../out" />
+      <excludeFolder url="file://$MODULE_DIR$/../game" />
+      <excludeFolder url="file://$MODULE_DIR$/../source" />
+      <excludeFolder url="file://$MODULE_DIR$/../shared" />
+      <excludeFolder url="file://$MODULE_DIR$/../tools" />
+      <excludeFolder url="file://$MODULE_DIR$/../tests" />
+      <excludeFolder url="file://$MODULE_DIR$/../docs" />
+      <excludeFolder url="file://$MODULE_DIR$/../resources" />
+      <excludeFolder url="file://$MODULE_DIR$/../tutorial" />
+      <excludeFolder url="file://$MODULE_DIR$/../examples" />
+      <excludePattern pattern="__pycache__" />
+      <excludePattern pattern=".pytest_cache" />
+      <excludePattern pattern=".mypy_cache" />
+      <excludePattern pattern=".venv" />
+      <excludePattern pattern="cmake-build-*" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

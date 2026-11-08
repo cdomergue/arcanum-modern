@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="DependencyValidationManager">
+  <scope name="Save editor" pattern="file:tools/save-editor//*||file:tests/test_save_editor.cjs||file:tools/build-save-editor.py||file:tools/generate-save-schema.py" />
+</component>
