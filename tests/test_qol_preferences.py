@@ -17,10 +17,13 @@ prelude=r'''
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 #include <sys/stat.h>
 #define OID_STR_LEN 100
 enum {SDL_BUTTON_MIDDLE=2,SDL_BUTTON_X1=4,SDL_BUTTON_X2=5};
 typedef uint64_t Uint64;
+typedef struct ModernMap { int mode,map,townmap; } ModernMap;
+static Uint64 SDL_GetTicks(void){return 0;}
 #define SDL_isalnum(c) isalnum((unsigned char)(c))
 static void SDL_strlcpy(char* dst,const char* src,size_t size){snprintf(dst,size,"%s",src);}
 static const char* tr(const char* fr,const char* en){(void)en;return fr;}
@@ -107,13 +110,13 @@ int main(void){
     azerty=false;
     notebook_sync();assert(tracked_quest==-1 && !map_memo_count);
     tracked_quest=1024;journal_marks[journal_mark_count++]=(JournalMark){1,1024};
-    map_memos[map_memo_count++]=(MapMemo){2,504,120,-53,"Entrée derrière l’église"};
+    map_memos[map_memo_count++]=(MapMemo){.mode=2,.map=504,.townmap=17,.x=120,.y=-53,.text="Entrée derrière l’église"};
     assert(notebook_save());
     tracked_quest=1025;assert(notebook_save());tracked_quest=1024;assert(notebook_save());
     pc=2;notebook_sync();assert(!journal_mark_count && !map_memo_count && tracked_quest==-1);
-    map_memos[map_memo_count++]=(MapMemo){0,0,32,17,"Second character"};assert(notebook_save());
+    map_memos[map_memo_count++]=(MapMemo){.mode=0,.map=0,.x=32,.y=17,.text="Second character"};assert(notebook_save());
     pc=1;notebook_sync();assert(tracked_quest==1024 && journal_mark_index(1,1024)==0);
-    assert(map_memo_count==1 && map_memos[0].map==504 && map_memos[0].x==120 && map_memos[0].y==-53);
+    assert(map_memo_count==1 && map_memos[0].map==504 && map_memos[0].townmap==17 && map_memos[0].x==120 && map_memos[0].y==-53);
     assert(!strcmp(map_memos[0].text,"Entrée derrière l’église"));
     assert(journal_mark_index(0,1024)==-1); /* IDs are scoped by chapter. */
     puts("PASS: conflicts, reserved keys, rebinding/unbinding round-trip, corrupt-file fallback and per-character UTF-8 notes");
