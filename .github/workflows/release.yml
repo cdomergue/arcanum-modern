@@ -66,6 +66,18 @@ jobs:
           python3 tests/test_map_local_input.py
           python3 tests/test_map_travel.py
           python3 tests/test_combat_feedback.py
+          python3 tests/test_floating_health.py
+          python3 tests/test_pathfinding.py
+          python3 tests/test_path_capacity.py
+          python3 tests/test_interaction_path.py
+          python3 tests/test_follow_input.py
+          python3 tests/test_party_distance.py
+          python3 tests/test_dialog_camera.py
+          python3 tests/test_free_camera.py
+          python3 tests/test_map_notes.py
+          python3 tests/test_notebook_map_scope.py
+          python3 tests/test_nested_followers.py
+          node tests/test_save_editor.cjs
       - name: Build and package Linux x64
         env:
           ARCANUM_BUILD_DIR: build/linux-x64
@@ -324,12 +336,20 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd dist
+          notes_file="../docs/releases/${RELEASE_TAG#v}.md"
+          notes_args=(--generate-notes)
+          if test -f "$notes_file"; then
+            notes_args=(--notes-file "$notes_file")
+          fi
           files=(ArcanumModern-windows-x64.zip ArcanumModern-windows-x64-setup.exe ArcanumModern-macos-arm64.zip ArcanumModern-linux-x64.zip worlded-renaissance-win.zip ArcanumModern-dependency-sources-windows-x64.zip ArcanumModern-dependency-sources-macos-arm64.zip ArcanumModern-dependency-sources-linux-x64.zip)
           sha256sum "${files[@]}" > SHA256SUMS.txt
           if gh release view "$RELEASE_TAG" --json isDraft > release.json; then
             test "$(jq -r .isDraft release.json)" = true || { echo 'Refusing to replace a published release.' >&2; exit 1; }
             gh release upload "$RELEASE_TAG" "${files[@]}" SHA256SUMS.txt --clobber
+            if test -f "$notes_file"; then
+              gh release edit "$RELEASE_TAG" --notes-file "$notes_file"
+            fi
           else
             gh release create "$RELEASE_TAG" "${files[@]}" SHA256SUMS.txt \
-              --verify-tag --draft --title "Arcanum Renaissance $RELEASE_TAG" --generate-notes
+              --verify-tag --draft --title "Arcanum Renaissance $RELEASE_TAG" "${notes_args[@]}"
           fi
