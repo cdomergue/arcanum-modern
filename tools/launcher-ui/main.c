@@ -67,9 +67,10 @@ static void read_state(const char* path)
     automatic=strcmp(a,"true")==0;playable=strcmp(p,"true")==0;closable=strcmp(c,"true")==0;
     status_text=fields[1];version_text=fields[2];heading=fields[3];play_text=fields[4];auto_text=fields[5];notes=fields[6];
 }
+static SDL_FRect releases_button={82,489,736,26};
 static void draw_notes(void)
 {
-    SDL_Rect clip={82,343,736,164};fill((SDL_FRect){82,343,736,164},(SDL_Color){23,17,12,255});SDL_SetRenderClipRect(renderer,&clip);
+    SDL_Rect clip={82,343,736,138};fill((SDL_FRect){82,343,736,138},(SDL_Color){23,17,12,255});SDL_SetRenderClipRect(renderer,&clip);
     const char* p=notes?notes:"";float x=92;int line=0;SDL_Color color={220,201,176,255};
     while(*p){
         if(*p=='\n'){p++;x=92;line++;continue;}
@@ -79,8 +80,8 @@ static void draw_notes(void)
         if(line>=scroll_line && line<scroll_line+8){char letter[8]={0};size_t len=(size_t)(p-start);if(len<sizeof(letter)){memcpy(letter,start,len);text(letter,x,347+(line-scroll_line)*23,color);}}
         x+=advance;
     }
-    SDL_SetRenderClipRect(renderer,NULL);int maximum=line-5;if(maximum<0)maximum=0;if(scroll_line>maximum)scroll_line=maximum;if(scroll_line<0)scroll_line=0;
-    if(maximum){fill((SDL_FRect){809,349,3,150},(SDL_Color){63,51,33,255});float thumb=150*6.0f/(line+1);if(thumb<12)thumb=12;fill((SDL_FRect){809,349+(150-thumb)*scroll_line/maximum,3,thumb},(SDL_Color){170,139,91,255});}
+    SDL_SetRenderClipRect(renderer,NULL);int maximum=line-4;if(maximum<0)maximum=0;if(scroll_line>maximum)scroll_line=maximum;if(scroll_line<0)scroll_line=0;
+    if(maximum){fill((SDL_FRect){809,349,3,124},(SDL_Color){63,51,33,255});float thumb=124*5.0f/(line+1);if(thumb<12)thumb=12;fill((SDL_FRect){809,349+(124-thumb)*scroll_line/maximum,3,thumb},(SDL_Color){170,139,91,255});}
 }
 static void draw(void)
 {
@@ -89,7 +90,7 @@ static void draw(void)
     if(status_text)text(status_text,450-width(status_text)/2,242,gold);
     fill((SDL_FRect){80,282,740,5},(SDL_Color){60,48,38,255});if(percent>0)fill((SDL_FRect){80,282,740*(percent>100?100:percent)/100.0f,5},(SDL_Color){193,153,97,255});
     button(news_tab,french?"Actualités":"News",focus_item==3,1);button(feedback_tab_button,"Feedbacks",focus_item==4,1);
-    if(!feedback_tab){SDL_Rect heading_clip={382,303,436,30};SDL_SetRenderClipRect(renderer,&heading_clip);if(heading)text(heading,382,308,muted);SDL_SetRenderClipRect(renderer,NULL);draw_notes();}else {
+    if(!feedback_tab){SDL_Rect heading_clip={382,303,436,30};SDL_SetRenderClipRect(renderer,&heading_clip);if(heading)text(heading,382,308,muted);SDL_SetRenderClipRect(renderer,NULL);draw_notes();button(releases_button,french?"Versions plus anciennes sur GitHub":"Older releases on GitHub",focus_item==5,1);}else {
         fill(feedback_field,(SDL_Color){23,17,12,255});SDL_Rect clip={82,343,736,102};SDL_SetRenderClipRect(renderer,&clip);
         /* End-of-text editor: keep the last four wrapped lines visible. */
         int lines=0;float measure=92;for(const char* q=feedback_text;*q;){if(*q=='\n'){q++;measure=92;lines++;continue;}unsigned c=codepoint(&q);if(measure+glyphs[c-32].xadvance>800){measure=92;lines++;}measure+=glyphs[c-32].xadvance;}
@@ -109,7 +110,7 @@ static void draw(void)
 static void community_action(int item,const char* path,SDL_Window* window)
 {
     if(item==3){action("news");return;}if(item==4){action("feedback");return;}
-    if(!feedback_tab)return;
+    if(!feedback_tab){if(item==5)action("releases");return;}
     if(item==8){action("github");return;}
     if(item==6 && community_available && !community_busy){fputs("feedback:",stdout);for(const unsigned char* p=(unsigned char*)feedback_text;*p;p++)printf("%02x",*p);puts("");fflush(stdout);return;}
     if(item==7){
@@ -141,10 +142,10 @@ int main(int argc,char** argv)
             if(event.type==SDL_EVENT_QUIT){if(closable){action("quit");running=false;}}
             else if(event.type==SDL_EVENT_MOUSE_WHEEL){scroll_line-=(int)(event.wheel.y*3);if(scroll_line<0)scroll_line=0;}
             else if(event.type==SDL_EVENT_TEXT_INPUT && feedback_tab && focus_item==5){size_t n=strlen(feedback_text),add=strlen(event.text.text);if(n+add<sizeof(feedback_text))memcpy(feedback_text+n,event.text.text,add+1);}
-            else if(event.type==SDL_EVENT_MOUSE_BUTTON_UP&&event.button.button==SDL_BUTTON_LEFT){float x=event.button.x,y=event.button.y;if(inside(play_button,x,y)&&playable)action("play");else if(inside(offer?install_button:auto_button,x,y))action("auto");else if(inside(language_button,x,y))action("language");else {int item=-1;if(inside(news_tab,x,y))item=3;else if(inside(feedback_tab_button,x,y))item=4;else if(feedback_tab){if(inside(feedback_field,x,y))item=5;else if(inside(send_button,x,y))item=6;else if(inside(privacy_button,x,y))item=7;else if(inside(github_button,x,y))item=8;}if(item>=0){focus_item=item;community_action(item,argv[1],window);}}}
+            else if(event.type==SDL_EVENT_MOUSE_BUTTON_UP&&event.button.button==SDL_BUTTON_LEFT){float x=event.button.x,y=event.button.y;if(inside(play_button,x,y)&&playable)action("play");else if(inside(offer?install_button:auto_button,x,y))action("auto");else if(inside(language_button,x,y))action("language");else {int item=-1;if(inside(news_tab,x,y))item=3;else if(inside(feedback_tab_button,x,y))item=4;else if(!feedback_tab&&inside(releases_button,x,y))item=5;else if(feedback_tab){if(inside(feedback_field,x,y))item=5;else if(inside(send_button,x,y))item=6;else if(inside(privacy_button,x,y))item=7;else if(inside(github_button,x,y))item=8;}if(item>=0){focus_item=item;community_action(item,argv[1],window);}}}
             else if(event.type==SDL_EVENT_KEY_DOWN){
                 if(feedback_tab&&focus_item==5){size_t n=strlen(feedback_text);if(event.key.key==SDLK_V&&(event.key.mod&(SDL_KMOD_CTRL|SDL_KMOD_GUI))){char* pasted=SDL_GetClipboardText();if(pasted){size_t add=strlen(pasted);if(n+add<sizeof(feedback_text))memcpy(feedback_text+n,pasted,add+1);SDL_free(pasted);}continue;}if(event.key.key==SDLK_BACKSPACE&&n){do{n--;}while(n&&((unsigned char)feedback_text[n]&0xc0)==0x80);feedback_text[n]=0;continue;}if(event.key.key==SDLK_RETURN&&n+1<sizeof(feedback_text)){feedback_text[n]='\n';feedback_text[n+1]=0;continue;}if(event.key.key==SDLK_SPACE)continue;}
-                switch(event.key.key){case SDLK_ESCAPE:if(closable){action("quit");running=false;}break;case SDLK_TAB:focus_item=(focus_item+1)%(feedback_tab?9:5);break;case SDLK_RETURN:case SDLK_SPACE:if(focus_item==0){if(playable)action("play");}else if(focus_item<3)action(focus_item==1?"auto":"language");else community_action(focus_item,argv[1],window);break;case SDLK_DOWN:scroll_line++;break;case SDLK_UP:if(scroll_line>0)scroll_line--;break;case SDLK_PAGEDOWN:scroll_line+=6;break;case SDLK_PAGEUP:scroll_line-=6;if(scroll_line<0)scroll_line=0;break;}}
+                switch(event.key.key){case SDLK_ESCAPE:if(closable){action("quit");running=false;}break;case SDLK_TAB:focus_item=(focus_item+1)%(feedback_tab?9:6);break;case SDLK_RETURN:case SDLK_SPACE:if(focus_item==0){if(playable)action("play");}else if(focus_item<3)action(focus_item==1?"auto":"language");else community_action(focus_item,argv[1],window);break;case SDLK_DOWN:scroll_line++;break;case SDLK_UP:if(scroll_line>0)scroll_line--;break;case SDLK_PAGEDOWN:scroll_line+=6;break;case SDLK_PAGEUP:scroll_line-=6;if(scroll_line<0)scroll_line=0;break;}}
         }
         draw();if(check){if(!status_text||!notes)return 1;puts("PASS: launcher background, UTF-8 text, notes and controls rendered");running=false;}SDL_Delay(33);
     }

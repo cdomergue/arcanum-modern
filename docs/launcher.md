@@ -9,7 +9,10 @@ check; it is a routing convention, not authentication.
 The window supports English and French. Release notes come from the published
 GitHub release and retain their original language. Players can scroll the notes,
 turn off automatic game startup, or play without updating. Checking the release
-service has a six-second timeout. The game has no separate update notification.
+service has a six-second timeout; loading release history has a separate
+six-second timeout. The game has no separate update notification.
+
+The News tab shows the five latest stable releases, grouped by version. The notes remain available offline after loading once. Use “Older releases on GitHub” below the notes to open the complete release history.
 
 ## UAP and Hotfix preparation
 
@@ -53,7 +56,7 @@ A recovery failure stops game startup instead of opening an inconsistent install
 
 The launcher stores its language and automatic-start preference in
 `modern-ui/launcher.json`, cached release text in
-`ArcanumModern/launcher-release.json`, and diagnostics in
+`ArcanumModern/launcher-release.json` and `ArcanumModern/launcher-history.json`, and diagnostics in
 `ArcanumModern/launcher.log`. These are not distributed update payloads.
 On Linux and macOS, renderer startup, stderr and exit timing are recorded in
 `ArcanumModern/launcher-ui.log`, with one rotated `.previous.log` segment

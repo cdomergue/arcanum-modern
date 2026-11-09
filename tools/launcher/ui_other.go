@@ -152,12 +152,16 @@ func showLauncherAttempt(a *application, p preferences, software bool, log io.Wr
 				}
 			}
 			switch action {
-			case "github":
+			case "github", "releases":
+				address := "https://github.com/cdomergue/arcanum-modern"
+				if action == "releases" {
+					address = releasesURL
+				}
 				opener := "xdg-open"
 				if runtime.GOOS == "darwin" {
 					opener = "open"
 				}
-				go func() { _ = exec.Command(opener, "https://github.com/cdomergue/arcanum-modern").Run() }()
+				go func() { _ = exec.Command(opener, address).Run() }()
 			case "news", "feedback":
 				communityTab = action == "feedback"
 				ready = time.Now()

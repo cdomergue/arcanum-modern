@@ -58,7 +58,7 @@ type drawItem struct {
 type launcherWindow struct {
 	app                                                                   *application
 	prefs                                                                 preferences
-	hwnd, notes, play, auto, language, install                            uintptr
+	hwnd, notes, releases, play, auto, language, install                  uintptr
 	font, titleFont, smallFont, brush                                     uintptr
 	width, height                                                         int32
 	scale                                                                 float64
@@ -169,6 +169,8 @@ func (w *launcherWindow) drawButton(d *drawItem) {
 		text = w.tr("Confidentialité", "Privacy")
 	case 113:
 		text = w.tr("Ça vous plaît ? Une étoile sur GitHub !", "You like it? Star it on GitHub!")
+	case 114:
+		text = w.tr("Versions plus anciennes sur GitHub", "Older releases on GitHub")
 	}
 	tint := uintptr(0x9fcef1)
 	if d.State&4 != 0 {
@@ -185,7 +187,7 @@ func (w *launcherWindow) drawButton(d *drawItem) {
 }
 func (w *launcherWindow) refresh() {
 	if w.lastLanguage != w.prefs.Language {
-		for h, label := range map[uintptr]string{w.tabNews: w.tr("Actualités", "News"), w.send: w.tr("Envoyer", "Send"), w.privacy: w.tr("Confidentialité", "Privacy"), w.github: w.tr("Ça vous plaît ? Une étoile sur GitHub !", "You like it? Star it on GitHub!")} {
+		for h, label := range map[uintptr]string{w.releases: w.tr("Versions plus anciennes sur GitHub", "Older releases on GitHub"), w.tabNews: w.tr("Actualités", "News"), w.send: w.tr("Envoyer", "Send"), w.privacy: w.tr("Confidentialité", "Privacy"), w.github: w.tr("Ça vous plaît ? Une étoile sur GitHub !", "You like it? Star it on GitHub!")} {
 			user.NewProc("SetWindowTextW").Call(h, ptr(label))
 			user.NewProc("InvalidateRect").Call(h, 0, 1)
 		}
@@ -333,6 +335,7 @@ func windowProcedure(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
 				news, feedback = 0, 1
 			}
 			user.NewProc("ShowWindow").Call(w.notes, news)
+			user.NewProc("ShowWindow").Call(w.releases, news)
 			for _, h := range []uintptr{w.feedback, w.send, w.privacy, w.github, w.feedbackStatus} {
 				user.NewProc("ShowWindow").Call(h, feedback)
 			}
@@ -356,6 +359,8 @@ func windowProcedure(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
 			}()
 		case 111:
 			user.NewProc("MessageBoxW").Call(hwnd, ptr(communityNotice(w.prefs.Language)), ptr(w.tr("Confidentialité", "Privacy")), 0)
+		case 114:
+			syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW").Call(hwnd, ptr("open"), ptr(releasesURL), 0, 0, 1)
 		case 113:
 			syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW").Call(hwnd, ptr("open"), ptr("https://github.com/cdomergue/arcanum-modern"), 0, 0, 1)
 		}
@@ -453,7 +458,8 @@ func showLauncher(a *application, p preferences) error {
 		user.NewProc("SendMessageW").Call(h, 0x30, w.font, 1)
 		return h
 	}
-	w.notes = create("EDIT", "", 0x00200000|0x00010000|0x0800|0x0040|0x0004, 82, 343, 736, 164, 104)
+	w.notes = create("EDIT", "", 0x00200000|0x00010000|0x0800|0x0040|0x0004, 82, 343, 736, 138, 104)
+	w.releases = create("BUTTON", w.tr("Versions plus anciennes sur GitHub", "Older releases on GitHub"), 0x10000|0xb, 82, 489, 736, 26, 114)
 	w.tabNews = create("BUTTON", w.tr("Actualités", "News"), 0x10000|0xb, 82, 303, 130, 30, 106)
 	w.tabFeedback = create("BUTTON", "Feedbacks", 0x10000|0xb, 222, 303, 140, 30, 107)
 	w.feedback = create("EDIT", "", 0x00200000|0x10000|0x0040|0x0004|0x1000, 82, 343, 736, 102, 108)

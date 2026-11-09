@@ -29,6 +29,7 @@ type application struct {
 	cancel  context.CancelFunc
 	done    chan struct{}
 	preview bool
+	history []release
 	stop    context.CancelFunc
 	answer  chan bool
 }
@@ -76,7 +77,16 @@ func (a *application) update(ctx context.Context) {
 		}
 		return
 	}
-	a.set(func(v *view) { v.Tag = r.Tag; v.Notes = releaseText(r.Body) })
+	history, historyErr := releaseHistory(ctx, client, historyAPI)
+	if historyErr != nil {
+		a.record(fmt.Errorf("release history: %w", historyErr))
+		history = a.history
+	}
+	a.history = recentReleases(append([]release{r}, history...))
+	a.set(func(v *view) { v.Tag = r.Tag; v.Notes = historyText(a.history) })
+	if raw, e := json.Marshal(a.history); e == nil {
+		_ = os.WriteFile(filepath.Join(a.root, "ArcanumModern", "launcher-history.json"), raw, 0600)
+	}
 	// Cache only release text; it is displayed as text and never executed.
 	if raw, e := json.Marshal(r); e == nil {
 		_ = os.WriteFile(filepath.Join(a.root, "ArcanumModern", "launcher-release.json"), raw, 0600)
@@ -142,6 +152,15 @@ func newApplication(root string, args []string, preview bool) *application {
 		if json.Unmarshal(b, &r) == nil {
 			a.state.Tag = r.Tag
 			a.state.Notes = releaseText(r.Body)
+			a.history = recentReleases([]release{r})
+		}
+	}
+	if b, e := os.ReadFile(filepath.Join(root, "ArcanumModern", "launcher-history.json")); e == nil {
+		var history []release
+		if json.Unmarshal(b, &history) == nil && len(recentReleases(history)) > 0 {
+			a.history = recentReleases(history)
+			a.state.Tag = a.history[0].Tag
+			a.state.Notes = historyText(a.history)
 		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -150,6 +169,8 @@ func newApplication(root string, args []string, preview bool) *application {
 	a.stop = func() { cancel(); stop() }
 	if preview {
 		a.state = view{Phase: "download", Percent: 64, Installed: buildVersion, Tag: "v2.0.2", Notes: releaseText("## Arcanum Renaissance\n\n### Character creation\n- Import a custom portrait, crop it and convert it in game.\n- Create backgrounds with native effects and advanced editing.\n\n### Improvements\n- Various bug fixes not covered by UAP.\n\nRelease notes are displayed in their published language.\n\n### Compatibility\nYour saves, settings and custom content are preserved.\n\n### Installation\nBoth the setup and the ZIP include the Renaissance launcher.\n\n### Credits\nBased on Arcanum Community Edition.")}
+		a.state.Notes = historyText([]release{{Tag: "v2.2.1", Published: "preview", Body: "Feedbacks et historique des cinq dernières versions."}, {Tag: "v2.2.0", Published: "preview", Body: a.state.Notes}})
+		a.state.Tag = "v2.2.1"
 		close(a.done)
 	} else {
 		go a.run(ctx, preparation)
