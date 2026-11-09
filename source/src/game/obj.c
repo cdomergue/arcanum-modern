@@ -5274,3 +5274,5 @@ void obj_arrayfield_ptr_set(int64_t obj, int fld, int index, void* value)
     obj_arrayfield_store(object, fld, index, &value);
     obj_unlock(obj);
 }
+
+#include "modern_companion_reader.inc"

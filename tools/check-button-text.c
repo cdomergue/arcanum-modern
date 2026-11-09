@@ -276,6 +276,8 @@ static void check_native_map_note(void)
     puts("PASS: native map annotation rendering, 100/150% text, edge tooltip and unchanged route");
 }
 
+#include "check-companion-journal.inc"
+
 int main(int argc,char** argv)
 {
     if((argc!=3&&argc!=4)||chdir(argv[1])||access(".map-export-sandbox",R_OK))return 2;
@@ -308,6 +310,7 @@ int main(int argc,char** argv)
 
     if(SDL_getenv("ARCANUM_CHECK_PARTY_HINTS")){check_party_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_NATIVE_MAP_NOTE")){check_native_map_note();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_COMPANIONS")){check_companion_journal();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_HUD_HINTS")){check_hud_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_COMBAT_HINTS")){check_combat_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_STAT_COLORS")){check_stat_colors();return 0;}

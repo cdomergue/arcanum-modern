@@ -26,6 +26,7 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
   campaign: item effects, strength requirements, quest and crafting tags,
   offerings, and gifts.
 - Independent companion positioning, regrouping, and control outside combat.
+- Find where your companions are awaiting your return in the journal.
 - Improved ground traps avoidance for player and companions.
 - Select automatic level-up schemes for your character and companions.
   Choose None for a companion to assign their available points yourself.
@@ -187,6 +188,10 @@ Existing custom bindings are preserved.
   Set a route and use the travel
   button to follow it; the cancel control clears it. In the journal, the star
   marks favorites and the pin tracks a quest.
+  The **Companions** chapter lists companions' last known locations and whether
+  they are following, waiting, or have left. Existing saves can recover waiting
+  companions when their link to your character is still recorded. See the
+  [companion journal guide](docs/companion-journal.md) for its limits.
 
 ## Preferences and saves
 

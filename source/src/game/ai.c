@@ -1,3 +1,4 @@
+#include "game/modern_companions.h"
 #include "ui/follower_ui.h"
 #include "game/ai.h"
 #include "game/gamelib.h"
@@ -1491,6 +1492,7 @@ void ai_npc_wait(int64_t obj)
         // Keep the bond and portrait. Waiting NPCs are already excluded from travel.
         sub_424070(obj,PRIORITY_3,false,true);
         obj_field_int32_set(obj,OBJ_F_NPC_FLAGS,obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)|ONF_AI_WAIT_HERE);
+        modern_companions_event(obj,critter_leader_get(obj),COMPANION_WAITING);
         return;
     }
     wait = obj_field_int32_get(obj, OBJ_F_NPC_WAIT);
@@ -1515,6 +1517,7 @@ void ai_npc_wait(int64_t obj)
     npc_flags = obj_field_int32_get(obj, OBJ_F_NPC_FLAGS);
     npc_flags |= ONF_AI_WAIT_HERE;
     obj_field_int32_set(obj, OBJ_F_NPC_FLAGS, npc_flags);
+    modern_companions_event(obj,leader_obj,COMPANION_WAITING);
 }
 
 // 0x4AA8C0
@@ -1538,6 +1541,7 @@ void ai_npc_unwait(int64_t obj, bool force)
 
     if (critter_is_bound_familiar(obj)) {
         obj_field_int32_set(obj,OBJ_F_NPC_FLAGS,obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)&~ONF_AI_WAIT_HERE);
+        modern_companions_event(obj,leader_obj,COMPANION_PRESENT);
         return;
     }
 
@@ -1579,6 +1583,7 @@ bool ai_npc_wait_here_timeevent_process(TimeEvent* timeevent)
         max_charisma = stat_level_max(leader_obj, STAT_CHARISMA);
         charisma = stat_level_get(leader_obj, STAT_CHARISMA);
         reaction_adj(obj, leader_obj, 2 * (charisma - max_charisma));
+        modern_companions_event(obj,leader_obj,COMPANION_WAIT_EXPIRED);
         critter_leader_set(obj, OBJ_HANDLE_NULL);
     }
 

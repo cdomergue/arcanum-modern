@@ -1,3 +1,4 @@
+#include "game/modern_companions.h"
 #include "game/modern_background_rules.h"
 #include "game/modern_house.h"
 #include "game/modern_world_updates_internal.h"
@@ -423,6 +424,7 @@ void gamelib_reset(void)
     tig_debug_printf("gamelib_reset: Resetting.\n");
     tig_timer_now(&reset_started_at);
 
+    modern_companions_reset();
     modern_autosave_reset();
     modern_world_updates_reset();
     modern_progression_reset();
@@ -1105,6 +1107,13 @@ static bool gamelib_save_impl(const char* name, const char* description)
 
     gamelib_saveinfo_exit(&save_info);
 
+    save_diagnostic_phase = "companion_journal";
+    if (!modern_companions_save()) {
+        rw_save_discard(stage);
+        in_save = false;
+        return false;
+    }
+
     snprintf(path, sizeof(path), "save\\%s", stage);
     tig_debug_printf("gamelib_save: creating folder archive...");
 
@@ -1165,6 +1174,7 @@ static bool gamelib_load_internal(const char* name)
 
     save_diagnostic_phase = "reset";
     gamelib_save_log("load_phase", "");
+    modern_companions_reset();
     modern_autosave_reset();
     modern_world_updates_reset();
     modern_progression_reset();

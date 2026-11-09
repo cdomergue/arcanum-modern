@@ -391,6 +391,10 @@ void obj_save_preprocess(int64_t obj);
 void obj_load_postprocess(int64_t obj);
 bool obj_write(TigFile* stream, int64_t obj);
 bool obj_read(TigFile* stream, int64_t* obj_ptr);
+/* Metadata-only reader: never instantiates or registers saved objects. */
+typedef struct CompanionSnapshot { ObjectID id,leader; int type,description,flags,object_flags; int64_t location; } CompanionSnapshot;
+bool obj_companion_snapshot(TigFile* stream,CompanionSnapshot* snapshot);
+bool obj_companion_diff(TigFile* stream,CompanionSnapshot* snapshot);
 void obj_write_mem(uint8_t** data_ptr, int* size_ptr, int64_t obj);
 bool obj_read_mem(uint8_t* data, int64_t* obj_ptr);
 int obj_is_modified(int64_t obj);

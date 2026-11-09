@@ -1,3 +1,4 @@
+#include "game/modern_companions.h"
 #include "game/modern_progression.h"
 #include "game/modern_compat.h"
 #include "game/critter.h"
@@ -936,6 +937,8 @@ bool critter_follow(int64_t follower_obj, int64_t leader_obj, bool force)
     }
     obj_field_int32_set(follower_obj, OBJ_F_NPC_FLAGS, flags);
 
+    modern_companions_event(follower_obj, leader_obj, COMPANION_PRESENT);
+
     // Update follower state.
     anim_speed_recalc(follower_obj);
     ui_follower_refresh();
@@ -1006,6 +1009,7 @@ static bool critter_unlink_follower(int64_t obj, bool require_member)
     if (!removed && require_member) return false;
     if (removed || !(obj_field_int32_get(obj,OBJ_F_NPC_FLAGS)&ONF_FAMILIAR)) sub_459EA0(obj);
 
+    modern_companions_event(obj, leader_obj, COMPANION_LEFT);
     critter_leader_set(obj, OBJ_HANDLE_NULL);
 
     // Update animations.
@@ -2486,3 +2490,5 @@ bool critter_follower_limit_reached(int64_t leader)
     int maximum = stat_level_get(leader, STAT_MAX_FOLLOWERS);
     return maximum == 0 || critter_num_followers(leader, true) >= maximum;
 }
+
+#include "modern_companions.inc"

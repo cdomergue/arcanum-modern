@@ -1,3 +1,6 @@
+#include "game/map.h"
+#include "game/modern_companions.h"
+#include "game/area.h"
 #include "ui/modern_map_generator.h"
 /* Arcanum Renaissance: native-resolution presentation, independent of world pixels.
  * Original artwork is read from the user's DAT files; gameplay remains upstream.
@@ -764,28 +767,33 @@ static bool quest_filter_matches(int filter,int state)
     }
 }
 
+#include "modern_companion_journal.inc"
+
 static void rebuild_book(void)
 {
     char raw[32768],utf8[65536],haystack[65536],needle[256];
     notebook_sync();
     line_count=0;matched_count=0;
-    entry_count=modern_logbook_select(chapter);
+    if(chapter==7)modern_companions_refresh();
+    entry_count=chapter==7?modern_companions_count():modern_logbook_select(chapter);
     char profile_title[96],profile_story[1024];
     bool personal_background=chapter==5 && background_profile_read(player_get_local_pc_obj(),profile_title,sizeof(profile_title),profile_story,sizeof(profile_story));
     if(personal_background && entry_count==0)entry_count=1;
     fold(search,needle,sizeof(needle));
     for(int i=0;i<entry_count;i++) {
-        int style=modern_logbook_entry(i,raw,sizeof(raw));
-        current_entry=modern_logbook_id(i);
-        if(journal_favorites && journal_mark_index(chapter,current_entry)<0)continue;
+        int style=chapter==7?0:modern_logbook_entry(i,raw,sizeof(raw));
+        current_entry=chapter==7?-1:modern_logbook_id(i);
+        if(chapter!=7 && journal_favorites && journal_mark_index(chapter,current_entry)<0)continue;
         if(chapter==1 && !quest_filter_matches(quest_filter,quest_state_get(player_get_local_pc_obj(),current_entry)))continue;
-        from_game(raw,utf8,sizeof(utf8));
+        if(chapter==7)companion_journal_entry(i,utf8,sizeof(utf8));
+        else from_game(raw,utf8,sizeof(utf8));
         if(personal_background)snprintf(utf8,sizeof(utf8),"%s\n%s",profile_title,profile_story);
         fold(utf8,haystack,sizeof(haystack));
         if(*needle && !strstr(haystack,needle)) continue;
         if(!*utf8) continue;
         matched_count++;
-        size_t first=line_count;wrap_text(utf8,style);if(line_count>first)lines[first].entry_start=true;
+        size_t first=line_count;wrap_text(utf8,style);
+        if(line_count>first){lines[first].entry_start=true;if(chapter==7)lines[first].heading=true;}
     }
     current_entry=-1;
     if(line_count==0) add_line(*search?tr("Aucune entrée ne correspond à la recherche.","No entries match your search."):tr("Aucune entrée dans cette rubrique.","No entries in this section."),0,false);
@@ -794,6 +802,14 @@ static void rebuild_book(void)
     size_t unpaged_count=line_count;
     lines=NULL;line_count=0;line_capacity=0;
     for(size_t i=0;i<unpaged_count;i++) {
+        if(chapter==7 && unpaged[i].entry_start) {
+            size_t end=i+1;
+            while(end<unpaged_count && !unpaged[end].entry_start)end++;
+            while(end>i && !unpaged[end-1].text[0])end--;
+            size_t length=end-i,remaining=lines_per_page-line_count%lines_per_page;
+            if(length<=(size_t)lines_per_page && length>remaining)
+                while(line_count%lines_per_page)add_line("",0,false);
+        }
         if(unpaged[i].heading && i+1<unpaged_count
             && line_count % lines_per_page == (size_t)(lines_per_page-1)) add_line("",0,false);
         if(!unpaged[i].text[0] && line_count % lines_per_page == 0) continue;
@@ -885,15 +901,17 @@ static void draw_journal(void)
     const char* symbol_hint=NULL;SDL_FRect symbol_hover={0};
     notebook_sync();journal_target_count=0;
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){8,6,4,160});
-    frame(panel);
+    SDL_FRect journal_frame=panel;
+    if(chapter==7)journal_frame.h+=58;
+    frame(journal_frame);
     text_draw(3,game_text(modern_intgame_text(1004)),panel.x+26,panel.y+17,GOLD);
     button_label(0,tr("CARNET DE VOYAGE","TRAVEL JOURNAL"),(SDL_FRect){panel.x+27,panel.y+56,174,34},false,MUTED);
-    for(int i=0;i<7;i++) {
-        SDL_FRect r={panel.x+21,panel.y+100+i*57,180,48};
-        button(r,100+i,game_text(modern_logbook_tab_label(i)),chapter_art[i],chapter==i,true);
+    for(int i=0;i<8;i++) {
+        SDL_FRect r={panel.x+21,panel.y+100+i*51,180,44};
+        button(r,100+i,journal_chapter_label(i),i<7?chapter_art[i]:-1,chapter==i,true);
     }
     rule(panel.x+27,panel.y+520,163,(SDL_Color){121,86,44,255});
-    text_draw(0,tr("Taille du texte","Text size"),panel.x+28,panel.y+535,MUTED);
+    button_label(0,tr("Taille du texte","Text size"),(SDL_FRect){panel.x+28,panel.y+529,165,34},false,MUTED);
     button((SDL_FRect){panel.x+28,panel.y+565,64,34},202,"A-",-1,false,text_scale>75);
     button((SDL_FRect){panel.x+103,panel.y+565,64,34},203,"A+",-1,false,text_scale<150);
     button((SDL_FRect){panel.x+panel.w-49,panel.y+16,30,30},200,"X",-1,false,true);
@@ -922,8 +940,8 @@ static void draw_journal(void)
             rule(pages[i].x,pages[i].y+pages[i].h-j,pages[i].w,(SDL_Color){87,62,30,(Uint8)(35-j*5)});
         }
     }
-    centered(2,game_text(modern_logbook_tab_label(chapter)),pages[0].x+pages[0].w/2,book.y+31,INK);
-    centered(2,game_text(modern_logbook_tab_label(chapter)),pages[1].x+pages[1].w/2,book.y+31,INK);
+    centered(2,journal_chapter_label(chapter),pages[0].x+pages[0].w/2,book.y+31,INK);
+    centered(2,journal_chapter_label(chapter),pages[1].x+pages[1].w/2,book.y+31,INK);
     rule(pages[0].x+24,book.y+65,pages[0].w-48,(SDL_Color){137,115,75,150});
     rule(pages[1].x+24,book.y+65,pages[1].w-48,(SDL_Color){137,115,75,150});
     if(dirty) rebuild_book();
@@ -956,15 +974,30 @@ static void draw_journal(void)
         char number[32];snprintf(number,sizeof(number),"- %d -",spread*2+side+1);
         button_label(0,number,(SDL_FRect){pages[side].x,book.y+book.h-43,pages[side].w,27},true,INK);
     }
-    button((SDL_FRect){book.x+20,panel.y+panel.h-44,110,28},204,tr("< Précédentes","< Previous"),-1,false,spread>0);
-    button((SDL_FRect){book.x+book.w-130,panel.y+panel.h-44,110,28},205,tr("Suivantes >","Next >"),-1,false,spread+1<spread_count);
+    const char* previous_label=tr("< Précédent","< Previous");
+    const char* next_label=tr("Suivant >","Next >");
+    /* Size both controls from the complete translated labels at the chosen
+     * reading size, so the arrow cannot wrap onto a line of its own. */
+    float nav_width=ceilf(fmaxf(button_text_bounds(BUTTON_FONT,previous_label).w,
+        button_text_bounds(BUTTON_FONT,next_label).w))+32;
+    nav_width=fmaxf(150,nav_width);
+    float nav_y=panel.y+panel.h-48;
+    button((SDL_FRect){book.x+20,nav_y,nav_width,40},204,previous_label,-1,false,spread>0);
+    button((SDL_FRect){book.x+book.w-20-nav_width,nav_y,nav_width,40},205,next_label,-1,false,spread+1<spread_count);
     char footer[100];snprintf(footer,sizeof(footer),"%d %s   ·   %d / %d",matched_count,matched_count==1?tr("entrée","entry"):tr("entrées","entries"),spread+1,spread_count);
-    button_label(0,footer,(SDL_FRect){book.x+140,panel.y+panel.h-44,book.w-280,28},true,GOLD);
+    button_label(0,footer,(SDL_FRect){book.x+30+nav_width,nav_y,book.w-60-2*nav_width,40},true,GOLD);
     float filter_y=panel.y+panel.h+14;
+    if(chapter==7) {
+        rule(book.x+20,panel.y+panel.h+2,book.w-40,(SDL_Color){121,86,44,180});
+        button_label(0,tr("Derniers lieux connus. Certaines séparations anciennes restent inconnues.","Last known locations. Some earlier separations cannot be recovered."),
+            (SDL_FRect){book.x+20,panel.y+panel.h+8,book.w-40,40},true,MUTED);
+    }
     SDL_FRect favorites={book.x+book.w-155,filter_y,140,30};
+    if(chapter!=7) {
     button(favorites,2300,"",-1,journal_favorites,true);
     journal_symbol((SDL_FRect){favorites.x+5,favorites.y+2,26,26},false,journal_favorites,true);
     button_label(0,tr("Favoris","Favorites"),(SDL_FRect){favorites.x+36,favorites.y+2,favorites.w-42,favorites.h-4},false,menu_control_color(favorites,journal_favorites,true));
+    }
     if(chapter==1) {
         const char* filters[]={tr("Toutes","All"),tr("En cours","In progress"),game_text(modern_logbook_state_label(QUEST_STATE_COMPLETED)),game_text(modern_logbook_state_label(QUEST_STATE_BOTCHED)),game_text(modern_logbook_state_label(QUEST_STATE_MENTIONED))};
         float width=(book.w-190)/5;
@@ -2567,7 +2600,7 @@ static void activate(int action)
     if(panels_action(action))return;
     /* A conversation may begin between a HUD click and its deferred dispatch. */
     if(intgame_mode_get()==INTGAME_MODE_DIALOG) return;
-    if(action>=100 && action<107) {
+    if(action>=100 && action<108) {
         chapter=action-100;spread=0;search[0]=0;quest_filter=0;dirty=true;search_focus(false);
     } else switch(action) {
     case 952: {

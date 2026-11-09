@@ -1,3 +1,4 @@
+#include "game/modern_companions.h"
 #include "game/map.h"
 
 #include <stdio.h>
@@ -958,6 +959,7 @@ bool map_flush(unsigned int flags)
     TigFile* stream;
     if (!sector_save_retry()) return false;
     wallcheck_flush();
+    if (!map_editor) modern_companions_refresh();
     if (!map_save_preprocess()) return false;
     if (map_editor) {
         ok = map_save_objects();
@@ -2131,3 +2133,5 @@ bool map_list_info_add_internal(const char* name, int64_t x, int64_t y, bool is_
 
     return false;
 }
+
+#include "modern_companion_scan.inc"
