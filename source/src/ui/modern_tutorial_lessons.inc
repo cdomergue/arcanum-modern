@@ -236,9 +236,9 @@ static void tutorial_draw_lesson(void)
         break;
     case TUTORIAL_NOTE:
         voice="TUTORIAL_NOTE";
-        line=tr("Choisissez Ajouter une note, cliquez près de la maison, écrivez un repère et enregistrez-le.",
-                "Choose Add note, click near the house, enter a landmark and save it.");
-        target=panel==3?2190:3; complete=panel==3 && map_memo_count>initial_count && memo_edit<0;
+        line=tr("Ouvrez Note, choisissez Par clic, puis cliquez près de la maison, écrivez un repère et enregistrez-le. Par coordonnées permet aussi de saisir un emplacement précis.",
+                "Open Note, choose By click, then click near the house, write a landmark and save it. You can also choose By coordinates to enter an exact location.");
+        target=panel!=3?3:memo_edit>=0?2192:memo_menu_open?2190:memo_placing?-1:2199; complete=panel==3 && map_memo_count>initial_count && memo_edit<0;
         break;
     case TUTORIAL_ROUTE:
         voice="TUTORIAL_ROUTE";

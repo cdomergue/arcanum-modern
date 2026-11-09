@@ -1,0 +1,43 @@
+﻿ID	FR	EN
+TUTORIAL_HELLO	Bonjour et bienvenue dans Arcanum Renaissance. Ce tutoriel vous fera découvrir ce qui rend ce mod unique.	Hello, and welcome to Arcanum Renaissance. In this tutorial, you will discover what makes this mod unique.
+TUTORIAL_GUIDE	Parlez au garde dans la maison et invitez-le à rejoindre le groupe.	Talk to the guard in the house and ask him to join you.
+TUTORIAL_MOVE	Le portrait du garde affiche sa vie et sa fatigue. Cliquez sur le plancher pour marcher ensemble.	The guard’s portrait shows his health and fatigue. Click the floor to walk together.
+TUTORIAL_CAMERA	Utilisez la molette pour zoomer. Dans les options graphiques, la caméra peut suivre le personnage ou rester libre.	Use the wheel to zoom. Graphics options let the camera follow your character or move freely.
+TUTORIAL_BAG	Ouvrez votre inventaire. Les objets portés apparaissent à gauche et le sac au centre.	Open your inventory. Worn equipment appears on the left and the pack in the middle.
+TUTORIAL_SEARCH	Cliquez sur la recherche et tapez quelques lettres. Effacez-les pour retrouver tout votre sac.	Click the search field and type a few letters. Clear it to see your whole pack again.
+TUTORIAL_FILTER	Choisissez une catégorie, par exemple Armes. Tous réaffiche chaque catégorie.	Choose a category such as Weapons. All shows every category again.
+TUTORIAL_DETAILS	Revenez à Tous, puis survolez un objet. Lisez sa fiche à droite ; faites défiler les détails longs.	Return to All, then hover over an item. Read its card on the right and scroll through longer descriptions.
+TUTORIAL_COMPARE_1	La comparaison est activée. Survolez l’épée donnée par le garde : sa fiche apparaît avec celle de votre arme équipée.	Comparison is enabled. Hover over the guard’s sword to see its details alongside your equipped weapon.
+TUTORIAL_COMPARE_2	Activez Comparer l’équipement, puis survolez l’épée donnée par le garde.	Enable Compare equipment, then hover over the sword given by the guard.
+TUTORIAL_EQUIP	Équipez ou retirez une arme ou une armure. Vous pouvez ensuite remettre votre équipement préféré.	Equip or remove a weapon or armour. You can then restore your preferred equipment.
+TUTORIAL_TRANSFER	Le garde vous a donné 20 pièces. Ouvrez l’échange avec lui et donnez-lui une partie de votre or. Maj + clic transfère toute la pile.	The guard gave you 20 coins. Open trade with him and give him some of your gold. Shift-click transfers the whole stack.
+TUTORIAL_HOTBAR	Dans l’inventaire d’Erwin, faites glisser la potion donnée par le garde vers la case 1 de la barre rapide.	In Merwin’s inventory, drag the potion given by the guard to quick slot 1.
+TUTORIAL_BANK	Fermez le panneau et maintenez Maj pour afficher la deuxième banque de dix raccourcis.	Close the panel and hold Shift to see the second bank of ten quick slots.
+TUTORIAL_DETACH	Sur le portrait du garde, cliquez sur le petit bouton de liaison pour le détacher du groupe.	Click the small link button on the guard’s portrait to detach him from the party.
+TUTORIAL_POSITION	Sélectionnez le garde détaché et envoyez-le près de la cheminée.	Select the detached guard and move him near the fireplace.
+TUTORIAL_REGROUP	Utilisez le bouton de liaison pour que le garde recommence à vous suivre.	Use the link button to have the guard follow you again.
+TUTORIAL_MAP	Ouvrez la carte locale de l’île. Les zones encore inexplorées restent masquées.	Open the island’s local map. Unexplored areas remain covered.
+TUTORIAL_ZOOM	Zoomez sur la maison avec + ou la molette. Faites glisser la carte pour voir l’autre partie de l’île.	Zoom in on the house with + or the wheel. Drag the map to see the other part of the island.
+TUTORIAL_NOTE	Ouvrez Note, choisissez Par clic, puis cliquez près de la maison, écrivez un repère et enregistrez-le. Par coordonnées permet aussi de saisir un emplacement précis.	Open Note, choose By click, then click near the house, write a landmark and save it. You can also choose By coordinates to enter an exact location.
+TUTORIAL_JOURNAL	Fermez la carte et ouvrez le journal. Ses onglets séparent quêtes, rumeurs et autres découvertes.	Close the map and open the journal. Its tabs separate quests, rumours and other discoveries.
+TUTORIAL_JOURNAL_FILTER	Essayez la recherche, les favoris ou un filtre de quêtes pour réduire la liste du journal.	Try search, favourites or a quest filter to narrow the journal list.
+TUTORIAL_TRACK	Marquez une quête avec l’étoile, essayez Favoris, puis épinglez la quête des loups pour afficher son suivi sur le HUD.	Star a quest, try Favourites, then pin the wolf quest to track it on the HUD.
+TUTORIAL_SHEET	Ouvrez la fiche du personnage. Consultez ses caractéristiques, ses compétences et les points à dépenser à la montée de niveau.	Open the character sheet to review attributes, skills and points available when levelling up.
+TUTORIAL_PORTRAIT	Dans votre fiche, cliquez sur la tête pour choisir ou importer un portrait. Fermez ensuite ce panneau : Annuler permet de garder votre portrait actuel.	On your character sheet, click the face to choose or import a portrait. Then close this panel: Cancel keeps your current portrait.
+TUTORIAL_SPELLS	Ouvrez Magie. Faites glisser le sort du parchemin d’Agilité du Feu vers la case 2 de la barre rapide. Le parchemin sera consommé au lancement.	Open Magic. Drag the spell from the Agility of Fire scroll to quick slot 2. Casting it consumes the scroll.
+TUTORIAL_SKILLS	Ouvrez Compétences. Faites glisser Vol à la tire vers la case 3 de la barre rapide.	Open Skills. Drag Pick Pocket to quick slot 3.
+TUTORIAL_SCHEMATICS	Ouvrez les schémas pour consulter les composants de fabrication.	Open the schematics panel to inspect crafting components.
+TUTORIAL_REST	Ouvrez le repos pour examiner les durées proposées, puis refermez le panneau.	Open the rest panel to review the available durations, then close it.
+TUTORIAL_SERVICES	Appuyez sur Échap pour ouvrir le menu des sauvegardes et des options, puis revenez au jeu. Cette étape se valide à votre retour.	Press Escape to open the save and options menu, then return to the game. This step completes when you return.
+TUTORIAL_ROUTE	Les sorties sont ouvertes. Tracez un chemin vers la maison à l’est sur la carte, puis cliquez sur « Suivre le chemin tracé ».	The exits are open. Plot a route to the house to the east on the map, then click Follow the plotted route.
+TUTORIAL_FIGHT	Mission du garde : les sorties sont libres. Traversez vers l’est et combattez les trois loups en tour par tour.	Guard’s mission: the exits are open. Cross to the east and fight the three wolves in turn-based combat.
+TUTORIAL_TURN	L’initiative détermine l’ordre en haut. Survolez une cible pour prévisualiser le coût en PA, attaquez puis terminez le tour.	Initiative sets the order at the top. Hover over a target to preview the AP cost, attack, then end the turn.
+TUTORIAL_AI	Basculez le contrôle du compagnon. En manuel, deux alliés dont les tours se suivent peuvent se partager le tour.	Toggle companion control. In manual mode, allies with consecutive turns can share their turn.
+TUTORIAL_LOG	Consultez le journal de combat pour lire les attaques et leurs résultats. Battez les trois loups.	Open the combat log to read attacks and outcomes. Defeat all three wolves.
+TUTORIAL_DONE	Les deux secteurs sont sûrs. Vous pouvez explorer, ou revenir au menu pour rejouer le tutoriel.	Both sectors are safe. Explore the island or return to the menu to replay the tutorial.
+INVITATION_01	Bienvenue sur l’île	Welcome to the island
+INVITATION_02	Découvrez les spécificités d’Arcanum Renaissance par rapport au jeu de base. Rencontrez le garde et apprenez à voyager et à combattre ensemble.	Discover what makes Arcanum Renaissance different from the base game. Meet the guard and learn to travel and fight together.
+INVITATION_03	Commencer le tutoriel	Start tutorial
+INVITATION_04	Plus tard	Later
+INVITATION_05	Ne plus proposer	Don’t ask again
+BUTTON_SKIP	Passer	Skip

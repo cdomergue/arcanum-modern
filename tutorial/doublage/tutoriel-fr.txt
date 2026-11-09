@@ -1,0 +1,127 @@
+﻿[TUTORIAL_HELLO]
+Bonjour et bienvenue dans Arcanum Renaissance. Ce tutoriel vous fera découvrir ce qui rend ce mod unique.
+
+[TUTORIAL_GUIDE]
+Parlez au garde dans la maison et invitez-le à rejoindre le groupe.
+
+[TUTORIAL_MOVE]
+Le portrait du garde affiche sa vie et sa fatigue. Cliquez sur le plancher pour marcher ensemble.
+
+[TUTORIAL_CAMERA]
+Utilisez la molette pour zoomer. Dans les options graphiques, la caméra peut suivre le personnage ou rester libre.
+
+[TUTORIAL_BAG]
+Ouvrez votre inventaire. Les objets portés apparaissent à gauche et le sac au centre.
+
+[TUTORIAL_SEARCH]
+Cliquez sur la recherche et tapez quelques lettres. Effacez-les pour retrouver tout votre sac.
+
+[TUTORIAL_FILTER]
+Choisissez une catégorie, par exemple Armes. Tous réaffiche chaque catégorie.
+
+[TUTORIAL_DETAILS]
+Revenez à Tous, puis survolez un objet. Lisez sa fiche à droite ; faites défiler les détails longs.
+
+[TUTORIAL_COMPARE_1]
+La comparaison est activée. Survolez l’épée donnée par le garde : sa fiche apparaît avec celle de votre arme équipée.
+
+[TUTORIAL_COMPARE_2]
+Activez Comparer l’équipement, puis survolez l’épée donnée par le garde.
+
+[TUTORIAL_EQUIP]
+Équipez ou retirez une arme ou une armure. Vous pouvez ensuite remettre votre équipement préféré.
+
+[TUTORIAL_TRANSFER]
+Le garde vous a donné 20 pièces. Ouvrez l’échange avec lui et donnez-lui une partie de votre or. Maj + clic transfère toute la pile.
+
+[TUTORIAL_HOTBAR]
+Dans l’inventaire d’Erwin, faites glisser la potion donnée par le garde vers la case 1 de la barre rapide.
+
+[TUTORIAL_BANK]
+Fermez le panneau et maintenez Maj pour afficher la deuxième banque de dix raccourcis.
+
+[TUTORIAL_DETACH]
+Sur le portrait du garde, cliquez sur le petit bouton de liaison pour le détacher du groupe.
+
+[TUTORIAL_POSITION]
+Sélectionnez le garde détaché et envoyez-le près de la cheminée.
+
+[TUTORIAL_REGROUP]
+Utilisez le bouton de liaison pour que le garde recommence à vous suivre.
+
+[TUTORIAL_MAP]
+Ouvrez la carte locale de l’île. Les zones encore inexplorées restent masquées.
+
+[TUTORIAL_ZOOM]
+Zoomez sur la maison avec + ou la molette. Faites glisser la carte pour voir l’autre partie de l’île.
+
+[TUTORIAL_NOTE]
+Ouvrez Note, choisissez Par clic, puis cliquez près de la maison, écrivez un repère et enregistrez-le. Par coordonnées permet aussi de saisir un emplacement précis.
+
+[TUTORIAL_JOURNAL]
+Fermez la carte et ouvrez le journal. Ses onglets séparent quêtes, rumeurs et autres découvertes.
+
+[TUTORIAL_JOURNAL_FILTER]
+Essayez la recherche, les favoris ou un filtre de quêtes pour réduire la liste du journal.
+
+[TUTORIAL_TRACK]
+Marquez une quête avec l’étoile, essayez Favoris, puis épinglez la quête des loups pour afficher son suivi sur le HUD.
+
+[TUTORIAL_SHEET]
+Ouvrez la fiche du personnage. Consultez ses caractéristiques, ses compétences et les points à dépenser à la montée de niveau.
+
+[TUTORIAL_PORTRAIT]
+Dans votre fiche, cliquez sur la tête pour choisir ou importer un portrait. Fermez ensuite ce panneau : Annuler permet de garder votre portrait actuel.
+
+[TUTORIAL_SPELLS]
+Ouvrez Magie. Faites glisser le sort du parchemin d’Agilité du Feu vers la case 2 de la barre rapide. Le parchemin sera consommé au lancement.
+
+[TUTORIAL_SKILLS]
+Ouvrez Compétences. Faites glisser Vol à la tire vers la case 3 de la barre rapide.
+
+[TUTORIAL_SCHEMATICS]
+Ouvrez les schémas pour consulter les composants de fabrication.
+
+[TUTORIAL_REST]
+Ouvrez le repos pour examiner les durées proposées, puis refermez le panneau.
+
+[TUTORIAL_SERVICES]
+Appuyez sur Échap pour ouvrir le menu des sauvegardes et des options, puis revenez au jeu. Cette étape se valide à votre retour.
+
+[TUTORIAL_ROUTE]
+Les sorties sont ouvertes. Tracez un chemin vers la maison à l’est sur la carte, puis cliquez sur « Suivre le chemin tracé ».
+
+[TUTORIAL_FIGHT]
+Mission du garde : les sorties sont libres. Traversez vers l’est et combattez les trois loups en tour par tour.
+
+[TUTORIAL_TURN]
+L’initiative détermine l’ordre en haut. Survolez une cible pour prévisualiser le coût en PA, attaquez puis terminez le tour.
+
+[TUTORIAL_AI]
+Basculez le contrôle du compagnon. En manuel, deux alliés dont les tours se suivent peuvent se partager le tour.
+
+[TUTORIAL_LOG]
+Consultez le journal de combat pour lire les attaques et leurs résultats. Battez les trois loups.
+
+[TUTORIAL_DONE]
+Les deux secteurs sont sûrs. Vous pouvez explorer, ou revenir au menu pour rejouer le tutoriel.
+
+INVITATION ET BOUTONS (facultatif)
+
+[INVITATION_01]
+Bienvenue sur l’île
+
+[INVITATION_02]
+Découvrez les spécificités d’Arcanum Renaissance par rapport au jeu de base. Rencontrez le garde et apprenez à voyager et à combattre ensemble.
+
+[INVITATION_03]
+Commencer le tutoriel
+
+[INVITATION_04]
+Plus tard
+
+[INVITATION_05]
+Ne plus proposer
+
+[BUTTON_SKIP]
+Passer

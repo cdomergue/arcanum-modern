@@ -1,0 +1,127 @@
+﻿[TUTORIAL_HELLO]
+Hello, and welcome to Arcanum Renaissance. In this tutorial, you will discover what makes this mod unique.
+
+[TUTORIAL_GUIDE]
+Talk to the guard in the house and ask him to join you.
+
+[TUTORIAL_MOVE]
+The guard’s portrait shows his health and fatigue. Click the floor to walk together.
+
+[TUTORIAL_CAMERA]
+Use the wheel to zoom. Graphics options let the camera follow your character or move freely.
+
+[TUTORIAL_BAG]
+Open your inventory. Worn equipment appears on the left and the pack in the middle.
+
+[TUTORIAL_SEARCH]
+Click the search field and type a few letters. Clear it to see your whole pack again.
+
+[TUTORIAL_FILTER]
+Choose a category such as Weapons. All shows every category again.
+
+[TUTORIAL_DETAILS]
+Return to All, then hover over an item. Read its card on the right and scroll through longer descriptions.
+
+[TUTORIAL_COMPARE_1]
+Comparison is enabled. Hover over the guard’s sword to see its details alongside your equipped weapon.
+
+[TUTORIAL_COMPARE_2]
+Enable Compare equipment, then hover over the sword given by the guard.
+
+[TUTORIAL_EQUIP]
+Equip or remove a weapon or armour. You can then restore your preferred equipment.
+
+[TUTORIAL_TRANSFER]
+The guard gave you 20 coins. Open trade with him and give him some of your gold. Shift-click transfers the whole stack.
+
+[TUTORIAL_HOTBAR]
+In Merwin’s inventory, drag the potion given by the guard to quick slot 1.
+
+[TUTORIAL_BANK]
+Close the panel and hold Shift to see the second bank of ten quick slots.
+
+[TUTORIAL_DETACH]
+Click the small link button on the guard’s portrait to detach him from the party.
+
+[TUTORIAL_POSITION]
+Select the detached guard and move him near the fireplace.
+
+[TUTORIAL_REGROUP]
+Use the link button to have the guard follow you again.
+
+[TUTORIAL_MAP]
+Open the island’s local map. Unexplored areas remain covered.
+
+[TUTORIAL_ZOOM]
+Zoom in on the house with + or the wheel. Drag the map to see the other part of the island.
+
+[TUTORIAL_NOTE]
+Open Note, choose By click, then click near the house, write a landmark and save it. You can also choose By coordinates to enter an exact location.
+
+[TUTORIAL_JOURNAL]
+Close the map and open the journal. Its tabs separate quests, rumours and other discoveries.
+
+[TUTORIAL_JOURNAL_FILTER]
+Try search, favourites or a quest filter to narrow the journal list.
+
+[TUTORIAL_TRACK]
+Star a quest, try Favourites, then pin the wolf quest to track it on the HUD.
+
+[TUTORIAL_SHEET]
+Open the character sheet to review attributes, skills and points available when levelling up.
+
+[TUTORIAL_PORTRAIT]
+On your character sheet, click the face to choose or import a portrait. Then close this panel: Cancel keeps your current portrait.
+
+[TUTORIAL_SPELLS]
+Open Magic. Drag the spell from the Agility of Fire scroll to quick slot 2. Casting it consumes the scroll.
+
+[TUTORIAL_SKILLS]
+Open Skills. Drag Pick Pocket to quick slot 3.
+
+[TUTORIAL_SCHEMATICS]
+Open the schematics panel to inspect crafting components.
+
+[TUTORIAL_REST]
+Open the rest panel to review the available durations, then close it.
+
+[TUTORIAL_SERVICES]
+Press Escape to open the save and options menu, then return to the game. This step completes when you return.
+
+[TUTORIAL_ROUTE]
+The exits are open. Plot a route to the house to the east on the map, then click Follow the plotted route.
+
+[TUTORIAL_FIGHT]
+Guard’s mission: the exits are open. Cross to the east and fight the three wolves in turn-based combat.
+
+[TUTORIAL_TURN]
+Initiative sets the order at the top. Hover over a target to preview the AP cost, attack, then end the turn.
+
+[TUTORIAL_AI]
+Toggle companion control. In manual mode, allies with consecutive turns can share their turn.
+
+[TUTORIAL_LOG]
+Open the combat log to read attacks and outcomes. Defeat all three wolves.
+
+[TUTORIAL_DONE]
+Both sectors are safe. Explore the island or return to the menu to replay the tutorial.
+
+INVITATION AND BUTTONS (optional)
+
+[INVITATION_01]
+Welcome to the island
+
+[INVITATION_02]
+Discover what makes Arcanum Renaissance different from the base game. Meet the guard and learn to travel and fight together.
+
+[INVITATION_03]
+Start tutorial
+
+[INVITATION_04]
+Later
+
+[INVITATION_05]
+Don’t ask again
+
+[BUTTON_SKIP]
+Skip

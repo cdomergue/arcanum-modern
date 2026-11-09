@@ -2,7 +2,7 @@
 
 Les scripts tutoriel-fr.txt et tutoriel-en.txt reprennent exactement les textes
 actuels des encadrés, dans leur ordre de lecture. Le fichier TSV aligne les langues.
-35 textes de leçon : accueil HELLO, 33 étapes et les deux variantes de comparaison.
+36 textes de leçon, dont l’accueil, le choix du portrait et les deux variantes de comparaison.
 Les six textes d’invitation et de boutons figurent à part, en fin de fichier.
 
 Enregistrer un fichier par identifiant et par langue, par exemple :

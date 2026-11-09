@@ -32,6 +32,6 @@ def export():
         text+='\n\n'+('INVITATION ET BOUTONS (facultatif)' if lang=='fr' else 'INVITATION AND BUTTONS (optional)')+'\n\n'
         text+='\n\n'.join(f'[{row[0]}]\n{row[col]}' for row in extras)+'\n'
         (OUT/f'tutoriel-{lang}.txt').write_bytes(text.replace('\n','\r\n').encode('utf-8-sig'))
-    assert len(rows)==35, len(rows)
+    assert len(rows)==36, len(rows)
     print(f'Exported {len(rows)} lesson lines (including comparison variants), {len(extras)} invitation/button lines.')
 if __name__=='__main__': export()
