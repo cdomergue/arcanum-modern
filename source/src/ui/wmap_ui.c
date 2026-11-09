@@ -5179,6 +5179,37 @@ bool modern_map_local_point(int index,int* x,int* y)
     *x=coords.x;*y=coords.y;return true;
 }
 
+/* Read native annotations without changing routes, notes or the active city. */
+const char* modern_map_local_note(int x,int y,int radius)
+{
+    static int last_city=-1,last_note=-1;
+    int selected=-1;
+    const char* text=NULL;
+    if(wmap_ui_created && wmap_ui_mode==WMAP_UI_MODE_TOWN && dword_66D878==wmap_ui_townmap) {
+        WmapInfo* info=&wmap_ui_mode_info[WMAP_UI_MODE_TOWN];
+        if(x>=0 && y>=0 && x<info->map_width && y<info->map_height) {
+            for(int i=*info->num_notes-1;i>=0;i--) {
+                WmapNote* note=&info->notes[i];
+                if(note->type<0 || note->type>=WMAP_NOTE_TYPE_COUNT
+                    || !wmap_note_type_info[note->type].enabled || !*note->str)continue;
+                int rx=wmap_note_type_info[note->type].width/2;
+                int ry=wmap_note_type_info[note->type].height/2;
+                if(rx<radius)rx=radius;
+                if(ry<radius)ry=radius;
+                if((int64_t)x>= (int64_t)note->coords.x-rx && (int64_t)x<= (int64_t)note->coords.x+rx
+                    && (int64_t)y>= (int64_t)note->coords.y-ry && (int64_t)y<= (int64_t)note->coords.y+ry) {
+                    selected=i;text=note->str;break;
+                }
+            }
+        }
+    }
+    if(selected!=last_note || last_city!=wmap_ui_townmap) {
+        if(selected>=0)town_notes_log("hover",dword_66D878,wmap_ui_townmap,wmap_ui_num_town_notes,"native_note");
+        last_note=selected;last_city=wmap_ui_townmap;
+    }
+    return text;
+}
+
 void modern_map_local_mouse(int x,int y,int event,int radius)
 {
     if(!wmap_ui_created || wmap_ui_mode!=WMAP_UI_MODE_TOWN

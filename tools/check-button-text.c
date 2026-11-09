@@ -245,6 +245,37 @@ static void create_party_fixture(void)
     assert(critter_follow(follower,info.obj,true));
 }
 
+static void check_native_map_note(void)
+{
+    wmap_ui_open();panels_tick();modern_map_action(1);capture_frame(NULL);
+    assert(map_camera_local);
+    int nx=-1,ny=-1;
+    for(int y=0;y<map_local.height && nx<0;y+=8)for(int x=0;x<map_local.width;x+=8)
+        if(modern_map_local_note(x,y,4)){nx=x;ny=y;break;}
+    assert(nx>=0);
+    int route_count=map_local.count;
+    const int scales[]={100,150};
+    for(int i=0;i<2;i++) {
+        text_scale=scales[i];capture_frame(NULL);
+        map_camera.x=nx-map_camera.width/2;map_camera.y=ny-map_camera.height/2;
+        map_camera_clamp(&map_camera,map_camera_width,map_camera_height);capture_frame(NULL);
+        int width,height;SDL_GetWindowSize(window,&width,&height);
+        float px=map_destination.x+(nx-map_camera.x)*map_camera.scale;
+        float py=map_destination.y+(ny-map_camera.y)*map_camera.scale;
+        SDL_WarpMouseInWindow(window,px*width/canvas_w,py*height/canvas_h);
+        char name[64];snprintf(name,sizeof(name),"native-map-note-%d",scales[i]);capture_frame(name);
+        assert(modern_map_local_note(nx,ny,(int)ceilf(10/map_camera.scale)));
+        assert(map_local.count==route_count);
+        /* Same typography and clamping as native notes, at both screen edges. */
+        const char* label=game_text(modern_map_local_note(nx,ny,10));
+        draw_map_note_hint(label,(SDL_FRect){canvas_w-4,canvas_h-4,16,16});
+        SDL_Surface* surface=SDL_RenderReadPixels(renderer,NULL);assert(surface);
+        char path[4096];snprintf(path,sizeof(path),"%s/native-map-note-edge-%d.png",capture_dir,scales[i]);
+        assert(SDL_SavePNG(surface,path));SDL_DestroySurface(surface);
+    }
+    puts("PASS: native map annotation rendering, 100/150% text, edge tooltip and unchanged route");
+}
+
 int main(int argc,char** argv)
 {
     if((argc!=3&&argc!=4)||chdir(argv[1])||access(".map-export-sandbox",R_OK))return 2;
@@ -276,6 +307,7 @@ int main(int argc,char** argv)
     location_origin_set(obj_field_int64_get(pc,OBJ_F_LOCATION));iso_interface_refresh();
 
     if(SDL_getenv("ARCANUM_CHECK_PARTY_HINTS")){check_party_hints();return 0;}
+    if(SDL_getenv("ARCANUM_CHECK_NATIVE_MAP_NOTE")){check_native_map_note();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_HUD_HINTS")){check_hud_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_COMBAT_HINTS")){check_combat_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_STAT_COLORS")){check_stat_colors();return 0;}

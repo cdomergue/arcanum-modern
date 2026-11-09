@@ -653,19 +653,22 @@ static SDL_FRect memo_map_rect;
 static ModernMap memo_map_state;
 static int memo_hover=-1;
 static SDL_FRect memo_hover_rect;
-static void draw_map_memo_hint(void)
+static void draw_map_note_hint(const char* label,SDL_FRect anchor)
 {
-    if(memo_hover<0 || memo_hover>=map_memo_count || memo_edit>=0)return;
-    const char* label=map_memos[memo_hover].text;
     float width=fminf(fminf(520,canvas_w-16),ceilf(button_text_bounds(0,label).w)+24);
     int rows=menu_paragraph(label,(SDL_FRect){0,0,width-24,0},0,GOLD);
     SDL_FRect ink=button_text_bounds(0,"AgÉjy");
     float height=(rows-1)*text_line_height()+ink.h+20;
-    float y=memo_hover_rect.y>canvas_h/2?memo_hover_rect.y-height-6:memo_hover_rect.y+memo_hover_rect.h+6;
-    SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,memo_hover_rect.x)),
+    float y=anchor.y>canvas_h/2?anchor.y-height-6:anchor.y+anchor.h+6;
+    SDL_FRect tip={fmaxf(8,fminf(canvas_w-width-8,anchor.x)),
         fmaxf(8,fminf(canvas_h-height-8,y)),width,height};
     hud_panel(tip);
     menu_paragraph(label,(SDL_FRect){tip.x+12,tip.y+10-ink.y,width-24,rows*text_line_height()},0,GOLD);
+}
+static void draw_map_memo_hint(void)
+{
+    if(memo_hover<0 || memo_hover>=map_memo_count || memo_edit>=0)return;
+    draw_map_note_hint(map_memos[memo_hover].text,memo_hover_rect);
 }
 static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)
 {
@@ -947,6 +950,12 @@ static void draw_map(void)
         menu_paragraph(help,content,0,GOLD);
     }
     /* Draw after restoring the map clip, so edge notes keep their full tooltip. */
+    const char* native_note=NULL;
+    if(local && memo_hover<0 && memo_edit<0 && !memo_placing && !map_pressed && inside(dest,mouse_x,mouse_y))
+        native_note=modern_map_local_note((int)floorf(map.offset_x+(mouse_x-dest.x)/scale),
+            (int)floorf(map.offset_y+(mouse_y-dest.y)/scale),(int)ceilf(10/scale));
+    else modern_map_local_note(-1,-1,0);
+    if(native_note)draw_map_note_hint(game_text(native_note),(SDL_FRect){mouse_x,mouse_y,16,16});
     draw_map_memo_hint();
     draw_memo_editor();
 }
