@@ -5,6 +5,8 @@ import os,subprocess,tempfile
 root=Path(__file__).resolve().parents[1]
 s=(root/'source/src/ui/modern_notebook.inc').read_text();s=s[:s.index('static int journal_mark_index')]
 panels=(root/'source/src/ui/modern_panels.inc').read_text()
+coords=(root/'source/src/ui/modern_map_memo_coordinates.inc').read_text()
+coord_value=coords[:coords.index('static bool memo_coordinate_position')]
 def fn(signature):
  start=panels.index(signature+'\n{');return panels[start:panels.index('\n}',start)+2]+'\n'
 code=r'''
@@ -16,6 +18,7 @@ code=r'''
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 typedef uint64_t Uint64;
 #define OID_STR_LEN 64
 #define SDL_isalnum isalnum
@@ -39,7 +42,8 @@ static bool inside(SDL_FRect r,float x,float y){return x>=r.x&&y>=r.y&&x<r.x+r.w
 static void button(SDL_FRect r,int action,const char* text,int icon,bool active,bool allowed){(void)r;(void)text;(void)icon;(void)active;assert(allowed);buttons++;last_button=action;}
 static void memo_focus(int i){memo_edit=i;}
 static void memo_close(void){memo_edit=-1;}
-'''+fn('static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)')+fn('static bool memo_action(int action)')+r'''
+static bool memo_coordinate_position(int* x,int* y){*x=10;*y=20;return true;}
+'''+coord_value+fn('static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)')+fn('static bool memo_action(int action)')+r'''
 int main(void){
  FILE* f=fopen("modern-ui/notebook-fixture.txt","w");assert(f);
  fputs("TRACK 8\nFAV 2 12\nNOTE 2 7 50 50 Ancienne note Éaux\nNOTE2 2 7 101 50 50 Ville A\nNOTE2 2 7 205 50 50 Ville B\nNOTE 0 0 50 50 Monde\n",f);fclose(f);
@@ -60,6 +64,9 @@ int main(void){
  assert(map_memos[1].townmap==101&&!strcmp(map_memos[1].text,"Ville A modifiée"));assert(map_memos[2].townmap==205);
  assert(journal_mark_count==1&&journal_marks[0].id==12&&tracked_quest==8);
  ModernMap world={.mode=0,.map=0};assert(map_memo_matches(&map_memos[3],&world));
+ map_memos[map_memo_count++]=(MapMemo){.mode=1,.map=0,.x=72,.y=333,.text="Position précise",.west=397,.south=1827,.precise=true};
+ assert(notebook_save());notebook_identity[0]=0;notebook_sync();assert(map_memo_count==5);
+ assert(map_memos[4].precise&&map_memos[4].west==397&&map_memos[4].south==1827&&!strcmp(map_memos[4].text,"Position précise"));
  f=fopen("ArcanumModern/notebook-notes.log","wb");assert(f);fseek(f,1024*1024-1,SEEK_SET);fputc('x',f);fclose(f);ticks+=2000;
  for(int i=0;i<100;i++){errno=EDOM;notebook_notes_log("test",true);assert(errno==EDOM);}
  puts("PASS: personal notes scoped by town within shared world map, legacy notes preserved without guessing, NOTE2 round-trip, favorites/tracking, rendered buttons/hover/edit scope and diagnostics");

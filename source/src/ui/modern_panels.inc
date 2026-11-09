@@ -684,9 +684,12 @@ static void draw_map_memos(ModernMap* map,SDL_FRect dest,float scale)
         }
     }
 }
+#include "modern_map_memo_coordinates.inc"
+
 static bool memo_action(int action)
 {
-    if(action==2190){memo_placing=!memo_placing;return true;}
+    if(action==2199){memo_menu_open=!memo_menu_open;memo_placing=false;return true;}
+    if(action==2190){memo_menu_open=false;memo_placing=!memo_placing;return true;}
     if(action==2191){memos_visible=!memos_visible;return true;}
     if(action>=2200 && action<2200+map_memo_count){
         if(map_memo_matches(&map_memos[action-2200],&memo_map_state)){
@@ -697,9 +700,20 @@ static bool memo_action(int action)
     if(action==2194){memo_close();return true;}
     if(memo_edit<0)return false;
     if(action==2192 && *memo_draft.text){
-        if(memo_edit<map_memo_count)map_memos[memo_edit]=memo_draft;
+        if(memo_coords_changed) {
+            int x,y;
+            if(!memo_coordinate_position(&x,&y)) {memo_error=1;notebook_notes_log("coordinate_rejected",false);return true;}
+            memo_draft.x=x;memo_draft.y=y;memo_draft.precise=true;
+            memo_coordinate_value(memo_west,&memo_draft.west);memo_coordinate_value(memo_south,&memo_draft.south);
+        }
+        int previous_count=map_memo_count;MapMemo previous={0};
+        if(memo_edit<map_memo_count){previous=map_memos[memo_edit];map_memos[memo_edit]=memo_draft;}
         else if(map_memo_count<64)map_memos[map_memo_count++]=memo_draft;
-        notebook_save();memo_close();return true;
+        if(!notebook_save()) {
+            if(memo_edit<previous_count)map_memos[memo_edit]=previous;
+            map_memo_count=previous_count;memo_error=2;return true;
+        }
+        memo_close();return true;
     }
     if(action==2193 && memo_edit<map_memo_count){map_memos[memo_edit]=map_memos[--map_memo_count];notebook_save();memo_close();return true;}
     return false;
@@ -708,14 +722,25 @@ static void draw_memo_editor(void)
 {
     if(memo_edit<0)return;
     fill((SDL_FRect){0,0,canvas_w,canvas_h},(SDL_Color){0,0,0,155});
-    float x=canvas_w/2-300,y=canvas_h/2-110;
-    frame((SDL_FRect){x,y,600,220});button_count=panel_region_count=0;
+    float w=fminf(820,canvas_w-64),text_h=fmaxf(96,4*text_line_height()+12),h=text_h+310;
+    float x=(canvas_w-w)/2,y=(canvas_h-h)/2,coord_y=y+text_h+122;
+    frame((SDL_FRect){x,y,w,h});button_count=panel_region_count=0;
+    button_overflow_hint[0]=0; /* Discard hover hints from behind the modal. */
     text_draw(2,tr("Note personnelle","Personal note"),x+25,y+18,GOLD);
-    fill((SDL_FRect){x+25,y+62,550,70},(SDL_Color){19,14,10,255});
-    menu_paragraph(memo_draft.text,(SDL_FRect){x+35,y+68,530,60},0,GOLD);
-    button((SDL_FRect){x+25,y+155,170,42},2192,menu_text(260),-1,false,*memo_draft.text!=0);
-    button((SDL_FRect){x+215,y+155,170,42},2193,tr("Supprimer","Delete"),-1,false,memo_edit<map_memo_count);
-    button((SDL_FRect){x+405,y+155,170,42},2194,menu_text(54),-1,false,true);
+    draw_memo_field((SDL_FRect){x+25,y+66,w-50,text_h},0,memo_draft.text,tr("Texte de la note...","Note text..."));
+    float column=(w-70)/2;
+    button_label(0,tr("Ouest (O)","West (W)"),(SDL_FRect){x+25,coord_y-38,column,34},false,MUTED);
+    button_label(0,tr("Sud (S)","South (S)"),(SDL_FRect){x+45+column,coord_y-38,column,34},false,MUTED);
+    draw_memo_field((SDL_FRect){x+25,coord_y,column,44},1,memo_west,"0");
+    draw_memo_field((SDL_FRect){x+45+column,coord_y,column,44},2,memo_south,"0");
+    const char* help=memo_error==2?tr("Enregistrement impossible. Réessayez.","Could not save. Please try again."):
+        memo_error?tr("Coordonnées invalides ou hors de la carte affichée.","Invalid coordinates or outside the displayed map."):
+        tr("Coordonnées de cette carte. Tab passe au champ suivant.","Coordinates on this map. Tab moves to the next field.");
+    button_label(0,help,(SDL_FRect){x+25,coord_y+54,w-50,60},false,memo_error?UI_RED:GOLD);
+    float button_w=(w-70)/3;
+    button((SDL_FRect){x+25,y+h-65,button_w,44},2192,menu_text(260),-1,false,*memo_draft.text!=0);
+    button((SDL_FRect){x+35+button_w,y+h-65,button_w,44},2193,tr("Supprimer","Delete"),-1,false,memo_edit<map_memo_count);
+    button((SDL_FRect){x+45+2*button_w,y+h-65,button_w,44},2194,menu_text(54),-1,false,true);
 }
 #include "modern_map_bitmap.inc"
 /* Travel labels are UI text, not pixels in the zoomed terrain texture. */
@@ -813,10 +838,14 @@ static void draw_map(void)
     panel_backdrop();float w=fminf(1440,canvas_w-40),x=(canvas_w-w)/2,y=(canvas_h-820)/2;
     frame((SDL_FRect){x,y,w,820});
     centered(3,game_text(modern_map_text(map.mode==1?502:501)),canvas_w/2,y+22,GOLD);
-    menu_button((SDL_FRect){x+30,y+78,260,48},741,game_text(modern_map_text(501)),true);
-    menu_button((SDL_FRect){x+310,y+78,260,48},742,game_text(modern_map_text(502)),true);
-    button((SDL_FRect){x+590,y+78,220,48},2190,tr("Ajouter une note","Add note"),-1,memo_placing,map_memo_count<64 && !map.moving);
-    button((SDL_FRect){x+830,y+78,200,48},2191,tr("Notes visibles","Show notes"),-1,memos_visible,true);
+    float control_w=(w-206)/4;
+    menu_button((SDL_FRect){x+30,y+78,control_w,48},741,game_text(modern_map_text(501)),true);
+    menu_button((SDL_FRect){x+40+control_w,y+78,control_w,48},742,game_text(modern_map_text(502)),true);
+    SDL_FRect note_button={x+50+2*control_w,y+78,control_w,48};
+    button(note_button,2199,tr("Note","Note"),-1,memo_menu_open || memo_placing,map_memo_count<64 && !map.moving);
+    float arrow_x=note_button.x+note_button.w-19,arrow_y=note_button.y+22;
+    for(int row=0;row<5;row++)fill((SDL_FRect){arrow_x+row,arrow_y+row,9-row*2,1},GOLD);
+    button((SDL_FRect){x+60+3*control_w,y+78,control_w,48},2191,tr("Notes visibles","Show notes"),-1,memos_visible,true);
     if(!travel && (SDL_GetTicks()-map_texture_time>50 || map_texture_mode!=map.mode || map_texture_hd!=local || !map_texture)) {
         float ww,hh;SDL_DestroyTexture(map_texture);
         if(map.mode==1) {
@@ -830,7 +859,7 @@ static void draw_map(void)
         map_texture_time=SDL_GetTicks();map_texture_mode=map.mode;
         map_texture_hd=local;
     }
-    SDL_FRect available={x+30,y+150,w-60,550};
+    SDL_FRect available={x+30,y+150,w-60,520};
     float scale=fminf(available.w/map.width,available.h/map.height);
     ModernMap native=map;
     bool continent=map.mode==1;
@@ -922,8 +951,8 @@ static void draw_map(void)
     panel_region(dest,(local || travel)?map.offset_x:map.x+(continent?(int)map_camera.x:0),
         (local || travel)?map.offset_y:map.y+(continent?(int)map_camera.y:0),map.width,map.height,3);
     if(map_camera_active) {
-        button((SDL_FRect){x+w-140,y+78,48,48},749,"-",-1,false,map_camera_active && map_camera.scale>map_camera.min_scale+0.001f);
-        button((SDL_FRect){x+w-82,y+78,48,48},750,"+",-1,false,map_camera_active && map_camera.scale<map_camera.max_scale-0.001f);
+        button((SDL_FRect){x+w-136,y+78,48,48},749,"-",-1,false,map_camera_active && map_camera.scale>map_camera.min_scale+0.001f);
+        button((SDL_FRect){x+w-78,y+78,48,48},750,"+",-1,false,map_camera_active && map_camera.scale<map_camera.max_scale-0.001f);
     }
     if(local) {
         menu_button((SDL_FRect){x+w-585,y+741,220,50},748,menu_text(54),map_local.count>0);
@@ -931,8 +960,19 @@ static void draw_map(void)
     menu_button((SDL_FRect){x+30,y+741,230,50},740,menu_text(4003),true);
     SDL_FRect navigation={x+w-350,y+741,320,50};
     text_in_button(navigation,743,tr(game_text(modern_map_text(512)),"Follow the plotted route"),false,map.mode!=1);
-    if(memo_placing)text_draw(0,tr("Cliquez sur la carte pour placer la note.","Click the map to place your note."),x+35,y+711,GOLD);
-    else if(*message_text && SDL_GetTicks()-message_time<12000)menu_paragraph(message_text,(SDL_FRect){x+35,y+704,w-70,34},0,GOLD);
+    if(memo_placing)button_label(0,tr("Cliquez sur la carte pour placer la note.","Click the map to place your note."),(SDL_FRect){x+35,y+673,w-70,30},false,GOLD);
+    else if(*message_text && SDL_GetTicks()-message_time<12000)button_label(0,message_text,(SDL_FRect){x+35,y+673,w-70,30},false,GOLD);
+    char position[128],hover[128];int west,south;
+    if(modern_map_position_coords(&west,&south))snprintf(position,sizeof(position),tr("Position : %d O, %d S","Position: %d W, %d S"),west,south);
+    else snprintf(position,sizeof(position),"%s",tr("Position : —","Position: —"));
+    snprintf(hover,sizeof(hover),"%s",tr("Survol : —","Cursor: —"));
+    if(memo_edit<0 && inside(dest,mouse_x,mouse_y)
+        && modern_map_point_coords((int)floorf(map.offset_x+(mouse_x-dest.x)/scale),
+            (int)floorf(map.offset_y+(mouse_y-dest.y)/scale),&west,&south))
+        snprintf(hover,sizeof(hover),tr("Survol : %d O, %d S","Cursor: %d W, %d S"),west,south);
+    rule(x+30,y+704,w-60,(SDL_Color){121,86,44,180});
+    button_label(0,position,(SDL_FRect){x+35,y+706,(w-80)/2,30},false,GOLD);
+    button_label(0,hover,(SDL_FRect){x+45+(w-80)/2,y+706,(w-80)/2,30},false,GOLD);
     if(memo_edit<0 && inside(navigation,mouse_x,mouse_y)) {
         char help[1024];
         if(map.mode==1)snprintf(help,sizeof(help),tr(
@@ -951,12 +991,13 @@ static void draw_map(void)
     }
     /* Draw after restoring the map clip, so edge notes keep their full tooltip. */
     const char* native_note=NULL;
-    if(local && memo_hover<0 && memo_edit<0 && !memo_placing && !map_pressed && inside(dest,mouse_x,mouse_y))
+    if(local && memo_hover<0 && memo_edit<0 && !memo_menu_open && !memo_placing && !map_pressed && inside(dest,mouse_x,mouse_y))
         native_note=modern_map_local_note((int)floorf(map.offset_x+(mouse_x-dest.x)/scale),
             (int)floorf(map.offset_y+(mouse_y-dest.y)/scale),(int)ceilf(10/scale));
     else modern_map_local_note(-1,-1,0);
     if(native_note)draw_map_note_hint(game_text(native_note),(SDL_FRect){mouse_x,mouse_y,16,16});
-    draw_map_memo_hint();
+    if(!memo_menu_open)draw_map_memo_hint();
+    draw_memo_menu(note_button);
     draw_memo_editor();
 }
 
@@ -1217,7 +1258,7 @@ static bool panels_action(int action)
         return true;
     }
     if(p==8 && action>=969 && action<982){modern_fate_choose(action-970);return true;}
-    if(p==3 && memo_action(action))return true;
+    if(p==3 && (memo_coordinate_action(action) || memo_action(action)))return true;
     if(p==2 && (action==2407 || action==2408)) {
         inventory_search_focus(false);
         modern_inventory_action(action==2407?7:8);
@@ -1286,7 +1327,7 @@ static void panels_tick(void)
     if(portrait_editor.active && portrait_editor.in_game && !portrait_editor_target_valid())portrait_editor_close();
     if(p!=panel_previous) {
         button_count=0;panel_region_count=0;pressed_action=-1;click_captured=false;
-        if(memo_edit>=0)memo_close();memo_placing=false;
+        if(memo_edit>=0)memo_close();memo_placing=false;memo_menu_open=false;
         if(inventory_searching)inventory_search_focus(false);
         inventory_quick_release=false;inventory_sort_pressed=false;
         if(p==9)written_scroll=0;
@@ -1395,13 +1436,14 @@ static bool panels_event(SDL_Event* event)
 {
     int p=native_panel();if(!p)return false;
     if(event->type==SDL_EVENT_WINDOW_FOCUS_LOST) {
-        binding_event(event);inventory_quick_release=false;
+        binding_event(event);inventory_quick_release=false;memo_menu_open=false;
         map_pressed=map_dragged=false;map_pan_x=map_pan_y=0;SDL_CaptureMouse(false);return false;
     }
     int ww,wh;SDL_GetWindowSize(window,&ww,&wh);if(ww<=0 || wh<=0)return false;
     if(event->type==SDL_EVENT_MOUSE_MOTION){mouse_x=event->motion.x*canvas_w/ww;mouse_y=event->motion.y*canvas_h/wh;}
     if(event->type==SDL_EVENT_MOUSE_WHEEL){mouse_x=event->wheel.mouse_x*canvas_w/ww;mouse_y=event->wheel.mouse_y*canvas_h/wh;}
     if(event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP){mouse_x=event->button.x*canvas_w/ww;mouse_y=event->button.y*canvas_h/wh;}
+    if(p==3 && memo_menu_event(event))return true;
     if(p==3 && memo_event(event))return true;
     if(p==3 && memo_edit<0 && (event->type==SDL_EVENT_MOUSE_BUTTON_DOWN || event->type==SDL_EVENT_MOUSE_BUTTON_UP)) {
         int action=hit(mouse_x,mouse_y);

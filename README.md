@@ -185,6 +185,9 @@ Existing custom bindings are preserved.
 - **Maps and journal:** drag the map to pan. On travel and continent maps, the
   mouse wheel zooms in and out continuously, down to the full map. Travel
   destinations and route points follow the zoomed view.
+  The map footer shows your current position and the coordinates under the
+  cursor. Open **Note → By click** to place a personal note, or **Note → By coordinates**
+  to enter its west and south coordinates on the displayed map.
   Set a route and use the travel
   button to follow it; the cancel control clears it. In the journal, the star
   marks favorites and the pin tracks a quest.

@@ -5425,3 +5425,5 @@ int modern_map_travel_markers(ModernMapMarker* markers, int capacity)
         wmap_note_type_info[WMAP_NOTE_TYPE_CROSS].art_id, false};
     return count;
 }
+
+#include "modern_map_coordinates.inc"

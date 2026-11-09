@@ -29,6 +29,10 @@ typedef struct ModernLocalMap {
 bool modern_map_local_state(ModernLocalMap* state);
 bool modern_map_local_point(int index,int* x,int* y);
 const char* modern_map_local_note(int x,int y,int radius);
+/* Absolute pixels in the active modern map, independent of pan and zoom. */
+bool modern_map_point_coords(int x,int y,int* west,int* south);
+bool modern_map_coords_point(int west,int south,int* x,int* y);
+bool modern_map_position_coords(int* west,int* south);
 void modern_map_local_mouse(int x,int y,int event,int radius);
 void* modern_map_local_tile(int index);
 void modern_map_local_tile_release(int index);
