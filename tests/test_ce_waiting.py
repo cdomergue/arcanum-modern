@@ -46,17 +46,23 @@ static int basic_skill_training_get(int64_t obj,int skill){(void)obj;(void)skill
 static void timeevent_add_delay(TimeEvent* event,DateTime* dt){events++;last=*event;delay=*dt;}
 static void critter_disband(int64_t obj,bool b){(void)obj;(void)b;disbands++;}
 static void critter_leader_set(int64_t obj,int64_t leader){(void)obj;assert(leader==9);}
+enum {COMPANION_WAITING=2};
+static int journal_events;
+static void modern_companions_event(int64_t obj,int64_t leader,int state){
+ assert(obj==7&&leader==9&&state==COMPANION_WAITING);
+ assert(fields[OBJ_F_NPC_FLAGS]&ONF_AI_WAIT_HERE);journal_events++;
+}
 ''' + function('src/game/ai.c','void ai_npc_wait(int64_t obj)') + r'''
-static void reset(void){memset(fields,0,sizeof(fields));fields[OBJ_F_TYPE]=OBJ_TYPE_NPC;fields[OBJ_F_NPC_WAIT]=1;events=disbands=0;}
+static void reset(void){memset(fields,0,sizeof(fields));fields[OBJ_F_TYPE]=OBJ_TYPE_NPC;fields[OBJ_F_NPC_WAIT]=1;events=disbands=journal_events=0;}
 int main(void){
- reset();ai_npc_wait(7);assert(events==1&&last.params[0].object_value==7&&delay.milliseconds==900000&&disbands==1);
- ai_npc_wait(7);assert(events==1);
+ reset();ai_npc_wait(7);assert(events==1&&last.params[0].object_value==7&&delay.milliseconds==900000&&disbands==1&&journal_events==1);
+ ai_npc_wait(7);assert(events==1&&journal_events==1);
  reset();extraordinary=true;ai_npc_wait(7);assert(events==0&&disbands==1);
  reset();extraordinary=false;fields[OBJ_F_SPELL_FLAGS]=OSF_MIND_CONTROLLED;ai_npc_wait(7);assert(events==0);
  reset();training=1;ai_npc_wait(7);assert(events==1&&delay.milliseconds==7200000);
  reset();fields[OBJ_F_NPC_WAIT]=5;ai_npc_wait(7);assert(events==0);
- reset();familiar=true;ai_npc_wait(7);assert(events==0&&disbands==0&&(fields[OBJ_F_NPC_FLAGS]&ONF_AI_WAIT_HERE));
- reset();familiar=false;fields[OBJ_F_TYPE]=OBJ_TYPE_PC;ai_npc_wait(7);assert(events==0&&disbands==0);
+ reset();familiar=true;ai_npc_wait(7);assert(events==0&&disbands==0&&(fields[OBJ_F_NPC_FLAGS]&ONF_AI_WAIT_HERE)&&journal_events==1);
+ reset();familiar=false;fields[OBJ_F_TYPE]=OBJ_TYPE_PC;ai_npc_wait(7);assert(events==0&&disbands==0&&journal_events==0);
 }
 '''
 
