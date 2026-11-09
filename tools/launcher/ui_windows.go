@@ -56,20 +56,23 @@ type drawItem struct {
 }
 
 type launcherWindow struct {
-	app                                             *application
-	prefs                                           preferences
-	hwnd, notes, play, auto, language, install      uintptr
-	font, titleFont, smallFont, brush               uintptr
-	width, height                                   int32
-	scale                                           float64
-	pixels                                          []byte
-	bitmap                                          bitmapInfo
-	view                                            view
-	lastNotes                                       string
-	lastOffer                                       int
-	lastInstall, lastButton, lastAuto, lastLanguage string
-	readyAt                                         time.Time
-	wantPlay, closing                               bool
+	app                                                                   *application
+	prefs                                                                 preferences
+	hwnd, notes, play, auto, language, install                            uintptr
+	font, titleFont, smallFont, brush                                     uintptr
+	width, height                                                         int32
+	scale                                                                 float64
+	pixels                                                                []byte
+	bitmap                                                                bitmapInfo
+	view                                                                  view
+	lastNotes                                                             string
+	lastOffer                                                             int
+	lastInstall, lastButton, lastAuto, lastLanguage                       string
+	readyAt                                                               time.Time
+	wantPlay, closing                                                     bool
+	communityTab, communityBusy                                           bool
+	tabNews, tabFeedback, feedback, send, privacy, github, feedbackStatus uintptr
+	communityResult                                                       chan string
 }
 
 var activeWindow *launcherWindow
@@ -121,9 +124,11 @@ func (w *launcherWindow) paint() {
 	}
 	w.box(memory, track, 0x6199c1)
 	label := w.view.heading(w.prefs.Language)
-	w.text(memory, label, rect{w.s(82), w.s(307), w.s(820), w.s(332)}, w.smallFont, muted, 0x20)
+	if !w.communityTab {
+		w.text(memory, label, rect{w.s(382), w.s(307), w.s(820), w.s(332)}, w.smallFont, muted, 0x20)
+	}
 	w.text(memory, fmt.Sprintf(w.tr("Version installée : %s", "Installed version: %s"), w.view.Installed), rect{w.s(80), w.s(576), w.s(820), w.s(600)}, w.smallFont, muted, 0x20)
-	if !w.readyAt.IsZero() && w.prefs.AutoPlay && w.view.autoStart() {
+	if !w.communityTab && !w.readyAt.IsZero() && w.prefs.AutoPlay && w.view.autoStart() {
 		remaining := 4 - int(time.Since(w.readyAt).Seconds())
 		if remaining < 0 {
 			remaining = 0
@@ -154,6 +159,16 @@ func (w *launcherWindow) drawButton(d *drawItem) {
 		text = w.tr("Installer", "Install")
 	case 103:
 		text = "FR  /  EN"
+	case 106:
+		text = w.tr("Actualités", "News")
+	case 107:
+		text = "Feedbacks"
+	case 109:
+		text = w.tr("Envoyer", "Send")
+	case 111:
+		text = w.tr("Confidentialité", "Privacy")
+	case 113:
+		text = w.tr("Ça vous plaît ? Une étoile sur GitHub !", "You like it? Star it on GitHub!")
 	}
 	tint := uintptr(0x9fcef1)
 	if d.State&4 != 0 {
@@ -169,6 +184,26 @@ func (w *launcherWindow) drawButton(d *drawItem) {
 	}
 }
 func (w *launcherWindow) refresh() {
+	if w.lastLanguage != w.prefs.Language {
+		for h, label := range map[uintptr]string{w.tabNews: w.tr("Actualités", "News"), w.send: w.tr("Envoyer", "Send"), w.privacy: w.tr("Confidentialité", "Privacy"), w.github: w.tr("Ça vous plaît ? Une étoile sur GitHub !", "You like it? Star it on GitHub!")} {
+			user.NewProc("SetWindowTextW").Call(h, ptr(label))
+			user.NewProc("InvalidateRect").Call(h, 0, 1)
+		}
+		label := w.tr("10–2000 caractères. Message et version envoyés au développeur.", "10–2000 characters. Message and version sent to the developer.")
+		if communityURL == "" {
+			label = w.tr("Service non configuré : aucun envoi.", "Service not configured: sending unavailable.")
+		}
+		if w.communityBusy {
+			label = w.tr("Envoi…", "Sending…")
+		}
+		user.NewProc("SetWindowTextW").Call(w.feedbackStatus, ptr(label))
+	}
+	select {
+	case status := <-w.communityResult:
+		w.communityBusy = false
+		user.NewProc("SetWindowTextW").Call(w.feedbackStatus, ptr(status))
+	default:
+	}
 	previous := w.view
 	w.view = w.app.snapshot()
 	if w.view.Phase == "uap-failed" && previous.Phase != "uap-failed" {
@@ -223,7 +258,14 @@ func (w *launcherWindow) refresh() {
 		user.NewProc("DestroyWindow").Call(w.hwnd)
 		return
 	}
-	if w.view.Ready && !w.view.Fatal && (w.wantPlay || (w.view.autoStart() && w.prefs.AutoPlay && time.Since(w.readyAt) >= 4*time.Second)) {
+	for _, h := range []uintptr{w.send} {
+		enabled := uintptr(1)
+		if w.communityBusy || communityURL == "" || w.app.preview {
+			enabled = 0
+		}
+		user.NewProc("EnableWindow").Call(h, enabled)
+	}
+	if w.view.Ready && !w.view.Fatal && !w.communityBusy && (w.wantPlay || (!w.communityTab && w.view.autoStart() && w.prefs.AutoPlay && time.Since(w.readyAt) >= 4*time.Second)) {
 		user.NewProc("KillTimer").Call(w.hwnd, 1)
 		user.NewProc("ShowWindow").Call(w.hwnd, 0)
 		if err := w.app.launch(); err != nil {
@@ -282,6 +324,40 @@ func windowProcedure(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
 			if !w.app.preview {
 				savePreferences(w.app.root, w.prefs)
 			}
+		case 106, 107:
+			w.communityTab = wp&0xffff == 107
+			w.wantPlay = false
+			w.readyAt = time.Now()
+			news, feedback := uintptr(1), uintptr(0)
+			if w.communityTab {
+				news, feedback = 0, 1
+			}
+			user.NewProc("ShowWindow").Call(w.notes, news)
+			for _, h := range []uintptr{w.feedback, w.send, w.privacy, w.github, w.feedbackStatus} {
+				user.NewProc("ShowWindow").Call(h, feedback)
+			}
+			user.NewProc("InvalidateRect").Call(hwnd, 0, 0)
+		case 109:
+			if w.communityBusy || w.app.preview || communityURL == "" {
+				break
+			}
+			buffer := make([]uint16, 4097)
+			user.NewProc("GetWindowTextW").Call(w.feedback, uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
+			body := syscall.UTF16ToString(buffer)
+			w.communityBusy = true
+			language := w.prefs.Language
+			user.NewProc("SetWindowTextW").Call(w.feedbackStatus, ptr(w.tr("Envoi…", "Sending…")))
+			go func() {
+				status := localized(language, "Merci, votre retour a été envoyé.", "Thank you, your feedback was sent.")
+				if err := sendFeedback(body); err != nil {
+					status = localized(language, "Envoi impossible. Vérifiez la connexion et le texte (10–2000 caractères).", "Could not send. Check connection and text (10–2000 characters).")
+				}
+				w.communityResult <- status
+			}()
+		case 111:
+			user.NewProc("MessageBoxW").Call(hwnd, ptr(communityNotice(w.prefs.Language)), ptr(w.tr("Confidentialité", "Privacy")), 0)
+		case 113:
+			syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW").Call(hwnd, ptr("open"), ptr("https://github.com/cdomergue/arcanum-modern"), 0, 0, 1)
 		}
 		w.refresh()
 		return 0
@@ -308,7 +384,7 @@ func showLauncher(a *application, p preferences) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	user.NewProc("SetProcessDPIAware").Call()
-	w := &launcherWindow{app: a, prefs: p, scale: 1, view: a.snapshot(), lastOffer: -1}
+	w := &launcherWindow{app: a, prefs: p, scale: 1, view: a.snapshot(), lastOffer: -1, communityResult: make(chan string, 1)}
 	activeWindow = w
 	defer func() { activeWindow = nil }()
 	image, err := png.Decode(bytes.NewReader(backdrop))
@@ -378,6 +454,20 @@ func showLauncher(a *application, p preferences) error {
 		return h
 	}
 	w.notes = create("EDIT", "", 0x00200000|0x00010000|0x0800|0x0040|0x0004, 82, 343, 736, 164, 104)
+	w.tabNews = create("BUTTON", w.tr("Actualités", "News"), 0x10000|0xb, 82, 303, 130, 30, 106)
+	w.tabFeedback = create("BUTTON", "Feedbacks", 0x10000|0xb, 222, 303, 140, 30, 107)
+	w.feedback = create("EDIT", "", 0x00200000|0x10000|0x0040|0x0004|0x1000, 82, 343, 736, 102, 108)
+	user.NewProc("SendMessageW").Call(w.feedback, 0xc5, 4000, 0)
+	w.feedbackStatus = create("STATIC", w.tr("10–2000 caractères. Message et version envoyés au développeur.", "10–2000 characters. Message and version sent to the developer."), 0, 82, 449, 736, 38, 112)
+	if communityURL == "" {
+		user.NewProc("SetWindowTextW").Call(w.feedbackStatus, ptr(w.tr("Service non configuré : aucun envoi ni collecte.", "Service not configured: no sending or collection.")))
+	}
+	w.privacy = create("BUTTON", w.tr("Confidentialité", "Privacy"), 0x10000|0xb, 82, 489, 150, 26, 111)
+	w.github = create("BUTTON", w.tr("Ça vous plaît ? Une étoile sur GitHub !", "You like it? Star it on GitHub!"), 0x10000|0xb, 244, 489, 350, 26, 113)
+	w.send = create("BUTTON", w.tr("Envoyer", "Send"), 0x10000|0xb, 608, 489, 210, 26, 109)
+	for _, h := range []uintptr{w.feedback, w.send, w.privacy, w.github, w.feedbackStatus} {
+		user.NewProc("ShowWindow").Call(h, 0)
+	}
 	user.NewProc("SendMessageW").Call(w.notes, 0x00d3, 3, uintptr(w.s(10))|(uintptr(w.s(10))<<16))
 	w.play = create("BUTTON", w.tr("Jouer sans mise à jour", "Play without updating"), 0x00010000|0x000b, 562, 525, 256, 42, 101)
 	w.install = create("BUTTON", w.tr("Installer", "Install"), 0x00010000|0x000b, 82, 525, 210, 42, 105)

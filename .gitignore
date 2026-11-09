@@ -27,6 +27,8 @@
 *.log
 
 # Local tools, settings and generated files.
+.aws/
+*.private.json
 __pycache__/
 *.pyc
 worlded.local.json

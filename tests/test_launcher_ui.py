@@ -23,3 +23,10 @@ with tempfile.TemporaryDirectory(prefix='renaissance-ui-test-') as directory:
                         str(ROOT/'game/modern-ui/Book.ttf'), '--check-render'], check=True,
                        env=dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_VIDEO_DRIVER='dummy', SDL_RENDER_DRIVER='software'))
         print('PASS:', language, 'launcher rendering')
+    for french in (0, 1):
+        state.write_text(f'100 false true true 0 1 1 0 {french}\nReady\nVersion: 2.2.0\nFeedbacks\nPlay\nLaunch automatically\n'
+                         + ('10–2000 caractères. Message et version envoyés au développeur.' if french else '10–2000 characters. Message and version sent to the developer.'), encoding='utf-8')
+        subprocess.run([str(args.renderer.resolve()), str(state), str(ROOT/'tools/launcher/assets/background.png'),
+                        str(ROOT/'game/modern-ui/Book.ttf'), '--check-render'], check=True,
+                       env=dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_VIDEO_DRIVER='dummy', SDL_RENDER_DRIVER='software'))
+        print('PASS: feedback tab', 'fr' if french else 'en')

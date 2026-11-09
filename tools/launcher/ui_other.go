@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -60,15 +61,38 @@ func showLauncherAttempt(a *application, p preferences, software bool, log io.Wr
 	}
 	events := make(chan string, 16)
 	exited := make(chan error, 1)
+	communityTab, communityBusy := false, false
+	communityStatus := ""
+	communityResult := make(chan string, 1)
 	writeState := func(v view, seconds int) error {
 		tr := func(fr, en string) string { return localized(p.Language, fr, en) }
 		play := v.playLabel(p.Language)
 		notes := v.notes(p.Language)
 		status := statusText(v, p.Language)
-		if v.autoStart() && p.AutoPlay {
+		if !communityTab && v.autoStart() && p.AutoPlay {
 			status += fmt.Sprintf(" (%d s)", seconds)
 		}
 		text := fmt.Sprintf("%d %t %t %t %d\n%s\n%s\n%s\n%s\n%s\n%s", v.Percent, p.AutoPlay, !v.busy() && !v.Fatal, !v.busy(), v.Offer, status, tr("Version installée : ", "Installed version: ")+v.Installed, v.heading(p.Language), play, v.secondaryLabel(p.Language), strings.ReplaceAll(notes, "\r", ""))
+		if communityTab {
+			statusText := communityStatus
+			if statusText == "" {
+				statusText = tr("10–2000 caractères. Message et version envoyés au développeur.", "10–2000 characters. Message and version sent to the developer.")
+			}
+			if communityURL == "" {
+				statusText = tr("Service non configuré : aucun envoi ni collecte.", "Service not configured: no sending or collection.")
+			}
+			text = fmt.Sprintf("%d %t %t %t %d\n%s\n%s\n%s\n%s\n%s\n%s", v.Percent, p.AutoPlay, !v.busy() && !v.Fatal, !v.busy(), v.Offer, status, tr("Version installée : ", "Installed version: ")+v.Installed, "Feedbacks", play, v.secondaryLabel(p.Language), statusText)
+		}
+		flag := func(b bool) int {
+			if b {
+				return 1
+			}
+			return 0
+		}
+		text = strings.Replace(text, "\n", fmt.Sprintf(" %d %d %d %d\n", flag(communityTab), flag(communityURL != "" && !a.preview), flag(communityBusy), flag(p.Language == "fr")), 1)
+		if e := os.WriteFile(statePath+".privacy", []byte(communityNotice(p.Language)), 0600); e != nil {
+			return e
+		}
 		if e := os.WriteFile(statePath+".new", []byte(text), 0600); e != nil {
 			return e
 		}
@@ -104,11 +128,40 @@ func showLauncherAttempt(a *application, p preferences, software bool, log io.Wr
 	lastPhase := ""
 	for {
 		select {
+		case status := <-communityResult:
+			communityBusy = false
+			communityStatus = status
+			last = ""
 		case e := <-exited:
 			return e
 		case action := <-events:
 			v := a.snapshot()
+			if strings.HasPrefix(action, "feedback:") && !communityBusy && !a.preview && communityURL != "" {
+				body, err := hex.DecodeString(strings.TrimPrefix(action, "feedback:"))
+				if err == nil {
+					communityBusy = true
+					communityStatus = localized(p.Language, "Envoi…", "Sending…")
+					language := p.Language
+					go func() {
+						status := localized(language, "Merci, votre retour a été envoyé.", "Thank you, your feedback was sent.")
+						if sendFeedback(string(body)) != nil {
+							status = localized(language, "Envoi impossible. Vérifiez la connexion et le texte (10–2000 caractères).", "Could not send. Check connection and text (10–2000 characters).")
+						}
+						communityResult <- status
+					}()
+				}
+			}
 			switch action {
+			case "github":
+				opener := "xdg-open"
+				if runtime.GOOS == "darwin" {
+					opener = "open"
+				}
+				go func() { _ = exec.Command(opener, "https://github.com/cdomergue/arcanum-modern").Run() }()
+			case "news", "feedback":
+				communityTab = action == "feedback"
+				ready = time.Now()
+				play = false
 			case "play":
 				if v.Offer != 0 {
 					play = false
@@ -140,6 +193,7 @@ func showLauncherAttempt(a *application, p preferences, software bool, log io.Wr
 			if !a.preview {
 				savePreferences(a.root, p)
 			}
+			last = ""
 		case <-tick.C:
 		}
 		v := a.snapshot()
@@ -175,7 +229,7 @@ func showLauncherAttempt(a *application, p preferences, software bool, log io.Wr
 			stop()
 			return nil
 		}
-		if v.Ready && !v.Fatal && (play || (v.autoStart() && p.AutoPlay && time.Since(ready) >= 4*time.Second)) {
+		if v.Ready && !v.Fatal && !communityBusy && (play || (!communityTab && v.autoStart() && p.AutoPlay && time.Since(ready) >= 4*time.Second)) {
 			stop()
 			return a.launch()
 		}

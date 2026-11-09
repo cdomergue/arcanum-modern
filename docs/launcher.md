@@ -62,6 +62,21 @@ unless `SDL_RENDER_DRIVER` was explicitly selected. Set
 `RENAISSANCE_LAUNCHER_SOFTWARE=1` to use software rendering for the launcher
 without changing the game renderer.
 
+## Feedback
+
+The Feedbacks tab sends a message of 10–2000 characters to the developer through
+an HTTPS relay and Amazon SES. Only the text and launcher version are submitted;
+no save, diagnostic log or installation identifier is attached. The launcher
+pauses automatic game startup while this tab is open. An unsuccessful send keeps
+the text available for another attempt. Drafts are not saved when the launcher
+closes. The Privacy button explains what is sent, and the GitHub button opens
+the project repository.
+
+The recipient address and AWS credentials are not distributed in the launcher.
+The service configuration lives in `tools/community-service/`; its deployment
+and operational limits are described in that directory. No player statistics
+are collected by this feature.
+
 ## Building and verification
 
 `tools/build-launcher.py --target windows|linux|macos --output PATH` uses the same

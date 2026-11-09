@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Arcanum Renaissance private feedback relay
+Parameters:
+  CodeBucket:
+    Type: String
+  CodeKey:
+    Type: String
+  FeedbackFrom:
+    Type: String
+    NoEcho: true
+  FeedbackTo:
+    Type: String
+    NoEcho: true
+  SenderIdentity:
+    Type: String
+    Default: ''
+    Description: Verified SES domain identity; empty uses the sender address identity.
+Conditions:
+  HasSenderIdentity: !Not [!Equals [!Ref SenderIdentity, '']]
+Resources:
+  Counters:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: pk, AttributeType: S}
+        - {AttributeName: sk, AttributeType: S}
+      KeySchema:
+        - {AttributeName: pk, KeyType: HASH}
+        - {AttributeName: sk, KeyType: RANGE}
+      TimeToLiveSpecification: {AttributeName: expires, Enabled: true}
+      SSESpecification: {SSEEnabled: true}
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CommunityOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:UpdateItem]
+                Resource: !GetAtt Counters.Arn
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource:
+                  - !If
+                    - HasSenderIdentity
+                    - !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SenderIdentity}'
+                    - !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${FeedbackFrom}'
+                  - !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${FeedbackFrom}'
+                  # Sandbox sends can also authorize the verified recipient identity.
+                  - !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${FeedbackTo}'
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref FeedbackFrom
+                  ForAllValues:StringEquals:
+                    ses:Recipients: [!Ref FeedbackTo]
+  Service:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.13
+      Handler: handler.handler
+      Role: !GetAtt Role.Arn
+      Code: {S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey}
+      Timeout: 15
+      MemorySize: 128
+      ReservedConcurrentExecutions: 2
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Counters
+          FEEDBACK_FROM: !Ref FeedbackFrom
+          FEEDBACK_TO: !Ref FeedbackTo
+          DAILY_FEEDBACK_LIMIT: '50'
+      # No logging permission: request content and IPs must not enter CloudWatch.
+  API:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: Arcanum Renaissance community
+      ProtocolType: HTTP
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref API
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt Service.Arn
+      PayloadFormatVersion: '2.0'
+  FeedbackRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref API
+      RouteKey: POST /feedback
+      Target: !Join ['/', [integrations, !Ref Integration]]
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref API
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 4
+        ThrottlingRateLimit: 2
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Service
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${API}/*'
+Outputs:
+  Endpoint:
+    Value: !GetAtt API.ApiEndpoint
+  CounterTable:
+    Value: !Ref Counters
