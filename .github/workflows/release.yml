@@ -75,6 +75,8 @@ jobs:
           python3 tests/test_dialog_camera.py
           python3 tests/test_free_camera.py
           python3 tests/test_map_notes.py
+          python3 tests/test_map_native_notes.py
+          python3 tests/test_map_coordinates.py
           python3 tests/test_notebook_map_scope.py
           python3 tests/test_nested_followers.py
           node tests/test_save_editor.cjs
