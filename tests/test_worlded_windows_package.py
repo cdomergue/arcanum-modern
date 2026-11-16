@@ -40,6 +40,7 @@ class PackageTests(unittest.TestCase):
             self.make_archive(path)
             package.verify_archive(path)
             for kwargs in ({'omit': 'worlded-tutorial.html'}, {'omit': 'vcruntime140.dll'},
+                           {'omit': 'art-editor.exe'}, {'omit': 'docs/art-editor.md'},
                            {'corrupt': True}, {'extra': '../escape'},
                            {'extra': 'WORLDed.exe'}, {'extra': 'Slot0001.sav'},
                            {'omit': 'licenses/ffmpeg/COPYING.LGPLv2.1'},

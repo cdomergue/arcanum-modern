@@ -322,3 +322,9 @@ The script editor and its guide are included in `worlded-renaissance-win.zip`.
 Follow the Windows packaging steps in [Building WorldED](worlded-build.md) to
 produce that shared archive. The packager checks executable startup and the Qt
 platform plugin without the SDK on PATH.
+
+## Companion editors
+
+The **Tools** menu opens WorldED or [ART Editor](art-editor.md) with the current
+Arcanum installation. All three editors use the same resource readers and ship
+together in the WorldED Windows package with one shared Qt runtime.

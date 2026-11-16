@@ -375,3 +375,11 @@ version 119 MOB/PRO objects, ART graphics, MES tables and native scripts. ART
 is read-only. Saved games and DIF files are not editable, structures spanning
 sectors are not assembled automatically, and some character graphics fall back
 to an idle sprite or a marker.
+
+## ART sprites and animations
+
+Select an ART resource and choose **Resources > ART editor** to open it in the
+[ART Editor](art-editor.md). Edit palettes, anchors and movement offsets, preview
+animations and character mirroring, or import and export PNG frames. ART Editor
+is included alongside WorldED and Script Editor and shares their resource library
+and Qt runtime.

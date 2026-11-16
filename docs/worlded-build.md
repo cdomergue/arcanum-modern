@@ -59,7 +59,8 @@ to the configure command.
 
 Visual Studio places the programs under `build/worlded-windows/Release/`:
 `worlded-explorer.exe`, `worlded.exe`, `worlded-house-export.exe` and
-`script-editor.exe`. See [Script editing](script-editor.md) for standalone use.
+`script-editor.exe`, plus `art-editor.exe`. See [Script editing](script-editor.md)
+and [ART editing](art-editor.md) for standalone use.
 `worlded-gui-check.exe` is the test program. CTest runs the format tests, GUI
 tests and housing export tests. Keep the Qt DLL directory on PATH while running
 these executables from the build tree.
@@ -75,7 +76,7 @@ python tools/package-worlded-windows.py `
   --qt-bin "$qt/bin" --smoke-test
 ```
 
-This creates `dist/worlded-renaissance-win.zip` with the four editor programs,
+This creates `dist/worlded-renaissance-win.zip` with the five editor programs,
 native helper, Qt plugins, Microsoft C++ runtime DLLs, FFmpeg DLLs, documentation
 and [offline tutorial](../worlded-tutorial.html). Keep Visual Studio C++ build tools
 installed so the packager can locate its redistributable DLLs. Use `--extra-dll`
@@ -84,7 +85,7 @@ to include its FFmpeg libraries and notices; otherwise the DLLs are read beside
 the helper.
 
 The packager checks the archive manifest and, with `--smoke-test`, extracts it
-and starts all five tools with the Qt SDK removed from PATH. The release workflow
+and starts all six tools with the Qt SDK removed from PATH. The release workflow
 builds this archive on Windows and includes it with every tagged release.
 
 ## Linux
@@ -117,7 +118,7 @@ using a downloaded Qt build. Use a fresh build directory when switching Qt kits
 or compilers. An error naming a missing `libicu*.so` is a Qt runtime dependency
 problem; it is not fixed by rebuilding WorldED.
 
-Ninja puts the three programs directly in `build/worlded-linux/`. To install
+Ninja puts the five editor programs directly in `build/worlded-linux/`. To install
 them elsewhere:
 
 ```sh

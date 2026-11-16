@@ -234,8 +234,8 @@ jobs:
       - name: Build and test script editor
         run: |
           cmake -S tools/worlded -B build/script-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DWORLDED_BUILD_GUI=ON
-          cmake --build build/script-release --target script-editor script-editor-check --parallel 4
-          ctest --test-dir build/script-release -R '^script_editor' --output-on-failure
+          cmake --build build/script-release --target script-editor script-editor-check art-editor art-editor-check --parallel 4
+          ctest --test-dir build/script-release -R '^(script_editor|art_editor)' --output-on-failure
 
   windows-install:
     needs: windows

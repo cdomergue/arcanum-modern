@@ -37,15 +37,31 @@ public:
     unsigned rotations() const { return rotations_; }
     unsigned frames() const { return frames_; }
     unsigned fps() const { return fps_; }
+    unsigned flags() const;
+    std::int32_t action_frame() const;
     bool palette_available(unsigned palette) const;
     const ArtFrame& frame(unsigned rotation, unsigned index) const;
+    Bytes indexed(unsigned rotation, unsigned index) const;
     Bytes rgba(unsigned rotation, unsigned index, unsigned palette = 0) const;
+    using Palette = std::array<std::uint32_t, 256>;
+    const Palette& palette(unsigned slot) const;
+    void set_palette(unsigned slot, const Palette& colors);
+    void set_fps(unsigned value);
+    void set_action_frame(std::int32_t value);
+    void set_anchor(unsigned rotation, unsigned index, std::int32_t x, std::int32_t y);
+    void set_offset(unsigned rotation, unsigned index, std::int32_t x, std::int32_t y);
+    // Untouched bytes (including pointer stubs, RLE and trailing data) survive edits.
+    const Bytes& encode() const { return data_; }
+    void validate() const;
+    static Art create(unsigned rotations, unsigned fps, const Palette& palette,
+        const std::vector<ArtFrame>& frames, const std::vector<Bytes>& pixels);
 private:
     Bytes data_;
     unsigned rotations_ = 0, frames_ = 0, fps_ = 0;
     std::array<bool, 4> present_{};
     std::array<std::array<std::uint32_t, 256>, 4> palettes_{};
     std::vector<ArtFrame> frame_data_;
+    std::size_t headers_offset_ = 0;
 };
 
 struct ResourceSource {

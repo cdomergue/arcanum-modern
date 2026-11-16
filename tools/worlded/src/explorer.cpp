@@ -1,4 +1,5 @@
 #include "editor_canvas.hpp"
+#include "editor_tools.hpp"
 #include "prototype_catalog.hpp"
 #include "worlded/world.hpp"
 #include "world_view.hpp"
@@ -256,12 +257,11 @@ public:
         zoneMenu->addSeparator();zoneMenu->addAction("Update reference…",this,[this]{adoptUpdateReference();});zoneMenu->addAction("Import campaign object for update…",this,[this]{importUpdateObject();});
         resourcesMenu->addAction("Campaign…",this,[this]{if(installation){CampaignEditor dialog(*installation,this,installationPath);dialog.exec();}});
         resourcesMenu->addAction("Scripts & dialogues…",this,[this]{contentLibrary();});
-        resourcesMenu->addAction("Script editor…",this,[this]{QString executable=QCoreApplication::applicationDirPath()+"/script-editor";
-#ifdef Q_OS_WIN
-            executable+=".exe";
-#endif
-            QStringList arguments;if(!installationPath.isEmpty())arguments<<"--game"<<installationPath;
-            if(!QProcess::startDetached(executable,arguments))QMessageBox::warning(this,"Cannot open script editor","Keep script-editor beside WorldED, with its Qt runtime files.");
+        resourcesMenu->addAction("Script editor…",this,[this]{launch_editor(this,"script-editor",installationPath);});
+        resourcesMenu->addAction("ART editor…",this,[this]{
+            QStringList arguments;auto selected=filter.mapToSource(resources->currentIndex());
+            if(selected.isValid()) {auto path=text(model.paths.at(selected.row()));if(path.endsWith(".art"))arguments<<"--resource"<<path;}
+            launch_editor(this,"art-editor",installationPath,arguments);
         });resourcesMenu->addSeparator();
         resourcesMenu->addAction("New script…",this,[this]{createContent(false);});resourcesMenu->addAction("New dialogue…",this,[this]{createContent(true);});
         resourcesMenu->addSeparator();resourcesMenu->addAction(openArchive);

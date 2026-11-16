@@ -15,13 +15,13 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('windows_package', ROOT/'tools/package-windows.py')
 resources = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(resources)
-PROGRAMS = ('worlded-explorer.exe', 'worlded.exe', 'worlded-house-export.exe', 'script-editor.exe')
+PROGRAMS = ('worlded-explorer.exe', 'worlded.exe', 'worlded-house-export.exe', 'script-editor.exe', 'art-editor.exe')
 HELPER = 'worlded-native-inventory.exe'
 MOVIES = ('avformat-62.dll', 'avcodec-62.dll', 'avutil-60.dll')
 REQUIRED = (*PROGRAMS, HELPER, *MOVIES, 'Qt6Core.dll', 'Qt6Gui.dll',
             'Qt6Widgets.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'platforms/qwindows.dll', 'platforms/qoffscreen.dll', 'worlded-tutorial.html',
             'tools/world-updates/package.py', 'tools/world-updates/FORMAT.md',
-            'script-editor.html', 'docs/script-editor.md', 'docs/worlded-modding.md',
+            'script-editor.html', 'docs/script-editor.md', 'docs/art-editor.md', 'docs/worlded-modding.md',
             'examples/scripts/49000_reward_chest.wscript', 'examples/scripts/49001_reward_keeper.wscript',
             'examples/scripts/49001_reward_keeper.wdlg', 'examples/scripts/reward_chest.native.txt',
             'docs/worlded.md', 'docs/housing.md', 'docs/world-updates.md', 'README.txt',
@@ -71,7 +71,8 @@ def smoke_test(path):
         env['QT_QPA_PLATFORM'] = 'offscreen'
         for name, args, expected in ((PROGRAMS[0], ['--help'], 0),
                                      (PROGRAMS[1], ['--help'], 0),
-                                     (PROGRAMS[2], [], 2), (PROGRAMS[3], ['--help'], 0), (PROGRAMS[3], ['--smoke-test'], 0), (HELPER, [], 2)):
+                                     (PROGRAMS[2], [], 2), (PROGRAMS[3], ['--help'], 0), (PROGRAMS[3], ['--smoke-test'], 0),
+                                     (PROGRAMS[4], ['--help'], 0), (PROGRAMS[4], ['--smoke-test'], 0), (HELPER, [], 2)):
             result = subprocess.run([str(Path(temporary)/name), *args], cwd=temporary,
                                     env=env, capture_output=True, timeout=30)
             if result.returncode != expected:
@@ -174,6 +175,8 @@ def package(args):
             'Open worlded-tutorial.html in a browser for the complete offline guide.\n'
             'Run worlded-explorer.exe and choose your Arcanum installation.\n'
             'For scripts and dialogues without a map, run script-editor.exe; its guide is script-editor.html.\n'
+            'For ART sprites, animations and PNG conversion, run art-editor.exe; see docs/art-editor.md.\n'
+            'The editors share game resource readers and one Qt runtime.\n'
             'Keep every DLL and plugin folder beside the executables.\n'
             'The Microsoft C++ runtime DLLs are included beside the editor.\n'
             'Playtests require a matching Renaissance game executable and your game files.\n'
