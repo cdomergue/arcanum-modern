@@ -8941,6 +8941,35 @@ void modern_intgame_hud_hide(bool hide)
     hidden = hide;
 }
 
+void modern_intgame_gamepad_point(int x,int y)
+{
+    if (combat_turn_based_is_active() && !combat_input_ready(combat_input_actor())) return;
+    TargetDescriptor target;
+    if (!sub_552050(x,y,&target)) return;
+    modern_map_route_cancel_tracking();
+    if (target.is_loc && intgame_mode_get()==INTGAME_MODE_MAIN)
+        anim_goal_move_to_tile(combat_input_actor(),target.loc);
+    else sub_54EA80(&target);
+}
+
+void modern_intgame_gamepad_hover(int x,int y)
+{
+    TigMouseState previous;
+    if(tig_mouse_get_state(&previous)!=TIG_OK || previous.x!=x || previous.y!=y)
+        tig_mouse_set_position(x,y);
+    modern_intgame_cursor_sync();
+    TigMessage move={0};move.type=TIG_MESSAGE_MOUSE;
+    move.data.mouse.x=x;move.data.mouse.y=y;move.data.mouse.event=TIG_MESSAGE_MOUSE_MOVE;
+    sub_553A70(&move);
+}
+
+void modern_intgame_gamepad_combat(void)
+{
+    /* The hidden classic button rejects input outside the PC's turn. The
+     * native toggle itself validates remaining threats and ends party combat. */
+    if(intgame_mode_get()!=INTGAME_MODE_DIALOG)intgame_combat_mode_toggle();
+}
+
 void modern_intgame_action(int action)
 {
     TigMessage message = {0};
@@ -9053,7 +9082,10 @@ bool modern_world_resize(int width, int height, float anchor_x, float anchor_y)
     combat_ui_resize(&resize);
     follower_ui_resize(&resize);
     if (tig_window_is_hidden(dword_64C52C)) follower_ui_hide();
-    location_origin_scroll((int)((width-old_width)*anchor_x), (int)((height-old_height)*anchor_y));
+    /* Round the two anchor positions, not each incremental difference: a held
+     * trigger must not accumulate half-pixel truncation on every frame. */
+    location_origin_reframe((int)(width*anchor_x)-(int)(old_width*anchor_x),
+        (int)(height*anchor_y)-(int)(old_height*anchor_y));
     object_hover_obj_set(OBJ_HANDLE_NULL);
     iso_invalidate_rect(&resize.content_rect);
     SDL_Renderer* renderer;
@@ -9067,12 +9099,22 @@ bool modern_world_resize(int width, int height, float anchor_x, float anchor_y)
 /* Read-only previews: never invoke an action, a script, or a random roll. */
 bool modern_combat_preview(ModernCombatPreview* p)
 {
+    TigMouseState mouse;
+    if(tig_mouse_get_state(&mouse)!=TIG_OK)return false;
+    return modern_combat_preview_at(p,mouse.x,mouse.y,OBJ_HANDLE_NULL);
+}
+
+bool modern_combat_preview_at(ModernCombatPreview* p,int x,int y,int64_t target)
+{
     memset(p, 0, sizeof(*p)); p->chance = -1; p->in_range = true; p->resources = true;
     p->actor = combat_input_actor();
     if (!combat_turn_based_is_active() || !combat_input_ready(p->actor)) return false;
-    TigMouseState mouse; TargetDescriptor td;
-    if (tig_mouse_get_state(&mouse) != TIG_OK || !sub_5518C0(mouse.x, mouse.y)) return false;
-    if (!target_pick_at_screen_xy_ex(mouse.x, mouse.y, &td, TGT_OBJECT | TGT_OBJ_NO_T_WALL | TGT_TILE, intgame_fullscreen)) return false;
+    TargetDescriptor td;
+    if(target && obj_handle_is_valid(target))td=(TargetDescriptor){.obj=target,.is_loc=false};
+    else {
+        if (!sub_5518C0(x,y)) return false;
+        if (!target_pick_at_screen_xy_ex(x,y,&td,TGT_OBJECT|TGT_OBJ_NO_T_WALL|TGT_TILE,intgame_fullscreen)) return false;
+    }
     p->target = td.is_loc ? OBJ_HANDLE_NULL : td.obj;
     if (p->target == p->actor && intgame_mode_get() == INTGAME_MODE_MAIN) return false;
     if (p->target && intgame_mode_get() == INTGAME_MODE_MAIN && !tig_kb_get_modifier(SDL_KMOD_ALT)

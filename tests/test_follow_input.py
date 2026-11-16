@@ -11,6 +11,11 @@ def function(name):
     start = source.index('static int64_t '+name+'(void)')
     return source[start:source.index('\n}', start)+2]
 walk = source[source.index('typedef struct FollowWalk'):source.index('\nvoid modern_ui_tick(void)')]
+# The controller path is exercised with the full engine in check-gamepad-ui.inc.
+# Keep this focused keyboard harness independent of SDL and rendering.
+pad_start=walk.index('/* The native pathfinder accepts arbitrary tile destinations.')
+pad_end=walk.index('static void follow_walk_tick(void)',pad_start)
+walk=walk[:pad_start]+'static bool pad_walk_tick(void){return false;}\n'+walk[pad_end:]
 code = r'''
 #include <assert.h>
 #include <stdbool.h>

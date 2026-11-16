@@ -20,6 +20,7 @@ Download the [installer](https://github.com/cdomergue/arcanum-modern/releases/la
 - Interactive voiced tutorial on a dedicated island
 - Zoom the world, pan with the keyboard, or use Follow Camera to move your character with WASD.
   Remap your keys and play in windowed, desktop fullscreen, or exclusive fullscreen mode.
+- Native gamepad support for movement, combat and menu navigation, with radial shortcuts and vibration feedback.
 - Inventory search, categories, equipment comparison, item details, stack
   transfers, and two banks of ten personal quick slots per controlled character.
 - Integrated **AID descriptions in French and English** for the Arcanum
@@ -195,6 +196,50 @@ Existing custom bindings are preserved.
   they are following, waiting, or have left. Existing saves can recover waiting
   companions when their link to your character is still recorded. See the
   [companion journal guide](docs/companion-journal.md) for its limits.
+
+### Controllers and Steam Deck
+
+SDL-compatible gamepads work directly with the native interface. Connect one
+before or during play. **Options → Key bindings → Gamepad** lists the controls
+and provides vibration, stick dead zone and pointer speed settings. Button prompts
+follow the connected controller's face-button labels.
+
+| Control | Action |
+| --- | --- |
+| Left stick | Move outside turn-based combat; navigate controls in panels |
+| D-pad | Navigate panels; in play: up journal, left character, right map, down inventory |
+| Right stick | Point in the world or on maps; choose a slot while the radial menu is open |
+| South face button (A / Cross) | Activate the focused control; interact with an object ahead or at the pointer |
+| East face button (B / Circle) | Cancel or go back |
+| West face button (X / Square) | Open inventory |
+| North face button (Y / Triangle) | Ready weapons; use or transfer the focused inventory item |
+| Hold LB / L1 | Show the ten quick slots; choose with either stick and release to activate |
+| LT / L2 while holding LB / L1 | Show the second (Alt) quick-slot bar; release LT to return to the first |
+| Hold RB / R1 | Open the menu wheel; choose with either stick and release to open |
+| Right stick click | Cycle visible targets |
+| LB / RB in panels | Previous / next page where supported |
+| Left stick click | End the current combat turn |
+| Start / Options; Back / View | Pause menu; journal |
+
+Left-stick movement follows the stick's direction through the game's tile
+pathfinder. Tilt gently to walk and further to run; the camera follows while
+using the controller. In turn-based combat, point with the right stick and
+confirm the destination or target, with the normal action-point preview.
+Without the pointer, A interacts with a nearby character, chest, door or item
+in front of the controlled character. Moving with the left stick returns to this
+mode; using the right stick enables precise pointing. B cancels without opening
+a menu; Start opens the pause menu. The RB wheel contains Character, Journal,
+Map, Inventory, Skills, Spells, Schematics, Rest and Fate Points.
+Press A, B or Start to skip cinematics, including the opening movies. Release
+the button before skipping the next movie.
+Inventory cells and equipment slots have directional focus; confirm to pick up
+or place an item, and cancel to return it. Vibrations accompany newly displayed
+damage numbers, and can be disabled independently of the visual feedback.
+
+On Steam Deck, use a Steam Input **Gamepad** layout so the game receives controller
+events. Keyboard/mouse layouts continue to use the keyboard controls instead.
+The trackpad, mouse and keyboard remain available; use the on-screen keyboard
+for names and search text. Controller settings are stored in `modern-ui/gamepad.ini`.
 
 ## Preferences and saves
 

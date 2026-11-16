@@ -304,7 +304,7 @@ static void tactical_tick(void)
     if(SDL_GetTicks()-tactical_preview_time>=80){
         tactical_preview_time=SDL_GetTicks();
         tactical_has_preview=!modern_combat_input_blocked() && !native_panel() && !native_menu() && !tactical_region(mouse_x,mouse_y)
-            && modern_combat_preview(&tactical_preview);
+            && (gamepad.active?pad_combat_preview(&tactical_preview):modern_combat_preview(&tactical_preview));
     }
 }
 static SDL_FPoint tactical_point(int64_t loc)

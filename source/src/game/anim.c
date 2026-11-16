@@ -13360,7 +13360,7 @@ bool anim_goal_animate_loop(int64_t obj)
 }
 
 // 0x433640
-bool anim_goal_move_to_tile(int64_t obj, int64_t loc)
+static bool anim_goal_move_to_tile_impl(int64_t obj, int64_t loc, bool allow_run)
 {
     AnimID anim_id;
     AnimRunInfo* run_info;
@@ -13396,7 +13396,7 @@ bool anim_goal_move_to_tile(int64_t obj, int64_t loc)
     }
 
     if ((obj_field_int32_get(obj, OBJ_F_TYPE) == OBJ_TYPE_PC || combat_player_controls(obj))
-        && get_always_run(obj)
+        && allow_run && get_always_run(obj)
         && critter_encumbrance_level_get(obj) < 4) {
         return anim_goal_run_to_tile(obj, loc);
     }
@@ -13462,6 +13462,17 @@ bool anim_goal_move_to_tile(int64_t obj, int64_t loc)
     run_info->goals[0].params[AGDATA_TARGET_TILE].loc = loc;
 
     return true;
+}
+
+bool anim_goal_move_to_tile(int64_t obj, int64_t loc)
+{
+    return anim_goal_move_to_tile_impl(obj,loc,true);
+}
+
+/* Analog walking must not alter the player's persistent Always Run preference. */
+bool anim_goal_walk_to_tile(int64_t obj, int64_t loc)
+{
+    return anim_goal_move_to_tile_impl(obj,loc,false);
 }
 
 // 0x4339A0

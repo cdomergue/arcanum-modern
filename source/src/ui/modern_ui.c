@@ -7,6 +7,7 @@
  */
 #include "ui/modern_ui.h"
 #include "ui/modern_graphics.h"
+#include "ui/modern_gamepad.h"
 #include "ui/modern_version.h"
 
 #include <math.h>
@@ -66,6 +67,7 @@
 #include "game/townmap.h"
 #include "ui/hotkey_ui.h"
 #include "ui/intgame.h"
+#include "ui/item_ui.h"
 #include "ui/logbook_ui.h"
 #include "ui/mainmenu_ui.h"
 #include "ui/slide_ui.h"
@@ -160,6 +162,15 @@ static int text_scale = 100;
 static float text_size(void) { return 20*text_scale/100.0f; }
 static float text_line_height(void) { return 27*text_scale/100.0f; }
 static bool follow_camera;
+static ModernPadState gamepad;
+static bool pad_pause_request;
+static void follow_walk_stop(void);
+static void pad_ui_tick(void);
+static void pad_draw(void);
+static void draw_pad_options(float x,float y,float w);
+static bool pad_options_action(int action);
+static bool pad_world_ready(void);
+static bool pad_combat_preview(ModernCombatPreview* preview);
 /* The selected page is transient; deferred actions carry an absolute slot. */
 static SDL_Keymod hotbar_mods;
 static int hotbar_offset(void) { return (hotbar_mods & SDL_KMOD_SHIFT) ? 10 : 0; }
@@ -1228,7 +1239,11 @@ static void menu_button_sound(int action,TigButtonState state)
     case TIG_BUTTON_STATE_MOUSE_INSIDE:sound=data.mouse_enter_snd_id;break;
     case TIG_BUTTON_STATE_MOUSE_OUTSIDE:sound=data.mouse_exit_snd_id;break;
     }
-    if(sound>=0)tig_sound_quick_play(sound);
+    if(sound>=0) {
+        tig_sound_quick_play(sound);
+        if(state==TIG_BUTTON_STATE_MOUSE_INSIDE)
+            modern_pad_menu_pulse(&gamepad);
+    }
 }
 
 static void menu_hover_sound(int action)
@@ -1752,6 +1767,7 @@ bool modern_ui_confirm(const char* message)
     pending_action=-1;button_count=0;pressed_action=-1;click_captured=false;
     while (confirmation_choice<0) {
         tig_ping();
+        pad_ui_tick();
         if (pending_action==450 || pending_action==451) {
             confirmation_choice=pending_action==450;
             pending_action=-1;
@@ -2028,7 +2044,7 @@ static bool world_zoom_allowed(void)
 }
 bool modern_follow_camera_active(void)
 {
-    return follow_camera && world_zoom_allowed() && !menu_suspended
+    return (follow_camera || (gamepad.enabled && gamepad.active)) && world_zoom_allowed() && !menu_suspended
         && !slide_ui_is_active() && !tactical_active();
 }
 
@@ -2112,10 +2128,22 @@ void modern_follow_camera_tick(void)
     int64_t origin_x,origin_y;
     location_origin_get(&origin_x,&origin_y);
     double target_x,target_y;
-    follow_camera_target(&motion,now,dx+origin_x,dy+origin_y,&target_x,&target_y);
+    /* Sample the actor in a viewport-independent frame. A zoom changes the
+     * screen centre, not the actor's motion; feeding that change to the spring
+     * caused a sideways drift while the framebuffer was resized. */
+    int64_t center_x=hrp_iso_window_width_get()/2,center_y=hrp_iso_window_height_get()/2;
+    static int previous_width,previous_height;
+    static Uint64 zoom_log_time;
+    if(previous_width!=hrp_iso_window_width_get() || previous_height!=hrp_iso_window_height_get()) {
+        previous_width=hrp_iso_window_width_get();previous_height=hrp_iso_window_height_get();
+        if(gamepad.active && SDL_GetTicks()-zoom_log_time>=250) {
+            zoom_log_time=SDL_GetTicks();modern_pad_log("zoom-follow-error",(int)dx,(int)dy);
+        }
+    }
+    follow_camera_target(&motion,now,dx+origin_x-center_x,dy+origin_y-center_y,&target_x,&target_y);
     double decay=exp(-follow_camera_frequency*seconds);
-    int64_t step_x=follow_camera_step(&horizontal,target_x-origin_x,seconds,decay);
-    int64_t step_y=follow_camera_step(&vertical,target_y-origin_y,seconds,decay);
+    int64_t step_x=follow_camera_step(&horizontal,target_x+center_x-origin_x,seconds,decay);
+    int64_t step_y=follow_camera_step(&vertical,target_y+center_y-origin_y,seconds,decay);
     if (step_x || step_y) {
         if (llabs(step_x)<hrp_iso_window_width_get() && llabs(step_y)<hrp_iso_window_height_get()) {
             scroll_by(step_x,step_y);
@@ -2177,6 +2205,7 @@ static bool world_zoom_event(SDL_Event* event)
 void modern_ui_menu_tick(void)
 {
     world_zoom_sync();
+    pad_ui_tick();
     if (!enabled) return;
     if(mainmenu_ui_is_active() && mainmenu_ui_window_type_get()==MM_WINDOW_SHOP) {
         in_game=true;panels_tick();
@@ -2289,6 +2318,7 @@ void modern_ui_menu_tick(void)
 #include "modern_floating_health.inc"
 #include "modern_combat.inc"
 #include "modern_party.inc"
+#include "modern_gamepad_ui.inc"
 
 /* Stable-size maintenance controls for the character currently controlled. */
 static int maintained_ids[32],maintained_spells[32],maintained_count,maintained_page;
@@ -2477,7 +2507,7 @@ static void render_overlay(SDL_Renderer* target)
     int ww,wh;
     SDL_GetWindowSize(window,&ww,&wh);
     float mx,my;SDL_GetMouseState(&mx,&my);
-    if(ww>0 && wh>0) {mouse_x=mx*canvas_w/ww;mouse_y=my*canvas_h/wh;}
+    if(!gamepad.active && ww>0 && wh>0) {mouse_x=mx*canvas_w/ww;mouse_y=my*canvas_h/wh;}
     int old_w,old_h;SDL_RendererLogicalPresentation old_mode;
     SDL_GetRenderLogicalPresentation(renderer,&old_w,&old_h,&old_mode);
     SDL_SetRenderLogicalPresentation(renderer,(int)canvas_w,(int)canvas_h,SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -2510,6 +2540,7 @@ static void render_overlay(SDL_Renderer* target)
         draw_quest_tracker();
         drawing_hud=false;
         drawing_play_panel=true;
+        if(journal || native_panel())button_count=0;
         if(journal) draw_journal();
         draw_play_panels();
         draw_binding_bar();
@@ -2533,21 +2564,23 @@ static void render_overlay(SDL_Renderer* target)
         hud_panel(box);content.y=box.y+8;content.h=box.h-16;
         menu_paragraph(button_overflow_hint,content,0,GOLD);
     }
+    pad_draw();
     SDL_SetRenderDrawBlendMode(renderer,old_blend);
     SDL_SetRenderLogicalPresentation(renderer,old_w,old_h,old_mode);
 }
 
 static void render_cursor(SDL_Renderer* target)
 {
-    if (!enabled || slide_ui_is_active() || tig_movie_is_playing()) return;
+    if (!enabled || (gamepad.active && (!pad_cursor_mode || pad_radial || pad_binding.type)) || slide_ui_is_active() || tig_movie_is_playing()) return;
     renderer = target;
     update_geometry();
     int ww, wh, old_w, old_h;
     SDL_GetWindowSize(window, &ww, &wh);
     float x, y;
     SDL_GetMouseState(&x, &y);
-    if (ww <= 0 || wh <= 0 || SDL_GetMouseFocus() != window) return;
-    x *= canvas_w / ww; y *= canvas_h / wh;
+    if (ww <= 0 || wh <= 0 || (!gamepad.active && SDL_GetMouseFocus() != window)) return;
+    if(gamepad.active){x=mouse_x;y=mouse_y;}
+    else {x *= canvas_w / ww; y *= canvas_h / wh;}
     SDL_RendererLogicalPresentation old_mode;
     SDL_GetRenderLogicalPresentation(renderer, &old_w, &old_h, &old_mode);
     SDL_SetRenderLogicalPresentation(renderer, (int)canvas_w, (int)canvas_h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -2626,6 +2659,7 @@ static void activate(int action)
 
 static bool handle_event(SDL_Event* event)
 {
+    if(modern_pad_event(&gamepad,event))return true;
     hotbar_event(event);
     static bool captured_keys[SDL_SCANCODE_COUNT];
     bool keyboard = event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP;
@@ -2921,6 +2955,8 @@ bool modern_ui_init(void)
     if(!book_font_data) {modern_ui_exit();return false;}
     load_settings();
     key_load();
+    modern_pad_init(&gamepad);
+    pad_load();
     update_geometry();
     if(!fonts[0].texture || !fonts[1].texture || !fonts[2].texture || !fonts[3].texture
         || !fonts[BUTTON_FONT].texture || !fonts[MENU_BUTTON_FONT].texture) {modern_ui_exit();return false;}
@@ -2998,6 +3034,8 @@ bool modern_ui_init(void)
 }
 
 bool modern_ui_enabled(void) {return enabled;}
+bool modern_ui_take_pause_request(void) {bool requested=pad_pause_request;pad_pause_request=false;return requested;}
+void modern_ui_gamepad_barrier(void) {modern_pad_barrier(&gamepad);}
 
 typedef struct FollowWalk {
     int64_t pc, destination;
@@ -3060,8 +3098,56 @@ static void follow_walk_stop(void)
     follow_walk.pc=0;
 }
 
+/* The native pathfinder accepts arbitrary tile destinations. Keep the complete
+ * stick vector rather than quantizing it to the eight keyboard directions. */
+static bool pad_walk_tick(void)
+{
+    static bool walking,running;
+    static ModernPadVector previous;
+    static Uint64 retry_at;
+    ModernPadVector stick=gamepad.left;
+    bool allowed=gamepad.enabled && gamepad.active && gamepad.focused && pad_world_ready()
+        && !pad_radial && !tactical_active() && (intgame_mode_get()==INTGAME_MODE_MAIN || pad_aiming());
+    int64_t actor=follow_control_actor();
+    if(!allowed || !stick.length || !actor || !critter_is_active(actor)) {
+        if(walking){follow_walk_log("pad-stop",actor,-1,0,0,allowed);follow_walk_stop();}
+        walking=false;return false;
+    }
+    bool run=stick.length>=0.65f && critter_encumbrance_level_get(actor)<4;
+    if(!walking || follow_walk.pc!=actor || running!=run) {
+        if(!walking || running!=run)follow_walk_log("pad-route",actor,-1,0,0,run);
+        follow_walk_stop();retry_at=0;
+    }
+    walking=true;running=run;
+    Uint64 now=SDL_GetTicks();
+    if(now<retry_at)return true;
+    retry_at=now+100;
+    int64_t tile=obj_field_int64_get(actor,OBJ_F_LOCATION);
+    if(follow_walk_animation() && location_dist(tile,follow_walk.destination)>2
+        && fabsf(stick.x-previous.x)+fabsf(stick.y-previous.y)<0.12f)return true;
+    previous=stick;
+    int64_t sx,sy;location_xy(tile,&sx,&sy);
+    float dx=stick.x/stick.length,dy=stick.y/stick.length;
+    for(float distance=100+220*stick.length;distance>=40;distance-=40) {
+        int64_t destination;
+        if(!location_at(sx+40+(int)(dx*distance),sy+20+(int)(dy*distance),&destination) || destination==tile)continue;
+        AnimPath path;
+        if(!anim_preview_path(actor,destination,false,&path) || path.max>location_dist(tile,destination)+1)continue;
+        bool moved=run?anim_goal_run_to_tile(actor,destination):anim_goal_walk_to_tile(actor,destination);
+        follow_walk_log("pad-path",actor,location_rot(tile,destination),0,0,moved);
+        if(moved && sub_423300(actor,&follow_walk.id)) {
+            follow_walk.pc=actor;follow_walk.destination=destination;follow_walk.direction=location_rot(tile,destination);
+            modern_map_route_cancel_tracking();
+        }
+        return true;
+    }
+    follow_walk_log("pad-blocked",actor,-1,0,0,0);
+    follow_walk_stop();return true;
+}
+
 static void follow_walk_tick(void)
 {
+    if(pad_walk_tick()){follow_walk_taps=0;return;}
     static Uint64 retry_at;
     static int previous_direction=-1;
     static int64_t previous_actor;
@@ -3173,6 +3259,7 @@ void modern_ui_message(const char* text)
 
 void modern_ui_exit(void)
 {
+    modern_pad_exit(&gamepad);
     modern_health_reset();
     tutorial_exit();
     SDL_SetAtomicInt(&portrait_picker.alive,0);

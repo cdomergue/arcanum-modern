@@ -5,6 +5,7 @@ typedef struct HealthFloat {
     ObjectID identity;
     Uint64 born;
     int lane;
+    bool feedback;
 } HealthFloat;
 static HealthFloat health_floats[HEALTH_FLOAT_CAPACITY];
 
@@ -58,7 +59,7 @@ void modern_health_change(int64_t actor,int old_damage,int new_damage)
     int lane=0;while(lane<HEALTH_FLOAT_LANES && (lanes&(1U<<lane)))lane++;
     if(lane==HEALTH_FLOAT_LANES){slot=actor_oldest;lane=health_floats[slot].lane;}
     if(slot<0)slot=oldest;
-    health_floats[slot]=(HealthFloat){actor,delta,obj_get_id(actor),now,lane};
+    health_floats[slot]=(HealthFloat){actor,delta,obj_get_id(actor),now,lane,false};
 }
 
 static void draw_floating_health(void)
@@ -75,6 +76,13 @@ static void draw_floating_health(void)
         TigRect rect;
         if(!health_actor_visible(f->actor,&rect)
             || !objid_is_equal(f->identity,obj_get_id(f->actor))){f->delta=0;continue;}
+        /* One pulse when the damage number is first shown, never on redraw,
+         * healing, missed attacks, hidden actors or save initialization. */
+        if(!f->feedback) {
+            f->feedback=true;
+            int max_hp=object_hp_max(f->actor);
+            if(f->delta<0)modern_pad_rumble(&gamepad,(float)-f->delta/(max_hp>0?max_hp:1)*3);
+        }
         float phase=(float)age/HEALTH_FLOAT_LIFETIME;
         unsigned char alpha=age<400?255:(unsigned char)(255*(HEALTH_FLOAT_LIFETIME-age)/800);
         char label[32];snprintf(label,sizeof(label),"%+lld",(long long)f->delta);

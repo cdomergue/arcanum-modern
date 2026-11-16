@@ -20,6 +20,8 @@ enum {OBJ_F_TYPE,OBJ_F_FLAGS,OBJ_F_SPELL_FLAGS,OBJ_F_HP_DAMAGE,OBJ_F_LOCATION};
 enum {OF_OFF=1,OF_DESTROYED=2,OF_EXTINCT=4,OF_DONTDRAW=8,OF_INVISIBLE=16,OSF_INVISIBLE=32};
 static bool enabled=true,in_game=true,loading,resetting,menu,movie,journal,panel;
 static Uint64 now=1000;
+static int gamepad,rumble_count;
+static void modern_pad_rumble(int* pad,float strength){(void)pad;assert(strength>0);rumble_count++;}
 static bool covered;
 static bool roof_is_covered_loc(int64_t loc,bool faded){(void)loc;assert(faded);return covered;}
 static int64_t obj_field_int64_get(int64_t obj,int field){(void)field;return obj;}
@@ -58,12 +60,12 @@ static int count(void){int n=0;for(int i=0;i<HEALTH_FLOAT_CAPACITY;i++)if(health
 static void fresh(void){modern_health_reset();damage[1]=0;now+=2000;draws=0;}
 int main(void){
  for(int i=1;i<90;i++){identities[i]=i;types[i]=1;}
- object_hp_damage_set(1,12);assert(damage[1]==12&&count()==1);draw_floating_health();
+ object_hp_damage_set(1,12);assert(damage[1]==12&&count()==1&&!rumble_count);draw_floating_health();assert(rumble_count==1);
  assert(!strcmp(drawn,"-12")&&drawn_color.r>drawn_color.g&&drawn_color.a==255);
  float y=drawn_y,x=drawn_x;now+=600;draw_floating_health();assert(drawn_y<y&&drawn_color.a<255);
- camera_x=100;draw_floating_health();assert(drawn_x==x-100);camera_x=0;
+ camera_x=100;draw_floating_health();assert(drawn_x==x-100&&rumble_count==1);camera_x=0;
  now+=600;draws=0;draw_floating_health();assert(!count()&&!draws);
- object_hp_damage_set(1,3);draw_floating_health();assert(!strcmp(drawn,"+9")&&drawn_color.g>drawn_color.r);
+ object_hp_damage_set(1,3);draw_floating_health();assert(!strcmp(drawn,"+9")&&drawn_color.g>drawn_color.r&&rumble_count==1);
  fresh();damage[1]=3;object_hp_damage_set(1,-99);draw_floating_health();assert(damage[1]==0&&!strcmp(drawn,"+3"));
  object_hp_damage_set(1,0);assert(count()==1);
  fresh();for(int i=0;i<10;i++){now++;object_hp_damage_set(1,i+1);}assert(count()==HEALTH_FLOAT_LANES);

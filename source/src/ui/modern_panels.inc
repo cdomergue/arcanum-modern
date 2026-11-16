@@ -158,7 +158,8 @@ static void binding_tick(void)
 {
     if(binding_pending.type) {
         QuickBinding request=binding_pending;binding_pending.type=HOTKEY_NONE;
-        if(request.actor==combat_input_actor())modern_hotkey_assign(request.slot,request.type,request.data,request.item);
+        bool assigned=request.actor==combat_input_actor() && modern_hotkey_assign(request.slot,request.type,request.data,request.item);
+        modern_pad_log(assigned?"bind-success":"bind-rejected",request.type,request.slot);
         sub_575770();sub_573730();intgame_refresh_cursor();
     }
     if(binding_cancel){sub_575770();sub_573730();intgame_refresh_cursor();binding_cancel=false;}

@@ -13,6 +13,7 @@ typedef struct ModernCombatPreview {
     int64_t path[201];
 } ModernCombatPreview;
 bool modern_combat_preview(ModernCombatPreview* preview);
+bool modern_combat_preview_at(ModernCombatPreview* preview,int x,int y,int64_t target);
 void modern_intgame_cursor_sync(void);
 void modern_combat_sync(void);
 bool modern_combat_input_blocked(void);
@@ -33,6 +34,9 @@ bool modern_ui_prepare_maps(const char* executable);
 SDL_Texture* modern_ui_loading_label(SDL_Renderer* target,const char* text,float size);
 void modern_ui_exit(void);
 bool modern_ui_enabled(void);
+bool modern_ui_take_pause_request(void);
+void modern_ui_gamepad_barrier(void);
+void modern_mainmenu_pause_start(void);
 void modern_tutorial_load(void);
 bool modern_tutorial_skip_movie(const char* path);
 bool modern_tutorial_active(void);
@@ -104,6 +108,9 @@ const char* modern_ui_translate(const char* fr,const char* en);
 bool modern_ui_item_description(int64_t object,char* result,size_t capacity);
 void modern_intgame_hud_hide(bool hide);
 void modern_intgame_action(int action);
+void modern_intgame_gamepad_point(int x,int y);
+void modern_intgame_gamepad_hover(int x,int y);
+void modern_intgame_gamepad_combat(void);
 const char* modern_intgame_text(int number);
 int modern_intgame_icon(int slot);
 typedef struct ModernDetails {
@@ -165,6 +172,7 @@ typedef struct ModernInventory {
 bool modern_inventory_state(ModernInventory* state);
 int64_t modern_inventory_at(int x,int y);
 void modern_inventory_mouse(int x,int y,int event);
+void modern_inventory_gamepad_activate(int x,int y,bool secondary);
 void modern_inventory_action(int action);
 void modern_inventory_scroll(int direction);
 const char* modern_inventory_text(int number);

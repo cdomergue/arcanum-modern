@@ -468,6 +468,11 @@ void main_loop(void)
         }
 
         modern_ui_tick();
+        if(modern_ui_take_pause_request()) {
+            modern_mainmenu_pause_start();
+            if(!mainmenu_ui_handle())return;
+            continue;
+        }
         tig_ping();
         gamelib_ping();
         modern_autosave_tick();

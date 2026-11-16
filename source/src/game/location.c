@@ -269,6 +269,15 @@ void location_origin_scroll(int64_t dx, int64_t dy)
     location_origin_y += dy;
 }
 
+/* Changing viewport dimensions moves the pixel origin without moving the
+ * camera's world anchor. Scroll limits must not reject this compensation at
+ * map edges; normal panning still uses location_origin_scroll. */
+void location_origin_reframe(int64_t dx, int64_t dy)
+{
+    location_origin_x += dx;
+    location_origin_y += dy;
+}
+
 // 0x4B8CE0
 void location_origin_set(int64_t location)
 {

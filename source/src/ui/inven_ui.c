@@ -4645,6 +4645,19 @@ void modern_inventory_mouse(int x,int y,int event)
     inven_ui_message_filter(&message);
     if(event==TIG_MESSAGE_MOUSE_MOVE && inven_ui_created)inven_ui_message_filter_handle_mouse_idle(x,y);
 }
+/* One controller press picks up; the next places. The legacy drag flag must
+ * not remain held when switching back to a physical mouse. */
+void modern_inventory_gamepad_activate(int x,int y,bool secondary)
+{
+    if(!inven_ui_created)return;
+    dword_68346C=false;
+    modern_inventory_mouse(x,y,TIG_MESSAGE_MOUSE_MOVE);
+    int event=secondary?TIG_MESSAGE_MOUSE_RIGHT_BUTTON_UP:
+        inven_ui_drag_item_obj==OBJ_HANDLE_NULL?TIG_MESSAGE_MOUSE_LEFT_BUTTON_DOWN:TIG_MESSAGE_MOUSE_LEFT_BUTTON_UP;
+    modern_inventory_mouse(x,y,event);
+    dword_68346C=false;
+}
+
 void modern_inventory_scroll(int direction)
 {
     if(!inven_ui_created || inven_ui_drag_item_obj!=OBJ_HANDLE_NULL)return;

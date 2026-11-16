@@ -32,6 +32,7 @@
 #include "game/timeevent.h"
 #include "ui/broadcast_ui.h"
 #include "ui/charedit_ui.h"
+#include "ui/dialog_ui.h"
 #include "ui/fate_ui.h"
 #include "ui/gameuilib.h"
 #include "ui/intgame.h"
@@ -1556,6 +1557,13 @@ void sub_541170(void)
 }
 
 // 0x541180
+void modern_mainmenu_pause_start(void)
+{
+    bool locked=dialog_ui_is_local_pc_in_dialog() || wmap_ui_is_created()
+        || (combat_turn_based_is_active() && player_get_local_pc_obj()!=combat_turn_based_whos_turn_get());
+    mainmenu_ui_start(locked?MM_TYPE_IN_PLAY_LOCKED:MM_TYPE_IN_PLAY);
+}
+
 void mainmenu_ui_start(MainMenuType type)
 {
     tig_art_id_t art_id;

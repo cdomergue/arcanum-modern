@@ -140,8 +140,8 @@ static void tutorial_draw_invite(void)
 {
     draw_menu_background();
     float w=fminf(canvas_w-32,760), x=(canvas_w-w)/2;
-    const char* description=tr("Découvrez les spécificités d’Arcanum Renaissance par rapport au jeu de base. Rencontrez le garde et apprenez à voyager et à combattre ensemble.",
-        "Discover what makes Arcanum Renaissance different from the base game. Meet the guard and learn to travel and fight together.");
+    const char* description=tr("Découvrez les spécificités d’Arcanum Renaissance par rapport au jeu de base. Rencontrez le garde et apprenez à voyager et à combattre ensemble. Certaines étapes nécessitent un clavier, même à la manette.",
+        "Discover what makes Arcanum Renaissance different from the base game. Meet the guard and learn to travel and fight together. Some steps require a keyboard, even with a controller.");
     int rows=menu_paragraph(description,(SDL_FRect){0,0,w-48,0},0,GOLD);
     float text_height=rows*text_line_height(), height=260+text_height, y=(canvas_h-height)/2;
     menu_plaque((SDL_FRect){x,y,w,height},true,false);

@@ -23,7 +23,17 @@
 #include "ui/gameuilib.h"
 #include "ui/sleep_ui.h"
 #include "ui/fate_ui.h"
+#include <SDL3/SDL.h>
+static SDL_Window* check_keyboard_focus(void);
+/* The optional headless integration mode has no desktop window. Real focus
+ * acquisition/loss remains covered by check-gamepad and the X11 UI run. */
+#define SDL_GetKeyboardFocus check_keyboard_focus
 #include "../source/src/ui/modern_ui.c"
+#undef SDL_GetKeyboardFocus
+static SDL_Window* check_keyboard_focus(void)
+{
+    return SDL_getenv("ARCANUM_CHECK_GAMEPAD_HEADLESS")?window:SDL_GetKeyboardFocus();
+}
 /* Avoid a modal CRT assertion dialog in unattended native capture jobs. */
 #undef assert
 #define assert(condition) do { if(!(condition)){fprintf(stderr,"FAIL line %d: %s\n",__LINE__,#condition);exit(3);} } while(0)
@@ -278,6 +288,7 @@ static void check_native_map_note(void)
 
 #include "check-companion-journal.inc"
 #include "check-map-coordinates.inc"
+#include "check-gamepad-ui.inc"
 
 int main(int argc,char** argv)
 {
@@ -287,7 +298,14 @@ int main(int argc,char** argv)
     _set_error_mode(_OUT_TO_STDERR);
 #endif
     puts("Starting isolated typography capture");
-    SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
+    if(SDL_getenv("ARCANUM_CHECK_GAMEPAD"))SDL_SetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT,"0x1209/0xa11c");
+    const char* check_video=SDL_getenv("ARCANUM_CHECK_GAMEPAD")?
+        (!strcmp(SDL_GetPlatform(),"Windows")?"windows":"x11"):"dummy";
+    if(SDL_getenv("ARCANUM_CHECK_GAMEPAD_HEADLESS")) {
+        check_video="dummy";
+        SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,"1");
+    }
+    SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER,check_video,SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER,"dummy",SDL_HINT_OVERRIDE);
     SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER,"software",SDL_HINT_OVERRIDE);
     highres_config_load();
@@ -309,6 +327,7 @@ int main(int argc,char** argv)
     int64_t pc=player_get_local_pc_obj();object_flags_unset(pc,OF_OFF);
     location_origin_set(obj_field_int64_get(pc,OBJ_F_LOCATION));iso_interface_refresh();
 
+    if(SDL_getenv("ARCANUM_CHECK_GAMEPAD")){check_gamepad_ui();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_PARTY_HINTS")){check_party_hints();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_NATIVE_MAP_NOTE")){check_native_map_note();return 0;}
     if(SDL_getenv("ARCANUM_CHECK_COMPANIONS")){check_companion_journal();return 0;}

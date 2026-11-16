@@ -1,5 +1,6 @@
 #include "ui/modern_movie.h"
 #include "ui/modern_ui.h"
+#include "ui/modern_gamepad.h"
 #include <tig/tig.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -17,6 +18,8 @@ typedef struct Movie {
     int video_index, audio_index;
     bool started, stopped, ignore_keys, silent;
     SDL_Scancode skip_key;
+    ModernPadState pad;
+    bool skip_pad;
     Uint64 start;
     double end_time;
 } Movie;
@@ -33,6 +36,11 @@ int modern_movie_check(void)
 static void movie_events(Movie* movie)
 {
     tig_ping();
+    bool skip=modern_pad_movie_skip(&movie->pad,SDL_GetKeyboardFocus()==SDL_GetRenderWindow(movie->renderer));
+    if(!movie->ignore_keys && !movie->stopped && skip) {
+        movie->skip_pad=movie->stopped=true;
+        modern_pad_log("movie-skip",0,(int)movie->pad.held);
+    }
     TigMessage message;
     while (tig_message_dequeue(&message) == TIG_OK) {
         if (message.type == TIG_MESSAGE_QUIT) movie_quit = movie->stopped = true;
@@ -174,6 +182,8 @@ static int movie_play(const char* path, TigMovieFlags flags, int sound_track)
     Uint8 r, g, b, a;
     SDL_GetRenderDrawColor(movie.renderer, &r, &g, &b, &a);
     bool cursor = SDL_CursorVisible();
+    modern_pad_init(&movie.pad);
+    modern_pad_movie_skip(&movie.pad,SDL_GetKeyboardFocus()==SDL_GetRenderWindow(movie.renderer));
     SDL_HideCursor();
     if (flags & TIG_MOVIE_FADE_IN) tig_video_fade(0, 64, 3.0f, 0);
     tig_video_fade(0, 0, 0, 1);
@@ -200,6 +210,10 @@ static int movie_play(const char* path, TigMovieFlags flags, int sound_track)
     while (!movie_quit && movie.skip_key != SDL_SCANCODE_UNKNOWN && tig_kb_is_key_pressed(movie.skip_key)) {
         movie_events(&movie); SDL_Delay(5);
     }
+    while(!movie_quit && movie.skip_pad && movie.pad.focused && movie.pad.device && movie.pad.held) {
+        movie_events(&movie);SDL_Delay(5);
+    }
+    modern_ui_gamepad_barrier();
     if (movie_quit) tig_message_post_quit(0);
     if (!(flags & TIG_MOVIE_NO_FINAL_FLIP)) {
         SDL_SetRenderDrawColor(movie.renderer, 0, 0, 0, 255);
@@ -213,6 +227,7 @@ static int movie_play(const char* path, TigMovieFlags flags, int sound_track)
     tig_window_invalidate_rect(NULL);
     if (ok && (movie.stopped || read_result == AVERROR_EOF)) result = TIG_OK;
 cleanup:
+    modern_pad_exit(&movie.pad);
     if (result != TIG_OK) SDL_Log("Cannot play movie %s: %s", path, SDL_GetError());
     SDL_DestroyAudioStream(movie.sound);
     SDL_DestroyTexture(movie.texture);

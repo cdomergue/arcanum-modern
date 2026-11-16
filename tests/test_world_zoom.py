@@ -7,7 +7,9 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / 'source/src/ui/modern_ui.c').read_text()
-start = source.index('static bool hud_region(float x,float y);')
+start = source.index('static int zoom_base_width,zoom_base_height;')
+state_end = source.index('bool modern_follow_camera_active(void)', start)
+sync_start = source.index('static void world_zoom_sync(void)', state_end)
 end = source.index('void modern_ui_menu_tick(void)', start)
 code = r'''
 #include <assert.h>
@@ -51,7 +53,7 @@ static bool modern_world_resize(int w,int h,float ax,float ay){
     origin_x+=(int)((w-logical_w)*ax);origin_y+=(int)((h-logical_h)*ay);
     logical_w=w;logical_h=h;resizes++;return true;
 }
-''' + source[start:end] + r'''
+''' + source[start:state_end] + source[sync_start:end] + r'''
 int main(void){
     world_zoom_sync();assert(resizes==0);
     SDL_Event e={.type=1,.wheel={1200,650,-1,0}};

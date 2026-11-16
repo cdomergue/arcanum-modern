@@ -120,9 +120,9 @@ static void tutorial_draw_lesson(void)
     switch(tutorial_step){
     case TUTORIAL_HELLO:
         voice="TUTORIAL_HELLO";
-        line=tr("Bonjour et bienvenue dans Arcanum Renaissance. Ce tutoriel vous fera découvrir ce qui rend ce mod unique.",
-                "Hello, and welcome to Arcanum Renaissance. In this tutorial, you will discover what makes this mod unique.");
-        complete=SDL_GetTicks()-tutorial_hello_started>=9000;
+        line=tr("Bienvenue dans Arcanum Renaissance. Ce tutoriel présente les fonctionnalités du mod. Certaines étapes nécessitent un clavier, même si vous jouez à la manette.",
+                "Welcome to Arcanum Renaissance. This tutorial introduces the mod’s features. Some steps require a keyboard, even when playing with a controller.");
+        complete=SDL_GetTicks()-tutorial_hello_started>=14000;
         break;
     case TUTORIAL_GUIDE:
         voice="TUTORIAL_GUIDE";

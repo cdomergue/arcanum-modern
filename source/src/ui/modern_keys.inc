@@ -17,6 +17,7 @@ static const int key_display_order[KB_COUNT]={KB_INVENTORY,KB_SORT,KB_JOURNAL,KB
     KB_MAP,KB_SPELLS,KB_SKILLS,KB_SCHEMATICS,KB_REST,KB_STEALTH,KB_STEAL,KB_END,
     KB_UP,KB_LEFT,KB_DOWN,KB_RIGHT,KB_COMBAT,KB_LAST};
 static int key_edit=-1,key_page,key_mouse_capture;
+static bool key_gamepad;
 static char key_status[256];
 static const char* tr(const char* fr,const char* en)
 {return modern_ui_translate(fr,en);}
@@ -148,7 +149,9 @@ static bool key_options_event(SDL_Event* event)
 static void draw_key_options(float x,float y,float w)
 {
     int pages=(KB_COUNT+KEY_ROWS_PER_PAGE-1)/KEY_ROWS_PER_PAGE;
-    option_section(x,y+151,w,tr("Affectation des touches","Key assignments"));
+    option_button((SDL_FRect){x,y+143,w/2-4,38},460,tr("Clavier / souris","Keyboard / mouse"),!key_gamepad,true);
+    option_button((SDL_FRect){x+w/2+4,y+143,w/2-4,38},461,tr("Manette","Gamepad"),key_gamepad,true);
+    if(key_gamepad){draw_pad_options(x,y,w);return;}
     for(int row=0;row<KEY_ROWS_PER_PAGE;row++){
         int index=key_page*KEY_ROWS_PER_PAGE+row;
         if(index>=KB_COUNT)break;
@@ -174,6 +177,8 @@ static bool key_options_action(int action)
 {
     if(action==418){options_tab=3;key_edit=-1;key_status[0]=0;return true;}
     if(options_tab!=3)return false;
+    if(action==460 || action==461){key_gamepad=action==461;key_edit=-1;return true;}
+    if(key_gamepad && pad_options_action(action))return true;
     if(action>=480 && action<480+KB_COUNT){key_edit=action-480;key_status[0]=0;return true;}
     if(action==419 || action==420){
         int next=key_page+(action==419?-1:1);

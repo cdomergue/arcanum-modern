@@ -44,6 +44,8 @@ set(SRCS
     "src/ui/modern_graphics.h"
     "src/ui/modern_map_generator.c"
     "src/ui/modern_map_generator.h"
+    "src/ui/modern_gamepad.c"
+    "src/ui/modern_gamepad.h"
     "src/ui/modern_ui.c"
     "src/ui/modern_ui.h"
     "src/game/a_name.c"
@@ -429,7 +431,14 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_outputs} "$<TARGET_FILE_DIR:check-text-size>" VERBATIM)
 endif()
 
-add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_movie.c")
+add_executable(check-gamepad EXCLUDE_FROM_ALL "../tests/test_gamepad.c" "src/ui/modern_gamepad.c")
+target_include_directories(check-gamepad PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(check-gamepad PRIVATE SDL3::SDL3)
+if(NOT MSVC)
+    target_link_libraries(check-gamepad PRIVATE m)
+endif()
+
+add_executable(check-movie EXCLUDE_FROM_ALL "../tools/check-movie.c" "src/ui/modern_gamepad.c")
 target_include_directories(check-movie PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(check-movie PRIVATE ${TIG_LIBRARY} ffmpeg_avformat ffmpeg_avcodec ffmpeg_avutil)
 add_dependencies(check-movie arcanum-ffmpeg)
