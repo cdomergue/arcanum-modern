@@ -221,20 +221,8 @@ follow the connected controller's face-button labels.
 | Left stick click | End the current combat turn |
 | Start / Options; Back / View | Pause menu; journal |
 
-Left-stick movement follows the stick's direction through the game's tile
-pathfinder. Tilt gently to walk and further to run; the camera follows while
-using the controller. In turn-based combat, point with the right stick and
-confirm the destination or target, with the normal action-point preview.
-Without the pointer, A interacts with a nearby character, chest, door or item
-in front of the controlled character. Moving with the left stick returns to this
-mode; using the right stick enables precise pointing. B cancels without opening
-a menu; Start opens the pause menu. The RB wheel contains Character, Journal,
-Map, Inventory, Skills, Spells, Schematics, Rest and Fate Points.
-Press A, B or Start to skip cinematics, including the opening movies. Release
-the button before skipping the next movie.
-Inventory cells and equipment slots have directional focus; confirm to pick up
-or place an item, and cancel to return it. Vibrations accompany newly displayed
-damage numbers, and can be disabled independently of the visual feedback.
+Tilt the left stick slightly to walk or fully to run. Use the right stick to activate the cursor (for combat targets and action-point previews); moving the left stick returns to direct character control.
+Press A to interact with objects or NPCs in front of you. Hold RB to open the quick-access wheel (Character, Journal, Map, Inventory, Skills, Spells, Schematics, Rest, Fate Points).
 
 On Steam Deck, use a Steam Input **Gamepad** layout so the game receives controller
 events. Keyboard/mouse layouts continue to use the keyboard controls instead.
