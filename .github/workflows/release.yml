@@ -87,8 +87,9 @@ jobs:
           python3 tests/test_linux_package.py
           python3 tests/test_house_catalog.py
           ./build.sh
-          cmake --build build/linux-x64 --target check-name-input
+          cmake --build build/linux-x64 --target check-name-input check-gamepad
           build/linux-x64/check-name-input
+          build/linux-x64/check-gamepad
           python3 tools/package-linux.py --exe build/linux-x64/arcanum-ce --build-dir build/linux-x64
           python3 tests/test_linux_package.py dist/ArcanumModern-linux-x64.zip
           python3 tests/test_dependency_source_packages.py dist/ArcanumModern-linux-x64.zip dist/ArcanumModern-dependency-sources-linux-x64.zip
@@ -135,7 +136,7 @@ jobs:
           docker run --rm \
             --mount "type=bind,source=$PWD,target=/work" --workdir /work \
             -e LLVM_MINGW=/opt/llvm-mingw \
-            mstorsjo/llvm-mingw:latest cmake --build build/windows-x64 --target check-utf8-files check-name-input worlded-native-inventory
+            mstorsjo/llvm-mingw:latest cmake --build build/windows-x64 --target check-utf8-files check-name-input check-gamepad worlded-native-inventory
       - name: Build setup and verify ZIP
         run: |
           sudo apt-get update
@@ -155,6 +156,7 @@ jobs:
           path: |
             build/windows-x64/check-utf8-files.exe
             build/windows-x64/check-name-input.exe
+            build/windows-x64/check-gamepad.exe
             build/launcher/launcher-tests.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v7.0.2
@@ -269,6 +271,11 @@ jobs:
         run: |
           ./checks/windows-x64/check-name-input.exe
           if ($LASTEXITCODE -ne 0) { throw "Name input test failed: $LASTEXITCODE" }
+      - name: Test native gamepad input on Windows
+        shell: pwsh
+        run: |
+          ./checks/windows-x64/check-gamepad.exe
+          if ($LASTEXITCODE -ne 0) { throw "Gamepad test failed: $LASTEXITCODE" }
       - name: Check packaged movie decoder on Windows
         shell: pwsh
         run: |
@@ -292,8 +299,9 @@ jobs:
       - run: bash ./build-macos.sh
       - name: Test character and save names
         run: |
-          cmake --build build/macos-arm64 --target check-name-input
+          cmake --build build/macos-arm64 --target check-name-input check-gamepad
           build/macos-arm64/check-name-input
+          build/macos-arm64/check-gamepad
       - name: Check native map preparation
         run: |
           python3 tools/build-map-exporter.py --source tools/check-map-generation.c --name check-map-generation --exclude-object src/ui/modern_map_generator.c.o
