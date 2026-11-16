@@ -23,6 +23,10 @@ enum {SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_SPACE=44, SDL_SCANCODE_COMMA=54, SDL_SC
 enum {SDL_KMOD_SHIFT=3, SDL_KMOD_CTRL=192, SDL_KMOD_ALT=768, SDL_KMOD_GUI=3072};
 enum {SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP, INTGAME_MODE_DIALOG=10};
 typedef struct {int type; struct {int scancode,mod; bool repeat;} key;} SDL_Event;
+// SDL controller behavior is covered by check-gamepad; model event ownership here.
+static int gamepad;
+static bool gamepad_consumed;
+static bool modern_pad_event(int* pad,SDL_Event* event){(void)pad;(void)event;return gamepad_consumed;}
 static bool active,panel,typing;
 static int mode,pending_action=-1,tactical_pressed_actor;
 static void* window;
@@ -58,6 +62,9 @@ static bool press(int key,int mods){
 }
 int main(void){
     memcpy(key_binding,key_defaults,sizeof(key_binding));
+    gamepad_consumed=true;
+    assert(press(SDL_SCANCODE_R,0) && pending_action==-1);
+    gamepad_consumed=false;
     assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==0);
     follow_camera=true;
     assert(press(SDL_SCANCODE_W,0) && follow_walk_taps==1);
