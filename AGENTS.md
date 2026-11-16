@@ -47,7 +47,13 @@ Batch requested changes and finish local validation before release preflight.
 Validate complete packages before creating the release tag, as described below.
 Publish one release for the completed set of changes.
 
-The README is a user and contributor guide. Keep it focused on installation,
+All agents and subagents must be CONCISE and precise in responses and documentation.
+Include only useful information. Omit development anecdotes, conversation history,
+and repetition. Discussions between commits do not automatically belong in docs
+or release notes; include only information with lasting value for readers.
+
+Edit the main README carefully: it is a user and contributor guide, not a changelog.
+Keep it focused on installation,
 features, controls, configuration, build instructions, and limitations. Do not add
 chronological progress reports, descriptions of our own bug fixes, or manual test
 diaries. Report task-specific changes and test results in the conversation.
